@@ -1,4 +1,4 @@
-# AwavePuzz
+# A Wave Puzzle
 
 Co-op wave-based zombie survival prototype for Roblox. This repository mirrors the
 code/scripts that should be pasted into Studio while following the instructions
