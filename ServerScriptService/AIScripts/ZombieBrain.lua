@@ -25,8 +25,9 @@ local function moveAlongPath(humanoid, root, targetPosition)
     local waypoints = path:GetWaypoints()
     for _, waypoint in ipairs(waypoints) do
         humanoid:MoveTo(waypoint.Position)
-        local reached = humanoid.MoveToFinished:Wait()
-        if not reached then
+        -- MoveToFinished:Wait() returns true if movement finished, but this may include interruptions or failures.
+        local success = humanoid.MoveToFinished:Wait()
+        if not success then
             break
         end
     end
