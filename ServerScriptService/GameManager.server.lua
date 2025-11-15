@@ -152,6 +152,6 @@ local function mainLoop()
     end
 end
 
-spawn(function()
+task.spawn(function()
     mainLoop()
 end)
