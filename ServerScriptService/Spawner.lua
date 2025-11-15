@@ -138,9 +138,9 @@ function Spawner:SpawnZombieOfType(zombieTypeName)
         Damage = zombieType.Damage,
         AttackInterval = Config.Spawning.DefaultAttackInterval,
         AttackRange = Config.Spawning.DefaultAttackRange,
-        OnBaseAttack = function(damageAmount, model)
+        OnBaseAttack = function(damageAmount)
             if self.onBaseDamaged then
-                self.onBaseDamaged(damageAmount, model)
+                self.onBaseDamaged(damageAmount, zombie)
             end
         end,
     })
