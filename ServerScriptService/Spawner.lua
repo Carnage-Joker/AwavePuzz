@@ -129,7 +129,23 @@ function Spawner:SpawnZombieOfType(zombieTypeName)
         local spawnPart = self.spawnPoints[math.random(1, #self.spawnPoints)]
         local primary = zombie.PrimaryPart or zombie:FindFirstChild("HumanoidRootPart")
         if primary and spawnPart then
-            zombie:MoveTo(spawnPart.Position + Vector3.new(0, 2, 0))
+            local spawnPosition = spawnPart.Position + Vector3.new(0, 2, 0)
+            local rayOrigin = spawnPosition
+            local rayDirection = Vector3.new(0, -4, 0) -- Check 4 studs below spawn position
+            local ray = Ray.new(rayOrigin, rayDirection)
+            local hitPart = workspace:FindPartOnRay(ray, zombie)
+            if not hitPart then
+                zombie:MoveTo(spawnPosition)
+            else
+                -- Try a higher position if obstructed
+                local altSpawnPosition = spawnPart.Position + Vector3.new(0, 4, 0)
+                local altRay = Ray.new(altSpawnPosition, Vector3.new(0, -4, 0))
+                local altHitPart = workspace:FindPartOnRay(altRay, zombie)
+                if not altHitPart then
+                    zombie:MoveTo(altSpawnPosition)
+                end
+                -- If still obstructed, skip spawning or handle as needed
+            end
         end
     end
 
