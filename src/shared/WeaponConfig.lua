@@ -1,5 +1,5 @@
 -- WeaponConfig.lua
--- Defines the available weapons, upgrades, and shop items for AwavePuzz
+-- Defines the available weapons, upgrades, and shop items for AWavePuzz
 
 local WeaponConfig = {}
 

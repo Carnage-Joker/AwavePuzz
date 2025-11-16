@@ -100,12 +100,12 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         end
 
         if input.KeyCode == Enum.KeyCode.B then
-                        screenGui.Enabled = not screenGui.Enabled
-                        if screenGui.Enabled then
-                                statusLabel.Text = "Purchasing..."
-                                shopRequest:FireServer("catalog")
-                        else
-                                statusLabel.Text = "Press B to toggle shop"
-                        end
+                screenGui.Enabled = not screenGui.Enabled
+                if screenGui.Enabled then
+                        statusLabel.Text = "Purchasing..."
+                        shopRequest:FireServer("catalog")
+                else
+                        statusLabel.Text = "Press B to toggle shop"
+                end
         end
 end)
