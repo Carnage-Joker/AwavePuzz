@@ -52,6 +52,7 @@ local function chooseZombieType(composition)
     end
 
     -- If the weights do not sum to 1 we fallback to a random key.
+    warn("[Spawner] chooseZombieType: Composition weights do not sum to 1. Falling back to random selection. Composition: " .. game:GetService("HttpService"):JSONEncode(composition))
     local keys = {}
     for zombieType in pairs(composition) do
         table.insert(keys, zombieType)
@@ -160,8 +161,6 @@ function Spawner:SpawnZombieOfType(zombieTypeName)
             end
         end,
     })
-
-    zombie:SetAttribute("AIHandle", aiHandle and true)
 
     local function cleanup()
         if aiHandle then
