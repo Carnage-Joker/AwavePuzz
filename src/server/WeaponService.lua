@@ -188,9 +188,12 @@ function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
         zombieModel:SetAttribute("LastHitWeapon", weaponId)
 
         -- Wrap in pcall in case humanoid is destroyed between validation and damage application
-        pcall(function()
-                humanoid:TakeDamage(stats.Damage)
+        local success, err = pcall(function()
+            humanoid:TakeDamage(stats.Damage)
         end)
+        if not success then
+            warn("[WeaponService] Failed to apply damage to humanoid: " .. tostring(err))
+        end
 end
 
 function WeaponService:onZombieKilled(zombieModel)
