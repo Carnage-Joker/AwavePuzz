@@ -44,9 +44,9 @@ function GameManager.new()
                 self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
                 self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
         else
+                -- Load spawn points from workspace folders only
                 self.spawner:loadSpawnPoints()
-                self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
-                self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+                -- Do not overwrite with potentially empty mapManager data
         end
 
         -- Game state

@@ -187,11 +187,8 @@ function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
         zombieModel:SetAttribute("LastHitBy", player.UserId)
         zombieModel:SetAttribute("LastHitWeapon", weaponId)
 
-        if stats.PelletCount and stats.PelletCount > 1 then
-                humanoid:TakeDamage(stats.Damage / stats.PelletCount)
-        else
-                humanoid:TakeDamage(stats.Damage)
-        end
+        -- Apply full damage per pellet hit (shotguns deal full damage per pellet)
+        humanoid:TakeDamage(stats.Damage)
 end
 
 function WeaponService:onZombieKilled(zombieModel)

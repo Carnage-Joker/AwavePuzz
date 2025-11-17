@@ -133,16 +133,22 @@ function Spawner:SpawnZombieOfType(zombieTypeName)
             local spawnPosition = spawnPart.Position + Vector3.new(0, 2, 0)
             local rayOrigin = spawnPosition
             local rayDirection = Vector3.new(0, -4, 0) -- Check 4 studs below spawn position
-            local ray = Ray.new(rayOrigin, rayDirection)
-            local hitPart = workspace:FindPartOnRay(ray, zombie)
-            if not hitPart then
+            
+            -- Use modern Raycast API
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            raycastParams.FilterDescendantsInstances = {zombie}
+            
+            local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+            if not raycastResult then
                 zombie:MoveTo(spawnPosition)
             else
                 -- Try a higher position if obstructed
                 local altSpawnPosition = spawnPart.Position + Vector3.new(0, 4, 0)
-                local altRay = Ray.new(altSpawnPosition, Vector3.new(0, -4, 0))
-                local altHitPart = workspace:FindPartOnRay(altRay, zombie)
-                if not altHitPart then
+                local altRayOrigin = altSpawnPosition
+                local altRayDirection = Vector3.new(0, -4, 0)
+                local altRaycastResult = workspace:Raycast(altRayOrigin, altRayDirection, raycastParams)
+                if not altRaycastResult then
                     zombie:MoveTo(altSpawnPosition)
                 end
                 -- If still obstructed, skip spawning or handle as needed
