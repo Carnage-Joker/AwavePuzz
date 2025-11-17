@@ -55,10 +55,8 @@ end
 
 function MapManager:loadDefault()
         local id
-        if MapConfig then
-                local defaultId = select(1, MapConfig.getDefault())
-                id = defaultId
-        end
+        local defaultId = select(1, MapConfig.getDefault())
+        id = defaultId
         self:load(id)
 end
 
