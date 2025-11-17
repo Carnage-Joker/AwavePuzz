@@ -130,7 +130,7 @@ function WeaponController:equipSlot(slot)
         end
 
         self.currentWeapon = weaponId
-        self.lastFireTime = 0 -- Reset cooldown when switching weapons
+        self.lastFireTime = tick() -- Preserve cooldown when switching weapons
         equipEvent:FireServer(weaponId)
 end
 
