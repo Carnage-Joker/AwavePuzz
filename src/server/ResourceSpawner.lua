@@ -1,4 +1,3 @@
--- ResourceSpawner.lua
 -- Manages spawning of cure components around the map and awards inventory items on pickup
 
 local Players = game:GetService("Players")
