@@ -185,8 +185,9 @@ end
 
 function GameManager:generateEndlessWave()
         -- Generate procedural waves after configured waves end
-        -- Note: Currently uses linear zombie count scaling. Additional difficulty scaling
-        -- (health, speed, damage) could be applied for increased challenge in endless mode.
+        -- Note: Currently uses linear zombie count scaling. Health scaling is already applied via
+        -- GameConfig.ZOMBIE_HEALTH_MULTIPLIER; additional scaling (e.g., speed, damage, or more aggressive health scaling)
+        -- could be added for increased challenge in endless mode.
         local baseCount = 15 + (self.currentWave * 2)
 
         return {
