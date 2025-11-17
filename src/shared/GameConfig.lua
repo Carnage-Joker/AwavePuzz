@@ -7,6 +7,9 @@ local GameConfig = {}
 GameConfig.MAX_PLAYERS = 8
 GameConfig.STARTING_HEALTH = 100
 GameConfig.RESPAWN_ENABLED = false
+GameConfig.STARTING_CURRENCY = 150
+GameConfig.CURRENCY_PER_WAVE = 75
+GameConfig.DEFAULT_WEAPON = "Pistol"
 
 -- Base Settings
 GameConfig.BASE_HEALTH = 1000
@@ -27,11 +30,11 @@ GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.2 -- Health increase per wave
 -- Cure Crafting Settings
 GameConfig.CURE_COMPONENTS_REQUIRED = 5
 GameConfig.CURE_COMPONENT_NAMES = {
-	"Chemical A",
-	"Chemical B",
-	"Biological Sample",
-	"Research Notes",
-	"Catalyst"
+        "Chemical A",
+        "Chemical B",
+        "Biological Sample",
+        "Research Notes",
+        "Catalyst"
 }
 
 -- Alliance Settings
@@ -41,5 +44,8 @@ GameConfig.BETRAYAL_COOLDOWN = 60 -- Seconds before can betray again
 -- Resource Settings
 GameConfig.RESOURCE_SPAWN_RATE = 45 -- Seconds between resource spawns
 GameConfig.MAX_RESOURCES_ON_MAP = 10
+
+-- Map Settings
+GameConfig.ENABLE_MULTI_MAP = true
 
 return GameConfig
