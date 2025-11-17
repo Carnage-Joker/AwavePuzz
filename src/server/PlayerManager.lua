@@ -89,12 +89,17 @@ function PlayerManager:getPlayerData(player)
 end
 
 function PlayerManager:addCurrency(player, amount)
+        -- Only allow non-negative amounts to be added. Use deductCurrency for deductions.
+        if type(amount) ~= "number" or amount < 0 then
+                warn("[PlayerManager] addCurrency called with negative or invalid amount: " .. tostring(amount))
+                return
+        end
         local playerData = self.players[player.UserId]
         if not playerData then
                 return
         end
 
-        playerData.currency = math.max(0, playerData.currency + amount)
+        playerData.currency = playerData.currency + amount
         self:sendCurrencyUpdate(player)
 end
 
