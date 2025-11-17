@@ -249,6 +249,11 @@ function PlayerManager:sendWeaponLoadout(player)
                                 local stats = self.weaponService:getModifiedStats(player, weaponId)
                                 if stats then
                                         weaponStats[weaponId] = stats
+                                else
+                                        warn(string.format(
+                                                "[PlayerManager] Warning: No modified stats found for player '%s' weaponId '%s'",
+                                                tostring(player), tostring(weaponId)
+                                        ))
                                 end
                         end
                 end
