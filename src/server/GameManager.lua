@@ -38,12 +38,16 @@ function GameManager.new()
         self.resourceSpawner = ResourceSpawner.new(self.playerManager)
         self.mapManager = MapManager.new()
         self.spawner = Spawner.new(self.weaponService)
+        
+        -- Link WeaponService to PlayerManager for stats calculation
+        self.playerManager:setWeaponService(self.weaponService)
 
         if GameConfig.ENABLE_MULTI_MAP then
                 self.mapManager:loadDefault()
                 self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
                 self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
         else
+                -- Load spawn points from workspace folders only
                 self.spawner:loadSpawnPoints()
                 -- Do not overwrite spawn points with potentially empty mapManager data
                 -- self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
@@ -181,8 +185,9 @@ end
 
 function GameManager:generateEndlessWave()
         -- Generate procedural waves after configured waves end
-        -- Note: Currently uses linear zombie count scaling. Additional difficulty scaling
-        -- (health, speed, damage) could be applied for increased challenge in endless mode.
+        -- Note: Currently uses linear zombie count scaling. Health scaling is already applied via
+        -- GameConfig.ZOMBIE_HEALTH_MULTIPLIER; additional scaling (e.g., speed, damage, or more aggressive health scaling)
+        -- could be added for increased challenge in endless mode.
         local baseCount = 15 + (self.currentWave * 2)
 
         return {
@@ -281,7 +286,7 @@ end
 
 function GameManager:updateCountdown(deltaTime)
         self.stateTimer = self.stateTimer - deltaTime
-        self.resourceSpawner:update(deltaTime)
+        -- self.resourceSpawner:update(deltaTime) -- Do not spawn resources during COUNTDOWN
 
         if self.stateTimer <= 0 then
                 -- Start first wave

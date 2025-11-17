@@ -13,8 +13,13 @@ function PlayerManager.new()
         self.players = {} -- player userId -> player data
         self.alliances = {} -- player userId -> table of allied player userIds
         self.remoteEvents = {}
+        self.weaponService = nil -- Will be set after WeaponService is created
         self:setupRemoteEvents()
         return self
+end
+
+function PlayerManager:setWeaponService(weaponService)
+        self.weaponService = weaponService
 end
 
 function PlayerManager:setupRemoteEvents()
@@ -92,6 +97,9 @@ function PlayerManager:addCurrency(player, amount)
         -- Only allow non-negative amounts to be added. Use deductCurrency for deductions.
         if type(amount) ~= "number" or amount < 0 then
                 warn("[PlayerManager] addCurrency called with negative or invalid amount: " .. tostring(amount))
+                return
+        end
+        if amount == 0 then
                 return
         end
         local playerData = self.players[player.UserId]
@@ -232,9 +240,23 @@ end
 
 function PlayerManager:sendWeaponLoadout(player)
         if self.remoteEvents.WeaponLoadoutUpdate then
+                local weaponStats = {}
+                
+                -- Gather stats for all owned weapons (with upgrades applied)
+                if self.weaponService then
+                        local weapons = self:getWeapons(player)
+                        for _, weaponId in ipairs(weapons) do
+                                local stats = self.weaponService:getModifiedStats(player, weaponId)
+                                if stats then
+                                        weaponStats[weaponId] = stats
+                                end
+                        end
+                end
+                
                 self.remoteEvents.WeaponLoadoutUpdate:FireClient(player, {
                         weapons = self:getWeapons(player),
-                        equipped = self:getEquippedWeapon(player)
+                        equipped = self:getEquippedWeapon(player),
+                        stats = weaponStats
                 })
         end
 end

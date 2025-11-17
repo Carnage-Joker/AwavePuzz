@@ -1,4 +1,3 @@
--- ResourceSpawner.lua
 -- Manages spawning of cure components around the map and awards inventory items on pickup
 
 local Players = game:GetService("Players")
@@ -84,7 +83,13 @@ function ResourceSpawner:spawnResource()
         textLabel.Parent = billboard
 
         local touchDetector
+        local debouncing = false
         touchDetector = part.Touched:Connect(function(hit)
+                -- Debounce to prevent multiple rapid touches
+                if debouncing then
+                        return
+                end
+
                 local character = hit and hit.Parent
                 if not character then
                         return
@@ -94,6 +99,7 @@ function ResourceSpawner:spawnResource()
                         return
                 end
 
+                debouncing = true
                 self:onResourceCollected(player, resourceId, componentName, part)
         end)
 

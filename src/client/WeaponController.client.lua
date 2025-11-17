@@ -23,6 +23,8 @@ function WeaponController.new()
         self.isFiring = false
         self.currentWeapon = nil
         self.weapons = {}
+        self.lastFireTime = 0
+        self.weaponStats = {} -- Store weapon stats for fire rate tracking
         return self
 end
 
@@ -65,6 +67,9 @@ function WeaponController:start()
                 if payload.equipped then
                         self.currentWeapon = payload.equipped
                 end
+                if payload.stats then
+                        self.weaponStats = payload.stats
+                end
         end)
 
         hitEvent.OnClientEvent:Connect(function(payload)
@@ -80,6 +85,16 @@ function WeaponController:fire()
                 return
         end
 
+        -- Client-side fire rate throttling to prevent excessive RemoteEvent calls
+        local currentTime = tick()
+        local weaponStats = self.weaponStats[self.currentWeapon]
+        if weaponStats and weaponStats.FireRate then
+                local cooldown = weaponStats.FireRate
+                if currentTime - self.lastFireTime < cooldown then
+                        return -- Still on cooldown
+                end
+        end
+
         local character = player.Character
         if not character then
                 return
@@ -88,6 +103,9 @@ function WeaponController:fire()
         if not hrp then
                 return
         end
+
+        -- Update last fire time after passing cooldown check
+        self.lastFireTime = currentTime
 
         local targetPosition = mouse.Hit and mouse.Hit.Position or (hrp.Position + hrp.CFrame.LookVector * 50)
         local origin = hrp.Position + Vector3.new(0, 2, 0)
@@ -112,6 +130,7 @@ function WeaponController:equipSlot(slot)
         end
 
         self.currentWeapon = weaponId
+        self.lastFireTime = tick() -- Preserve cooldown when switching weapons
         equipEvent:FireServer(weaponId)
 end
 
