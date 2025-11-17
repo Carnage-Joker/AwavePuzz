@@ -75,6 +75,7 @@ local spawnController = Spawner.new({
         baseHealthValue.Value = math.max(baseHealthValue.Value - amount, 0)
         if baseHealthValue.Value <= 0 then
             spawnController:StopWave()
+            matchActive = false
             waveAnnounce:FireAllClients({message = "Base destroyed! Survivors failed."})
         end
     end,
@@ -95,6 +96,7 @@ end
 
 local function regenBase()
     baseHealthValue.Value = math.min(Config.Base.MaxHealth, baseHealthValue.Value + Config.Base.WaveClearRegen)
+    broadcastWave()
 end
 
 local function getWaveData(index)

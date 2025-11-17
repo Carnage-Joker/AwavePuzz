@@ -197,10 +197,10 @@ If zombie models don't exist, the system creates basic placeholder models automa
 - Player statistics tracking
 
 ### Phase 2 (Medium)
-- Weapon system with raycast
-- Player inventory system
-- Upgrade/shop system
-- Multiple map support
+- **Weapon system with raycast** – Added `WeaponConfig`, `WeaponService`, and the client `WeaponController` for server-authoritative firing, per-weapon stats, and on-hit validation.
+- **Player inventory system** – `PlayerManager` now tracks currency, cure components, and owned weapons with live UI updates via `InventoryUI`.
+- **Upgrade/shop system** – Implemented `ShopService` plus a client shop UI (`B` key) so players can buy new guns or apply stat upgrades using earned cash.
+- **Multiple map support** – `MapManager` selects/clones maps from `ServerStorage.Maps`, feeding spawn data to the spawner and resource system.
 
 ### Phase 3 (Advanced)
 - Procedural wave generation

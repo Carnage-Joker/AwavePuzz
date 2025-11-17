@@ -18,6 +18,7 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 - Zombies get stronger and more numerous each wave
 - Strategic base defense mechanics
 - Base health system with damage tracking
+- Reward payouts per kill based on weapon used
 
 ### 3. **Cure-Crafting Puzzle System**
 - 5 unique cure components to collect:
@@ -36,7 +37,23 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 - Betrayal mechanics with cooldown system
 - Strategic decision-making between cooperation and competition
 
-### 5. **Win/Lose Conditions**
+### 5. **Weapon & Upgrade System**
+- Server-authoritative raycast weapons with fire-rate balancing
+- Earn currency from kills and wave completions
+- Camp Vendor shop with weapon unlocks and stat upgrades
+- Hotkeys to swap between owned weapons on the fly
+
+### 6. **Inventory & Resource Loop**
+- Visible inventory tracker for cure components
+- Server-spawned resource pickups scattered per map
+- Cure stations validate inventory before allowing deposits
+
+### 7. **Dynamic Map Support**
+- MapManager clones any map model stored in `ServerStorage.Maps`
+- Each map carries its own zombie/resource spawn points
+- Clients receive map announcements at match start
+
+### 8. **Win/Lose Conditions**
 **Victory:** Successfully craft the cure by collecting all required components
 
 **Defeat:** Game ends when:
@@ -75,6 +92,8 @@ AwavePuzz/
 ### Player Mechanics
 - Starting health: 100 HP
 - No respawning (hardcore mode)
+- Earn cash from kills and wave completions
+- Purchase or upgrade weapons at the shop (default key **B**)
 - Can form and break alliances
 - Collect cure components to contribute to victory
 
@@ -89,6 +108,19 @@ AwavePuzz/
 - Components spawn periodically around the map
 - Maximum 10 resources on map at once
 - New resources spawn every 45 seconds
+- Inventory is server-tracked; depositing consumes from your bag
+- Puzzle mini-events can reward additional components
+
+### Weapons & Upgrades
+- Default pistol for every survivor
+- Additional weapons: SMG, Shotgun, Rifle
+- Damage/Firerate upgrade chips apply permanent buffs per player
+- Raycast validation runs on the server to prevent exploits
+
+### Map Rotation
+- `ServerStorage.Maps` can contain themed arenas (e.g., Research Outpost, Desert Ruins)
+- Each map provides its own `ZombieSpawnPoints` and `ResourceSpawnPoints`
+- Fallback to legacy workspace folders when a map is missing
 
 ## 🔧 Configuration
 

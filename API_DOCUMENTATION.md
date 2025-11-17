@@ -4,6 +4,7 @@ This document describes the API for each module in the AwavePuzz game system.
 
 ## Table of Contents
 - [GameConfig](#gameconfig)
+- [WeaponConfig](#weaponconfig)
 - [GameState](#gamestate)
 - [GameServer](#gameserver)
 - [PlayerManager](#playermanager)
@@ -11,6 +12,9 @@ This document describes the API for each module in the AwavePuzz game system.
 - [BaseManager](#basemanager)
 - [CureCraftingManager](#curecraftingmanager)
 - [ResourceSpawner](#resourcespawner)
+- [WeaponService](#weaponservice)
+- [ShopService](#shopservice)
+- [MapManager](#mapmanager)
 - [ClientController](#clientcontroller)
 
 ---
@@ -62,6 +66,31 @@ CURE_COMPONENT_NAMES = {              -- Available components
     "Research Notes",
     "Catalyst"
 }
+```
+
+---
+
+## WeaponConfig
+
+**Location**: `src/shared/WeaponConfig.lua`
+**Type**: Configuration Module
+**Description**: Central catalog for every weapon, upgrade, and shop entry.
+
+### Tables
+
+```lua
+WeaponConfig.DefaultWeapon -- Starting weapon id
+WeaponConfig.Weapons -- Stats per weapon (Damage, FireRate, Range, RewardBonus, etc.)
+WeaponConfig.Upgrades -- Upgrade definitions with affected stat + multiplier
+WeaponConfig.ShopItems -- Ordered array used by the shop/camp vendor UI
+```
+
+### Helper Functions
+
+```lua
+WeaponConfig.getWeapon(weaponId) -> table
+WeaponConfig.getUpgrade(upgradeId) -> table
+WeaponConfig.getCatalog() -> {items}
 ```
 
 ---
@@ -591,12 +620,12 @@ Resets cure progress.
 
 **Location**: `src/server/ResourceSpawner.lua`  
 **Type**: Class  
-**Description**: Manages spawning of cure components on the map.
+**Description**: Spawns physical resource pickups, awards inventory items on touch, and enforces the max resource limit per map.
 
 ### Constructor
 
 ```lua
-ResourceSpawner.new() -> ResourceSpawner
+ResourceSpawner.new(playerManager) -> ResourceSpawner
 ```
 
 ### Methods
@@ -615,43 +644,78 @@ Returns a random component name.
 
 #### spawnResource
 ```lua
-ResourceSpawner:spawnResource() -> table|nil
+ResourceSpawner:spawnResource() -> Instance|nil
 ```
-Spawns a resource at random location.
-
-**Returns:**
-```lua
-{
-    id: string,
-    componentName: string,
-    position: Vector3,
-    spawnTime: number
-}
-```
+Creates a glowing part at a random spawn point with the assigned component label.
 
 #### collectResource
 ```lua
 ResourceSpawner:collectResource(resourceId: string) -> string|nil
 ```
-Collects a resource.
-
-**Returns:**
-- `componentName` (string): The component collected, or nil if invalid
+Collects a resource entry manually (used as fallback cleanup).
 
 #### update
 ```lua
-ResourceSpawner:update(deltaTime: number) -> table|nil
+ResourceSpawner:update(deltaTime: number) -> nil
 ```
-Updates spawner, spawns resources periodically.
-
-**Returns:**
-- New resource data if spawned, nil otherwise
+Updates timers and spawns resources periodically.
 
 #### getActiveResourceCount
 ```lua
 ResourceSpawner:getActiveResourceCount() -> number
 ```
 Returns count of active resources on map.
+
+---
+
+## WeaponService
+
+**Location**: `src/server/WeaponService.lua`
+**Type**: Class
+**Description**: Validates player shots, performs server-side raycasts, applies zombie damage, and rewards currency.
+
+### Constructor
+
+```lua
+WeaponService.new(playerManager) -> WeaponService
+```
+
+### Methods
+
+- `initializePlayer(player)` – Seeds default weapon loadout for a player.
+- `handleWeaponFire(player, payload)` – Validates fire-rate and direction, raycasts, and damages zombies.
+- `onZombieKilled(zombieModel)` – Grants the appropriate reward to the killer.
+- `applyUpgrade(player, upgradeId)` – Persists stat upgrades that modify weapon data per player.
+
+---
+
+## ShopService
+
+**Location**: `src/server/ShopService.lua`
+**Type**: Class
+**Description**: Owns the Camp Vendor logic, delivering catalog data and validating purchases via RemoteEvents.
+
+### Methods
+
+- `ShopService.new(playerManager, weaponService)` – Creates the service and binds `ShopRequest`/`ShopUpdate`.
+- `sendCatalog(player)` – Fires current shop items to a client.
+- `attemptPurchase(player, itemId)` – Deducts currency, unlocks weapons, or applies upgrades.
+
+---
+
+## MapManager
+
+**Location**: `src/server/MapManager.lua`
+**Type**: Class
+**Description**: Handles cloning of map models from `ServerStorage.Maps` and exposes spawn points to other systems.
+
+### Methods
+
+- `MapManager.new()` – Initializes the manager and reads fallback spawn folders.
+- `load(mapId)` / `loadDefault()` – Selects a map and extracts spawn points.
+- `getZombieSpawnPoints()` – Returns table of zombie spawn `Vector3`s.
+- `getResourceSpawnPoints()` – Returns table of resource spawn `Vector3`s.
+- `getCurrentMapId()` – Returns the active map identifier for UI announcements.
 
 ---
 
