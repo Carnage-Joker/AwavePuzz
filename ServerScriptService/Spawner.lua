@@ -133,12 +133,9 @@ function Spawner:SpawnZombieOfType(zombieTypeName)
             local spawnPosition = spawnPart.Position + Vector3.new(0, 2, 0)
             local rayOrigin = spawnPosition
             local rayDirection = Vector3.new(0, -4, 0) -- Check 4 studs below spawn position
-            
-            -- Use modern Raycast API
             local raycastParams = RaycastParams.new()
             raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
             raycastParams.FilterDescendantsInstances = {zombie}
-            
             local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
             if not raycastResult then
                 zombie:MoveTo(spawnPosition)

@@ -54,8 +54,10 @@ function MapManager:load(mapId)
 end
 
 function MapManager:loadDefault()
+        local id
         local defaultId = select(1, MapConfig.getDefault())
-        self:load(defaultId)
+        id = defaultId
+        self:load(id)
 end
 
 function MapManager:extractPoints()

@@ -94,7 +94,6 @@ function PlayerManager:addCurrency(player, amount)
                 warn("[PlayerManager] addCurrency called with negative or invalid amount: " .. tostring(amount))
                 return
         end
-
         local playerData = self.players[player.UserId]
         if not playerData then
                 return
