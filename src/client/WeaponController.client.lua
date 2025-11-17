@@ -15,8 +15,6 @@ local equipEvent = remoteFolder:WaitForChild("WeaponEquip")
 local loadoutEvent = remoteFolder:WaitForChild("WeaponLoadoutUpdate")
 local hitEvent = remoteFolder:WaitForChild("WeaponHitConfirm")
 
--- Require WeaponConfig to get weapon stats for client-side throttling
-
 local WeaponController = {}
 WeaponController.__index = WeaponController
 
@@ -106,8 +104,8 @@ function WeaponController:fire()
                 return
         end
 
-        -- Update last shot time before firing
-        self.lastShotTime = currentTime
+        -- Update last fire time after passing cooldown check
+        self.lastFireTime = currentTime
 
         local targetPosition = mouse.Hit and mouse.Hit.Position or (hrp.Position + hrp.CFrame.LookVector * 50)
         local origin = hrp.Position + Vector3.new(0, 2, 0)
@@ -119,8 +117,6 @@ function WeaponController:fire()
                 direction = direction,
                 timestamp = tick()
         })
-
-        self.lastFireTime = currentTime
 end
 
 function WeaponController:equipSlot(slot)
@@ -134,7 +130,7 @@ function WeaponController:equipSlot(slot)
         end
 
         self.currentWeapon = weaponId
-        self.lastShotTime = 0 -- Reset cooldown when switching weapons
+        self.lastFireTime = 0 -- Reset cooldown when switching weapons
         equipEvent:FireServer(weaponId)
 end
 
