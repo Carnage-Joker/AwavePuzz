@@ -70,8 +70,10 @@ function MapManager:extractPoints()
         local spawnFolder = root:FindFirstChild("ZombieSpawnPoints")
         if spawnFolder then
                 for _, point in ipairs(spawnFolder:GetChildren()) do
-                        if point:IsA("BasePart") or point:IsA("Attachment") then
+                        if point:IsA("BasePart") then
                                 table.insert(self.zombieSpawnPoints, point.Position)
+                        elseif point:IsA("Attachment") then
+                                table.insert(self.zombieSpawnPoints, point.WorldPosition)
                         elseif point:IsA("Model") and point.PrimaryPart then
                                 table.insert(self.zombieSpawnPoints, point.PrimaryPart.Position)
                         end
@@ -81,8 +83,10 @@ function MapManager:extractPoints()
         local resourceFolder = root:FindFirstChild("ResourceSpawnPoints")
         if resourceFolder then
                 for _, point in ipairs(resourceFolder:GetChildren()) do
-                        if point:IsA("BasePart") or point:IsA("Attachment") then
+                        if point:IsA("BasePart") then
                                 table.insert(self.resourceSpawnPoints, point.Position)
+                        elseif point:IsA("Attachment") then
+                                table.insert(self.resourceSpawnPoints, point.WorldPosition)
                         elseif point:IsA("Model") and point.PrimaryPart then
                                 table.insert(self.resourceSpawnPoints, point.PrimaryPart.Position)
                         end

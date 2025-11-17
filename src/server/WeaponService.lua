@@ -110,11 +110,7 @@ function WeaponService:getModifiedStats(player, weaponId)
                 for upgradeId in pairs(state.upgrades) do
                         local upgrade = WeaponConfig.getUpgrade(upgradeId)
                         if upgrade and upgrade.Type == "stat" and modified[upgrade.Stat] then
-                                if upgrade.Stat == "FireRate" then
-                                        modified[upgrade.Stat] = modified[upgrade.Stat] * upgrade.Multiplier
-                                else
-                                        modified[upgrade.Stat] = modified[upgrade.Stat] * upgrade.Multiplier
-                                end
+                                modified[upgrade.Stat] = modified[upgrade.Stat] * upgrade.Multiplier
                         end
                 end
         end
@@ -192,12 +188,9 @@ function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
         zombieModel:SetAttribute("LastHitWeapon", weaponId)
 
         if stats.PelletCount and stats.PelletCount > 1 then
-                local damagePerPellet = stats.Damage / stats.PelletCount
-                for _ = 1, stats.PelletCount do
-                        humanoid:TakeDamage(damagePerPellet)
-                end
+                humanoid:TakeDamage(stats.Damage / stats.PelletCount)
         else
-                        humanoid:TakeDamage(stats.Damage)
+                humanoid:TakeDamage(stats.Damage)
         end
 end
 
