@@ -38,6 +38,9 @@ function GameManager.new()
         self.resourceSpawner = ResourceSpawner.new(self.playerManager)
         self.mapManager = MapManager.new()
         self.spawner = Spawner.new(self.weaponService)
+        
+        -- Link WeaponService to PlayerManager for stats calculation
+        self.playerManager:setWeaponService(self.weaponService)
 
         if GameConfig.ENABLE_MULTI_MAP then
                 self.mapManager:loadDefault()
