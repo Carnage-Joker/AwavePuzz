@@ -83,8 +83,14 @@ function ResourceSpawner:spawnResource()
         textLabel.Text = componentName
         textLabel.Parent = billboard
 
+        local isCollecting = false
         local touchDetector
         touchDetector = part.Touched:Connect(function(hit)
+                -- Debounce to prevent duplicate collection
+                if isCollecting then
+                        return
+                end
+
                 local character = hit and hit.Parent
                 if not character then
                         return
@@ -94,6 +100,7 @@ function ResourceSpawner:spawnResource()
                         return
                 end
 
+                isCollecting = true
                 self:onResourceCollected(player, resourceId, componentName, part)
         end)
 
