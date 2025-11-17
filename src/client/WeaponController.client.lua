@@ -16,7 +16,6 @@ local loadoutEvent = remoteFolder:WaitForChild("WeaponLoadoutUpdate")
 local hitEvent = remoteFolder:WaitForChild("WeaponHitConfirm")
 
 -- Require WeaponConfig to get weapon stats for client-side throttling
-local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local WeaponController = {}
 WeaponController.__index = WeaponController
