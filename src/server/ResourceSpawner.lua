@@ -83,7 +83,6 @@ function ResourceSpawner:spawnResource()
         textLabel.Text = componentName
         textLabel.Parent = billboard
 
-        local isCollecting = false
         local touchDetector
         local debouncing = false
         touchDetector = part.Touched:Connect(function(hit)
