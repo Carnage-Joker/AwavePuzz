@@ -15,6 +15,9 @@ local equipEvent = remoteFolder:WaitForChild("WeaponEquip")
 local loadoutEvent = remoteFolder:WaitForChild("WeaponLoadoutUpdate")
 local hitEvent = remoteFolder:WaitForChild("WeaponHitConfirm")
 
+-- Require WeaponConfig to get weapon stats for client-side throttling
+local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+
 local WeaponController = {}
 WeaponController.__index = WeaponController
 
@@ -23,6 +26,7 @@ function WeaponController.new()
         self.isFiring = false
         self.currentWeapon = nil
         self.weapons = {}
+        self.lastShotTime = 0 -- Track last shot time for client-side throttling
         return self
 end
 
@@ -80,6 +84,18 @@ function WeaponController:fire()
                 return
         end
 
+        -- Get weapon stats for client-side fire rate throttling
+        local weaponStats = WeaponConfig.getWeapon(self.currentWeapon)
+        if not weaponStats then
+                return
+        end
+
+        -- Check client-side cooldown to prevent excessive RemoteEvent fires
+        local now = tick()
+        if now - self.lastShotTime < weaponStats.FireRate then
+                return -- Still on cooldown
+        end
+
         local character = player.Character
         if not character then
                 return
@@ -88,6 +104,9 @@ function WeaponController:fire()
         if not hrp then
                 return
         end
+
+        -- Update last shot time before firing
+        self.lastShotTime = now
 
         local targetPosition = mouse.Hit and mouse.Hit.Position or (hrp.Position + hrp.CFrame.LookVector * 50)
         local origin = hrp.Position + Vector3.new(0, 2, 0)
@@ -112,6 +131,7 @@ function WeaponController:equipSlot(slot)
         end
 
         self.currentWeapon = weaponId
+        self.lastShotTime = 0 -- Reset cooldown when switching weapons
         equipEvent:FireServer(weaponId)
 end
 
