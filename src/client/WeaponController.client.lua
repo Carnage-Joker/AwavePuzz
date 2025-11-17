@@ -89,7 +89,7 @@ function WeaponController:fire()
         local currentTime = tick()
         local weaponStats = self.weaponStats[self.currentWeapon]
         if weaponStats and weaponStats.FireRate then
-                local cooldown = 1 / weaponStats.FireRate
+                local cooldown = weaponStats.FireRate
                 if currentTime - self.lastFireTime < cooldown then
                         return -- Still on cooldown
                 end
