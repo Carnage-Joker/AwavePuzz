@@ -286,7 +286,7 @@ end
 
 function GameManager:updateCountdown(deltaTime)
         self.stateTimer = self.stateTimer - deltaTime
-        self.resourceSpawner:update(deltaTime)
+        -- self.resourceSpawner:update(deltaTime) -- Do not spawn resources during COUNTDOWN
 
         if self.stateTimer <= 0 then
                 -- Start first wave
