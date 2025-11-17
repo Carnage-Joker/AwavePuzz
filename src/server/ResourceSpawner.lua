@@ -85,9 +85,10 @@ function ResourceSpawner:spawnResource()
 
         local isCollecting = false
         local touchDetector
+        local debouncing = false
         touchDetector = part.Touched:Connect(function(hit)
-                -- Debounce to prevent duplicate collection
-                if isCollecting then
+                -- Debounce to prevent multiple rapid touches
+                if debouncing then
                         return
                 end
 
@@ -100,7 +101,7 @@ function ResourceSpawner:spawnResource()
                         return
                 end
 
-                isCollecting = true
+                debouncing = true
                 self:onResourceCollected(player, resourceId, componentName, part)
         end)
 
