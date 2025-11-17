@@ -246,7 +246,10 @@ function PlayerManager:sendWeaponLoadout(player)
                 if self.weaponService then
                         local weapons = self:getWeapons(player)
                         for _, weaponId in ipairs(weapons) do
-                                weaponStats[weaponId] = self.weaponService:getModifiedStats(player, weaponId)
+                                local stats = self.weaponService:getModifiedStats(player, weaponId)
+                                if stats then
+                                        weaponStats[weaponId] = stats
+                                end
                         end
                 end
                 
