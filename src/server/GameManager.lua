@@ -38,12 +38,16 @@ function GameManager.new()
         self.resourceSpawner = ResourceSpawner.new(self.playerManager)
         self.mapManager = MapManager.new()
         self.spawner = Spawner.new(self.weaponService)
+        
+        -- Link WeaponService to PlayerManager for stats calculation
+        self.playerManager:setWeaponService(self.weaponService)
 
         if GameConfig.ENABLE_MULTI_MAP then
                 self.mapManager:loadDefault()
                 self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
                 self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
         else
+                -- Load spawn points from workspace folders only
                 self.spawner:loadSpawnPoints()
                 -- Do not overwrite spawn points with potentially empty mapManager data
                 -- self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())

@@ -23,6 +23,8 @@ function WeaponController.new()
         self.isFiring = false
         self.currentWeapon = nil
         self.weapons = {}
+        self.lastFireTime = 0
+        self.weaponStats = {} -- Store weapon stats for fire rate tracking
         return self
 end
 
@@ -65,6 +67,9 @@ function WeaponController:start()
                 if payload.equipped then
                         self.currentWeapon = payload.equipped
                 end
+                if payload.stats then
+                        self.weaponStats = payload.stats
+                end
         end)
 
         hitEvent.OnClientEvent:Connect(function(payload)
@@ -78,6 +83,16 @@ end
 function WeaponController:fire()
         if not self.currentWeapon then
                 return
+        end
+
+        -- Client-side fire rate throttling to prevent excessive RemoteEvent calls
+        local currentTime = tick()
+        local weaponStats = self.weaponStats[self.currentWeapon]
+        if weaponStats and weaponStats.FireRate then
+                local cooldown = weaponStats.FireRate
+                if currentTime - self.lastFireTime < cooldown then
+                        return -- Still on cooldown
+                end
         end
 
         local character = player.Character
@@ -99,6 +114,8 @@ function WeaponController:fire()
                 direction = direction,
                 timestamp = tick()
         })
+
+        self.lastFireTime = currentTime
 end
 
 function WeaponController:equipSlot(slot)
