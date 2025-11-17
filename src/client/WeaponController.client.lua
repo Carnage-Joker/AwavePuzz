@@ -107,7 +107,7 @@ function WeaponController:fire()
         end
 
         -- Update last shot time before firing
-        self.lastShotTime = now
+        self.lastShotTime = currentTime
 
         local targetPosition = mouse.Hit and mouse.Hit.Position or (hrp.Position + hrp.CFrame.LookVector * 50)
         local origin = hrp.Position + Vector3.new(0, 2, 0)
