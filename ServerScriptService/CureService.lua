@@ -172,9 +172,9 @@ function CureService:handleDepositComponent(player, componentName)
         return
     end
     
-    -- In Phase 3, we don't have PlayerManager inventory yet
-    -- Components are collected from the world via ResourceSpawner
-    -- For now, accept the deposit (ResourceSpawner will validate pickup)
+    -- Note: In Phase 3, component collection is validated by ResourceSpawner
+    -- which calls this function directly after successful touch detection.
+    -- This ensures only actually collected resources increment the cure progress.
     
     -- Add component
     self.componentsCollected[componentName] = self.componentsCollected[componentName] + 1

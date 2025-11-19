@@ -37,22 +37,6 @@ local ResourceSpawner = require(script.Parent:WaitForChild("ResourceSpawner"))
 local waveAnnounce = getOrCreateRemote("WaveAnnounce")
 local waveUpdate = getOrCreateRemote("WaveUpdate")
 
--- Phase 3: Game manager state
-local gameManager = {
-    onCureComplete = function()
-        matchActive = false
-        waveAnnounce:FireAllClients({message = "CURE COMPLETE! Victory!"})
-        spawnController:StopWave()
-        print("=== VICTORY: CURE COMPLETED ===")
-    end
-}
-
--- Phase 3: Initialize cure systems
-local cureService = CureService.new(gameManager)
-local resourceSpawner = ResourceSpawner.new(cureService)
-
-print("Phase 3 systems initialized: CureService and ResourceSpawner")
-
 local statusFolder = ReplicatedStorage:FindFirstChild("GameStatus") or Instance.new("Folder")
 statusFolder.Name = "GameStatus"
 statusFolder.Parent = ReplicatedStorage
@@ -78,7 +62,34 @@ timeLeftValue.Value = 0
 timeLeftValue.Parent = statusFolder
 
 local baseCaptureZone = workspace:WaitForChild("BaseCaptureZone")
-local spawnController = Spawner.new({
+
+local waveIndex = 0
+local matchActive = true
+local countdown = Config.Waves.InitialCountdown
+
+-- Forward declare spawnController for use in gameManager
+local spawnController
+
+-- Phase 3: Game manager state
+local gameManager = {
+    onCureComplete = function()
+        matchActive = false
+        waveAnnounce:FireAllClients({message = "CURE COMPLETE! Victory!"})
+        if spawnController then
+            spawnController:StopWave()
+        end
+        print("=== VICTORY: CURE COMPLETED ===")
+    end
+}
+
+-- Phase 3: Initialize cure systems
+local cureService = CureService.new(gameManager)
+local resourceSpawner = ResourceSpawner.new(cureService)
+
+print("Phase 3 systems initialized: CureService and ResourceSpawner")
+
+-- Initialize spawner (after gameManager is created)
+spawnController = Spawner.new({
     TargetPart = baseCaptureZone,
     OnZombieSpawned = function()
         zombiesAliveValue.Value = zombiesAliveValue.Value + 1
@@ -101,10 +112,6 @@ local spawnController = Spawner.new({
         end
     end,
 })
-
-local waveIndex = 0
-local matchActive = true
-local countdown = Config.Waves.InitialCountdown
 
 local function broadcastWave()
     waveUpdate:FireAllClients({
