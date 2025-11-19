@@ -12,13 +12,13 @@ local CureService = require(script.Parent.CureService)
 
 print("=== AwavePuzz Server Starting ===")
 
--- Initialize game manager
-local gameManager = GameManager.new()
-print("GameManager initialized")
-
--- Initialize alliance service
+-- Initialize alliance service first (needed by GameManager)
 local allianceService = AllianceService.new()
 print("AllianceService initialized")
+
+-- Initialize game manager (will create WeaponService with AllianceService reference)
+local gameManager = GameManager.new(allianceService)
+print("GameManager initialized")
 
 -- Initialize cure service (needs reference to game manager & player manager)
 local cureService = CureService.new(gameManager, gameManager:getPlayerManager())

@@ -27,13 +27,16 @@ GameManager.States = {
         DEFEAT = "Defeat"
 }
 
-function GameManager.new()
+function GameManager.new(allianceService)
         local self = setmetatable({}, GameManager)
+
+        -- Store alliance service reference
+        self.allianceService = allianceService
 
         -- Managers
         self.baseManager = BaseManager.new()
         self.playerManager = PlayerManager.new()
-        self.weaponService = WeaponService.new(self.playerManager)
+        self.weaponService = WeaponService.new(self.playerManager, allianceService)
         self.shopService = ShopService.new(self.playerManager, self.weaponService)
         self.resourceSpawner = ResourceSpawner.new(self.playerManager)
         self.mapManager = MapManager.new()

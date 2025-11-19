@@ -147,6 +147,7 @@ notificationLabel.Parent = notificationFrame
 -- State
 local myAlliances = {}
 local pendingRequest = nil
+local allyHighlights = {} -- Track highlight objects for allies
 
 -- Functions
 local function showNotification(message, duration)
@@ -156,6 +157,62 @@ local function showNotification(message, duration)
 	task.delay(duration or 3, function()
 		notificationFrame.Visible = false
 	end)
+end
+
+local function addAllyHighlight(allyPlayer)
+	-- Remove any existing highlight for this player
+	if allyHighlights[allyPlayer.UserId] then
+		allyHighlights[allyPlayer.UserId]:Destroy()
+		allyHighlights[allyPlayer.UserId] = nil
+	end
+	
+	-- Wait for character if it doesn't exist yet
+	local character = allyPlayer.Character
+	if not character then
+		allyPlayer.CharacterAdded:Wait()
+		character = allyPlayer.Character
+	end
+	
+	if character then
+		-- Create highlight effect for ally
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "AllyHighlight"
+		highlight.FillColor = Color3.fromRGB(100, 200, 100) -- Green for allies
+		highlight.FillTransparency = 0.5
+		highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+		highlight.OutlineTransparency = 0
+		highlight.Parent = character
+		
+		allyHighlights[allyPlayer.UserId] = highlight
+		
+		-- Re-add highlight if character respawns
+		allyPlayer.CharacterAdded:Connect(function(newChar)
+			if myAlliances[allyPlayer.UserId] then
+				task.wait(0.1) -- Small delay for character to load
+				addAllyHighlight(allyPlayer)
+			end
+		end)
+	end
+end
+
+local function removeAllyHighlight(allyPlayer)
+	if allyHighlights[allyPlayer.UserId] then
+		allyHighlights[allyPlayer.UserId]:Destroy()
+		allyHighlights[allyPlayer.UserId] = nil
+	end
+end
+
+local function updateAllyVisuals()
+	-- Update highlights for all players
+	for _, otherPlayer in ipairs(Players:GetPlayers()) do
+		if otherPlayer ~= player then
+			if myAlliances[otherPlayer.UserId] then
+				addAllyHighlight(otherPlayer)
+			else
+				removeAllyHighlight(otherPlayer)
+			end
+		end
+	end
 end
 
 local function updatePlayerList()
@@ -280,6 +337,7 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		showNotification("Alliance formed with " .. data.withName, 3)
 		requestFrame.Visible = false
 		updatePlayerList()
+		updateAllyVisuals()
 		
 	elseif data.type == "broken" then
 		-- Alliance was broken
@@ -290,6 +348,7 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 			showNotification(data.withName .. " betrayed you!", 3)
 		end
 		updatePlayerList()
+		updateAllyVisuals()
 		
 	elseif data.type == "rejected" then
 		-- Request was rejected
@@ -326,15 +385,20 @@ declineButton.MouseButton1Click:Connect(function()
 end)
 
 -- Listen for player changes
-Players.PlayerAdded:Connect(function()
+Players.PlayerAdded:Connect(function(newPlayer)
 	task.wait(0.5)
 	if mainFrame.Visible then
 		updatePlayerList()
+	end
+	-- Add highlight if they're an ally
+	if myAlliances[newPlayer.UserId] then
+		addAllyHighlight(newPlayer)
 	end
 end)
 
 Players.PlayerRemoving:Connect(function(removedPlayer)
 	myAlliances[removedPlayer.UserId] = nil
+	removeAllyHighlight(removedPlayer)
 	if mainFrame.Visible then
 		updatePlayerList()
 	end
