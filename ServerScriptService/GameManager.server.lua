@@ -1,10 +1,11 @@
 --[[
     GameManager
     Controls the wave loop, base health, and RemoteEvent updates.
-    Later phases will extend this script to integrate cure progress and alliances.
+    Phase 3: Integrated with CureService and ResourceSpawner for win condition
 ]]
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local sharedFolder = ReplicatedStorage:FindFirstChild("Shared") or Instance.new("Folder")
@@ -29,8 +30,28 @@ local Config = require(sharedFolder:WaitForChild("Config"))
 local WaveConfig = require(sharedFolder:WaitForChild("WaveConfig"))
 local Spawner = require(script.Parent:WaitForChild("Spawner"))
 
+-- Phase 3: Require cure system modules
+local CureService = require(script.Parent:WaitForChild("CureService"))
+local ResourceSpawner = require(script.Parent:WaitForChild("ResourceSpawner"))
+
 local waveAnnounce = getOrCreateRemote("WaveAnnounce")
 local waveUpdate = getOrCreateRemote("WaveUpdate")
+
+-- Phase 3: Game manager state
+local gameManager = {
+    onCureComplete = function()
+        matchActive = false
+        waveAnnounce:FireAllClients({message = "CURE COMPLETE! Victory!"})
+        spawnController:StopWave()
+        print("=== VICTORY: CURE COMPLETED ===")
+    end
+}
+
+-- Phase 3: Initialize cure systems
+local cureService = CureService.new(gameManager)
+local resourceSpawner = ResourceSpawner.new(cureService)
+
+print("Phase 3 systems initialized: CureService and ResourceSpawner")
 
 local statusFolder = ReplicatedStorage:FindFirstChild("GameStatus") or Instance.new("Folder")
 statusFolder.Name = "GameStatus"
@@ -122,9 +143,16 @@ local function startWave()
     spawnController:StartWave(waveData)
 
     local timer = waveData.timeLimit
-    while timer > 0 and baseHealthValue.Value > 0 do
+    local updateCounter = 0
+    
+    while timer > 0 and baseHealthValue.Value > 0 and matchActive do
         timer -= 1
         timeLeftValue.Value = timer
+        updateCounter += 1
+        
+        -- Phase 3: Update resource spawner every second
+        resourceSpawner:update(1)
+        
         broadcastWave()
 
         if spawnController:IsFinishedSpawning() and zombiesAliveValue.Value <= 0 then
@@ -139,7 +167,18 @@ local function startWave()
 end
 
 local function intermission()
-    runCountdown(Config.Waves.Intermission, "Next wave in")
+    -- Phase 3: Continue spawning resources during intermission
+    local intermissionTime = Config.Waves.Intermission
+    for i = intermissionTime, 1, -1 do
+        waveAnnounce:FireAllClients({message = string.format("Next wave in %d", i)})
+        timeLeftValue.Value = i
+        broadcastWave()
+        
+        -- Update resource spawner
+        resourceSpawner:update(1)
+        
+        task.wait(1)
+    end
 end
 
 local function mainLoop()

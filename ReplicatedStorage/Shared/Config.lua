@@ -22,4 +22,18 @@ Config.Spawning = {
     DefaultAttackRange = 6,
 }
 
+-- Cure Crafting Settings (Phase 3)
+Config.Cure = {
+    ComponentsRequired = 5, -- How many of each component type needed
+    ComponentNames = {
+        "Chemical A",
+        "Chemical B",
+        "Biological Sample",
+        "Research Notes",
+        "Catalyst"
+    },
+    ResourceSpawnRate = 45, -- Seconds between resource spawns
+    MaxResourcesOnMap = 10,
+}
+
 return Config
