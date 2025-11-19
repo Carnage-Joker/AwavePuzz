@@ -31,11 +31,14 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 - Resources spawn randomly around the map
 - Progress tracking system
 
-### 4. **Alliance System**
+### 4. **Alliance System** ✅ PHASE 4 COMPLETE
 - Team up with other players for better survival
-- Allied players can't damage each other
-- Betrayal mechanics with cooldown system
+- Allied players can't damage each other (friendly fire prevention)
+- Visual indicators: Green highlights show who is allied
+- Betrayal mechanics with 60-second cooldown
 - Strategic decision-making between cooperation and competition
+- PvP enabled between non-allied players
+- Alliance UI accessible with Tab key
 
 ### 5. **Weapon & Upgrade System**
 - Server-authoritative raycast weapons with fire-rate balancing

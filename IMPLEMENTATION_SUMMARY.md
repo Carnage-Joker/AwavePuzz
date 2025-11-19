@@ -6,10 +6,12 @@ AwavePuzz is a complete multiplayer Roblox zombie survival game featuring wave-b
 ## Implementation Statistics
 
 - **Total Lua Files**: 21
-- **Documentation Files**: 5 (README, API_DOCUMENTATION, GAME_DESIGN, INSTALLATION, ROBLOX_SETUP)
+- **Documentation Files**: 9 (README, API_DOCUMENTATION, GAME_DESIGN, INSTALLATION, ROBLOX_SETUP, PHASE3_SUMMARY, PHASE3_TESTING, PHASE4_SUMMARY, PHASE4_TESTING)
 - **Server Scripts**: 13
 - **Client Scripts**: 5
 - **Shared Modules**: 4
+- **Phase 3 (Cure System)**: ✅ Complete
+- **Phase 4 (Alliance System)**: ✅ Complete
 
 ## Features Implemented
 
@@ -39,12 +41,17 @@ AwavePuzz is a complete multiplayer Roblox zombie survival game featuring wave-b
    - Progress tracking (0-100%)
    - Win condition when cure complete
 
-5. **Alliance System**
+5. **Alliance System** ✅ PHASE 4 COMPLETE
    - Request alliances with other players
-   - Accept/decline mechanics
+   - Accept/decline mechanics with UI
    - Betrayal functionality
    - 60-second betrayal cooldown
-   - No friendly fire between allies
+   - No friendly fire between allies (server-authoritative)
+   - PvP enabled between non-allied players
+   - Visual indicators: Green highlights on allied players
+   - Alliance UI accessible with Tab key
+   - Highlights persist across character respawns
+   - Automatic cleanup on player disconnect
 
 ### ✅ User Interface
 1. **WaveUI** - Shows wave number, time remaining, zombie count
@@ -249,12 +256,52 @@ If zombie models don't exist, the system creates basic placeholder models automa
 - Comprehensive game design document
 - Step-by-step installation guide
 - Quick setup guide for Roblox Studio
+- Phase 3 documentation (Cure System): Summary and Testing Guide
+- Phase 4 documentation (Alliance System): Summary and Testing Guide
+
+## Phase Development Progress
+
+### ✅ Phase 1 - Core Loop (Complete)
+- GameManager, Spawner, ZombieBrain, Waves
+- Basic gameplay loop functional
+- Server-authoritative design
+
+### ✅ Phase 2 - Weapons & Damage (Complete)  
+- Raycast weapon system
+- Kill rewards and currency
+- Shop system
+- Weapon upgrades
+- Inventory management
+
+### ✅ Phase 3 - Cure System (Complete)
+- CureService for puzzle management
+- Resource spawning system
+- Component collection
+- Cure stations with ProximityPrompts
+- Win condition on 100% cure completion
+- Detailed documentation provided
+
+### ✅ Phase 4 - Alliances (Complete)
+- AllianceService integration
+- Friendly fire prevention
+- PvP damage for non-allies
+- Visual indicators (green highlights)
+- Betrayal system with cooldown
+- Alliance UI with Tab key
+- Comprehensive documentation provided
+
+### 🔜 Phase 5 - Polish & Balancing (Future)
+- Sound effects and music
+- Visual effects
+- UI improvements
+- Difficulty tuning
+- Performance optimization
 
 ## Conclusion
 
-AwavePuzz is a fully functional, production-ready Roblox game that implements all required features from the problem statement. The modular architecture makes it easy to extend with additional features like weapons, more zombie types, or different game modes. The comprehensive documentation ensures anyone can set up and modify the game.
+AwavePuzz is a fully functional, production-ready Roblox game that implements all required features from the problem statement. Phases 1-4 are complete with full functionality and documentation. The modular architecture makes it easy to extend with additional features. The comprehensive documentation ensures anyone can set up, test, and modify the game.
 
-**Status**: ✅ **COMPLETE AND READY FOR DEPLOYMENT**
+**Status**: ✅ **PHASES 1-4 COMPLETE AND READY FOR TESTING**
 
 ---
 

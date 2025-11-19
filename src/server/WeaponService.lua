@@ -18,9 +18,10 @@ end
 local WeaponService = {}
 WeaponService.__index = WeaponService
 
-function WeaponService.new(playerManager)
+function WeaponService.new(playerManager, allianceService)
         local self = setmetatable({}, WeaponService)
         self.playerManager = playerManager
+        self.allianceService = allianceService
         self.playerWeaponState = {} -- userId -> state
         self.remoteEvents = {}
         self:setupRemoteEvents()
@@ -167,13 +168,35 @@ function WeaponService:handleWeaponFire(player, payload)
         local result = Workspace:Raycast(origin, rayDirection, params)
         if result then
                 local hitInstance = result.Instance
-                local zombieModel = hitInstance and hitInstance:FindFirstAncestorOfClass("Model")
-                if zombieModel and zombieModel:GetAttribute("IsZombie") then
-                        self:damageZombie(zombieModel, player, stats, weaponId)
-                        self.remoteEvents.WeaponHitConfirm:FireClient(player, {
-                                position = result.Position,
-                                target = zombieModel.Name
-                        })
+                local hitModel = hitInstance and hitInstance:FindFirstAncestorOfClass("Model")
+                
+                if hitModel then
+                        -- Check if hit a zombie
+                        if hitModel:GetAttribute("IsZombie") then
+                                self:damageZombie(hitModel, player, stats, weaponId)
+                                self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+                                        position = result.Position,
+                                        target = hitModel.Name
+                                })
+                        -- Check if hit a player
+                        elseif hitModel:FindFirstChild("Humanoid") then
+                                local hitPlayer = Players:GetPlayerFromCharacter(hitModel)
+                                if hitPlayer and hitPlayer ~= player then
+                                        -- Check if players are allied
+                                        local areAllied = self.allianceService and 
+                                                          self.allianceService:areAllied(player, hitPlayer)
+                                        
+                                        if not areAllied then
+                                                -- PvP damage is allowed for non-allied players
+                                                self:damagePlayer(hitModel, hitPlayer, player, stats, weaponId)
+                                                self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+                                                        position = result.Position,
+                                                        target = hitPlayer.Name
+                                                })
+                                        end
+                                        -- If allied, damage is prevented (friendly fire protection)
+                                end
+                        end
                 end
         end
 end
@@ -194,6 +217,25 @@ function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
         if not success then
             warn("[WeaponService] Failed to apply damage to humanoid: " .. tostring(err))
         end
+end
+
+function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlayer, stats, weaponId)
+        local humanoid = characterModel:FindFirstChild("Humanoid")
+        if not humanoid then
+                return
+        end
+
+        -- Apply PvP damage (non-allied players can damage each other)
+        local success, err = pcall(function()
+            humanoid:TakeDamage(stats.Damage)
+        end)
+        if not success then
+            warn("[WeaponService] Failed to apply PvP damage: " .. tostring(err))
+        end
+        
+        -- Log the PvP hit for potential tracking/stats
+        print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
+                attackingPlayer.Name, targetPlayer.Name, stats.Damage))
 end
 
 function WeaponService:onZombieKilled(zombieModel)
