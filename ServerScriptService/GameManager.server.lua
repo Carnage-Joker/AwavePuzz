@@ -1,10 +1,11 @@
 --[[
     GameManager
     Controls the wave loop, base health, and RemoteEvent updates.
-    Later phases will extend this script to integrate cure progress and alliances.
+    Phase 3: Integrated with CureService and ResourceSpawner for win condition
 ]]
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local sharedFolder = ReplicatedStorage:FindFirstChild("Shared") or Instance.new("Folder")
@@ -28,6 +29,10 @@ end
 local Config = require(sharedFolder:WaitForChild("Config"))
 local WaveConfig = require(sharedFolder:WaitForChild("WaveConfig"))
 local Spawner = require(script.Parent:WaitForChild("Spawner"))
+
+-- Phase 3: Require cure system modules
+local CureService = require(script.Parent:WaitForChild("CureService"))
+local ResourceSpawner = require(script.Parent:WaitForChild("ResourceSpawner"))
 
 local waveAnnounce = getOrCreateRemote("WaveAnnounce")
 local waveUpdate = getOrCreateRemote("WaveUpdate")
@@ -57,10 +62,37 @@ timeLeftValue.Value = 0
 timeLeftValue.Parent = statusFolder
 
 local baseCaptureZone = workspace:WaitForChild("BaseCaptureZone")
-local spawnController = Spawner.new({
+
+local waveIndex = 0
+local matchActive = true
+local countdown = Config.Waves.InitialCountdown
+
+-- Forward declare spawnController for use in gameManager
+local spawnController
+
+-- Phase 3: Game manager state
+local gameManager = {
+    onCureComplete = function()
+        matchActive = false
+        waveAnnounce:FireAllClients({message = "CURE COMPLETE! Victory!"})
+        if spawnController then
+            spawnController:StopWave()
+        end
+        print("=== VICTORY: CURE COMPLETED ===")
+    end
+}
+
+-- Phase 3: Initialize cure systems
+local cureService = CureService.new(gameManager)
+local resourceSpawner = ResourceSpawner.new(cureService)
+
+print("Phase 3 systems initialized: CureService and ResourceSpawner")
+
+-- Initialize spawner (after gameManager is created)
+spawnController = Spawner.new({
     TargetPart = baseCaptureZone,
     OnZombieSpawned = function()
-        zombiesAliveValue.Value += 1
+        zombiesAliveValue.Value = zombiesAliveValue.Value + 1
         waveUpdate:FireAllClients({
             wave = waveValue.Value,
             timeLeft = timeLeftValue.Value,
@@ -80,10 +112,6 @@ local spawnController = Spawner.new({
         end
     end,
 })
-
-local waveIndex = 0
-local matchActive = true
-local countdown = Config.Waves.InitialCountdown
 
 local function broadcastWave()
     waveUpdate:FireAllClients({
@@ -113,7 +141,7 @@ local function runCountdown(seconds, message)
 end
 
 local function startWave()
-    waveIndex += 1
+    waveIndex = waveIndex + 1
     local waveData = getWaveData(waveIndex)
     waveValue.Value = waveData.number or waveIndex
     zombiesAliveValue.Value = 0
@@ -122,9 +150,16 @@ local function startWave()
     spawnController:StartWave(waveData)
 
     local timer = waveData.timeLimit
-    while timer > 0 and baseHealthValue.Value > 0 do
-        timer -= 1
+    local updateCounter = 0
+    
+    while timer > 0 and baseHealthValue.Value > 0 and matchActive do
+        timer = timer - 1
         timeLeftValue.Value = timer
+        updateCounter = updateCounter + 1
+        
+        -- Phase 3: Update resource spawner every second
+        resourceSpawner:update(1)
+        
         broadcastWave()
 
         if spawnController:IsFinishedSpawning() and zombiesAliveValue.Value <= 0 then
@@ -139,7 +174,18 @@ local function startWave()
 end
 
 local function intermission()
-    runCountdown(Config.Waves.Intermission, "Next wave in")
+    -- Phase 3: Continue spawning resources during intermission
+    local intermissionTime = Config.Waves.Intermission
+    for i = intermissionTime, 1, -1 do
+        waveAnnounce:FireAllClients({message = string.format("Next wave in %d", i)})
+        timeLeftValue.Value = i
+        broadcastWave()
+        
+        -- Update resource spawner
+        resourceSpawner:update(1)
+        
+        task.wait(1)
+    end
 end
 
 local function mainLoop()

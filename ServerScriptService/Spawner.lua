@@ -45,7 +45,7 @@ local function chooseZombieType(composition)
     local roll = math.random()
     local cumulative = 0
     for zombieType, weight in pairs(composition) do
-        cumulative += weight
+        cumulative = cumulative + weight
         if roll <= cumulative then
             return zombieType
         end
@@ -199,7 +199,7 @@ function Spawner:StartWave(waveData)
         while self.active and self.spawnedThisWave < self.totalToSpawn do
             local zombieType = chooseZombieType(waveData.composition or { Walker = 1 })
             self:SpawnZombieOfType(zombieType)
-            self.spawnedThisWave += 1
+            self.spawnedThisWave = self.spawnedThisWave + 1
             task.wait(spawnDelay)
         end
     end)
