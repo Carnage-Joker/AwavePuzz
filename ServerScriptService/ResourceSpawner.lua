@@ -102,12 +102,31 @@ function ResourceSpawner:spawnResource()
     part:SetAttribute("ResourceId", resourceId)
     part.Parent = self.resourceFolder
     
-    -- Add rotating effect
-    local bodyAngularVelocity = Instance.new("BodyAngularVelocity")
-    bodyAngularVelocity.AngularVelocity = Vector3.new(0, 2, 0)
-    bodyAngularVelocity.MaxTorque = Vector3.new(0, math.huge, 0)
-    bodyAngularVelocity.P = 1000
-    bodyAngularVelocity.Parent = part
+    -- Add rotating effect (modern approach for anchored parts)
+    local RunService = game:GetService("RunService")
+    -- Store the initial CFrame for reference
+    local initialCFrame = part.CFrame
+    -- We'll rotate at 2 radians per second around Y axis
+    local rotationSpeed = 2 -- radians per second
+    -- Create a connection to rotate the part every Heartbeat
+    local rotationConnection
+    rotationConnection = RunService.Heartbeat:Connect(function(dt)
+        if not part or not part.Parent then
+            if rotationConnection then
+                rotationConnection:Disconnect()
+            end
+            return
+        end
+        -- Incremental rotation
+        part.CFrame = part.CFrame * CFrame.Angles(0, rotationSpeed * dt, 0)
+    end)
+    
+    -- Optionally, store the connection for cleanup if you remove the part elsewhere
+    part.Destroying:Connect(function()
+        if rotationConnection then
+            rotationConnection:Disconnect()
+        end
+    end)
     
     -- Add label
     local billboard = Instance.new("BillboardGui")
