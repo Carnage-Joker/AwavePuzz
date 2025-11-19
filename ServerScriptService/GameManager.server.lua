@@ -81,7 +81,7 @@ local baseCaptureZone = workspace:WaitForChild("BaseCaptureZone")
 local spawnController = Spawner.new({
     TargetPart = baseCaptureZone,
     OnZombieSpawned = function()
-        zombiesAliveValue.Value += 1
+        zombiesAliveValue.Value = zombiesAliveValue.Value + 1
         waveUpdate:FireAllClients({
             wave = waveValue.Value,
             timeLeft = timeLeftValue.Value,
@@ -134,7 +134,7 @@ local function runCountdown(seconds, message)
 end
 
 local function startWave()
-    waveIndex += 1
+    waveIndex = waveIndex + 1
     local waveData = getWaveData(waveIndex)
     waveValue.Value = waveData.number or waveIndex
     zombiesAliveValue.Value = 0
@@ -146,9 +146,9 @@ local function startWave()
     local updateCounter = 0
     
     while timer > 0 and baseHealthValue.Value > 0 and matchActive do
-        timer -= 1
+        timer = timer - 1
         timeLeftValue.Value = timer
-        updateCounter += 1
+        updateCounter = updateCounter + 1
         
         -- Phase 3: Update resource spawner every second
         resourceSpawner:update(1)
