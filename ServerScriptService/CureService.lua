@@ -279,7 +279,7 @@ function CureService:onCureComplete()
     
     -- Notify game manager about victory
     if self.gameManager and self.gameManager.onCureComplete then
-        self.gameManager:onCureComplete()
+        self.gameManager.onCureComplete()
     end
 end
 
