@@ -32,7 +32,7 @@ Config.Cure = {
         "Research Notes",
         "Catalyst"
     },
-    ResourceSpawnRate = 45, -- Seconds between resource spawns
+    ResourceSpawnRate = 45, -- Seconds between resource spawn attempts
     MaxResourcesOnMap = 10,
 }
 
