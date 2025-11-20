@@ -80,52 +80,71 @@ StarterGui
 
 ### Step 3: Import Server Scripts
 
-1. In **ServerScriptService**, create ModuleScripts for each server file:
+1. In **ServerScriptService**, create ModuleScripts for each server file from `src/server/`:
    
-   **GameServer**
-   - Right-click ServerScriptService → Insert Object → ModuleScript
-   - Rename to "GameServer"
-   - Copy contents from `src/server/GameServer.lua`
+   **MainServer** (Script, not ModuleScript!)
+   - Copy contents from `src/server/MainServer.lua`
+   
+   **GameManager**
+   - Copy contents from `src/server/GameManager.lua`
    
    **PlayerManager**
-   - Insert ModuleScript
-   - Rename to "PlayerManager"
    - Copy contents from `src/server/PlayerManager.lua`
    
    **WaveManager**
-   - Insert ModuleScript
-   - Rename to "WaveManager"
    - Copy contents from `src/server/WaveManager.lua`
    
    **BaseManager**
-   - Insert ModuleScript
-   - Rename to "BaseManager"
    - Copy contents from `src/server/BaseManager.lua`
    
-   **CureCraftingManager**
-   - Insert ModuleScript
-   - Rename to "CureCraftingManager"
-   - Copy contents from `src/server/CureCraftingManager.lua`
+   **Spawner**
+   - Copy contents from `src/server/Spawner.lua`
+   
+   **CureService**
+   - Copy contents from `src/server/CureService.lua`
+   
+   **AllianceService**
+   - Copy contents from `src/server/AllianceService.lua`
+   
+   **WeaponService**
+   - Copy contents from `src/server/WeaponService.lua`
+   
+   **ShopService**
+   - Copy contents from `src/server/ShopService.lua`
+   
+   **MapManager**
+   - Copy contents from `src/server/MapManager.lua`
    
    **ResourceSpawner**
-   - Insert ModuleScript
-   - Rename to "ResourceSpawner"
    - Copy contents from `src/server/ResourceSpawner.lua`
+   
+   **AIScripts Folder**
+   - Create folder "AIScripts" in ServerScriptService
+   - Inside it, create ModuleScript "ZombieBrain"
+   - Copy contents from `src/server/AIScripts/ZombieBrain.lua`
 
 ### Step 4: Import Shared Scripts
 
 1. In **ReplicatedStorage**, create a folder named "Shared"
-2. Inside "Shared", create ModuleScripts:
+2. Inside "Shared", create ModuleScripts from `src/shared/`:
    
    **GameConfig**
-   - Insert ModuleScript in Shared folder
-   - Rename to "GameConfig"
    - Copy contents from `src/shared/GameConfig.lua`
    
    **GameState**
-   - Insert ModuleScript in Shared folder
-   - Rename to "GameState"
    - Copy contents from `src/shared/GameState.lua`
+   
+   **WaveConfig**
+   - Copy contents from `src/shared/WaveConfig.lua`
+   
+   **ZombieTypes**
+   - Copy contents from `src/shared/ZombieTypes.lua`
+   
+   **WeaponConfig**
+   - Copy contents from `src/shared/WeaponConfig.lua`
+   
+   **MapConfig**
+   - Copy contents from `src/shared/MapConfig.lua`
 
 ### Step 5: Import Client Scripts
 
@@ -133,86 +152,59 @@ StarterGui
    
    **ClientController**
    - Insert ModuleScript
-   - Rename to "ClientController"
    - Copy contents from `src/client/ClientController.lua`
+   
+   **WeaponController.client**
+   - Insert LocalScript
+   - Copy contents from `src/client/WeaponController.client.lua`
 
-### Step 6: Create Main Server Script
+2. In **StarterGui**, create LocalScripts for UI from `src/client/UI/`:
+   
+   **WaveUI**
+   - Copy contents from `src/client/UI/WaveUI.client.lua`
+   
+   **BaseHealthUI**
+   - Copy contents from `src/client/UI/BaseHealthUI.client.lua`
+   
+   **CureUI**
+   - Copy contents from `src/client/UI/CureUI.client.lua`
+   
+   **AllianceUI**
+   - Copy contents from `src/client/UI/AllianceUI.client.lua`
+   
+   **ShopUI**
+   - Copy contents from `src/client/UI/ShopUI.client.lua`
+   
+   **InventoryUI**
+   - Copy contents from `src/client/UI/InventoryUI.client.lua`
 
-In **ServerScriptService**, create a new Script (not ModuleScript) named "MainServer":
+### Step 6: Create ServerStorage Structure
+
+1. In **ServerStorage**, create a folder named "Maps"
+2. (Optional) Add custom map models to the Maps folder
+   - Each map should have "ZombieSpawnPoints" and "ResourceSpawnPoints" folders
+   - The game will use a default map if none are provided
+
+3. (Optional) Create a folder named "ZombieModels" for custom zombie models
+   - Add R15 or R6 character models with Humanoid and HumanoidRootPart
+   - Name them: Walker, Runner, Brute, Spitter, Boss
+   - The game will create basic zombies if none are provided
+
+### Step 7: Verify Script Structure
+
+All scripts should be using proper Roblox service imports. The scripts in `src/` already use correct patterns like:
 
 ```lua
--- MainServer Script
-local GameServer = require(script.Parent.GameServer)
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
--- Initialize game server
-local gameServer = GameServer.new()
-
--- Player connection handlers
-Players.PlayerAdded:Connect(function(player)
-    local success, message = gameServer:onPlayerJoin(player)
-    if not success then
-        print("Player join failed:", message)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    gameServer:onPlayerLeave(player)
-end)
-
--- Main game loop
-RunService.Heartbeat:Connect(function(deltaTime)
-    gameServer:update(deltaTime)
-end)
-
--- Wait for minimum players and start game
--- (You can customize this logic)
-repeat
-    wait(1)
-until #Players:GetPlayers() >= 1  -- Start with at least 1 player
-
-gameServer:startGame()
-```
-
-### Step 7: Fix Script Requires
-
-Update the `require` statements in your scripts to match Roblox's structure:
-
-**In GameServer.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-local GameState = require(game.ReplicatedStorage.Shared.GameState)
+-- For requiring modules:
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local PlayerManager = require(script.Parent.PlayerManager)
-local WaveManager = require(script.Parent.WaveManager)
-local BaseManager = require(script.Parent.BaseManager)
-local CureCraftingManager = require(script.Parent.CureCraftingManager)
 ```
 
-**In PlayerManager.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-```
-
-**In WaveManager.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-```
-
-**In BaseManager.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-```
-
-**In CureCraftingManager.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-```
-
-**In ResourceSpawner.lua:**
-```lua
-local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-```
+No changes needed - just copy the files as-is from `src/` to Roblox Studio.
 
 ---
 
