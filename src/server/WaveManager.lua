@@ -1,7 +1,8 @@
 -- WaveManager.lua
 -- Manages zombie waves and spawning
 
-local GameConfig = require(script.Parent.Parent.shared.GameConfig)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
 local WaveManager = {}
 WaveManager.__index = WaveManager

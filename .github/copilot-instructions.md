@@ -102,11 +102,10 @@ Use descriptive names that indicate direction and purpose:
 ## Important Documentation
 
 Before making changes, consult these files:
-- `Custom_instructions.md` - Detailed system and development instructions
+- `INSTALLATION.md` - Complete setup guide for Roblox Studio
 - `GAME_DESIGN.md` - Game design document and mechanics
 - `API_DOCUMENTATION.md` - API reference and system interactions
 - `IMPLEMENTATION_SUMMARY.md` - Implementation details and progress
-- `ROBLOX_SETUP.md` - Roblox Studio setup guide
 
 ## Development Workflow
 

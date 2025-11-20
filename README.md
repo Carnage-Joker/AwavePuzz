@@ -153,16 +153,21 @@ MAX_RESOURCES_ON_MAP = 10
 
 ## 🚀 Installation (Roblox Studio)
 
+For detailed setup instructions, see [INSTALLATION.md](INSTALLATION.md)
+
+**Quick Start:**
 1. Clone this repository
 2. Open Roblox Studio
 3. Create a new place or open an existing one
-4. Import the `src` folder structure into your game:
-   - Place `server` scripts in `ServerScriptService`
-   - Place `client` scripts in `StarterPlayer.StarterPlayerScripts`
-   - Place `shared` modules in `ReplicatedStorage`
+4. Copy scripts from `src/` folders to appropriate Roblox locations:
+   - `src/server/` → ServerScriptService
+   - `src/client/` → StarterPlayer.StarterPlayerScripts and StarterGui
+   - `src/shared/` → ReplicatedStorage/Shared
 5. Set up the game environment (spawn points, base, etc.)
-6. Configure spawn points in the map for resources
+6. Configure workspace folders (ZombieSpawnPoints, CureStations, etc.)
 7. Test in multiplayer mode
+
+For complete step-by-step instructions, troubleshooting, and configuration options, refer to [INSTALLATION.md](INSTALLATION.md).
 
 ## 🎮 How to Play
 
@@ -198,25 +203,43 @@ The game tracks:
 ## 🛠️ Development
 
 This game is built using:
-- **Language**: Lua
+- **Language**: Lua (Roblox Luau)
 - **Platform**: Roblox
-- **Architecture**: Modular server-client system
+- **Architecture**: Modular server-client system with server-authoritative design
 - **Design Pattern**: Object-oriented with manager classes
+
+### Documentation
+
+- **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
+- **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Future Enhancements
+## 🎯 Current Features
 
-Potential features for future development:
-- Weapon and upgrade systems
-- Multiple base locations
-- Special zombie types
-- Power-ups and abilities
-- Leaderboard system
-- Custom game modes
-- Additional puzzle mechanics
+The game currently includes:
+- ✅ Multiplayer support (up to 8 players)
+- ✅ Wave-based zombie combat with progressive difficulty
+- ✅ Server-authoritative raycast weapon system
+- ✅ Weapon shop with upgrades (damage, fire rate)
+- ✅ Cure-crafting puzzle system (5 components × 5 pieces each)
+- ✅ Alliance system with betrayal mechanics
+- ✅ Resource spawning and inventory management
+- ✅ Dynamic map support with MapManager
+- ✅ Base health and player tracking systems
+- ✅ Victory/defeat conditions
+
+## 📚 Documentation
+
+For detailed information, see:
+- **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
+- **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
 
 ## 🤔 Contributing
 

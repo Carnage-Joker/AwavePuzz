@@ -1,7 +1,8 @@
 -- BaseManager.lua
 -- Manages the base health and defense
 
-local GameConfig = require(script.Parent.Parent.shared.GameConfig)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
 local BaseManager = {}
 BaseManager.__index = BaseManager
