@@ -1,8 +1,9 @@
 -- Spawner.lua
 -- Server script that spawns zombies based on wave configuration
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-local ZombieTypes = require(game.ReplicatedStorage.Shared.ZombieTypes)
+local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
 local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
 
 local Spawner = {}

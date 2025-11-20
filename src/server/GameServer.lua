@@ -1,8 +1,9 @@
 -- GameServer.lua
 -- Main server-side game controller
 
-local GameConfig = require(script.Parent.Parent.shared.GameConfig)
-local GameState = require(script.Parent.Parent.shared.GameState)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local GameState = require(ReplicatedStorage.Shared.GameState)
 local PlayerManager = require(script.Parent.PlayerManager)
 local WaveManager = require(script.Parent.WaveManager)
 local BaseManager = require(script.Parent.BaseManager)

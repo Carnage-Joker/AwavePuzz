@@ -1,7 +1,8 @@
 -- CureCraftingManager.lua
 -- Manages the puzzle system for crafting the cure
 
-local GameConfig = require(script.Parent.Parent.shared.GameConfig)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
 local CureCraftingManager = {}
 CureCraftingManager.__index = CureCraftingManager
