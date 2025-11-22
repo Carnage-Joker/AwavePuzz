@@ -19,14 +19,14 @@ function BaseManager:damageBase(damage)
 	if self.isDestroyed then
 		return false
 	end
-	
+
 	self.health = math.max(0, self.health - damage)
-	
+
 	if self.health <= 0 then
 		self.isDestroyed = true
 		return true -- Base destroyed
 	end
-	
+
 	return false
 end
 
@@ -34,7 +34,7 @@ function BaseManager:repairBase(amount)
 	if self.isDestroyed then
 		return false
 	end
-	
+
 	self.health = math.min(self.maxHealth, self.health + amount)
 	return true
 end
