@@ -12,6 +12,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "WaveUI"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
 -- Main Frame
@@ -97,18 +98,27 @@ announcementLabel.Font = Enum.Font.GothamBold
 announcementLabel.TextScaled = true
 announcementLabel.Parent = announcementFrame
 
--- Functions
+-- Helpers
+local currentAnnouncementId = 0
+
 local function formatTime(seconds)
+	seconds = tonumber(seconds) or 0
+	if seconds < 0 then
+		seconds = 0
+	end
+
 	local minutes = math.floor(seconds / 60)
 	local secs = seconds % 60
 	return string.format("%d:%02d", minutes, secs)
 end
 
 local function showAnnouncement(text, duration)
+	currentAnnouncementId += 1
+	local thisId = currentAnnouncementId
+
 	announcementLabel.Text = text
 	announcementFrame.Visible = true
-	
-	-- Animate in
+
 	announcementFrame.Size = UDim2.new(0, 0, 0, 0)
 	announcementFrame:TweenSize(
 		UDim2.new(0, 400, 0, 80),
@@ -117,9 +127,12 @@ local function showAnnouncement(text, duration)
 		0.5,
 		true
 	)
-	
-	-- Hide after duration
+
 	task.delay(duration or 3, function()
+		if thisId ~= currentAnnouncementId then
+			return
+		end
+
 		announcementFrame:TweenSize(
 			UDim2.new(0, 0, 0, 0),
 			Enum.EasingDirection.In,
@@ -127,7 +140,9 @@ local function showAnnouncement(text, duration)
 			0.3,
 			true,
 			function()
-				announcementFrame.Visible = false
+				if thisId == currentAnnouncementId then
+					announcementFrame.Visible = false
+				end
 			end
 		)
 	end)
@@ -139,52 +154,74 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 -- Wave Announce
 local waveAnnounceEvent = remoteEvents:WaitForChild("WaveAnnounce")
 waveAnnounceEvent.OnClientEvent:Connect(function(waveData)
-	waveLabel.Text = "Wave: " .. waveData.waveNumber
-	timeLabel.Text = "Time: " .. formatTime(waveData.timeLimit)
-	
-	showAnnouncement("WAVE " .. waveData.waveNumber .. " STARTING!", 3)
-	
-	-- Play sound effect (if available)
-	-- local sound = Instance.new("Sound")
-	-- sound.SoundId = "rbxassetid://YOUR_SOUND_ID"
-	-- sound.Parent = screenGui
-	-- sound:Play()
+	if typeof(waveData) ~= "table" then
+		return
+	end
+
+	local waveNumber = waveData.waveNumber or 0
+	local timeLimit = waveData.timeLimit or 0
+
+	waveLabel.Text = "Wave: " .. tostring(waveNumber)
+	timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	timeLabel.Text = "Time: " .. formatTime(timeLimit)
+
+	showAnnouncement("WAVE " .. tostring(waveNumber) .. " STARTING!", 3)
 end)
 
 -- Wave Update
 local waveUpdateEvent = remoteEvents:WaitForChild("WaveUpdate")
 waveUpdateEvent.OnClientEvent:Connect(function(updateData)
-	if updateData.timeRemaining then
-		timeLabel.Text = "Time: " .. formatTime(updateData.timeRemaining)
-		
-		-- Change color based on time remaining
-		if updateData.timeRemaining <= 30 then
+	if typeof(updateData) ~= "table" then
+		return
+	end
+
+	if updateData.timeRemaining ~= nil then
+		local remaining = tonumber(updateData.timeRemaining) or 0
+		if remaining < 0 then remaining = 0 end
+
+		timeLabel.Text = "Time: " .. formatTime(remaining)
+
+		if remaining <= 30 and remaining > 0 then
 			timeLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 		else
 			timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		end
 	end
-	
-	if updateData.zombiesAlive then
-		zombieLabel.Text = "Zombies: " .. updateData.zombiesAlive
+
+	if updateData.zombiesAlive ~= nil then
+		zombieLabel.Text = "Zombies: " .. tostring(updateData.zombiesAlive)
 	end
 end)
 
 -- Game State Update
 local gameStateEvent = remoteEvents:WaitForChild("GameStateUpdate")
 gameStateEvent.OnClientEvent:Connect(function(stateData)
-	if stateData.state == "Victory" then
+	if typeof(stateData) ~= "table" then
+		return
+	end
+
+	local state = stateData.state
+
+	if state == "Victory" then
 		showAnnouncement("VICTORY! CURE COMPLETED!", 5)
-		
-	elseif stateData.state == "Defeat" then
+		waveLabel.Text = "Wave: Complete"
+		timeLabel.Text = ""
+		zombieLabel.Text = ""
+
+	elseif state == "Defeat" then
 		showAnnouncement("DEFEAT! GAME OVER", 5)
-		
-	elseif stateData.state == "Waiting" then
+		waveLabel.Text = "Wave: Failed"
+		timeLabel.Text = ""
+		zombieLabel.Text = ""
+
+	elseif state == "Waiting" then
+		currentAnnouncementId += 1
+		announcementFrame.Visible = false
 		waveLabel.Text = "Waiting for players..."
 		timeLabel.Text = ""
 		zombieLabel.Text = ""
-		
-	elseif stateData.state == "Intermission" then
+
+	elseif state == "Intermission" then
 		showAnnouncement("Wave Complete! Next wave soon...", 3)
 	end
 end)
