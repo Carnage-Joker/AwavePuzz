@@ -12,6 +12,7 @@ local currencyEvent = remoteFolder:WaitForChild("CurrencyUpdate")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "InventoryUI"
 screenGui.ResetOnSpawn = false
+screenGui.Enabled = true
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
@@ -58,21 +59,40 @@ componentsLabel.Text = "Components: none"
 componentsLabel.Parent = frame
 
 local function formatInventory(inventory)
-        local parts = {}
-        for name, count in pairs(inventory or {}) do
-                table.insert(parts, string.format("%s x%d", name, count))
-        end
-        table.sort(parts)
-        if #parts == 0 then
-                return "Components: none"
-        end
-        return "Components: " .. table.concat(parts, ", ")
+	local parts = {}
+
+	if type(inventory) ~= "table" then
+		return "Components: none"
+	end
+
+	for name, count in pairs(inventory) do
+		local safeName = tostring(name or "Unknown")
+		local safeCount = tonumber(count) or 0
+		table.insert(parts, string.format("%s x%d", safeName, safeCount))
+	end
+
+	table.sort(parts)
+
+	if #parts == 0 then
+		return "Components: none"
+	end
+
+	return "Components: " .. table.concat(parts, ", ")
 end
 
 inventoryEvent.OnClientEvent:Connect(function(payload)
-        componentsLabel.Text = formatInventory(payload.inventory)
+	if type(payload) ~= "table" then
+		return
+	end
+
+	componentsLabel.Text = formatInventory(payload.inventory)
 end)
 
 currencyEvent.OnClientEvent:Connect(function(payload)
-        currencyLabel.Text = "Currency: " .. tostring(payload.balance or 0)
+	if type(payload) ~= "table" then
+		return
+	end
+
+	local balance = tonumber(payload.balance) or 0
+	currencyLabel.Text = "Currency: " .. tostring(balance)
 end)
