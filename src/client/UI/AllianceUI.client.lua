@@ -153,7 +153,7 @@ local allyHighlights = {} -- Track highlight objects for allies
 local function showNotification(message, duration)
 	notificationLabel.Text = message
 	notificationFrame.Visible = true
-	
+
 	task.delay(duration or 3, function()
 		notificationFrame.Visible = false
 	end)
@@ -165,14 +165,14 @@ local function addAllyHighlight(allyPlayer)
 		allyHighlights[allyPlayer.UserId]:Destroy()
 		allyHighlights[allyPlayer.UserId] = nil
 	end
-	
+
 	-- Wait for character if it doesn't exist yet
 	local character = allyPlayer.Character
 	if not character then
 		allyPlayer.CharacterAdded:Wait()
 		character = allyPlayer.Character
 	end
-	
+
 	if character then
 		-- Create highlight effect for ally
 		local highlight = Instance.new("Highlight")
@@ -182,9 +182,9 @@ local function addAllyHighlight(allyPlayer)
 		highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
 		highlight.OutlineTransparency = 0
 		highlight.Parent = character
-		
+
 		allyHighlights[allyPlayer.UserId] = highlight
-		
+
 		-- Re-add highlight if character respawns
 		allyPlayer.CharacterAdded:Connect(function(newChar)
 			if myAlliances[allyPlayer.UserId] then
@@ -222,25 +222,25 @@ local function updatePlayerList()
 			child:Destroy()
 		end
 	end
-	
+
 	-- Get all players
 	local allPlayers = Players:GetPlayers()
-	
+
 	for _, otherPlayer in ipairs(allPlayers) do
 		if otherPlayer ~= player then
 			local isAllied = myAlliances[otherPlayer.UserId] == true
-			
+
 			local itemFrame = Instance.new("Frame")
 			itemFrame.Name = otherPlayer.Name
 			itemFrame.Size = UDim2.new(1, -10, 0, 50)
 			itemFrame.BackgroundColor3 = isAllied and Color3.fromRGB(80, 120, 80) or Color3.fromRGB(50, 50, 50)
 			itemFrame.BorderSizePixel = 0
 			itemFrame.Parent = playerList
-			
+
 			local itemCorner = Instance.new("UICorner")
 			itemCorner.CornerRadius = UDim.new(0, 5)
 			itemCorner.Parent = itemFrame
-			
+
 			-- Player name
 			local nameLabel = Instance.new("TextLabel")
 			nameLabel.Size = UDim2.new(0.5, 0, 1, 0)
@@ -252,7 +252,7 @@ local function updatePlayerList()
 			nameLabel.Font = Enum.Font.GothamBold
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.Parent = itemFrame
-			
+
 			-- Status indicator
 			local statusLabel = Instance.new("TextLabel")
 			statusLabel.Size = UDim2.new(0.25, 0, 1, 0)
@@ -263,7 +263,7 @@ local function updatePlayerList()
 			statusLabel.TextSize = 12
 			statusLabel.Font = Enum.Font.Gotham
 			statusLabel.Parent = itemFrame
-			
+
 			-- Action button
 			local actionButton = Instance.new("TextButton")
 			actionButton.Size = UDim2.new(0, 60, 0, 35)
@@ -274,16 +274,16 @@ local function updatePlayerList()
 			actionButton.TextSize = 12
 			actionButton.Font = Enum.Font.GothamBold
 			actionButton.Parent = itemFrame
-			
+
 			local btnCorner = Instance.new("UICorner")
 			btnCorner.CornerRadius = UDim.new(0, 5)
 			btnCorner.Parent = actionButton
-			
+
 			-- Button click handler
 			actionButton.MouseButton1Click:Connect(function()
 				local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 				if not remoteEvents then return end
-				
+
 				if isAllied then
 					-- Break alliance
 					local breakEvent = remoteEvents:FindFirstChild("BreakAlliance")
@@ -301,7 +301,7 @@ local function updatePlayerList()
 			end)
 		end
 	end
-	
+
 	-- Update canvas size
 	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end
@@ -310,7 +310,7 @@ end
 local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
-	
+
 	if input.KeyCode == Enum.KeyCode.Tab then
 		mainFrame.Visible = not mainFrame.Visible
 		if mainFrame.Visible then
@@ -330,7 +330,7 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		pendingRequest = data.from
 		requestLabel.Text = data.fromName .. " wants to ally with you!"
 		requestFrame.Visible = true
-		
+
 	elseif data.type == "formed" then
 		-- Alliance was formed
 		myAlliances[data.with.UserId] = true
@@ -338,7 +338,7 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		requestFrame.Visible = false
 		updatePlayerList()
 		updateAllyVisuals()
-		
+
 	elseif data.type == "broken" then
 		-- Alliance was broken
 		myAlliances[data.with.UserId] = nil
@@ -349,11 +349,11 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		end
 		updatePlayerList()
 		updateAllyVisuals()
-		
+
 	elseif data.type == "rejected" then
 		-- Request was rejected
 		showNotification(data.byName .. " rejected your alliance request", 3)
-		
+
 	elseif data.type == "cooldown" then
 		-- On betrayal cooldown
 		showNotification(data.message, 3)
