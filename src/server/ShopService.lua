@@ -8,115 +8,233 @@ local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 local ShopService = {}
 ShopService.__index = ShopService
 
+local VALID_ACTIONS = {
+	catalog = true,
+	purchase = true,
+}
+
+local function getOrCreateRemoteFolder()
+	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if not remoteEventsFolder then
+		remoteEventsFolder = Instance.new("Folder")
+		remoteEventsFolder.Name = "RemoteEvents"
+		remoteEventsFolder.Parent = ReplicatedStorage
+	end
+	return remoteEventsFolder
+end
+
+local function getOrCreateRemoteEvent(parent, name)
+	local event = parent:FindFirstChild(name)
+	if not event then
+		event = Instance.new("RemoteEvent")
+		event.Name = name
+		event.Parent = parent
+	end
+	return event
+end
+
 function ShopService.new(playerManager, weaponService)
-        local self = setmetatable({}, ShopService)
-        self.playerManager = playerManager
-        self.weaponService = weaponService
-        self.remoteEvents = {}
-        self:setupRemoteEvents()
-        return self
+	local self = setmetatable({}, ShopService)
+
+	self.playerManager = playerManager
+	self.weaponService = weaponService
+	self.remoteEvents = {}
+
+	self:setupRemoteEvents()
+
+	return self
 end
 
 function ShopService:setupRemoteEvents()
-        local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-        if not remoteEventsFolder then
-                remoteEventsFolder = Instance.new("Folder")
-                remoteEventsFolder.Name = "RemoteEvents"
-                remoteEventsFolder.Parent = ReplicatedStorage
-        end
+	local remoteEventsFolder = getOrCreateRemoteFolder()
 
-        local requestEvent = remoteEventsFolder:FindFirstChild("ShopRequest")
-        if not requestEvent then
-                requestEvent = Instance.new("RemoteEvent")
-                requestEvent.Name = "ShopRequest"
-                requestEvent.Parent = remoteEventsFolder
-        end
-        self.remoteEvents.ShopRequest = requestEvent
+	local requestEvent = getOrCreateRemoteEvent(remoteEventsFolder, "ShopRequest")
+	local updateEvent = getOrCreateRemoteEvent(remoteEventsFolder, "ShopUpdate")
 
-        local updateEvent = remoteEventsFolder:FindFirstChild("ShopUpdate")
-        if not updateEvent then
-                updateEvent = Instance.new("RemoteEvent")
-                updateEvent.Name = "ShopUpdate"
-                updateEvent.Parent = remoteEventsFolder
-        end
-        self.remoteEvents.ShopUpdate = updateEvent
+	self.remoteEvents.ShopRequest = requestEvent
+	self.remoteEvents.ShopUpdate = updateEvent
 
-        requestEvent.OnServerEvent:Connect(function(player, action, data)
-                self:handleRequest(player, action, data)
-        end)
+	requestEvent.OnServerEvent:Connect(function(player, action, data)
+		self:handleRequest(player, action, data)
+	end)
 end
 
 function ShopService:handleRequest(player, action, data)
-        if action == "catalog" then
-                self:sendCatalog(player)
-        elseif action == "purchase" and data and data.itemId then
-                self:attemptPurchase(player, data.itemId)
-        end
+	if not player or typeof(player) ~= "Instance" then
+		return
+	end
+
+	if typeof(action) ~= "string" or not VALID_ACTIONS[action] then
+		self:sendResult(player, false, "Invalid shop action")
+		return
+	end
+
+	if action == "catalog" then
+		self:sendCatalog(player)
+	elseif action == "purchase" then
+		if typeof(data) ~= "table" or data.itemId == nil then
+			self:sendResult(player, false, "Invalid purchase data")
+			return
+		end
+
+		self:attemptPurchase(player, data.itemId)
+	end
 end
 
 function ShopService:sendCatalog(player)
-        if self.remoteEvents.ShopUpdate then
-                self.remoteEvents.ShopUpdate:FireClient(player, {
-                        type = "catalog",
-                        items = WeaponConfig.getCatalog()
-                })
-        end
+	local catalog = nil
+	local ok, err = pcall(function()
+		catalog = WeaponConfig.getCatalog()
+	end)
+
+	if not ok then
+		warn("[ShopService] WeaponConfig.getCatalog error: " .. tostring(err))
+		self:sendResult(player, false, "Shop is currently unavailable")
+		return
+	end
+
+	if typeof(catalog) ~= "table" then
+		warn("[ShopService] getCatalog did not return a table")
+		self:sendResult(player, false, "Shop is currently unavailable")
+		return
+	end
+
+	if self.remoteEvents.ShopUpdate then
+		self.remoteEvents.ShopUpdate:FireClient(player, {
+			type = "catalog",
+			items = catalog,
+		})
+	end
+end
+
+local function findCatalogItemById(catalog, itemId)
+	for _, item in ipairs(catalog) do
+		if item.Id == itemId then
+			return item
+		end
+	end
+	return nil
 end
 
 function ShopService:attemptPurchase(player, itemId)
-        local catalog = WeaponConfig.getCatalog()
-        local selectedItem = nil
-        for _, item in ipairs(catalog) do
-                if item.Id == itemId then
-                        selectedItem = item
-                        break
-                end
-        end
+	if not self.playerManager then
+		warn("[ShopService] playerManager not set")
+		self:sendResult(player, false, "Shop unavailable")
+		return
+	end
 
-        if not selectedItem then
-                self:sendResult(player, false, "Item not found")
-                return
-        end
+	local catalog
+	local ok, err = pcall(function()
+		catalog = WeaponConfig.getCatalog()
+	end)
 
-        if selectedItem.Type == "weapon" then
-                if self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
-                        self:sendResult(player, false, "Weapon already unlocked")
-                        return
-                end
+	if not ok or typeof(catalog) ~= "table" then
+		warn("[ShopService] Failed to fetch catalog: " .. tostring(err))
+		self:sendResult(player, false, "Shop is currently unavailable")
+		return
+	end
 
-                if not self.playerManager:deductCurrency(player, selectedItem.Price) then
-                        self:sendResult(player, false, "Not enough currency")
-                        return
-                end
+	local selectedItem = findCatalogItemById(catalog, itemId)
+	if not selectedItem then
+		self:sendResult(player, false, "Item not found")
+		return
+	end
 
-                self.playerManager:addWeapon(player, selectedItem.WeaponId)
-                self.playerManager:equipWeapon(player, selectedItem.WeaponId)
-                self:sendResult(player, true, selectedItem.WeaponId .. " unlocked!")
-        elseif selectedItem.Type == "upgrade" then
-                if not self.playerManager:deductCurrency(player, selectedItem.Price) then
-                        self:sendResult(player, false, "Not enough currency")
-                        return
-                end
+	-- Basic validation
+	local price = tonumber(selectedItem.Price) or 0
+	if price < 0 then
+		warn("[ShopService] Item has invalid price: " .. tostring(price))
+		self:sendResult(player, false, "Purchase unavailable")
+		return
+	end
 
-                local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
-                if success then
-                        self:sendResult(player, true, "Upgrade applied")
-                else
-                        -- refund if already owned
-                        self.playerManager:addCurrency(player, selectedItem.Price)
-                        self:sendResult(player, false, "Upgrade already owned")
-                end
-        end
+	-- Handle weapon purchase
+	if selectedItem.Type == "weapon" then
+		if not selectedItem.WeaponId then
+			self:sendResult(player, false, "Invalid weapon item")
+			return
+		end
+
+		if self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
+			self:sendResult(player, false, "Weapon already unlocked")
+			return
+		end
+
+		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+			self:sendResult(player, false, "Not enough currency")
+			return
+		end
+
+		if self.playerManager.addWeapon then
+			self.playerManager:addWeapon(player, selectedItem.WeaponId)
+		end
+
+		if self.playerManager.equipWeapon then
+			self.playerManager:equipWeapon(player, selectedItem.WeaponId)
+		end
+
+		self:sendResult(player, true, tostring(selectedItem.WeaponId) .. " unlocked!")
+
+		-- Handle upgrade purchase
+	elseif selectedItem.Type == "upgrade" then
+		if not selectedItem.UpgradeId then
+			self:sendResult(player, false, "Invalid upgrade item")
+			return
+		end
+
+		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+			self:sendResult(player, false, "Not enough currency")
+			return
+		end
+
+		if not (self.weaponService and self.weaponService.applyUpgrade) then
+			warn("[ShopService] weaponService or applyUpgrade missing")
+			-- Refund due to internal error
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
+			self:sendResult(player, false, "Upgrade service unavailable")
+			return
+		end
+
+		local success, applyErr = pcall(function()
+			return self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
+		end)
+
+		if not success then
+			warn("[ShopService] applyUpgrade error: " .. tostring(applyErr))
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
+			self:sendResult(player, false, "Upgrade failed")
+			return
+		end
+
+		if success and applyErr then
+			-- applyErr is actually the boolean result from applyUpgrade
+			self:sendResult(player, true, "Upgrade applied")
+		else
+			-- Refund if already owned or failed
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
+			self:sendResult(player, false, "Upgrade already owned")
+		end
+	else
+		self:sendResult(player, false, "Unknown item type")
+	end
 end
 
 function ShopService:sendResult(player, success, message)
-        if self.remoteEvents.ShopUpdate then
-                self.remoteEvents.ShopUpdate:FireClient(player, {
-                        type = "result",
-                        success = success,
-                        message = message
-                })
-        end
+	if not self.remoteEvents.ShopUpdate then
+		return
+	end
+
+	self.remoteEvents.ShopUpdate:FireClient(player, {
+		type = "result",
+		success = success and true or false,
+		message = message or "",
+	})
 end
 
 return ShopService
