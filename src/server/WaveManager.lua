@@ -28,9 +28,9 @@ function WaveManager:startWave()
 	self.currentWave = self.currentWave + 1
 	self.zombiesSpawned = 0
 	self.waveActive = true
-	
+
 	local zombieCount = self:calculateZombiesForWave(self.currentWave)
-	
+
 	return {
 		waveNumber = self.currentWave,
 		zombieCount = zombieCount,
@@ -42,15 +42,15 @@ function WaveManager:spawnZombie()
 	if not self.waveActive then
 		return nil
 	end
-	
+
 	local maxZombies = self:calculateZombiesForWave(self.currentWave)
 	if self.zombiesSpawned >= maxZombies then
 		return nil
 	end
-	
+
 	self.zombiesSpawned = self.zombiesSpawned + 1
 	self.zombiesAlive = self.zombiesAlive + 1
-	
+
 	return {
 		health = self:calculateZombieHealthForWave(self.currentWave),
 		damage = GameConfig.ZOMBIE_DAMAGE,
@@ -61,13 +61,13 @@ end
 
 function WaveManager:onZombieDeath()
 	self.zombiesAlive = math.max(0, self.zombiesAlive - 1)
-	
+
 	-- Check if wave is complete
 	if self.zombiesAlive == 0 and self.zombiesSpawned >= self:calculateZombiesForWave(self.currentWave) then
 		self.waveActive = false
 		return true -- Wave complete
 	end
-	
+
 	return false
 end
 
