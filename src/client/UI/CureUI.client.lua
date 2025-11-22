@@ -15,6 +15,7 @@ local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CureUI"
 screenGui.ResetOnSpawn = false
+screenGui.Enabled = true
 screenGui.Parent = playerGui
 
 -- Progress Frame (always visible)
@@ -26,6 +27,7 @@ progressFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 progressFrame.BackgroundTransparency = 0.3
 progressFrame.BorderSizePixel = 2
 progressFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
+progressFrame.Active = true
 progressFrame.Parent = screenGui
 
 local progressCorner = Instance.new("UICorner")
@@ -88,14 +90,14 @@ componentsLabel.Name = "ComponentsLabel"
 componentsLabel.Size = UDim2.new(1, -20, 0, 25)
 componentsLabel.Position = UDim2.new(0, 10, 0, 70)
 componentsLabel.BackgroundTransparency = 1
-componentsLabel.Text = "0 / 25 Components"
+componentsLabel.Text = "0 / 0 Components"
 componentsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 componentsLabel.TextSize = 14
 componentsLabel.Font = Enum.Font.Gotham
 componentsLabel.TextXAlignment = Enum.TextXAlignment.Left
 componentsLabel.Parent = progressFrame
 
--- Detailed Components Frame (shows on hover or interaction)
+-- Detailed Components Frame (shows on click or interaction)
 local detailFrame = Instance.new("Frame")
 detailFrame.Name = "DetailFrame"
 detailFrame.Size = UDim2.new(0, 350, 0, 250)
@@ -106,6 +108,7 @@ detailFrame.BorderSizePixel = 3
 detailFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
 detailFrame.Visible = false
 detailFrame.ZIndex = 10
+detailFrame.Active = true
 detailFrame.Parent = screenGui
 
 local detailCorner = Instance.new("UICorner")
@@ -153,6 +156,7 @@ componentsList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 componentsList.BackgroundTransparency = 0.5
 componentsList.BorderSizePixel = 0
 componentsList.ScrollBarThickness = 6
+componentsList.CanvasSize = UDim2.new(0, 0, 0, 0)
 componentsList.Parent = detailFrame
 
 local listLayout = Instance.new("UIListLayout")
@@ -164,34 +168,61 @@ listLayout.Parent = componentsList
 local cureProgress = 0
 local componentsCollected = {}
 
+local function getTotalNeeded()
+	if type(GameConfig) ~= "table" then
+		return 0
+	end
+
+	local names = GameConfig.CURE_COMPONENT_NAMES
+	local required = GameConfig.CURE_COMPONENTS_REQUIRED
+
+	if type(names) ~= "table" or type(required) ~= "number" then
+		return 0
+	end
+
+	return #names * required
+end
+
 -- Functions
 local function updateProgress(progress, components)
-	cureProgress = progress or cureProgress
-	
-	if components then
+	if type(progress) == "number" then
+		cureProgress = math.clamp(progress, 0, 100)
+	end
+
+	if type(components) == "table" then
 		componentsCollected = components
 	end
-	
+
 	-- Update progress bar
-	progressBarFill:TweenSize(
-		UDim2.new(cureProgress / 100, 0, 1, 0),
-		Enum.EasingDirection.Out,
-		Enum.EasingStyle.Quad,
-		0.5,
-		true
-	)
-	
+	local targetSize = UDim2.new(cureProgress / 100, 0, 1, 0)
+	pcall(function()
+		progressBarFill:TweenSize(
+			targetSize,
+			Enum.EasingDirection.Out,
+			Enum.EasingStyle.Quad,
+			0.5,
+			true
+		)
+	end)
+
 	-- Update text
-	progressText.Text = math.floor(cureProgress) .. "%"
-	
+	progressText.Text = string.format("%d%%", math.floor(cureProgress + 0.5))
+
 	-- Calculate total components
 	local totalCollected = 0
 	for _, count in pairs(componentsCollected) do
-		totalCollected = totalCollected + count
+		if type(count) == "number" then
+			totalCollected = totalCollected + count
+		end
 	end
-	local totalNeeded = #GameConfig.CURE_COMPONENT_NAMES * GameConfig.CURE_COMPONENTS_REQUIRED
-	componentsLabel.Text = totalCollected .. " / " .. totalNeeded .. " Components"
-	
+
+	local totalNeeded = getTotalNeeded()
+	if totalNeeded > 0 then
+		componentsLabel.Text = totalCollected .. " / " .. totalNeeded .. " Components"
+	else
+		componentsLabel.Text = totalCollected .. " Components"
+	end
+
 	-- Change color based on progress
 	if cureProgress >= 100 then
 		progressBarFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0) -- Gold
@@ -203,51 +234,58 @@ local function updateProgress(progress, components)
 end
 
 local function updateComponentsList()
-	-- Clear existing items
+	-- Clear existing items (keep the layout)
 	for _, child in ipairs(componentsList:GetChildren()) do
 		if child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
-	
+
+	local names = GameConfig.CURE_COMPONENT_NAMES
+	local required = GameConfig.CURE_COMPONENTS_REQUIRED
+
+	if type(names) ~= "table" or type(required) ~= "number" then
+		componentsList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+		return
+	end
+
 	-- Create items for each component
-	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
+	for _, componentName in ipairs(names) do
 		local count = componentsCollected[componentName] or 0
-		local required = GameConfig.CURE_COMPONENTS_REQUIRED
-		
+
 		local itemFrame = Instance.new("Frame")
-		itemFrame.Name = componentName
+		itemFrame.Name = tostring(componentName)
 		itemFrame.Size = UDim2.new(1, -10, 0, 35)
 		itemFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 		itemFrame.BorderSizePixel = 0
 		itemFrame.Parent = componentsList
-		
+
 		local itemCorner = Instance.new("UICorner")
 		itemCorner.CornerRadius = UDim.new(0, 5)
 		itemCorner.Parent = itemFrame
-		
+
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.Size = UDim2.new(0.6, 0, 1, 0)
 		nameLabel.Position = UDim2.new(0, 10, 0, 0)
 		nameLabel.BackgroundTransparency = 1
-		nameLabel.Text = componentName
+		nameLabel.Text = tostring(componentName)
 		nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 		nameLabel.TextSize = 14
 		nameLabel.Font = Enum.Font.Gotham
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 		nameLabel.Parent = itemFrame
-		
+
 		local countLabel = Instance.new("TextLabel")
 		countLabel.Size = UDim2.new(0.4, -10, 1, 0)
 		countLabel.Position = UDim2.new(0.6, 0, 0, 0)
 		countLabel.BackgroundTransparency = 1
-		countLabel.Text = count .. " / " .. required
+		countLabel.Text = tostring(count) .. " / " .. tostring(required)
 		countLabel.TextColor3 = count >= required and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 255, 100)
 		countLabel.TextSize = 14
 		countLabel.Font = Enum.Font.GothamBold
 		countLabel.TextXAlignment = Enum.TextXAlignment.Right
 		countLabel.Parent = itemFrame
-		
+
 		-- Checkmark if complete
 		if count >= required then
 			local checkmark = Instance.new("TextLabel")
@@ -261,14 +299,13 @@ local function updateComponentsList()
 			checkmark.Parent = itemFrame
 		end
 	end
-	
-	-- Update canvas size
+
 	componentsList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end
 
--- Show detail frame on click
+-- Show detail frame on click/touch
 progressFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		detailFrame.Visible = not detailFrame.Visible
 		if detailFrame.Visible then
 			updateComponentsList()
@@ -282,31 +319,28 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 -- Cure Update
 local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
 cureUpdateEvent.OnClientEvent:Connect(function(data)
-	if type(data) == "number" then
-		-- Simple progress update
+	local dataType = typeof(data)
+
+	if dataType == "number" then
 		updateProgress(data)
-	elseif type(data) == "table" then
+	elseif dataType == "table" then
 		if data.type == "progress" then
 			updateProgress(data.progress, data.components)
-			
-			-- Show notification if contributor specified
+
 			if data.contributor and data.componentAdded then
-				-- Could show a notification here
-				print(data.contributor .. " added " .. data.componentAdded)
+				print(tostring(data.contributor) .. " added " .. tostring(data.componentAdded))
 			end
-			
+
 		elseif data.type == "complete" then
-			-- Cure is complete!
 			updateProgress(100, data.components)
-			
+
 		elseif data.type == "openUI" then
-			-- Open detail UI
 			detailFrame.Visible = true
-			if data.components then
+			if type(data.components) == "table" then
 				componentsCollected = data.components
 			end
-			if data.progress then
-				cureProgress = data.progress
+			if type(data.progress) == "number" then
+				cureProgress = math.clamp(data.progress, 0, 100)
 			end
 			updateComponentsList()
 		end
