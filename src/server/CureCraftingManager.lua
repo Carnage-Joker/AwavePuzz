@@ -12,12 +12,12 @@ function CureCraftingManager.new()
 	self.componentsCollected = {}
 	self.cureProgress = 0
 	self.cureCrafted = false
-	
+
 	-- Initialize component tracking
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		self.componentsCollected[componentName] = 0
 	end
-	
+
 	return self
 end
 
@@ -25,14 +25,14 @@ function CureCraftingManager:addComponent(componentName)
 	if self.cureCrafted then
 		return false, "Cure already crafted"
 	end
-	
+
 	if not self.componentsCollected[componentName] then
 		return false, "Invalid component"
 	end
-	
+
 	self.componentsCollected[componentName] = self.componentsCollected[componentName] + 1
 	self:updateProgress()
-	
+
 	return true, "Component added"
 end
 
@@ -47,13 +47,13 @@ end
 function CureCraftingManager:updateProgress()
 	local totalRequired = #GameConfig.CURE_COMPONENT_NAMES * GameConfig.CURE_COMPONENTS_REQUIRED
 	local totalCollected = 0
-	
+
 	for _, count in pairs(self.componentsCollected) do
 		totalCollected = totalCollected + count
 	end
-	
+
 	self.cureProgress = (totalCollected / totalRequired) * 100
-	
+
 	-- Check if cure is complete
 	if self:checkCureComplete() then
 		self.cureCrafted = true
