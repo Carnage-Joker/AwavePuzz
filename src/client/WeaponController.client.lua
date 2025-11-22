@@ -37,13 +37,13 @@ function WeaponController:start()
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                         self.isFiring = true
                         self:fire()
-                elseif input.KeyCode == Enum.KeyCode.Alpha1 then
+                elseif input.KeyCode == Enum.KeyCode.One then
                         self:equipSlot(1)
-                elseif input.KeyCode == Enum.KeyCode.Alpha2 then
+                elseif input.KeyCode == Enum.KeyCode.Two then
                         self:equipSlot(2)
-                elseif input.KeyCode == Enum.KeyCode.Alpha3 then
+                elseif input.KeyCode == Enum.KeyCode.Three then
                         self:equipSlot(3)
-                elseif input.KeyCode == Enum.KeyCode.Alpha4 then
+                elseif input.KeyCode == Enum.KeyCode.Four then
                         self:equipSlot(4)
                 end
         end)
