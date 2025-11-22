@@ -6,7 +6,7 @@ ClientController.__index = ClientController
 
 function ClientController.new()
 	local self = setmetatable({}, ClientController)
-	
+
 	self.gameState = {
 		wave = 0,
 		baseHealth = 0,
@@ -15,7 +15,7 @@ function ClientController.new()
 		playerHealth = 100,
 		isAlive = true
 	}
-	
+
 	return self
 end
 
