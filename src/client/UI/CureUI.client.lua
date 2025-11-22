@@ -1,6 +1,8 @@
 -- CureUI.client.lua
 -- Client script for displaying cure progress and puzzle interface
 -- Place in StarterGui as a LocalScript
+-- TODO When 5 like components (for example 5 chemical A's) are collected before they are able to bec used in synthesising the cure a puzzle must be solved by the user at a cure station
+-- TODO when all 5 cure component puzzles have been solved a final puzzle must be solved in order to synthesise the cure
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
