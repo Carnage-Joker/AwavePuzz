@@ -8,278 +8,357 @@ local Players = game:GetService("Players")
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
 local function cloneTable(t)
-        local copy = {}
-        for key, value in pairs(t) do
-                copy[key] = value
-        end
-        return copy
+	local copy = {}
+	for key, value in pairs(t) do
+		copy[key] = value
+	end
+	return copy
 end
 
 local WeaponService = {}
 WeaponService.__index = WeaponService
 
 function WeaponService.new(playerManager, allianceService)
-        local self = setmetatable({}, WeaponService)
-        self.playerManager = playerManager
-        self.allianceService = allianceService
-        self.playerWeaponState = {} -- userId -> state
-        self.remoteEvents = {}
-        self:setupRemoteEvents()
-        return self
+	local self = setmetatable({}, WeaponService)
+	self.playerManager = playerManager
+	self.allianceService = allianceService
+	self.playerWeaponState = {} -- userId -> state
+	self.remoteEvents = {}
+	self:setupRemoteEvents()
+	return self
 end
 
 function WeaponService:setupRemoteEvents()
-        local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-        if not remoteEventsFolder then
-                remoteEventsFolder = Instance.new("Folder")
-                remoteEventsFolder.Name = "RemoteEvents"
-                remoteEventsFolder.Parent = ReplicatedStorage
-        end
+	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if not remoteEventsFolder then
+		remoteEventsFolder = Instance.new("Folder")
+		remoteEventsFolder.Name = "RemoteEvents"
+		remoteEventsFolder.Parent = ReplicatedStorage
+	end
 
-        local fireEvent = remoteEventsFolder:FindFirstChild("WeaponFire")
-        if not fireEvent then
-                fireEvent = Instance.new("RemoteEvent")
-                fireEvent.Name = "WeaponFire"
-                fireEvent.Parent = remoteEventsFolder
-        end
-        self.remoteEvents.WeaponFire = fireEvent
+	local fireEvent = remoteEventsFolder:FindFirstChild("WeaponFire")
+	if not fireEvent then
+		fireEvent = Instance.new("RemoteEvent")
+		fireEvent.Name = "WeaponFire"
+		fireEvent.Parent = remoteEventsFolder
+	end
+	self.remoteEvents.WeaponFire = fireEvent
 
-        local equipEvent = remoteEventsFolder:FindFirstChild("WeaponEquip")
-        if not equipEvent then
-                equipEvent = Instance.new("RemoteEvent")
-                equipEvent.Name = "WeaponEquip"
-                equipEvent.Parent = remoteEventsFolder
-        end
-        self.remoteEvents.WeaponEquip = equipEvent
+	local equipEvent = remoteEventsFolder:FindFirstChild("WeaponEquip")
+	if not equipEvent then
+		equipEvent = Instance.new("RemoteEvent")
+		equipEvent.Name = "WeaponEquip"
+		equipEvent.Parent = remoteEventsFolder
+	end
+	self.remoteEvents.WeaponEquip = equipEvent
 
-        local hitEvent = remoteEventsFolder:FindFirstChild("WeaponHitConfirm")
-        if not hitEvent then
-                hitEvent = Instance.new("RemoteEvent")
-                hitEvent.Name = "WeaponHitConfirm"
-                hitEvent.Parent = remoteEventsFolder
-        end
-        self.remoteEvents.WeaponHitConfirm = hitEvent
+	local hitEvent = remoteEventsFolder:FindFirstChild("WeaponHitConfirm")
+	if not hitEvent then
+		hitEvent = Instance.new("RemoteEvent")
+		hitEvent.Name = "WeaponHitConfirm"
+		hitEvent.Parent = remoteEventsFolder
+	end
+	self.remoteEvents.WeaponHitConfirm = hitEvent
 
-        fireEvent.OnServerEvent:Connect(function(player, payload)
-                self:handleWeaponFire(player, payload)
-        end)
+	fireEvent.OnServerEvent:Connect(function(player, payload)
+		self:handleWeaponFire(player, payload)
+	end)
 
-        equipEvent.OnServerEvent:Connect(function(player, weaponId)
-                self:handleEquipRequest(player, weaponId)
-        end)
+	equipEvent.OnServerEvent:Connect(function(player, weaponId)
+		self:handleEquipRequest(player, weaponId)
+	end)
 end
 
 function WeaponService:initializePlayer(player)
-        local userId = player.UserId
-        self.playerWeaponState[userId] = {
-                lastShot = 0,
-                upgrades = {}
-        }
+	local userId = player.UserId
+	self.playerWeaponState[userId] = {
+		lastShot = 0,
+		upgrades = {}
+	}
 
-        local startingWeapon = self.playerManager:getEquippedWeapon(player)
-        if not startingWeapon then
-                self.playerManager:addWeapon(player, WeaponConfig.DefaultWeapon)
-                self.playerManager:equipWeapon(player, WeaponConfig.DefaultWeapon)
-        end
+	local startingWeapon = self.playerManager:getEquippedWeapon(player)
+	if not startingWeapon then
+		self.playerManager:addWeapon(player, WeaponConfig.DefaultWeapon)
+		self.playerManager:equipWeapon(player, WeaponConfig.DefaultWeapon)
+		startingWeapon = WeaponConfig.DefaultWeapon
+	end
+
+	-- Give them the visual weapon on spawn
+	self:_equipVisualWeapon(player, startingWeapon)  -- NEW
 end
 
+
 function WeaponService:removePlayer(player)
-        self.playerWeaponState[player.UserId] = nil
+	self.playerWeaponState[player.UserId] = nil
 end
 
 function WeaponService:handleEquipRequest(player, weaponId)
-        if not self.playerManager:ownsWeapon(player, weaponId) then
-                return
-        end
+	if not self.playerManager:ownsWeapon(player, weaponId) then
+		return
+	end
 
-        self.playerManager:equipWeapon(player, weaponId)
+	self.playerManager:equipWeapon(player, weaponId)
+	self:_equipVisualWeapon(player, weaponId)   -- NEW
 end
 
+
 function WeaponService:getModifiedStats(player, weaponId)
-        local baseStats = WeaponConfig.getWeapon(weaponId)
-        if not baseStats then
-                return nil
-        end
+	local baseStats = WeaponConfig.getWeapon(weaponId)
+	if not baseStats then
+		return nil
+	end
 
-        local state = self.playerWeaponState[player.UserId]
-        if not state then
-                return baseStats
-        end
+	local state = self.playerWeaponState[player.UserId]
+	if not state then
+		return baseStats
+	end
 
-        local modified = cloneTable(baseStats)
-        if state.upgrades then
-                for upgradeId in pairs(state.upgrades) do
-                        local upgrade = WeaponConfig.getUpgrade(upgradeId)
-                        if upgrade and upgrade.Type == "stat" and modified[upgrade.Stat] then
-                                modified[upgrade.Stat] = modified[upgrade.Stat] * upgrade.Multiplier
-                        end
-                end
-        end
+	local modified = cloneTable(baseStats)
+	if state.upgrades then
+		for upgradeId in pairs(state.upgrades) do
+			local upgrade = WeaponConfig.getUpgrade(upgradeId)
+			if upgrade and upgrade.Type == "stat" and modified[upgrade.Stat] then
+				modified[upgrade.Stat] = modified[upgrade.Stat] * upgrade.Multiplier
+			end
+		end
+	end
 
-        return modified
+	return modified
 end
 
 function WeaponService:handleWeaponFire(player, payload)
-        if typeof(payload) ~= "table" then
-                return
-        end
+	if typeof(payload) ~= "table" then
+		return
+	end
 
-        local weaponId = payload.weaponId
-        local origin = payload.origin
-        local direction = payload.direction
-        local timestamp = payload.timestamp
+	local weaponId = payload.weaponId
+	local origin = payload.origin
+	local direction = payload.direction
+	local timestamp = payload.timestamp
 
-        if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then
-                return
-        end
+	if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then
+		return
+	end
 
-        if direction.Magnitude < 0.001 then
-                return
-        end
+	if direction.Magnitude < 0.001 then
+		return
+	end
 
-        local equipped = self.playerManager:getEquippedWeapon(player)
-        if not equipped or equipped ~= weaponId then
-                return
-        end
+	local equipped = self.playerManager:getEquippedWeapon(player)
+	if not equipped or equipped ~= weaponId then
+		return
+	end
 
-        local stats = self:getModifiedStats(player, weaponId)
-        if not stats then
-                return
-        end
+	local stats = self:getModifiedStats(player, weaponId)
+	if not stats then
+		return
+	end
 
-        local state = self.playerWeaponState[player.UserId]
-        if not state then
-                return
-        end
+	local state = self.playerWeaponState[player.UserId]
+	if not state then
+		return
+	end
 
-        local now = tick()
-        if now - (state.lastShot or 0) < stats.FireRate then
-                return -- still on cooldown
-        end
+	local now = tick()
+	if now - (state.lastShot or 0) < stats.FireRate then
+		return -- still on cooldown
+	end
 
-        state.lastShot = now
+	state.lastShot = now
 
-        local rayDirection = direction.Unit * stats.Range
-        local params = RaycastParams.new()
-        params.FilterDescendantsInstances = {player.Character}
-        params.FilterType = Enum.RaycastFilterType.Blacklist
-        params.IgnoreWater = true
+	local rayDirection = direction.Unit * stats.Range
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {player.Character}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
 
-        local result = Workspace:Raycast(origin, rayDirection, params)
-        if result then
-                local hitInstance = result.Instance
-                local hitModel = hitInstance and hitInstance:FindFirstAncestorOfClass("Model")
-                
-                if hitModel then
-                        -- Check if hit a zombie
-                        if hitModel:GetAttribute("IsZombie") then
-                                self:damageZombie(hitModel, player, stats, weaponId)
-                                self.remoteEvents.WeaponHitConfirm:FireClient(player, {
-                                        position = result.Position,
-                                        target = hitModel.Name
-                                })
-                        -- Check if hit a player
-                        elseif hitModel:FindFirstChild("Humanoid") then
-                                local hitPlayer = Players:GetPlayerFromCharacter(hitModel)
-                                if hitPlayer and hitPlayer ~= player then
-                                        -- Check if players are allied
-                                        local areAllied = self.allianceService and 
-                                                          self.allianceService:areAllied(player, hitPlayer)
-                                        
-                                        if not areAllied then
-                                                -- PvP damage is allowed for non-allied players
-                                                self:damagePlayer(hitModel, hitPlayer, player, stats, weaponId)
-                                                self.remoteEvents.WeaponHitConfirm:FireClient(player, {
-                                                        position = result.Position,
-                                                        target = hitPlayer.Name
-                                                })
-                                        end
-                                        -- If allied, damage is prevented (friendly fire protection)
-                                end
-                        end
-                end
-        end
+	local result = Workspace:Raycast(origin, rayDirection, params)
+	if result then
+		local hitInstance = result.Instance
+		local hitModel = hitInstance and hitInstance:FindFirstAncestorOfClass("Model")
+
+		if hitModel then
+			-- Check if hit a zombie
+			if hitModel:GetAttribute("IsZombie") then
+				self:damageZombie(hitModel, player, stats, weaponId)
+				self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+					position = result.Position,
+					target = hitModel.Name
+				})
+				-- Check if hit a player
+			elseif hitModel:FindFirstChild("Humanoid") then
+				local hitPlayer = Players:GetPlayerFromCharacter(hitModel)
+				if hitPlayer and hitPlayer ~= player then
+					-- Check if players are allied
+					local areAllied = self.allianceService and 
+						self.allianceService:areAllied(player, hitPlayer)
+
+					if not areAllied then
+						-- PvP damage is allowed for non-allied players
+						self:damagePlayer(hitModel, hitPlayer, player, stats, weaponId)
+						self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+							position = result.Position,
+							target = hitPlayer.Name
+						})
+					end
+					-- If allied, damage is prevented (friendly fire protection)
+				end
+			end
+		end
+	end
 end
-
 function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
-        local humanoid = zombieModel:FindFirstChild("Humanoid")
-        if not humanoid then
-                return
-        end
+	local humanoid = zombieModel:FindFirstChild("Humanoid")
+	if not humanoid then
+		return
+	end
 
-        zombieModel:SetAttribute("LastHitBy", player.UserId)
-        zombieModel:SetAttribute("LastHitWeapon", weaponId)
+	zombieModel:SetAttribute("LastHitBy", player.UserId)
+	zombieModel:SetAttribute("LastHitWeapon", weaponId)
 
-        -- Wrap in pcall in case humanoid is destroyed between validation and damage application
-        local success, err = pcall(function()
-            humanoid:TakeDamage(stats.Damage)
-        end)
-        if not success then
-            warn("[WeaponService] Failed to apply damage to humanoid: " .. tostring(err))
-        end
+	-- Wrap in pcall in case humanoid is destroyed between validation and damage application
+	local success, err = pcall(function()
+		humanoid:TakeDamage(stats.Damage)
+	end)
+	if not success then
+		warn("[WeaponService] Failed to apply damage to humanoid: " .. tostring(err))
+	end
 end
 
 function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlayer, stats, weaponId)
-        local humanoid = characterModel:FindFirstChild("Humanoid")
-        if not humanoid then
-                return
-        end
+	local humanoid = characterModel:FindFirstChild("Humanoid")
+	if not humanoid then
+		return
+	end
 
-        -- Apply PvP damage (non-allied players can damage each other)
-        local success, err = pcall(function()
-            humanoid:TakeDamage(stats.Damage)
-        end)
-        if not success then
-            warn("[WeaponService] Failed to apply PvP damage: " .. tostring(err))
-        end
-        
-        -- Log the PvP hit for potential tracking/stats
-        print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
-                attackingPlayer.Name, targetPlayer.Name, stats.Damage))
+	-- Apply PvP damage (non-allied players can damage each other)
+	local success, err = pcall(function()
+		humanoid:TakeDamage(stats.Damage)
+	end)
+	if not success then
+		warn("[WeaponService] Failed to apply PvP damage: " .. tostring(err))
+	end
+
+	-- Log the PvP hit for potential tracking/stats
+	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
+		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
 end
 
 function WeaponService:onZombieKilled(zombieModel)
-        if not zombieModel then
-                return
-        end
+	if not zombieModel then
+		return
+	end
 
-        local reward = zombieModel:GetAttribute("Reward") or 0
-        local lastHitUserId = zombieModel:GetAttribute("LastHitBy")
-        if not lastHitUserId then
-                return
-        end
+	local reward = zombieModel:GetAttribute("Reward") or 0
+	local lastHitUserId = zombieModel:GetAttribute("LastHitBy")
+	if not lastHitUserId then
+		return
+	end
 
-        local player = Players:GetPlayerByUserId(lastHitUserId)
-        if not player then
-                return
-        end
+	local player = Players:GetPlayerByUserId(lastHitUserId)
+	if not player then
+		return
+	end
 
-        local weaponId = zombieModel:GetAttribute("LastHitWeapon")
-        local weaponStats = weaponId and WeaponConfig.getWeapon(weaponId) or nil
-        local bonus = weaponStats and weaponStats.RewardBonus or 0
+	local weaponId = zombieModel:GetAttribute("LastHitWeapon")
+	local weaponStats = weaponId and WeaponConfig.getWeapon(weaponId) or nil
+	local bonus = weaponStats and weaponStats.RewardBonus or 0
 
-        self.playerManager:addCurrency(player, reward + bonus)
+	self.playerManager:addCurrency(player, reward + bonus)
 end
 
 function WeaponService:applyUpgrade(player, upgradeId)
-        local upgrade = WeaponConfig.getUpgrade(upgradeId)
-        if not upgrade then
-                return false
-        end
+	local upgrade = WeaponConfig.getUpgrade(upgradeId)
+	if not upgrade then
+		return false
+	end
 
-        local state = self.playerWeaponState[player.UserId]
-        if not state then
-                state = {lastShot = 0, upgrades = {}}
-                self.playerWeaponState[player.UserId] = state
-        end
+	local state = self.playerWeaponState[player.UserId]
+	if not state then
+		state = {lastShot = 0, upgrades = {}}
+		self.playerWeaponState[player.UserId] = state
+	end
 
-        state.upgrades = state.upgrades or {}
-        if state.upgrades[upgradeId] then
-                return false -- already owned
-        end
+	state.upgrades = state.upgrades or {}
+	if state.upgrades[upgradeId] then
+		return false -- already owned
+	end
 
-        state.upgrades[upgradeId] = true
-        return true
+	state.upgrades[upgradeId] = true
+	return true
 end
+local ServerStorage = game:GetService("ServerStorage")  -- at top of file if not already
 
+function WeaponService:_equipVisualWeapon(player, weaponId)
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local weaponConfig = WeaponConfig.getWeapon(weaponId)
+	if not weaponConfig then
+		warn("[WeaponService] No weapon config for id:", weaponId)
+		return
+	end
+
+	local gunsFolder = ServerStorage:FindFirstChild("Guns")
+	if not gunsFolder then
+		warn("[WeaponService] Guns folder missing in ServerStorage")
+		return
+	end
+
+	local modelName = weaponConfig.ModelName or weaponConfig.Name or weaponId
+	local template = gunsFolder:FindFirstChild(modelName)
+	if not template then
+		warn(string.format("[WeaponService] Gun model '%s' not found in ServerStorage.Guns", modelName))
+		return
+	end
+
+	-- Remove any existing equipped gun model
+	local old = character:FindFirstChild("EquippedWeaponModel")
+	if old then
+		old:Destroy()
+	end
+
+	local gunModel = template:Clone()
+	gunModel.Name = "EquippedWeaponModel"
+	gunModel.Parent = character
+
+	-- Ensure we have a primary part to weld from
+	if not gunModel.PrimaryPart then
+		-- try common names
+		gunModel.PrimaryPart =
+			gunModel:FindFirstChild("Main") or
+			gunModel:FindFirstChild("Base") or
+			gunModel:FindFirstChild("Body") or
+			gunModel:FindFirstChildWhichIsA("BasePart")
+	end
+
+	local primary = gunModel.PrimaryPart
+	if not primary then
+		warn("[WeaponService] Gun model has no PrimaryPart or base part:", modelName)
+		return
+	end
+
+	-- Attach to hand/arm
+	local rightHand = character:FindFirstChild("RightHand")
+		or character:FindFirstChild("Right Arm") -- R6 fallback
+
+	if not rightHand then
+		warn("[WeaponService] No RightHand / Right Arm to attach gun to for player:", player.Name)
+		return
+	end
+
+	-- Position + weld
+	gunModel:SetPrimaryPartCFrame(
+		rightHand.CFrame
+			* CFrame.new(0, -0.5, 0.3)               -- tweak offset
+			* CFrame.Angles(0, math.rad(90), 0)      -- tweak rotation
+	)
+
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = primary
+	weld.Part1 = rightHand
+	weld.Parent = primary
+end
 return WeaponService
