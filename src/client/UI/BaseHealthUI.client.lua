@@ -90,9 +90,9 @@ local maxHealth = 1000
 local function updateHealthBar(health, max)
 	currentHealth = health or currentHealth
 	maxHealth = max or maxHealth
-	
+
 	local healthPercent = currentHealth / maxHealth
-	
+
 	-- Update bar size
 	healthBarFill:TweenSize(
 		UDim2.new(healthPercent, 0, 1, 0),
@@ -101,10 +101,10 @@ local function updateHealthBar(health, max)
 		0.3,
 		true
 	)
-	
+
 	-- Update text
 	healthText.Text = math.floor(currentHealth) .. " / " .. maxHealth
-	
+
 	-- Change color based on health percentage
 	if healthPercent > 0.6 then
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255) -- Blue
@@ -112,7 +112,7 @@ local function updateHealthBar(health, max)
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(255, 200, 100) -- Orange
 	else
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(255, 100, 100) -- Red
-		
+
 		-- Pulse effect when critical
 		if healthPercent > 0 then
 			healthBarFill:TweenSize(
@@ -156,7 +156,7 @@ task.spawn(function()
 			maxHealth = healthValue.Value
 			currentHealth = healthValue.Value
 			updateHealthBar(currentHealth, maxHealth)
-			
+
 			-- Listen for changes
 			healthValue:GetPropertyChangedSignal("Value"):Connect(function()
 				updateHealthBar(healthValue.Value, maxHealth)
