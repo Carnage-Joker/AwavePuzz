@@ -32,17 +32,26 @@ title.Font = Enum.Font.GothamBold
 title.TextSize = 20
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Text = "Camp Vendor"
+title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
 
 local list = Instance.new("ScrollingFrame")
-list.Size = UDim2.new(1, -10, 1, -50)
+list.Size = UDim2.new(1, -10, 1, -70)
 list.Position = UDim2.new(0, 5, 0, 40)
 list.CanvasSize = UDim2.new(0, 0, 0, 0)
 list.ScrollBarThickness = 6
 list.BackgroundTransparency = 0.4
 list.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 list.BorderSizePixel = 0
+list.ClipsDescendants = true
 list.Parent = frame
+
+local padding = Instance.new("UIPadding")
+padding.PaddingTop = UDim.new(0, 4)
+padding.PaddingBottom = UDim.new(0, 4)
+padding.PaddingLeft = UDim.new(0, 4)
+padding.PaddingRight = UDim.new(0, 4)
+padding.Parent = list
 
 local layout = Instance.new("UIListLayout")
 layout.Parent = list
@@ -53,59 +62,96 @@ local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, -10, 0, 20)
 statusLabel.Position = UDim2.new(0, 5, 1, -25)
 statusLabel.BackgroundTransparency = 1
-statusLabel.Font = Enum.Font.GothamSemibold
+statusLabel.Font = Enum.Font.Arcade
 statusLabel.TextSize = 14
 statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 statusLabel.Text = "Press B to toggle shop"
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.Parent = frame
 
 local catalogCache = {}
+local debounce = false
+
+local function updateCanvasSize()
+	list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+end
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
 
 local function rebuildList(items)
-        list:ClearAllChildren()
-        layout.Parent = list
+	-- Preserve layout and padding while clearing entries
+	for _, child in ipairs(list:GetChildren()) do
+		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+			child:Destroy()
+		end
+	end
 
-        for _, item in ipairs(items) do
-                local button = Instance.new("TextButton")
-                button.Size = UDim2.new(1, -10, 0, 60)
-                button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-                button.TextColor3 = Color3.new(1, 1, 1)
-                button.TextWrapped = true
-                button.Font = Enum.Font.Gotham
-                button.TextSize = 14
-                button.Text = string.format("%s\n$%d - %s", item.Type == "weapon" and item.WeaponId or item.UpgradeId, item.Price, item.Description)
-                button.Parent = list
+	for _, item in ipairs(items) do
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, 0, 0, 60)
+		button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+		button.TextColor3 = Color3.new(1, 1, 1)
+		button.TextWrapped = true
+		button.Font = Enum.Font.Gotham
+		button.TextSize = 14
 
-                button.MouseButton1Click:Connect(function()
-                        shopRequest:FireServer("purchase", {itemId = item.Id})
-                end)
-        end
+		local idText = item.Type == "weapon" and item.WeaponId or item.UpgradeId or item.Id or "Unknown"
+		local price = tonumber(item.Price) or 0
+		local desc = item.Description or ""
 
-        list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+		button.Text = string.format("%s\n$%d - %s", idText, price, desc)
+		button.AutoButtonColor = true
+		button.Parent = list
+
+		button.MouseButton1Click:Connect(function()
+			if debounce then return end
+			debounce = true
+
+			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+			statusLabel.Text = "Processing purchase..."
+			shopRequest:FireServer("purchase", { itemId = item.Id })
+
+			task.delay(0.25, function()
+				debounce = false
+			end)
+		end)
+	end
+
+	updateCanvasSize()
 end
 
 shopUpdate.OnClientEvent:Connect(function(payload)
-        if payload.type == "catalog" then
-                catalogCache = payload.items or {}
-                rebuildList(catalogCache)
-        elseif payload.type == "result" then
-                statusLabel.TextColor3 = payload.success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
-                statusLabel.Text = payload.message or "Unknown"
-        end
+	if typeof(payload) ~= "table" then
+		return
+	end
+
+	if payload.type == "catalog" then
+		catalogCache = payload.items or {}
+		rebuildList(catalogCache)
+		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+		statusLabel.Text = "Select an item to purchase"
+	elseif payload.type == "result" then
+		local success = payload.success == true
+		statusLabel.TextColor3 = success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
+		statusLabel.Text = payload.message or (success and "Purchase successful" or "Purchase failed")
+	end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
-        if gpe then
-                return
-        end
+	if gpe then
+		return
+	end
 
-        if input.KeyCode == Enum.KeyCode.B then
-                screenGui.Enabled = not screenGui.Enabled
-                if screenGui.Enabled then
-                        statusLabel.Text = "Purchasing..."
-                        shopRequest:FireServer("catalog")
-                else
-                        statusLabel.Text = "Press B to toggle shop"
-                end
-        end
+	if input.KeyCode == Enum.KeyCode.B then
+		screenGui.Enabled = not screenGui.Enabled
+
+		if screenGui.Enabled then
+			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+			statusLabel.Text = "Loading shop..."
+			shopRequest:FireServer("catalog")
+		else
+			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+			statusLabel.Text = "Press B to toggle shop"
+		end
+	end
 end)
