@@ -45,6 +45,11 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager)
 	self.currentTarget = nil
 	self.currentTargetType = nil -- "player" or "base"
 	
+	-- Cache base reference for performance
+	self.cachedBase = nil
+	self.baseCacheTime = 0
+	self.baseCacheInterval = 5 -- Re-cache base every 5 seconds
+	
 	-- Attack system
 	self.attackCooldown = 0
 	self.attackInterval = GameConfig.ZOMBIE_ATTACK_INTERVAL or 1.5
@@ -85,16 +90,29 @@ function ZombieBrain:playAttackAnimation()
 	end
 end
 
--- Get the base position from workspace
-local function getBasePosition()
+-- Get the base position from workspace (with caching)
+function ZombieBrain:getBasePosition()
+	-- Return cached base if still valid
+	if self.cachedBase and self.cachedBase.Parent then
+		if self.cachedBase:IsA("Model") then
+			return self.cachedBase:GetPivot().Position
+		elseif self.cachedBase:IsA("BasePart") then
+			return self.cachedBase.Position
+		end
+	end
+	
+	-- Cache expired or invalid, find base again
 	local base = workspace:FindFirstChild("Base")
 	if base then
+		self.cachedBase = base
 		if base:IsA("Model") then
 			return base:GetPivot().Position
 		elseif base:IsA("BasePart") then
 			return base.Position
 		end
 	end
+	
+	self.cachedBase = nil
 	return nil
 end
 
@@ -123,9 +141,9 @@ local function getNearestPlayerPosition(rootPart)
 end
 
 -- Choose between attacking nearest player or the base
-local function selectBestTarget(rootPart)
-	local playerPos, playerDist, player = getNearestPlayerPosition(rootPart)
-	local basePos = getBasePosition()
+function ZombieBrain:selectBestTarget()
+	local playerPos, playerDist, player = getNearestPlayerPosition(self.rootPart)
+	local basePos = self:getBasePosition()
 	
 	if not playerPos and not basePos then
 		return nil, nil, nil
@@ -141,7 +159,7 @@ local function selectBestTarget(rootPart)
 	end
 	
 	-- Both exist, choose closest
-	local baseDist = (basePos - rootPart.Position).Magnitude
+	local baseDist = (basePos - self.rootPart.Position).Magnitude
 	if playerDist < baseDist then
 		return playerPos, "player", player
 	else
@@ -155,7 +173,7 @@ function ZombieBrain:tryAttack()
 		return false
 	end
 	
-	local targetPos, targetType, targetPlayer = selectBestTarget(self.rootPart)
+	local targetPos, targetType, targetPlayer = self:selectBestTarget()
 	if not targetPos then
 		return false
 	end
@@ -169,8 +187,14 @@ function ZombieBrain:tryAttack()
 		
 		-- Deal damage to appropriate target
 		if targetType == "player" and targetPlayer then
-			if self.playerManager then
-				self.playerManager:damagePlayer(targetPlayer, self.attackDamage)
+			-- Validate player still exists and has character
+			if targetPlayer and targetPlayer.Character then
+				local targetHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+				if targetHumanoid and targetHumanoid.Health > 0 then
+					if self.playerManager then
+						self.playerManager:damagePlayer(targetPlayer, self.attackDamage)
+					end
+				end
 			end
 		elseif targetType == "base" then
 			if self.baseManager then
@@ -218,7 +242,7 @@ function ZombieBrain:update(deltaTime)
 	-- Select best target (player or base)
 	local targetPos, targetType = nil, nil
 	if self.rootPart then
-		targetPos, targetType = selectBestTarget(self.rootPart)
+		targetPos, targetType = self:selectBestTarget()
 	end
 
 	if not targetPos then
@@ -247,6 +271,7 @@ function ZombieBrain:destroy()
 	self.rootPart = nil
 	self.baseManager = nil
 	self.playerManager = nil
+	self.cachedBase = nil
 end
 
 return ZombieBrain
