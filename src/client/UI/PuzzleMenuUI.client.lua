@@ -184,7 +184,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 end
 
 -- Function to populate puzzle menu
-local function updatePuzzleMenu()
+local function updatePuzzleMenu(progressData)
 	-- Clear existing buttons
 	for _, child in ipairs(puzzleList:GetChildren()) do
 		if child:IsA("TextButton") then
@@ -192,21 +192,27 @@ local function updatePuzzleMenu()
 		end
 	end
 	
+	progressData = progressData or {}
+	local componentPuzzles = progressData.componentPuzzles or {}
+	local componentCounts = progressData.componentCounts or {}
+	
 	-- Create buttons for each component puzzle
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		local puzzleConfig = PuzzleConfig.ComponentPuzzles[componentName]
 		if puzzleConfig then
-			-- We'll need to get component count from server
-			-- For now, create buttons with placeholder data
-			local available = false -- Will be updated by server data
-			local componentCount = 0 -- Will be updated by server data
+			local puzzleProgress = componentPuzzles[componentName] or {}
+			local componentCount = componentCounts[componentName] or 0
+			local available = componentCount >= GameConfig.CURE_COMPONENTS_REQUIRED and not puzzleProgress.solved
 			
 			createPuzzleButton(componentName, puzzleConfig, available, componentCount)
 		end
 	end
 	
 	-- Add final synthesis button
-	local finalAvailable = false -- Will be updated by server
+	local finalPuzzleData = progressData.finalPuzzle or {}
+	local readyForFinal = progressData.readyForFinal or false
+	local finalSolved = finalPuzzleData.solved or false
+	local finalAvailable = readyForFinal and not finalSolved
 	local finalButton = Instance.new("TextButton")
 	finalButton.Name = "FinalSynthesis"
 	finalButton.Size = UDim2.new(1, -10, 0, 100)
@@ -254,8 +260,12 @@ end
 
 -- Show puzzle menu
 local function showPuzzleMenu()
-	updatePuzzleMenu()
 	menuFrame.Visible = true
+	-- Request puzzle progress from server
+	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzleProgress") then
+		remoteEvents.RequestPuzzleProgress:FireServer()
+	end
 end
 
 -- Remote event handlers
@@ -266,6 +276,14 @@ local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
 cureUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "show_puzzle_menu" then
 		showPuzzleMenu()
+	end
+end)
+
+-- Listen for puzzle progress updates
+local puzzleUpdateEvent = remoteEvents:WaitForChild("PuzzleUpdate")
+puzzleUpdateEvent.OnClientEvent:Connect(function(data)
+	if type(data) == "table" and data.type == "progress" then
+		updatePuzzleMenu(data.progress)
 	end
 end)
 

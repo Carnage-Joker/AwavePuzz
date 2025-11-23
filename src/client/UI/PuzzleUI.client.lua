@@ -406,11 +406,13 @@ end
 local function createLogicPuzzleUI(puzzleData)
 	clearContent()
 	
+	-- TODO: Implement full deduction grid UI with clues and interactive selection
+	-- For MVP, using simplified text input approach
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 60)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
 	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "Use logic to deduce the correct arrangement\n(Simplified: Enter 'correct' to solve)"
+	instructionLabel.Text = "Use logic to deduce the correct arrangement\n(Simplified MVP: Enter 'correct' to solve)"
 	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	instructionLabel.TextSize = 16
 	instructionLabel.Font = Enum.Font.GothamBold
@@ -441,11 +443,13 @@ end
 local function createAbstractPuzzleUI(puzzleData)
 	clearContent()
 	
+	-- TODO: Implement full node connection UI with drag-and-drop or click-to-connect
+	-- For MVP, using simplified text input approach
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 60)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
 	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "Connect all nodes to form a complete circuit\n(Simplified: Enter 'circuit' to solve)"
+	instructionLabel.Text = "Connect all nodes to form a complete circuit\n(Simplified MVP: Enter 'circuit' to solve)"
 	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	instructionLabel.TextSize = 16
 	instructionLabel.Font = Enum.Font.GothamBold

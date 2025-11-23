@@ -50,6 +50,7 @@ function PuzzleService:setupRemoteEvents()
 		"PuzzleFailed",       -- Server notifies puzzle failure
 		"PuzzleCompleted",    -- Server notifies puzzle completion
 		"OpenPuzzleUI",       -- Server tells client to open puzzle UI
+		"RequestPuzzleProgress", -- Client requests puzzle progress data
 	}
 	
 	for _, eventName in ipairs(eventNames) do
@@ -69,6 +70,40 @@ function PuzzleService:setupRemoteEvents()
 	remoteEvents.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
 		self:handlePuzzleAnswer(player, componentName, answer)
 	end)
+	
+	remoteEvents.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
+		self:sendPuzzleProgress(player)
+	end)
+end
+
+-- Send puzzle progress to client
+function PuzzleService:sendPuzzleProgress(player)
+	local progress = self:getPuzzleProgress(player)
+	
+	-- Add component counts from CureService
+	if self.playerManager then
+		local playerData = self.playerManager:GetPlayerData(player)
+		if playerData and playerData.CureComponents then
+			progress.componentCounts = {}
+			for _, componentName in ipairs(require(game.ReplicatedStorage.Shared.GameConfig).CURE_COMPONENT_NAMES) do
+				local count = 0
+				for _, comp in ipairs(playerData.CureComponents) do
+					if comp == componentName then
+						count = count + 1
+					end
+				end
+				progress.componentCounts[componentName] = count
+			end
+		end
+	end
+	
+	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if remoteEvents and remoteEvents:FindFirstChild("PuzzleUpdate") then
+		remoteEvents.PuzzleUpdate:FireClient(player, {
+			type = "progress",
+			progress = progress
+		})
+	end
 end
 
 function PuzzleService:initializePlayer(player)
@@ -364,16 +399,21 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
 		-- Validate logic solution
-		-- Simplified: check if answer matches generated solution
-		return true -- Placeholder
+		-- TODO: Implement proper deduction grid validation
+		-- For MVP, accepting any string that matches expected answer
+		return answer == "correct" -- Simplified for MVP
 		
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		-- Validate node connections
-		return true -- Placeholder
+		-- TODO: Implement proper graph/circuit validation
+		-- For MVP, accepting hardcoded answer
+		return answer == "circuit" -- Simplified for MVP
 		
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Validate multi-stage answer
-		return true -- Placeholder
+		-- TODO: Implement multi-stage validation for final synthesis
+		-- For MVP, accepting simplified completion
+		return true -- Simplified - full implementation would validate each stage
 	end
 	
 	return false
