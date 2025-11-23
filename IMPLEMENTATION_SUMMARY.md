@@ -4,22 +4,22 @@
 
 AwavePuzz is a fully functional multiplayer Roblox zombie survival game with wave-based combat, cure-crafting puzzles, and alliance systems. All core features are implemented and working.
 
-## Project Status: ✅ Complete (All Phases)
+## Project Status: ✅ Complete (All Phases + Puzzle System)
 
 All game systems are implemented and functional:
 - ✅ **Phase 1**: Core game loop, waves, zombies
 - ✅ **Phase 2**: Weapons, damage, kill rewards
-- ✅ **Phase 3**: Cure crafting system
+- ✅ **Phase 3**: Cure crafting system with puzzle mini-games
 - ✅ **Phase 4**: Alliance system with betrayal mechanics
 - ✅ **Phase 5**: Polish, balancing, and multi-map support
 
 ## Implementation Statistics
 
-- **Total Lua Files**: 29 (all in src/ directory)
-- **Documentation Files**: 5 (README, INSTALLATION, API_DOCUMENTATION, GAME_DESIGN, IMPLEMENTATION_SUMMARY)
-- **Server Scripts**: 13 modules
-- **Client Scripts**: 7 scripts
-- **Shared Modules**: 6 config modules
+- **Total Lua Files**: 32 (all in src/ directory)
+- **Documentation Files**: 6 (README, INSTALLATION, API_DOCUMENTATION, GAME_DESIGN, IMPLEMENTATION_SUMMARY, PUZZLE_SYSTEM)
+- **Server Scripts**: 15 modules
+- **Client Scripts**: 9 scripts
+- **Shared Modules**: 7 config modules
 
 ## Features Implemented
 
@@ -42,17 +42,31 @@ All game systems are implemented and functional:
    - Visual health indicators
    - Lose condition when destroyed
 
-4. **Cure-Crafting Puzzle System**
+4. **Cure-Crafting Puzzle System** ✅ ENHANCED
    - 5 component types to collect
    - 5 pieces required per component (25 total)
+   - **NEW: 6 Puzzle Mini-Games**:
+     1. Mathematical Puzzle (Chemical A) - Sequences and equations
+     2. Pattern Matching (Chemical B) - Find the pattern
+     3. Color Matching (Biological Sample) - Arrange colors
+     4. Logic Puzzle (Research Notes) - Deduction challenge
+     5. Abstract Puzzle (Catalyst) - Node connections
+     6. Final Synthesis - Multi-stage combination puzzle
    - Cure stations with ProximityPrompts
+   - Interactive puzzle UI with time limits
+   - Server-authoritative puzzle validation
+   - Currency rewards for puzzle completion
+   - Puzzle menu for component selection
    - Progress tracking (0-100%)
-   - Win condition when cure complete
+   - Win condition when final synthesis complete
 
-5. **Alliance System** ✅ PHASE 4 COMPLETE
+5. **Alliance System** ✅ PHASE 4 COMPLETE + PUZZLE INTEGRATION
    - Request alliances with other players
    - Accept/decline mechanics with UI
-   - Betrayal functionality
+   - Betrayal functionality with puzzle/component stealing:
+     - 50% chance to steal each solved puzzle
+     - 50% chance to steal collected components  
+     - 50% chance to reset victim's puzzle progress
    - 60-second betrayal cooldown
    - No friendly fire between allies (server-authoritative)
    - PvP enabled between non-allied players
@@ -66,6 +80,8 @@ All game systems are implemented and functional:
 2. **BaseHealthUI** - Color-coded base health bar
 3. **CureUI** - Progress bar and detailed component tracking
 4. **AllianceUI** - Player list and alliance management (Tab key)
+5. **PuzzleUI** ✨ NEW - Interactive puzzle mini-games with timers
+6. **PuzzleMenuUI** ✨ NEW - Cure station menu for puzzle selection
 
 ### ✅ Technical Architecture
 1. **Server-Authoritative Design**
@@ -87,31 +103,56 @@ All game systems are implemented and functional:
 
 ```
 AwavePuzz/
-├── Documentation (5 files)
+├── Documentation (6 files) ✨ UPDATED
 │   ├── README.md - Main documentation
 │   ├── API_DOCUMENTATION.md - Complete API reference
 │   ├── GAME_DESIGN.md - Design document
 │   ├── INSTALLATION.md - Detailed setup
-│   └── ROBLOX_SETUP.md - Quick start guide
+│   ├── IMPLEMENTATION_SUMMARY.md - Implementation status
+│   └── PUZZLE_SYSTEM.md - ✨ NEW: Puzzle mechanics guide
 │
-├── src/server/ (13 files)
+├── src/server/ (15 files) ✨ UPDATED
 │   ├── MainServer.lua - Main entry point
 │   ├── GameManager.lua - Main orchestrator
 │   ├── Spawner.lua - Zombie spawning
-│   ├── AllianceService.lua - Alliance system
-│   ├── CureService.lua - Cure crafting
+│   ├── AllianceService.lua - Alliance system with puzzle integration
+│   ├── CureService.lua - Cure crafting with puzzle triggering
+│   ├── PuzzleService.lua - ✨ NEW: Puzzle management
+│   ├── CureStationSetup.lua - ✨ NEW: Cure station initialization
 │   ├── BaseManager.lua - Base health
 │   ├── PlayerManager.lua - Player data
 │   ├── WaveManager.lua - Wave progression
 │   ├── ResourceSpawner.lua - Resource spawning
 │   ├── CureCraftingManager.lua - Cure logic
-│   ├── GameServer.lua - Game controller
+│   ├── WeaponService.lua - Weapon system
+│   ├── ShopService.lua - Shop system
+│   ├── MapManager.lua - Map management
 │   └── AIScripts/
 │       └── ZombieBrain.lua - Zombie AI
 │
-├── src/client/ (5 files)
+├── src/client/ (9 files) ✨ UPDATED
 │   ├── ClientController.lua - Client controller
+│   ├── WeaponController.client.lua - Weapon controls
 │   └── UI/
+│       ├── WaveUI.client.lua
+│       ├── BaseHealthUI.client.lua
+│       ├── CureUI.client.lua
+│       ├── AllianceUI.client.lua
+│       ├── ShopUI.client.lua
+│       ├── InventoryUI.client.lua
+│       ├── PlayerHUD.client.lua
+│       ├── PuzzleUI.client.lua - ✨ NEW: Puzzle mini-games
+│       └── PuzzleMenuUI.client.lua - ✨ NEW: Puzzle selection
+│
+└── src/shared/ (7 files) ✨ UPDATED
+    ├── GameConfig.lua - Configuration
+    ├── PuzzleConfig.lua - ✨ NEW: Puzzle definitions
+    ├── GameState.lua - State management
+    ├── ZombieTypes.lua - Zombie definitions
+    ├── WaveConfig.lua - Wave configurations
+    ├── WeaponConfig.lua - Weapon definitions
+    └── MapConfig.lua - Map configurations
+```
 │       ├── WaveUI.client.lua
 │       ├── BaseHealthUI.client.lua
 │       ├── CureUI.client.lua
