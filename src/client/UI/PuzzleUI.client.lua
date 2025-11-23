@@ -407,6 +407,14 @@ local function createLogicPuzzleUI(puzzleData)
 	clearContent()
 	
 	-- TODO: Implement full deduction grid UI with clues and interactive selection
+	-- Full implementation would include:
+	--   1. Grid layout (3x3 or 4x4) showing element/person/location combinations
+	--   2. Clue display panel showing logical constraints
+	--   3. Interactive selection (click cells to mark possibilities)
+	--   4. Cross-referencing markers (X for impossible, ✓ for confirmed)
+	--   5. Visual feedback for conflicts
+	--   6. Submit button validates final arrangement against clues
+	-- Example grid: Scientists (rows) x Elements (cols) x Labs (depth)
 	-- For MVP, using simplified text input approach
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 60)
@@ -444,6 +452,16 @@ local function createAbstractPuzzleUI(puzzleData)
 	clearContent()
 	
 	-- TODO: Implement full node connection UI with drag-and-drop or click-to-connect
+	-- Full implementation would include:
+	--   1. Node visualization (circles/points positioned on canvas)
+	--   2. Drag-and-drop mechanics to create connections between nodes
+	--   3. Visual lines showing current connections
+	--   4. Collision detection to prevent crossing lines (if required)
+	--   5. Visual feedback for valid/invalid connections
+	--   6. Undo/clear buttons for connection management
+	--   7. Highlight completed circuits or valid paths
+	-- Example: Display 6-8 nodes, player drags from one to another to connect
+	-- Validate that all nodes connected and forms desired pattern (circuit, tree, etc.)
 	-- For MVP, using simplified text input approach
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 60)

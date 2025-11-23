@@ -400,19 +400,43 @@ function PuzzleService:validateAnswer(puzzle, answer)
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
 		-- Validate logic solution
 		-- TODO: Implement proper deduction grid validation
-		-- For MVP, accepting any string that matches expected answer
+		-- Full implementation would include:
+		--   1. Parse player's arrangement of elements/scientists/labs
+		--   2. Check each arrangement against generated clues
+		--   3. Verify no conflicts with given constraints
+		--   4. Return true only if all constraints satisfied
+		-- Example: If clue says "Dr. Smith studied Compound X in Lab A",
+		-- verify player's grid matches this relationship
+		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
 		return answer == "correct" -- Simplified for MVP
 		
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		-- Validate node connections
 		-- TODO: Implement proper graph/circuit validation
-		-- For MVP, accepting hardcoded answer
+		-- Full implementation would include:
+		--   1. Parse player's connection data (node pairs)
+		--   2. Build graph from connections
+		--   3. Verify all nodes are connected
+		--   4. Check no crossing lines (for planar graphs)
+		--   5. Validate forms complete circuit (Hamiltonian path)
+		-- Could use graph algorithms like DFS/BFS for connectivity check
+		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
 		return answer == "circuit" -- Simplified for MVP
 		
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Validate multi-stage answer
 		-- TODO: Implement multi-stage validation for final synthesis
-		-- For MVP, accepting simplified completion
+		-- Full implementation would:
+		--   1. Track current stage completion (1-5)
+		--   2. Validate each stage answer separately:
+		--      - Stage 1: Math answer validation
+		--      - Stage 2: Pattern answer validation
+		--      - Stage 3: Color arrangement validation
+		--      - Stage 4: Logic deduction validation
+		--      - Stage 5: Circuit connection validation
+		--   3. Progress to next stage only if current stage correct
+		--   4. Return true only when all 5 stages completed
+		-- Could use puzzle.data.currentStage to track progress
 		return true -- Simplified - full implementation would validate each stage
 	end
 	
