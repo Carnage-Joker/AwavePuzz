@@ -1,5 +1,6 @@
 -- Spawner.lua
 -- Server script that spawns zombies based on wave configuration
+-- Updated to support zombie attack system with baseManager and playerManager
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -9,10 +10,12 @@ local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
 local Spawner = {}
 Spawner.__index = Spawner
 
-function Spawner.new(weaponService)
+function Spawner.new(weaponService, baseManager, playerManager)
 	local self = setmetatable({}, Spawner)
 
 	self.weaponService = weaponService
+	self.baseManager = baseManager
+	self.playerManager = playerManager
 	self.spawnPoints = {}
 	self.activeZombies = {}
 	self.zombieBrains = {}
@@ -115,8 +118,8 @@ function Spawner:spawnZombie(zombieType)
 	zombieModel.Name = zombieType .. "_" .. self.zombieCount
 	zombieModel.Parent = workspace.Zombies
 
-	-- Initialize AI
-	local brain = ZombieBrain.new(zombieModel, stats)
+	-- Initialize AI with baseManager and playerManager for attack system
+	local brain = ZombieBrain.new(zombieModel, stats, self.baseManager, self.playerManager)
 	if brain then
 		self.zombieBrains[zombieModel] = brain
 		table.insert(self.activeZombies, zombieModel)

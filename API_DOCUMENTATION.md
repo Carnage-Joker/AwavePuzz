@@ -11,9 +11,11 @@ This document describes the API for each module in the AwavePuzz game system.
 - [WaveManager](#wavemanager)
 - [BaseManager](#basemanager)
 - [CureCraftingManager](#curecraftingmanager)
+- [Spawner](#spawner)
 - [ResourceSpawner](#resourcespawner)
 - [WeaponService](#weaponservice)
 - [ShopService](#shopservice)
+- [ZombieBrain](#zombiebrain)
 - [MapManager](#mapmanager)
 - [ClientController](#clientcontroller)
 
@@ -54,6 +56,9 @@ ZOMBIE_HEALTH = 50                    -- Base zombie health
 ZOMBIE_DAMAGE = 10                    -- Damage per attack
 ZOMBIE_SPEED = 16                     -- Movement speed (studs/sec)
 ZOMBIE_HEALTH_MULTIPLIER = 1.2        -- Health growth per wave
+ZOMBIE_ATTACK_RANGE = 6               -- Attack range in studs
+ZOMBIE_ATTACK_INTERVAL = 1.5          -- Seconds between attacks
+ZOMBIE_REPATH_INTERVAL = 1.0          -- Path recalculation frequency
 ```
 
 #### Cure Settings
@@ -616,6 +621,197 @@ Resets cure progress.
 
 ---
 
+## Spawner
+
+**Location**: `src/server/Spawner.lua`  
+**Type**: Class  
+**Description**: Manages zombie spawning, AI initialization, and zombie lifecycle. Integrates with BaseManager and PlayerManager for zombie attacks.
+
+### Constructor
+
+```lua
+Spawner.new(weaponService, baseManager, playerManager) -> Spawner
+```
+
+Creates a new Spawner instance.
+
+**Parameters:**
+- `weaponService` (WeaponService): For handling zombie kills and rewards
+- `baseManager` (BaseManager): Passed to zombie AI for base attacks
+- `playerManager` (PlayerManager): Passed to zombie AI for player attacks
+
+### Properties
+
+```lua
+.weaponService       -- Reference to WeaponService
+.baseManager         -- Reference to BaseManager (for zombie attacks)
+.playerManager       -- Reference to PlayerManager (for zombie attacks)
+.spawnPoints         -- Array of spawn positions
+.activeZombies       -- Array of active zombie models
+.zombieBrains        -- Map of zombie model -> ZombieBrain instance
+.zombieCount         -- Total zombies spawned (for naming)
+```
+
+### Methods
+
+#### setSpawnPoints
+```lua
+Spawner:setSpawnPoints(points: table) -> void
+```
+Sets the spawn point positions from an array of Vector3s.
+
+#### addSpawnPoint
+```lua
+Spawner:addSpawnPoint(position: Vector3) -> void
+```
+Adds a single spawn point position.
+
+#### loadSpawnPoints
+```lua
+Spawner:loadSpawnPoints() -> void
+```
+Loads spawn points from workspace folder (fallback method).
+
+#### getRandomSpawnPoint
+```lua
+Spawner:getRandomSpawnPoint() -> Vector3
+```
+Returns a random spawn point position.
+
+#### getZombieModel
+```lua
+Spawner:getZombieModel(zombieType: string) -> Model|nil
+```
+Gets or creates a zombie model for the specified type.
+
+**Parameters:**
+- `zombieType` (string): Zombie type from ZombieTypes config
+
+**Returns:**
+- Cloned zombie model from ServerStorage.ZombieModels
+- Or basic fallback model if custom model not found
+
+#### spawnZombie
+```lua
+Spawner:spawnZombie(zombieType: string) -> Model|nil
+```
+Spawns a single zombie of the specified type.
+
+**Parameters:**
+- `zombieType` (string): Type from ZombieTypes (Walker, Runner, Brute, etc.)
+
+**Returns:**
+- The spawned zombie model or `nil` on failure
+
+**Behavior:**
+- Gets zombie stats from ZombieTypes
+- Clones or creates zombie model
+- Positions at random spawn point
+- Sets zombie attributes (IsZombie, ZombieType, Reward)
+- Initializes AI with ZombieBrain (passes managers for attacks)
+- Sets up death handler
+- Adds to active zombies list
+
+#### spawnWave
+```lua
+Spawner:spawnWave(waveComposition: table) -> number
+```
+Spawns a complete wave of zombies.
+
+**Parameters:**
+- `waveComposition` (table): Map of zombie type to count
+
+**Example:**
+```lua
+spawner:spawnWave({
+    Walker = 5,
+    Runner = 3,
+    Brute = 1
+})
+```
+
+**Returns:**
+- Number of zombies successfully spawned
+
+#### onZombieDied
+```lua
+Spawner:onZombieDied(zombie: Model) -> void
+```
+Called when a zombie dies. Handles cleanup and rewards.
+
+**Behavior:**
+- Removes from active zombies list
+- Notifies WeaponService for kill rewards
+- Destroys ZombieBrain instance
+- Cleans up references
+
+#### update
+```lua
+Spawner:update(deltaTime: number) -> void
+```
+Updates all active zombie AI brains.
+
+**Parameters:**
+- `deltaTime` (number): Time since last update
+
+**Called By:**
+- GameManager's main update loop
+
+#### getActiveZombieCount
+```lua
+Spawner:getActiveZombieCount() -> number
+```
+Returns the number of living zombies.
+
+#### clearAllZombies
+```lua
+Spawner:clearAllZombies() -> void
+```
+Destroys all active zombies and clears tracking.
+
+**Used For:**
+- Victory/defeat cleanup
+- Round resets
+
+### Integration Notes
+
+**With ZombieBrain:**
+- Passes `baseManager` and `playerManager` to each zombie's AI
+- Enables zombies to attack both players and base
+- Manages zombie AI lifecycle (create, update, destroy)
+
+**With WeaponService:**
+- Notifies on zombie kills
+- Enables kill rewards and currency
+
+**With GameManager:**
+- Called every frame via `update(deltaTime)`
+- Spawns waves on command
+- Reports zombie counts
+
+### Usage Example
+
+```lua
+-- Create spawner with manager references
+local spawner = Spawner.new(weaponService, baseManager, playerManager)
+
+-- Set spawn points
+spawner:setSpawnPoints(mapManager:getZombieSpawnPoints())
+
+-- Spawn a wave
+spawner:spawnWave({
+    Walker = 10,
+    Runner = 5
+})
+
+-- Update in game loop
+game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+    spawner:update(deltaTime)
+end)
+```
+
+---
+
 ## ResourceSpawner
 
 **Location**: `src/server/ResourceSpawner.lua`  
@@ -700,6 +896,173 @@ WeaponService.new(playerManager) -> WeaponService
 - `ShopService.new(playerManager, weaponService)` – Creates the service and binds `ShopRequest`/`ShopUpdate`.
 - `sendCatalog(player)` – Fires current shop items to a client.
 - `attemptPurchase(player, itemId)` – Deducts currency, unlocks weapons, or applies upgrades.
+
+---
+
+## ZombieBrain
+
+**Location**: `src/server/AIScripts/ZombieBrain.lua`  
+**Type**: Class  
+**Description**: AI controller for individual zombies, handling movement, targeting, and attacks.
+
+### Constructor
+
+```lua
+ZombieBrain.new(zombieModel, stats, baseManager, playerManager) -> ZombieBrain|nil
+```
+
+Creates a new ZombieBrain instance for a zombie model.
+
+**Parameters:**
+- `zombieModel` (Model): The zombie model with Humanoid and HumanoidRootPart
+- `stats` (table): Zombie stats from ZombieTypes config
+- `baseManager` (BaseManager): Reference for dealing damage to base
+- `playerManager` (PlayerManager): Reference for dealing damage to players
+
+**Returns:**
+- `ZombieBrain` instance or `nil` if model is invalid
+
+### Properties
+
+```lua
+.zombieModel         -- The zombie model
+.humanoid            -- The zombie's Humanoid
+.rootPart            -- The zombie's HumanoidRootPart
+.stats               -- Zombie stats table
+.isActive            -- Whether AI is active
+.baseManager         -- Reference to BaseManager
+.playerManager       -- Reference to PlayerManager
+.attackCooldown      -- Time remaining until next attack
+.attackInterval      -- Seconds between attacks (from config)
+.attackRange         -- Range in studs for attacks (from config)
+.attackDamage        -- Damage dealt per attack
+.currentTarget       -- Current target position
+.currentTargetType   -- "player" or "base"
+```
+
+### Methods
+
+#### loadAttackAnimation
+```lua
+ZombieBrain:loadAttackAnimation() -> void
+```
+Loads the attack animation from the zombie model if available. Searches for an Animation instance named "AttackAnimation" in the zombie model.
+
+#### playAttackAnimation
+```lua
+ZombieBrain:playAttackAnimation() -> void
+```
+Plays the attack animation if one is loaded. Called automatically during attacks.
+
+#### tryAttack
+```lua
+ZombieBrain:tryAttack() -> boolean
+```
+Attempts to attack the current target if within range and cooldown is ready.
+
+**Returns:**
+- `true` if attack was performed, `false` otherwise
+
+**Behavior:**
+- Checks attack cooldown
+- Selects best target (player or base)
+- Verifies target is within attack range
+- Plays attack animation
+- Deals damage via appropriate manager
+- Resets attack cooldown
+
+#### update
+```lua
+ZombieBrain:update(deltaTime: number) -> void
+```
+Updates the zombie AI every frame.
+
+**Parameters:**
+- `deltaTime` (number): Time since last update in seconds
+
+**Behavior:**
+- Updates attack cooldown
+- Attempts to attack if target in range
+- Recalculates path every ZOMBIE_REPATH_INTERVAL seconds
+- Selects best target (nearest player or base)
+- Moves toward target using Humanoid:MoveTo
+
+#### destroy
+```lua
+ZombieBrain:destroy() -> void
+```
+Cleans up the zombie AI instance.
+
+**Behavior:**
+- Marks as inactive
+- Stops attack animations
+- Clears all references
+- Prevents memory leaks
+
+### AI Behavior
+
+#### Target Selection
+The zombie uses intelligent target selection:
+
+1. **Priority**: Always targets the closest threat
+2. **Players**: Targets alive players with >0 health
+3. **Base**: Targets the base when no players are closer
+4. **Fallback**: Targets base if no players exist
+5. **Retargeting**: Recalculates every 1 second (configurable)
+
+#### Attack System
+- **Range Check**: Attacks only when within ZOMBIE_ATTACK_RANGE (6 studs)
+- **Cooldown**: ZOMBIE_ATTACK_INTERVAL (1.5 seconds) between attacks
+- **Damage**: Deals ZOMBIE_DAMAGE (10 HP) per attack
+- **Animation**: Plays attack animation if available
+- **Server-Side**: All damage is server-authoritative
+
+#### Movement
+- **Pathfinding**: Uses Humanoid:MoveTo for basic pathfinding
+- **Update Rate**: Recalculates path every ZOMBIE_REPATH_INTERVAL (1.0 seconds)
+- **Speed**: Set from zombie stats or ZOMBIE_SPEED config
+- **Continuous**: Moves toward target between attacks
+
+### Configuration
+
+The ZombieBrain reads from GameConfig:
+
+```lua
+GameConfig.ZOMBIE_ATTACK_RANGE = 6      -- Attack range in studs
+GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5 -- Seconds between attacks
+GameConfig.ZOMBIE_REPATH_INTERVAL = 1.0 -- Path recalculation frequency
+GameConfig.ZOMBIE_DAMAGE = 10           -- Damage per attack
+```
+
+### Animation Support
+
+To add custom attack animations:
+
+1. Create an Animation instance in the zombie model
+2. Name it "AttackAnimation"
+3. Set the AnimationId to your animation asset
+4. The system will automatically load and play it
+
+**Optional**: Zombies function normally without animations.
+
+### Usage Example
+
+```lua
+-- Spawner creates zombie brain
+local brain = ZombieBrain.new(zombieModel, stats, baseManager, playerManager)
+
+-- Game loop updates brain
+game:GetService("RunService").Heartbeat:Connect(function(deltaTime)
+    if brain and brain.isActive then
+        brain:update(deltaTime)
+    end
+end)
+
+-- Cleanup on zombie death
+humanoid.Died:Connect(function()
+    brain:destroy()
+end)
+```
 
 ---
 

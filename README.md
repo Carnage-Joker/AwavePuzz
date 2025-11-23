@@ -17,6 +17,9 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 - Progressive difficulty scaling
 - Zombies get stronger and more numerous each wave
 - Strategic base defense mechanics
+- **Improved AI**: Zombies intelligently target nearest player or base
+- **Attack System**: Zombies attack when in range with cooldown
+- **Animation Support**: Attack animations for visual feedback
 - Base health system with damage tracking
 - Reward payouts per kill based on weapon used
 
@@ -224,6 +227,7 @@ This game is built using:
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
+- **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements documentation
 
 ## 📝 License
 
