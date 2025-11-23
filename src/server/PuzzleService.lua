@@ -85,7 +85,7 @@ function PuzzleService:sendPuzzleProgress(player)
 		local playerData = self.playerManager:GetPlayerData(player)
 		if playerData and playerData.CureComponents then
 			progress.componentCounts = {}
-			for _, componentName in ipairs(require(game.ReplicatedStorage.Shared.GameConfig).CURE_COMPONENT_NAMES) do
+			for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 				local count = 0
 				for _, comp in ipairs(playerData.CureComponents) do
 					if comp == componentName then
