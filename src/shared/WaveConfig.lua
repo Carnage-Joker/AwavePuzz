@@ -13,7 +13,7 @@ WaveConfig.Waves = {
 			Walker = 8
 		}
 	},
-	
+
 	-- Wave 2: Introduce runners
 	{
 		Number = 2,
@@ -24,7 +24,7 @@ WaveConfig.Waves = {
 			Runner = 4
 		}
 	},
-	
+
 	-- Wave 3: More variety
 	{
 		Number = 3,
@@ -36,7 +36,7 @@ WaveConfig.Waves = {
 			Brute = 2
 		}
 	},
-	
+
 	-- Wave 4: Adding spitters
 	{
 		Number = 4,
@@ -49,7 +49,7 @@ WaveConfig.Waves = {
 			Spitter = 2
 		}
 	},
-	
+
 	-- Wave 5: Boss wave
 	{
 		Number = 5,
@@ -63,7 +63,7 @@ WaveConfig.Waves = {
 			Boss = 1
 		}
 	},
-	
+
 	-- Wave 6: Post-boss difficulty spike
 	{
 		Number = 6,
@@ -76,7 +76,7 @@ WaveConfig.Waves = {
 			Spitter = 3
 		}
 	},
-	
+
 	-- Wave 7: Double trouble
 	{
 		Number = 7,
@@ -89,7 +89,7 @@ WaveConfig.Waves = {
 			Spitter = 3
 		}
 	},
-	
+
 	-- Wave 8: Multiple brutes
 	{
 		Number = 8,
@@ -102,7 +102,7 @@ WaveConfig.Waves = {
 			Spitter = 4
 		}
 	},
-	
+
 	-- Wave 9: Nightmare mode
 	{
 		Number = 9,
@@ -116,7 +116,7 @@ WaveConfig.Waves = {
 			Boss = 2
 		}
 	},
-	
+
 	-- Wave 10: Final wave
 	{
 		Number = 10,
