@@ -69,16 +69,32 @@ Zombie Health = Base HP × (Health Multiplier ^ (Wave - 1))
 ### Zombie AI
 
 **Behavior**
-- Seek nearest player or base
-- Attack on contact
-- Deal damage over time
-- Basic pathfinding
+- Intelligent target selection: nearest player or base
+- Proximity-based attack system (6 stud range)
+- Attack animations when available
+- Continuous movement toward target
+- Server-authoritative damage dealing
+- Dynamic retargeting every second
+
+**Targeting System**
+- Priority: Always attacks closest threat
+- Players: Targets alive players first
+- Base: Targets base when no players closer
+- Retargeting: Updates path every 1 second
+
+**Attack System**
+- Attack Range: 6 studs
+- Attack Interval: 1.5 seconds (cooldown)
+- Animation Support: Plays attack animation if available
+- Damage Dealing: Server-side validation
 
 **Stats (Base)**
 - Health: 50 HP
 - Damage: 10 HP per hit
 - Speed: 16 studs/second
-- Attack rate: 1 second cooldown
+- Attack cooldown: 1.5 seconds
+- Attack range: 6 studs
+- Repath interval: 1.0 seconds
 
 ### Base System
 

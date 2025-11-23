@@ -41,7 +41,7 @@ function GameManager.new(allianceService)
 	self.resourceSpawner = ResourceSpawner.new()
 
 	self.mapManager = MapManager.new()
-	self.spawner = Spawner.new(self.weaponService)
+	self.spawner = Spawner.new(self.weaponService, self.baseManager, self.playerManager)
 
 	-- Link WeaponService to PlayerManager for stats calculation
 	self.playerManager:setWeaponService(self.weaponService)
