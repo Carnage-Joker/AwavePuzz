@@ -23,22 +23,32 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 - Base health system with damage tracking
 - Reward payouts per kill based on weapon used
 
-### 3. **Cure-Crafting Puzzle System**
+### 3. **Cure-Crafting Puzzle System** ✅ NEW
 - 5 unique cure components to collect:
-  - Chemical A
-  - Chemical B
-  - Biological Sample
-  - Research Notes
-  - Catalyst
+  - Chemical A (Mathematical Puzzle)
+  - Chemical B (Pattern Matching Puzzle)
+  - Biological Sample (Color Matching Puzzle)
+  - Research Notes (Logic Puzzle)
+  - Catalyst (Abstract Node Connection Puzzle)
 - Each component requires 5 pieces to complete
+- **Puzzle Mini-Games**: When 5 components are collected, players must solve a puzzle at cure stations
+- **6 Total Puzzles**: 5 component-specific puzzles + 1 final synthesis puzzle
+- Interactive cure stations with ProximityPrompts
+- Time-limited puzzle challenges (45-120 seconds)
+- Currency rewards for puzzle completion
+- Final synthesis puzzle combines all 5 puzzle types and triggers victory
 - Resources spawn randomly around the map
 - Progress tracking system
 
-### 4. **Alliance System** ✅ PHASE 4 COMPLETE
+### 4. **Alliance System with Betrayal** ✅ PHASE 4 COMPLETE
 - Team up with other players for better survival
 - Allied players can't damage each other (friendly fire prevention)
 - Visual indicators: Green highlights show who is allied
-- Betrayal mechanics with 60-second cooldown
+- **Betrayal Mechanics**: Breaking alliances allows stealing:
+  - Solved puzzles (50% chance per puzzle)
+  - Collected components (50% steal rate)
+  - Potential puzzle reset for victim (50% chance)
+- Betrayal cooldown: 60 seconds before forming new alliances
 - Strategic decision-making between cooperation and competition
 - PvP enabled between non-allied players
 - Alliance UI accessible with Tab key
@@ -244,6 +254,7 @@ For detailed information, see:
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
+- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - ✨ NEW: Puzzle mechanics, types, and integration guide
 
 ## 🤔 Contributing
 

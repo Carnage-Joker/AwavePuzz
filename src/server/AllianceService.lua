@@ -16,12 +16,26 @@ function AllianceService.new()
 	self.alliances = {}           -- player UserId -> set of allied UserIds
 	self.pendingRequests = {}     -- player UserId -> set of pending request UserIds
 	self.betrayalCooldowns = {}   -- player UserId -> timestamp of last betrayal
+	
+	-- References to other services
+	self.puzzleService = nil      -- Will be set later
+	self.cureService = nil        -- Will be set later
 
 	-- Remote events
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
 
 	return self
+end
+
+-- Set puzzle service reference
+function AllianceService:setPuzzleService(puzzleService)
+	self.puzzleService = puzzleService
+end
+
+-- Set cure service reference
+function AllianceService:setCureService(cureService)
+	self.cureService = cureService
 end
 
 function AllianceService:setupRemoteEvents()
@@ -211,6 +225,11 @@ function AllianceService:handleBreakAlliance(player, target)
 
 	-- Set betrayal cooldown
 	self.betrayalCooldowns[player.UserId] = os.time()
+	
+	-- Trigger puzzle/component stealing mechanics
+	if self.puzzleService then
+		self.puzzleService:onBetrayal(player, target)
+	end
 
 	-- Notify both players
 	self.remoteEvents.AllianceUpdate:FireClient(player, {
