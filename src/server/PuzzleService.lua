@@ -351,6 +351,10 @@ end
 
 function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	local userId = player.UserId
+	if not self.playerPuzzles[userId] then
+		warn("[PuzzleService] Player not initialized:", player.Name)
+		return
+	end
 	local puzzleState = self.playerPuzzles[userId][componentName]
 	
 	if not puzzleState or not puzzleState.currentPuzzle then
