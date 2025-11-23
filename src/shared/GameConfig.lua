@@ -39,15 +39,13 @@ GameConfig.CURE_COMPONENT_NAMES = {
 	"Research Notes",
 	"Catalyst"
 }
- 
 
-Config.Spawning = {
-	SPAWN_INTERVALl = 2.5, -- seconds between spawns for the same spawn point.
+-- Spawning Settings
+GameConfig.Spawning = {
+	SPAWN_INTERVAL = 2.5, -- seconds between spawns for the same spawn point
 	DEFAULT_ATTACK_INTERVAL = 1.8,
 	DEFAULT_ATTACK_RANGE = 6,
 }
-
-
 
 -- Alliance Settings
 GameConfig.ALLIANCE_DAMAGE_MULTIPLIER = 0 -- Allies can't damage each other

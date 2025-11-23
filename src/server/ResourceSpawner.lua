@@ -89,7 +89,7 @@ function ResourceSpawner:findSpawnPoints()
 end
 
 function ResourceSpawner:getRandomComponent()
-	local components = GameConfig.COMPONENT_NAMES
+	local components = GameConfig.CURE_COMPONENT_NAMES
 	return components[math.random(1, #components)]
 end
 
@@ -239,7 +239,7 @@ end
 function ResourceSpawner:update(deltaTime)
 	self.spawnTimer = self.spawnTimer + deltaTime
 
-	if self.spawnTimer >= Config.RESOURCE_SPAWN_RATE then
+	if self.spawnTimer >= GameConfig.RESOURCE_SPAWN_RATE then
 		self.spawnTimer = 0
 		self:spawnResource()
 	end

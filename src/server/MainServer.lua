@@ -9,10 +9,8 @@ local Players = game:GetService("Players")
 local GameManager = require(script.Parent.GameManager)
 local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
+local PuzzleService = require(script.Parent.PuzzleService)
 local PlayerManager = require(script.Parent.PlayerManager)
-
--- Initialize managers
-
 
 print("=== AwavePuzz Server Starting ===")
 
@@ -24,15 +22,27 @@ print("AllianceService initialized")
 local gameManager = GameManager.new(allianceService)
 print("GameManager initialized")
 
-local playerManager = PlayerManager.new()
-local gameManager = GameManager.new(allianceService)
+-- Get player manager from game manager
+local playerManager = gameManager:getPlayerManager()
 
 -- Initialize cure service (needs reference to game manager & player manager)
-local CureService = require(script.Parent.CureService)
 local cureService = CureService.new(gameManager, playerManager)
-
-gameManager:setCureService(cureService)
 print("CureService initialized")
+
+-- Initialize puzzle service (needs cure service and player manager)
+local puzzleService = PuzzleService.new(cureService, playerManager)
+print("PuzzleService initialized")
+
+-- Link services together
+cureService:setPuzzleService(puzzleService)
+allianceService:setPuzzleService(puzzleService)
+allianceService:setCureService(cureService)
+gameManager:setCureService(cureService)
+print("Services linked")
+
+-- Setup cure stations
+require(script.Parent.CureStationSetup)
+print("Cure stations setup complete")
 
 
 
@@ -43,6 +53,8 @@ Players.PlayerAdded:Connect(function(player)
 	-- Initialize player services
 	gameManager:onPlayerAdded(player)
 	allianceService:initializePlayer(player)
+	cureService:initializePlayer(player)
+	puzzleService:initializePlayer(player)
 
 	-- Setup player character
 	player.CharacterAdded:Connect(function(character)
