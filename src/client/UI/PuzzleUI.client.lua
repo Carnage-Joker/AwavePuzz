@@ -367,18 +367,22 @@ local function createColorPuzzleUI(puzzleData)
 			blockCorner.CornerRadius = UDim.new(0, 8)
 			blockCorner.Parent = block
 			
+			block:SetAttribute("ColorIndex", i)
 			colorBlocks[i] = {frame = block, color = color}
 			
 			-- Simple swap on click (click two blocks to swap)
 			block.MouseButton1Click:Connect(function()
+				local currentIndex = block:GetAttribute("ColorIndex")
+				if not currentIndex then return end
+				
 				-- Implement simple selection and swap logic
 				if not colorFrame:GetAttribute("FirstSelected") then
-					colorFrame:SetAttribute("FirstSelected", i)
+					colorFrame:SetAttribute("FirstSelected", currentIndex)
 					block.BorderSizePixel = 3
 					block.BorderColor3 = Color3.fromRGB(255, 255, 0)
 				else
 					local firstIndex = colorFrame:GetAttribute("FirstSelected")
-					if firstIndex ~= i then
+					if firstIndex ~= currentIndex then
 						-- Swap layout orders
 						local firstBlock = colorBlocks[firstIndex].frame
 						local secondBlock = block
@@ -386,8 +390,12 @@ local function createColorPuzzleUI(puzzleData)
 						firstBlock.LayoutOrder = secondBlock.LayoutOrder
 						secondBlock.LayoutOrder = tempOrder
 						
+						-- Update indices
+						firstBlock:SetAttribute("ColorIndex", currentIndex)
+						block:SetAttribute("ColorIndex", firstIndex)
+						
 						-- Swap in table
-						colorBlocks[firstIndex], colorBlocks[i] = colorBlocks[i], colorBlocks[firstIndex]
+						colorBlocks[firstIndex], colorBlocks[currentIndex] = colorBlocks[currentIndex], colorBlocks[firstIndex]
 						
 						firstBlock.BorderSizePixel = 0
 					else

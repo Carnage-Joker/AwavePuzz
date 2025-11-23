@@ -586,7 +586,7 @@ function PuzzleService:onBetrayal(betrayer, victim)
 	
 	-- Steal solved puzzles
 	for componentName, puzzleState in pairs(victimPuzzles) do
-		if puzzleState.solved and not betrayerPuzzles[componentName].solved then
+		if puzzleState.solved and betrayerPuzzles[componentName] and not betrayerPuzzles[componentName].solved then
 			-- Steal with probability
 			if math.random() < PuzzleConfig.BetrayalMechanics.stealPercentage then
 				betrayerPuzzles[componentName].solved = true
