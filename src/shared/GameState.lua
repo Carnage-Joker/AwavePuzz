@@ -53,7 +53,7 @@ end
 
 function GameState:isGameOver()
 	return self.currentState == GameState.States.VICTORY or 
-	       self.currentState == GameState.States.DEFEAT
+		self.currentState == GameState.States.DEFEAT
 end
 
 return GameState
