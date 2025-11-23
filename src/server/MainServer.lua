@@ -41,7 +41,10 @@ gameManager:setCureService(cureService)
 print("Services linked")
 
 -- Setup cure stations
-require(script.Parent.CureStationSetup)
+local cureStationSetup = require(script.Parent.CureStationSetup)
+if not cureStationSetup then
+    warn("Cure station setup failed")
+end
 print("Cure stations setup complete")
 
 
