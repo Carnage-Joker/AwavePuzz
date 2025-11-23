@@ -550,17 +550,19 @@ submitButton.MouseButton1Click:Connect(function()
 		local colorFrame = contentFrame:FindFirstChild("ColorFrame")
 		if colorFrame then
 			answer = {}
-			local blocks = colorFrame:GetChildren()
-			table.sort(blocks, function(a, b)
-				if a:IsA("TextButton") and b:IsA("TextButton") then
-					return a.LayoutOrder < b.LayoutOrder
+			local blocks = {}
+			-- Filter to only TextButtons first
+			for _, child in ipairs(colorFrame:GetChildren()) do
+				if child:IsA("TextButton") then
+					table.insert(blocks, child)
 				end
-				return false
+			end
+			-- Now sort TextButtons by LayoutOrder
+			table.sort(blocks, function(a, b)
+				return a.LayoutOrder < b.LayoutOrder
 			end)
 			for _, block in ipairs(blocks) do
-				if block:IsA("TextButton") then
-					table.insert(answer, block.BackgroundColor3)
-				end
+				table.insert(answer, block.BackgroundColor3)
 			end
 		end
 	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.LOGIC or 
