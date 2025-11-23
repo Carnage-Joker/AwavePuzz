@@ -1,10 +1,12 @@
 -- ZombieBrain.lua
--- AI brain for zombies: walks toward nearest player or base and attacks when in range
--- Improvements:
--- - Attacks players and base (not just walks into them)
--- - Target selection prioritizes nearest threat (player or base)
--- - Attack animations support
--- - Attack cooldown system
+-- AI controller for zombies with attack system and intelligent targeting
+-- 
+-- Features:
+-- - Intelligent target selection: chooses nearest player or base
+-- - Proximity-based attack system with cooldowns
+-- - Attack animation support
+-- - Server-authoritative damage dealing
+-- - Base reference caching for performance
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
