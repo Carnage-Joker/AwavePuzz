@@ -26,9 +26,12 @@ GameConfig.BASE_ZOMBIES_PER_WAVE = 5
 
 -- Zombie Settings
 GameConfig.ZOMBIE_HEALTH = 50
-GameConfig.ZOMBIE_DAMAGE = 1
+GameConfig.ZOMBIE_DAMAGE = 10
 GameConfig.ZOMBIE_SPEED = 16
 GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.2 -- Health increase per wave
+GameConfig.ZOMBIE_ATTACK_RANGE = 6 -- Range at which zombies attack (studs)
+GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5 -- Seconds between zombie attacks
+GameConfig.ZOMBIE_REPATH_INTERVAL = 1.0 -- How often zombies recalculate path
 
 -- Cure Crafting Settings
 GameConfig.CURE_COMPONENTS_REQUIRED = 5
@@ -39,14 +42,6 @@ GameConfig.CURE_COMPONENT_NAMES = {
 	"Research Notes",
 	"Catalyst"
 }
- 
-
-Config.Spawning = {
-	SPAWN_INTERVALl = 2.5, -- seconds between spawns for the same spawn point.
-	DEFAULT_ATTACK_INTERVAL = 1.8,
-	DEFAULT_ATTACK_RANGE = 6,
-}
-
 
 
 -- Alliance Settings
