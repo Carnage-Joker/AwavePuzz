@@ -45,10 +45,8 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager)
 	self.currentTarget = nil
 	self.currentTargetType = nil -- "player" or "base"
 	
-	-- Cache base reference for performance
+	-- Cache base reference for performance (avoids repeated FindFirstChild)
 	self.cachedBase = nil
-	self.baseCacheTime = 0
-	self.baseCacheInterval = 5 -- Re-cache base every 5 seconds
 	
 	-- Attack system
 	self.attackCooldown = 0
@@ -92,8 +90,8 @@ end
 
 -- Get the base position from workspace (with caching)
 function ZombieBrain:getBasePosition()
-	-- Return cached base if still valid
-	if self.cachedBase and self.cachedBase.Parent then
+	-- Return cached base if still valid (within workspace and not destroyed)
+	if self.cachedBase and self.cachedBase.Parent and self.cachedBase:IsDescendantOf(workspace) then
 		if self.cachedBase:IsA("Model") then
 			return self.cachedBase:GetPivot().Position
 		elseif self.cachedBase:IsA("BasePart") then
@@ -101,7 +99,7 @@ function ZombieBrain:getBasePosition()
 		end
 	end
 	
-	-- Cache expired or invalid, find base again
+	-- Cache expired, invalid, or doesn't exist - find base again
 	local base = workspace:FindFirstChild("Base")
 	if base then
 		self.cachedBase = base
@@ -112,6 +110,7 @@ function ZombieBrain:getBasePosition()
 		end
 	end
 	
+	-- Base not found
 	self.cachedBase = nil
 	return nil
 end
