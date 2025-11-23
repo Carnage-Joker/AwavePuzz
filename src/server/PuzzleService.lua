@@ -395,7 +395,14 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Check if color order matches
 		if type(answer) ~= "table" then return false end
 		for i, color in ipairs(puzzle.data.correct) do
-			if not answer[i] or answer[i] ~= color then
+			local answerColor = answer[i]
+			if not answerColor then
+				return false
+			end
+			local dr = math.abs(color.R - answerColor.R)
+			local dg = math.abs(color.G - answerColor.G)
+			local db = math.abs(color.B - answerColor.B)
+			if dr > 0.01 or dg > 0.01 or db > 0.01 then
 				return false
 			end
 		end
