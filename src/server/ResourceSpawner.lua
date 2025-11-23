@@ -8,7 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local sharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(sharedFolder:WaitForChild("Config"))
+local GameConfig = require(sharedFolder:WaitForChild("GameConfig"))
 
 local ResourceSpawner = {}
 ResourceSpawner.__index = ResourceSpawner
@@ -89,7 +89,7 @@ function ResourceSpawner:findSpawnPoints()
 end
 
 function ResourceSpawner:getRandomComponent()
-	local components = Config.Cure.ComponentNames
+	local components = GameConfig.COMPONENT_NAMES
 	return components[math.random(1, #components)]
 end
 
@@ -101,7 +101,7 @@ function ResourceSpawner:getRandomSpawnPoint()
 end
 
 function ResourceSpawner:spawnResource()
-	if self:getActiveResourceCount() >= Config.Cure.MaxResourcesOnMap then
+	if self:getActiveResourceCount() >= GameConfig.MAX_RESOURCES_ON_MAP then
 		return nil
 	end
 
@@ -239,7 +239,7 @@ end
 function ResourceSpawner:update(deltaTime)
 	self.spawnTimer = self.spawnTimer + deltaTime
 
-	if self.spawnTimer >= Config.Cure.ResourceSpawnRate then
+	if self.spawnTimer >= Config.RESOURCE_SPAWN_RATE then
 		self.spawnTimer = 0
 		self:spawnResource()
 	end
