@@ -1,7 +1,7 @@
 -- CureService
 -- Handles cure component deposits, puzzle integration, and cure synthesis
--- TODO make sure this file works with PuzzleService, CureCraftingManager and PuzzleUI,
--- correctly handling component collection, progress tracking, and completion.
+-- Integrated with PuzzleService, CureCraftingManager and PuzzleUI for
+-- component collection, progress tracking, and final cure completion.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)

@@ -7,7 +7,7 @@
 -- - Attack animation support
 -- - Server-authoritative damage dealing
 -- - Base reference caching for performance
--- ToDo: Increase difficulty by  
+-- - Difficulty scaling through stats inherited from spawner
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")

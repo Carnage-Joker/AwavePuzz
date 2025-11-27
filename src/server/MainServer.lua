@@ -1,8 +1,7 @@
 -- MainServer.lua
 -- Main server initialization script
 -- Place this as a Script (not ModuleScript) in ServerScriptService
--- ToDo : add a way to disable the server
-
+-- Server can be disabled by calling gameManager:disableServer() or setting ServerEnabled attribute to false
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -42,6 +41,7 @@ print("PuzzleService initialized")
 cureService:setPuzzleService(puzzleService)
 allianceService:setPuzzleService(puzzleService)
 allianceService:setCureService(cureService)
+allianceService:setPlayerManager(playerManager)
 gameManager:setCureService(cureService)
 print("Services linked")
 

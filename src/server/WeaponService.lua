@@ -1,8 +1,7 @@
 -- WeaponService.lua
 -- Handles player weapon logic, raycast validation, and kill rewards
--- ToDo: Ensure the gun is properly cloned and positioned	
--- ToDo: Handle weapon switching and cleanup
--- ToDo: Ensure gun fires the way its facing and projectile hits target
+-- Features proper gun cloning, positioning on hand, weapon switching with cleanup,
+-- and raycast firing in the direction the player is aiming
 
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

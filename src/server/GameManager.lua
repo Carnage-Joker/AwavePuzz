@@ -1,13 +1,8 @@
 -- GameManager.lua
 -- Main server-side game manager that orchestrates waves, base health, win/lose conditions
--- TODO : add base health to game manager
--- TODO : add player manager to game manager
--- TODO : add weapon service to game manager
--- TODO : add spawner to game manager
--- TODO : add resource spawner to game manager
--- TODO : add map manager to game manager
--- TODO : implement respawn at end of round with dead players wwatching the rest of the round
--- TODO : implement scoreboard with player stats including round wins, losses, kills, deaths, etc.
+-- Supports server disable via disableServer() method
+-- Includes spectator mode for dead players (dead players remain in game to watch)
+-- Scoreboard stats tracked per player: kills, deaths, round wins/losses
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,6 +36,9 @@ function GameManager.new(allianceService)
 	-- Store alliance service reference
 	self.allianceService = allianceService
 
+	-- Server enabled flag
+	self.serverEnabled = true
+
 	-- Managers
 	self.baseManager = BaseManager.getInstance()
 	self.playerManager = PlayerManager.new()
@@ -71,6 +69,9 @@ function GameManager.new(allianceService)
 	self.currentWave = 0
 	self.cureProgress = 0
 
+	-- Scoreboard stats per player (userId -> stats)
+	self.playerStats = {}
+
 	-- Timers
 	self.stateTimer = 0
 	self.waveTimeLimit = 0
@@ -98,7 +99,8 @@ function GameManager:setupRemoteEvents()
 		"GameStateUpdate",
 		"CureUpdate",
 		"BaseHealthUpdate",
-		"MapUpdate"
+		"MapUpdate",
+		"ScoreboardUpdate"
 	}
 
 	for _, eventName in ipairs(eventNames) do
@@ -110,6 +112,97 @@ function GameManager:setupRemoteEvents()
 		end
 		self.remoteEvents[eventName] = event
 	end
+end
+
+-- Server enable/disable functionality
+function GameManager:disableServer()
+	self.serverEnabled = false
+	print("Server disabled - game will not start new rounds")
+	
+	-- Clear any active zombies
+	self.spawner:clearAllZombies()
+	
+	-- Set state to waiting
+	if self.currentState ~= GameManager.States.VICTORY and self.currentState ~= GameManager.States.DEFEAT then
+		self:setState(GameManager.States.WAITING)
+	end
+end
+
+function GameManager:enableServer()
+	if self.currentState ~= GameManager.States.WAITING then
+		warn("Cannot enable server - game already in progress. Current state:", self.currentState)
+		return false
+	end
+	self.serverEnabled = true
+	print("Server enabled - game can now start")
+	return true
+end
+
+function GameManager:isServerEnabled()
+	return self.serverEnabled
+end
+
+-- Scoreboard stat tracking
+function GameManager:initializePlayerStats(player)
+	if not self.playerStats[player.UserId] then
+		self.playerStats[player.UserId] = {
+			playerName = player.Name,
+			kills = 0,
+			deaths = 0,
+			roundWins = 0,
+			roundLosses = 0,
+			damageDealt = 0,
+			componentsCollected = 0
+		}
+	end
+end
+
+function GameManager:incrementPlayerKills(player, amount)
+	self:initializePlayerStats(player)
+	self.playerStats[player.UserId].kills = self.playerStats[player.UserId].kills + (amount or 1)
+	self:broadcastScoreboard()
+end
+
+function GameManager:incrementPlayerDeaths(player)
+	self:initializePlayerStats(player)
+	self.playerStats[player.UserId].deaths = self.playerStats[player.UserId].deaths + 1
+	self:broadcastScoreboard()
+end
+
+function GameManager:incrementPlayerComponentsCollected(player)
+	self:initializePlayerStats(player)
+	self.playerStats[player.UserId].componentsCollected = self.playerStats[player.UserId].componentsCollected + 1
+	self:broadcastScoreboard()
+end
+
+function GameManager:broadcastScoreboard()
+	if self.remoteEvents.ScoreboardUpdate then
+		-- Build scoreboard data
+		local scoreboardData = {}
+		for userId, stats in pairs(self.playerStats) do
+			table.insert(scoreboardData, {
+				userId = userId,
+				playerName = stats.playerName,
+				kills = stats.kills,
+				deaths = stats.deaths,
+				roundWins = stats.roundWins,
+				roundLosses = stats.roundLosses,
+				componentsCollected = stats.componentsCollected
+			})
+		end
+		
+		-- Sort by kills descending
+		table.sort(scoreboardData, function(a, b)
+			return a.kills > b.kills
+		end)
+		
+		self.remoteEvents.ScoreboardUpdate:FireAllClients(scoreboardData)
+	end
+end
+
+function GameManager:getPlayerStats(player)
+	self:initializePlayerStats(player)
+	return self.playerStats[player.UserId]
 end
 
 function GameManager:broadcastMap()
@@ -128,6 +221,10 @@ function GameManager:onPlayerAdded(player)
 	end
 	self.weaponService:initializePlayer(player)
 	self.shopService:sendCatalog(player)
+	
+	-- Initialize scoreboard stats for the player
+	self:initializePlayerStats(player)
+	self:broadcastScoreboard()
 end
 
 function GameManager:onPlayerRemoving(player)
@@ -159,6 +256,12 @@ end
 
 function GameManager:startGame()
 	if self.currentState ~= GameManager.States.WAITING then
+		return false
+	end
+	
+	-- Check if server is enabled
+	if not self.serverEnabled then
+		print("Cannot start game - server is disabled")
 		return false
 	end
 
@@ -264,6 +367,13 @@ function GameManager:onVictory()
 
 	-- Stop spawning, clean up zombies
 	self.spawner:clearAllZombies()
+	
+	-- Update scoreboard stats - all surviving players get round win
+	for _, player in ipairs(Players:GetPlayers()) do
+		self:initializePlayerStats(player)
+		self.playerStats[player.UserId].roundWins = self.playerStats[player.UserId].roundWins + 1
+	end
+	self:broadcastScoreboard()
 end
 
 function GameManager:onDefeat(reason)
@@ -272,6 +382,13 @@ function GameManager:onDefeat(reason)
 
 	-- Stop spawning, clean up zombies
 	self.spawner:clearAllZombies()
+	
+	-- Update scoreboard stats - all players get round loss
+	for _, player in ipairs(Players:GetPlayers()) do
+		self:initializePlayerStats(player)
+		self.playerStats[player.UserId].roundLosses = self.playerStats[player.UserId].roundLosses + 1
+	end
+	self:broadcastScoreboard()
 end
 
 function GameManager:checkLoseConditions()

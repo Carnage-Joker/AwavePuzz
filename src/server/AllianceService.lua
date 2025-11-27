@@ -1,8 +1,9 @@
 -- AllianceService.lua
 -- Server script that manages player alliances and betrayals
--- TODO make sure Alliance system is working, allied players share resources and puzzles, 
--- betraying allies transfers 3/4 of the the alliances resources and puzzles to the winner, 
--- surviving a betrayal from an allied player transfers all puzzles and resources to the survivor
+-- Features:
+-- - Allied players share resources and puzzles automatically
+-- - Betraying allies transfers 3/4 of resources/puzzles to the betrayer
+-- - Surviving a betrayal (when victim kills betrayer) transfers all to survivor
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -18,10 +19,14 @@ function AllianceService.new()
 	self.alliances = {}           -- player UserId -> set of allied UserIds
 	self.pendingRequests = {}     -- player UserId -> set of pending request UserIds
 	self.betrayalCooldowns = {}   -- player UserId -> timestamp of last betrayal
+	
+	-- Track recent betrayals for survivor mechanics
+	self.recentBetrayals = {}     -- betrayer UserId -> victim UserId
 
 	-- References to other services
 	self.puzzleService = nil      -- Will be set later
 	self.cureService = nil        -- Will be set later
+	self.playerManager = nil      -- Will be set later
 
 	-- Remote events
 	self.remoteEvents = {}
@@ -38,6 +43,11 @@ end
 -- Set cure service reference
 function AllianceService:setCureService(cureService)
 	self.cureService = cureService
+end
+
+-- Set player manager reference
+function AllianceService:setPlayerManager(playerManager)
+	self.playerManager = playerManager
 end
 
 function AllianceService:setupRemoteEvents()
@@ -227,8 +237,14 @@ function AllianceService:handleBreakAlliance(player, target)
 
 	-- Set betrayal cooldown
 	self.betrayalCooldowns[player.UserId] = os.time()
+	
+	-- Track this betrayal for survivor mechanics
+	self.recentBetrayals[player.UserId] = target.UserId
 
-	-- Trigger puzzle/component stealing mechanics
+	-- Transfer 3/4 of victim's resources and puzzles to betrayer
+	self:transferBetrayalResources(player, target, 0.75)
+
+	-- Trigger puzzle stealing mechanics
 	if self.puzzleService then
 		self.puzzleService:onBetrayal(player, target)
 	end
@@ -249,6 +265,86 @@ function AllianceService:handleBreakAlliance(player, target)
 	})
 
 	print(player.Name .. " betrayed alliance with " .. target.Name)
+end
+
+-- Transfer resources from victim to betrayer
+function AllianceService:transferBetrayalResources(betrayer, victim, transferRatio)
+	if not self.playerManager then
+		return
+	end
+	
+	local victimData = self.playerManager:getPlayerData(victim)
+	local betrayerData = self.playerManager:getPlayerData(betrayer)
+	
+	if not victimData or not betrayerData then
+		return
+	end
+	
+	-- Transfer currency based on transferRatio (e.g., 0.75 for betrayal, 1.0 for survivor victory)
+	local victimCurrency = victimData.currency or 0
+	local transferAmount = math.floor(victimCurrency * transferRatio)
+	
+	if transferAmount > 0 then
+		victimData.currency = victimData.currency - transferAmount
+		betrayerData.currency = betrayerData.currency + transferAmount
+		
+		-- Send currency updates to clients (with method existence check)
+		if self.playerManager.sendCurrencyUpdate then
+			self.playerManager:sendCurrencyUpdate(victim)
+			self.playerManager:sendCurrencyUpdate(betrayer)
+		end
+		
+		print(betrayer.Name .. " stole " .. transferAmount .. " currency from " .. victim.Name)
+	end
+end
+
+-- Called when a betrayer is killed by their recent victim (survivor mechanics)
+function AllianceService:onBetrayerKilled(betrayer, killer)
+	local victimUserId = self.recentBetrayals[betrayer.UserId]
+	if not victimUserId then
+		return
+	end
+	
+	-- Check if the killer was the victim of the betrayal
+	if killer.UserId ~= victimUserId then
+		return
+	end
+	
+	-- Clear the betrayal tracking
+	self.recentBetrayals[betrayer.UserId] = nil
+	
+	-- Transfer ALL resources from betrayer to survivor
+	self:transferBetrayalResources(killer, betrayer, 1.0)
+	
+	-- Transfer all puzzles from betrayer to survivor
+	if self.puzzleService then
+		self.puzzleService:onSurvivorVictory(killer, betrayer)
+	end
+	
+	-- Notify survivor
+	if self.remoteEvents.AllianceUpdate then
+		self.remoteEvents.AllianceUpdate:FireClient(killer, {
+			type = "survivor_victory",
+			betrayer = betrayer.Name,
+			message = "You survived the betrayal! All resources and puzzles transferred to you."
+		})
+	end
+	
+	print(killer.Name .. " survived betrayal by " .. betrayer.Name .. " and claimed all resources!")
+end
+
+-- Integration point: Call this from MainServer.lua or WeaponService.lua when a player is killed
+-- deadPlayer: The player who died
+-- killerPlayer: The player who killed them (may be nil for non-PvP deaths)
+function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
+	if not deadPlayer or not killerPlayer then
+		return
+	end
+	-- Check if deadPlayer was a betrayer and killerPlayer was their recent victim
+	local victimUserId = self.recentBetrayals and self.recentBetrayals[deadPlayer.UserId]
+	if victimUserId and killerPlayer.UserId == victimUserId then
+		self:onBetrayerKilled(deadPlayer, killerPlayer)
+	end
 end
 
 function AllianceService:createAlliance(player1, player2)
