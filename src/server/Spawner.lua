@@ -1,6 +1,9 @@
 -- Spawner.lua
 -- Server script that spawns zombies based on wave configuration
 -- Updated to support zombie attack system with baseManager and playerManager
+-- ToDo : spread out zombies in timing and spawn points
+-- ToDo : increase difficulty of later waves by strategically spawning specific,
+-- types in strategic positions and times
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -104,7 +107,7 @@ function Spawner:spawnZombie(zombieType)
 	-- Position zombie at spawn point
 	local spawnPosition = self:getRandomSpawnPoint()
 	if zombieModel.PrimaryPart then
-		zombieModel:SetPrimaryPartCFrame(CFrame.new(spawnPosition + Vector3.new(0, 3, 0)))
+		zombieModel:PivotTo(CFrame.new(spawnPosition + Vector3.new(0, 3, 0)))
 	elseif zombieModel:FindFirstChild("HumanoidRootPart") then
 		zombieModel.HumanoidRootPart.CFrame = CFrame.new(spawnPosition + Vector3.new(0, 3, 0))
 	end
