@@ -13,24 +13,24 @@ PuzzleService.__index = PuzzleService
 
 function PuzzleService.new(cureService, playerManager)
 	local self = setmetatable({}, PuzzleService)
-	
+
 	self.cureService = cureService
 	self.playerManager = playerManager
-	
+
 	-- Track puzzle state per player
 	-- Structure: playerPuzzles[userId] = {componentName = {solved = bool, attempts = num, currentPuzzle = data}}
 	self.playerPuzzles = {}
-	
+
 	-- Track which players have completed all 5 component puzzles and can attempt final
 	self.playersReadyForFinal = {}
-	
+
 	-- Track puzzle instances for validation
 	self.activePuzzles = {}
-	
+
 	self:setupRemoteEvents()
-	
+
 	print("[PuzzleService] Initialized")
-	
+
 	return self
 end
 
@@ -41,7 +41,7 @@ function PuzzleService:setupRemoteEvents()
 		remoteEvents.Name = "RemoteEvents"
 		remoteEvents.Parent = ReplicatedStorage
 	end
-	
+
 	-- Create puzzle-related remote events
 	local eventNames = {
 		"RequestPuzzle",      -- Client requests to start a puzzle
@@ -52,7 +52,7 @@ function PuzzleService:setupRemoteEvents()
 		"OpenPuzzleUI",       -- Server tells client to open puzzle UI
 		"RequestPuzzleProgress", -- Client requests puzzle progress data
 	}
-	
+
 	for _, eventName in ipairs(eventNames) do
 		local event = remoteEvents:FindFirstChild(eventName)
 		if not event then
@@ -61,16 +61,16 @@ function PuzzleService:setupRemoteEvents()
 			event.Parent = remoteEvents
 		end
 	end
-	
+
 	-- Connect event handlers
 	remoteEvents.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
 		self:handlePuzzleRequest(player, componentName)
 	end)
-	
+
 	remoteEvents.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
 		self:handlePuzzleAnswer(player, componentName, answer)
 	end)
-	
+
 	remoteEvents.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
 		self:sendPuzzleProgress(player)
 	end)
@@ -79,7 +79,7 @@ end
 -- Send puzzle progress to client
 function PuzzleService:sendPuzzleProgress(player)
 	local progress = self:getPuzzleProgress(player)
-	
+
 	-- Add component counts from CureService
 	if self.playerManager then
 		local playerData = self.playerManager:GetPlayerData(player)
@@ -96,7 +96,7 @@ function PuzzleService:sendPuzzleProgress(player)
 			end
 		end
 	end
-	
+
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleUpdate") then
 		remoteEvents.PuzzleUpdate:FireClient(player, {
@@ -108,10 +108,10 @@ end
 
 function PuzzleService:initializePlayer(player)
 	local userId = player.UserId
-	
+
 	if not self.playerPuzzles[userId] then
 		self.playerPuzzles[userId] = {}
-		
+
 		-- Initialize puzzle state for each component
 		for componentName, puzzleData in pairs(PuzzleConfig.ComponentPuzzles) do
 			self.playerPuzzles[userId][componentName] = {
@@ -121,7 +121,7 @@ function PuzzleService:initializePlayer(player)
 				lastAttemptTime = 0
 			}
 		end
-		
+
 		-- Initialize final puzzle state
 		self.playerPuzzles[userId]["FinalSynthesis"] = {
 			solved = false,
@@ -138,14 +138,14 @@ function PuzzleService:checkPlayerHasComponents(player, componentName)
 	if not playerData or not playerData.CureComponents then
 		return false
 	end
-	
+
 	local count = 0
 	for _, comp in ipairs(playerData.CureComponents) do
 		if comp == componentName then
 			count = count + 1
 		end
 	end
-	
+
 	return count >= GameConfig.CURE_COMPONENTS_REQUIRED
 end
 
@@ -153,38 +153,38 @@ function PuzzleService:checkPlayerReadyForFinal(player)
 	-- Check if player has solved all 5 component puzzles
 	local userId = player.UserId
 	local puzzleState = self.playerPuzzles[userId]
-	
+
 	if not puzzleState then
 		return false
 	end
-	
+
 	for componentName, _ in pairs(PuzzleConfig.ComponentPuzzles) do
 		if not puzzleState[componentName] or not puzzleState[componentName].solved then
 			return false
 		end
 	end
-	
+
 	return true
 end
 
 function PuzzleService:handlePuzzleRequest(player, componentName)
 	local userId = player.UserId
-	
+
 	-- Initialize player if needed
 	self:initializePlayer(player)
-	
+
 	local puzzleState = self.playerPuzzles[userId][componentName]
 	if not puzzleState then
 		warn("[PuzzleService] Invalid component name:", componentName)
 		return
 	end
-	
+
 	-- Check if puzzle already solved
 	if puzzleState.solved then
 		print("[PuzzleService]", player.Name, "already solved", componentName, "puzzle")
 		return
 	end
-	
+
 	-- Check retry delay
 	local currentTime = tick()
 	if puzzleState.lastAttemptTime > 0 then
@@ -195,13 +195,13 @@ function PuzzleService:handlePuzzleRequest(player, componentName)
 			return
 		end
 	end
-	
+
 	-- Check max attempts
 	if PuzzleConfig.Penalties.maxAttempts > 0 and puzzleState.attempts >= PuzzleConfig.Penalties.maxAttempts then
 		self:sendPuzzleError(player, "Maximum attempts reached for this puzzle")
 		return
 	end
-	
+
 	-- For component puzzles, verify player has collected 5 components
 	if componentName ~= "FinalSynthesis" then
 		if not self:checkPlayerHasComponents(player, componentName) then
@@ -215,14 +215,14 @@ function PuzzleService:handlePuzzleRequest(player, componentName)
 			return
 		end
 	end
-	
+
 	-- Generate puzzle based on component type
 	local puzzle = self:generatePuzzle(componentName)
 	puzzleState.currentPuzzle = puzzle
 	puzzleState.attempts = puzzleState.attempts + 1
-	
+
 	print("[PuzzleService]", player.Name, "started puzzle for", componentName)
-	
+
 	-- Send puzzle to client
 	self:sendPuzzleToClient(player, componentName, puzzle)
 end
@@ -231,12 +231,12 @@ function PuzzleService:generatePuzzle(componentName)
 	local puzzleConfig = componentName == "FinalSynthesis" 
 		and PuzzleConfig.FinalPuzzle 
 		or PuzzleConfig.ComponentPuzzles[componentName]
-	
+
 	if not puzzleConfig then
 		warn("[PuzzleService] No puzzle config for:", componentName)
 		return nil
 	end
-	
+
 	local puzzle = {
 		type = puzzleConfig.type,
 		name = puzzleConfig.name,
@@ -244,14 +244,14 @@ function PuzzleService:generatePuzzle(componentName)
 		timeLimit = puzzleConfig.timeLimit,
 		startTime = tick()
 	}
-	
+
 	-- Generate specific puzzle data based on type
 	if puzzleConfig.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL then
 		puzzle.data = PuzzleConfig.generateMathPuzzle()
-		
+
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.PATTERN then
 		puzzle.data = PuzzleConfig.generatePatternPuzzle()
-		
+
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.COLOR then
 		-- Generate color puzzle
 		local colorTemplate = PuzzleConfig.ColorPuzzles[1] -- Use spectrum for now
@@ -269,7 +269,7 @@ function PuzzleService:generatePuzzle(componentName)
 			correct = colorTemplate.colors,
 			type = colorTemplate.type
 		}
-		
+
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.LOGIC then
 		-- Generate logic puzzle (simplified for implementation)
 		local template = PuzzleConfig.LogicPuzzles[1]
@@ -280,7 +280,7 @@ function PuzzleService:generatePuzzle(componentName)
 			-- Generate clues and solution
 			solution = self:generateLogicSolution(template)
 		}
-		
+
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		-- Generate node connection puzzle
 		local template = PuzzleConfig.AbstractPuzzles[1]
@@ -289,7 +289,7 @@ function PuzzleService:generatePuzzle(componentName)
 			type = template.type,
 			solution = self:generateAbstractSolution(template)
 		}
-		
+
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Final puzzle combines multiple stages
 		puzzle.data = {
@@ -303,7 +303,7 @@ function PuzzleService:generatePuzzle(componentName)
 			currentStage = 1
 		}
 	end
-	
+
 	return puzzle
 end
 
@@ -312,13 +312,13 @@ function PuzzleService:generateLogicSolution(template)
 	-- Simplified: just create a random valid mapping
 	local solution = {}
 	local usedLabs = {}
-	
+
 	for i, scientist in ipairs(template.scientists) do
 		local element = template.elements[i]
 		local lab = template.labs[i]
 		solution[scientist] = {element = element, lab = lab}
 	end
-	
+
 	return solution
 end
 
@@ -356,22 +356,22 @@ function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 		return
 	end
 	local puzzleState = self.playerPuzzles[userId][componentName]
-	
+
 	if not puzzleState or not puzzleState.currentPuzzle then
 		warn("[PuzzleService] No active puzzle for", player.Name, componentName)
 		return
 	end
-	
+
 	-- Check time limit
 	local elapsedTime = tick() - puzzleState.currentPuzzle.startTime
 	if elapsedTime > puzzleState.currentPuzzle.timeLimit then
 		self:onPuzzleFailed(player, componentName, "Time limit exceeded")
 		return
 	end
-	
+
 	-- Validate answer
 	local isCorrect = self:validateAnswer(puzzleState.currentPuzzle, answer)
-	
+
 	if isCorrect then
 		self:onPuzzleCompleted(player, componentName, elapsedTime)
 	else
@@ -383,14 +383,14 @@ function PuzzleService:validateAnswer(puzzle, answer)
 	if not puzzle or not puzzle.data then
 		return false
 	end
-	
+
 	-- Validate based on puzzle type
 	if puzzle.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL then
 		return answer == puzzle.data.answer
-		
+
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
 		return answer == puzzle.data.answer
-		
+
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.COLOR then
 		-- Check if color order matches
 		if type(answer) ~= "table" then return false end
@@ -407,8 +407,9 @@ function PuzzleService:validateAnswer(puzzle, answer)
 			end
 		end
 		return true
-		
+
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
+
 		-- Validate logic solution
 		-- TODO: Implement proper deduction grid validation
 		-- Full implementation would include:
@@ -419,8 +420,9 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Example: If clue says "Dr. Smith studied Compound X in Lab A",
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
+
 		return answer == "correct" -- Simplified for MVP
-		
+
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		-- Validate node connections
 		-- TODO: Implement proper graph/circuit validation
@@ -433,7 +435,7 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
 		return answer == "circuit" -- Simplified for MVP
-		
+
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Validate multi-stage answer
 		-- TODO: Implement multi-stage validation for final synthesis
@@ -450,37 +452,37 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Could use puzzle.data.currentStage to track progress
 		return true -- Simplified - full implementation would validate each stage
 	end
-	
+
 	return false
 end
 
 function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
 	local userId = player.UserId
 	local puzzleState = self.playerPuzzles[userId][componentName]
-	
+
 	puzzleState.solved = true
 	puzzleState.currentPuzzle = nil
 	puzzleState.lastAttemptTime = tick()
-	
+
 	print("[PuzzleService]", player.Name, "solved", componentName, "puzzle in", math.floor(elapsedTime), "seconds")
-	
+
 	-- Award currency
 	local reward = PuzzleConfig.Rewards.componentPuzzleSolved
 	if componentName == "FinalSynthesis" then
 		reward = PuzzleConfig.Rewards.finalPuzzleSolved
 	end
-	
+
 	-- Time bonus
 	local puzzleConfig = componentName == "FinalSynthesis" 
 		and PuzzleConfig.FinalPuzzle 
 		or PuzzleConfig.ComponentPuzzles[componentName]
-	
+
 	if elapsedTime < puzzleConfig.timeLimit / 2 then
 		reward = math.floor(reward * PuzzleConfig.Rewards.timeBonusMultiplier)
 	end
-	
+
 	self.playerManager:addCurrency(player, reward)
-	
+
 	-- Notify client
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleCompleted") then
@@ -490,7 +492,7 @@ function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
 			timeTaken = elapsedTime
 		})
 	end
-	
+
 	-- Check if player completed all component puzzles
 	if componentName ~= "FinalSynthesis" then
 		if self:checkPlayerReadyForFinal(player) then
@@ -509,12 +511,12 @@ end
 function PuzzleService:onPuzzleFailed(player, componentName, reason)
 	local userId = player.UserId
 	local puzzleState = self.playerPuzzles[userId][componentName]
-	
+
 	puzzleState.currentPuzzle = nil
 	puzzleState.lastAttemptTime = tick()
-	
+
 	print("[PuzzleService]", player.Name, "failed", componentName, "puzzle:", reason)
-	
+
 	-- Notify client
 	self:sendPuzzleError(player, "Puzzle failed: " .. reason)
 end
@@ -522,33 +524,33 @@ end
 function PuzzleService:canAttemptPuzzle(player, componentName)
 	local userId = player.UserId
 	self:initializePlayer(player)
-	
+
 	local puzzleState = self.playerPuzzles[userId][componentName]
 	if not puzzleState then
 		return false, "Invalid puzzle"
 	end
-	
+
 	if puzzleState.solved then
 		return false, "Already solved"
 	end
-	
+
 	if PuzzleConfig.Penalties.maxAttempts > 0 and puzzleState.attempts >= PuzzleConfig.Penalties.maxAttempts then
 		return false, "Maximum attempts reached"
 	end
-	
+
 	return true, "Can attempt"
 end
 
 function PuzzleService:getPuzzleProgress(player)
 	local userId = player.UserId
 	self:initializePlayer(player)
-	
+
 	local progress = {
 		componentPuzzles = {},
 		finalPuzzle = {},
 		readyForFinal = false
 	}
-	
+
 	for componentName, puzzleConfig in pairs(PuzzleConfig.ComponentPuzzles) do
 		local puzzleState = self.playerPuzzles[userId][componentName]
 		progress.componentPuzzles[componentName] = {
@@ -558,14 +560,14 @@ function PuzzleService:getPuzzleProgress(player)
 			type = puzzleConfig.type
 		}
 	end
-	
+
 	progress.finalPuzzle = {
 		solved = self.playerPuzzles[userId]["FinalSynthesis"].solved,
 		attempts = self.playerPuzzles[userId]["FinalSynthesis"].attempts
 	}
-	
+
 	progress.readyForFinal = self:checkPlayerReadyForFinal(player)
-	
+
 	return progress
 end
 
@@ -574,16 +576,16 @@ function PuzzleService:onBetrayal(betrayer, victim)
 	if not PuzzleConfig.BetrayalMechanics.canStealSolvedPuzzles then
 		return
 	end
-	
+
 	local betrayerUserId = betrayer.UserId
 	local victimUserId = victim.UserId
-	
+
 	self:initializePlayer(betrayer)
 	self:initializePlayer(victim)
-	
+
 	local victimPuzzles = self.playerPuzzles[victimUserId]
 	local betrayerPuzzles = self.playerPuzzles[betrayerUserId]
-	
+
 	-- Steal solved puzzles
 	for componentName, puzzleState in pairs(victimPuzzles) do
 		if puzzleState.solved and betrayerPuzzles[componentName] and not betrayerPuzzles[componentName].solved then
@@ -594,7 +596,7 @@ function PuzzleService:onBetrayal(betrayer, victim)
 			end
 		end
 	end
-	
+
 	-- Potentially reset victim's puzzles
 	if math.random() < PuzzleConfig.BetrayalMechanics.betrayalPuzzleResetChance then
 		for componentName, puzzleState in pairs(victimPuzzles) do
