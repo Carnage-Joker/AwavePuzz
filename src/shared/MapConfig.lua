@@ -1,5 +1,12 @@
 -- MapConfig.lua
 -- Describes available maps and the helper utilities for the multi-map system
+-- ToDo : vote for map between rounds
+
+-- Map definitions
+-- Each map is a table with the following fields:
+--   Name: Display name for the map
+--   Model: Name of the map model in ReplicatedStorage.Maps
+--   Description: Brief description of the map
 
 local MapConfig = {}
 
