@@ -167,6 +167,7 @@ end
 function GameManager:incrementPlayerComponentsCollected(player)
 	self:initializePlayerStats(player)
 	self.playerStats[player.UserId].componentsCollected = self.playerStats[player.UserId].componentsCollected + 1
+	self:broadcastScoreboard()
 end
 
 function GameManager:broadcastScoreboard()
