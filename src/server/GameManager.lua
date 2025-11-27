@@ -129,8 +129,13 @@ function GameManager:disableServer()
 end
 
 function GameManager:enableServer()
+	if self.currentState ~= GameManager.States.WAITING then
+		warn("Cannot enable server - game already in progress. Current state:", self.currentState)
+		return false
+	end
 	self.serverEnabled = true
 	print("Server enabled - game can now start")
+	return true
 end
 
 function GameManager:isServerEnabled()
