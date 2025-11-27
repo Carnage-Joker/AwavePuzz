@@ -1,6 +1,8 @@
 -- AllianceService.lua
 -- Server script that manages player alliances and betrayals
---TODO make sure Alliance system is working, allied players share resources and puzzles, betraying allies transfers all resources and puzzles to the winner
+-- TODO make sure Alliance system is working, allied players share resources and puzzles, 
+-- betraying allies transfers 3/4 of the the alliances resources and puzzles to the winner, 
+-- surviving a betrayal from an allied player transfers all puzzles and resources to the survivor
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
