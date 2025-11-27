@@ -333,6 +333,19 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 	print(killer.Name .. " survived betrayal by " .. betrayer.Name .. " and claimed all resources!")
 end
 
+-- Integration point: Call this from MainServer.lua or WeaponService.lua when a player is killed
+-- deadPlayer: The player who died
+-- killerPlayer: The player who killed them (may be nil for non-PvP deaths)
+function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
+	if not deadPlayer or not killerPlayer then
+		return
+	end
+	-- Check if deadPlayer was a betrayer and killerPlayer was their recent victim
+	local victimUserId = self.recentBetrayals and self.recentBetrayals[deadPlayer.UserId]
+	if victimUserId and killerPlayer.UserId == victimUserId then
+		self:onBetrayerKilled(deadPlayer, killerPlayer)
+	end
+end
 function AllianceService:createAlliance(player1, player2)
 	local userId1 = player1.UserId
 	local userId2 = player2.UserId
