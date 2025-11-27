@@ -1,5 +1,7 @@
 -- CureCraftingManager.lua
 -- Manages the puzzle system for crafting the cure
+-- TODO make sure this file works with PuzzleService, CureService and PuzzleUI,
+-- correctly handling component collection, progress tracking, and completion.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
