@@ -122,11 +122,11 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 	button.BackgroundColor3 = available and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 60)
 	button.AutoButtonColor = available
 	button.Parent = puzzleList
-	
+
 	local buttonCorner = Instance.new("UICorner")
 	buttonCorner.CornerRadius = UDim.new(0, 8)
 	buttonCorner.Parent = button
-	
+
 	-- Component name
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Size = UDim2.new(1, -20, 0, 25)
@@ -138,7 +138,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = button
-	
+
 	-- Puzzle name
 	local puzzleLabel = Instance.new("TextLabel")
 	puzzleLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -150,7 +150,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 	puzzleLabel.Font = Enum.Font.Gotham
 	puzzleLabel.TextXAlignment = Enum.TextXAlignment.Left
 	puzzleLabel.Parent = button
-	
+
 	-- Status label
 	local statusLabel = Instance.new("TextLabel")
 	statusLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -167,7 +167,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 	statusLabel.Font = Enum.Font.Gotham
 	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 	statusLabel.Parent = button
-	
+
 	-- Click handler
 	if available then
 		button.MouseButton1Click:Connect(function()
@@ -179,7 +179,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 			end
 		end)
 	end
-	
+
 	return button
 end
 
@@ -191,11 +191,11 @@ local function updatePuzzleMenu(progressData)
 			child:Destroy()
 		end
 	end
-	
+
 	progressData = progressData or {}
 	local componentPuzzles = progressData.componentPuzzles or {}
 	local componentCounts = progressData.componentCounts or {}
-	
+
 	-- Create buttons for each component puzzle
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		local puzzleConfig = PuzzleConfig.ComponentPuzzles[componentName]
@@ -203,11 +203,11 @@ local function updatePuzzleMenu(progressData)
 			local puzzleProgress = componentPuzzles[componentName] or {}
 			local componentCount = componentCounts[componentName] or 0
 			local available = componentCount >= GameConfig.CURE_COMPONENTS_REQUIRED and not puzzleProgress.solved
-			
+
 			createPuzzleButton(componentName, puzzleConfig, available, componentCount)
 		end
 	end
-	
+
 	-- Add final synthesis button
 	local finalPuzzleData = progressData.finalPuzzle or {}
 	local readyForFinal = progressData.readyForFinal or false
@@ -220,11 +220,11 @@ local function updatePuzzleMenu(progressData)
 	finalButton.AutoButtonColor = finalAvailable
 	finalButton.LayoutOrder = 999
 	finalButton.Parent = puzzleList
-	
+
 	local finalCorner = Instance.new("UICorner")
 	finalCorner.CornerRadius = UDim.new(0, 8)
 	finalCorner.Parent = finalButton
-	
+
 	local finalLabel = Instance.new("TextLabel")
 	finalLabel.Size = UDim2.new(1, -20, 0, 30)
 	finalLabel.Position = UDim2.new(0, 10, 0, 10)
@@ -234,7 +234,7 @@ local function updatePuzzleMenu(progressData)
 	finalLabel.TextSize = 22
 	finalLabel.Font = Enum.Font.GothamBold
 	finalLabel.Parent = finalButton
-	
+
 	local finalDesc = Instance.new("TextLabel")
 	finalDesc.Size = UDim2.new(1, -20, 0, 50)
 	finalDesc.Position = UDim2.new(0, 10, 0, 45)
@@ -246,7 +246,7 @@ local function updatePuzzleMenu(progressData)
 	finalDesc.TextWrapped = true
 	finalDesc.TextXAlignment = Enum.TextXAlignment.Left
 	finalDesc.Parent = finalButton
-	
+
 	if finalAvailable then
 		finalButton.MouseButton1Click:Connect(function()
 			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
