@@ -1,6 +1,6 @@
 -- PlayerManager.lua
--- Manages player data, inventory, currency, and alliance relationships
-
+-- Manages player data, inventory, currency, alliances, and health
+-- Todo : 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
@@ -10,15 +10,32 @@ local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
 local PlayerManager = {}
 PlayerManager.__index = PlayerManager
 
+-- Singleton instance (so everyone shares one manager)
+local _instance = nil
+
+function PlayerManager.getInstance()
+	if not _instance then
+		_instance = PlayerManager.new()
+	end
+	return _instance
+end
+
 function PlayerManager.new()
 	local self = setmetatable({}, PlayerManager)
-	self.players = {} -- player userId -> player data
-	self.alliances = {} -- player userId -> table of allied player userIds
+
+	self.players = {}   -- player.UserId -> player data
+	self.alliances = {} -- player.UserId -> { allied userIds }
 	self.remoteEvents = {}
 	self.weaponService = nil -- Will be set after WeaponService is created
+
 	self:setupRemoteEvents()
+
 	return self
 end
+
+----------------------------------------------------------------
+-- Remote Events setup
+----------------------------------------------------------------
 
 function PlayerManager:setWeaponService(weaponService)
 	self.weaponService = weaponService
@@ -32,6 +49,7 @@ function PlayerManager:setupRemoteEvents()
 		remoteEventsFolder.Parent = ReplicatedStorage
 	end
 
+	-- Inventory updates
 	local inventoryEvent = remoteEventsFolder:FindFirstChild("InventoryUpdate")
 	if not inventoryEvent then
 		inventoryEvent = Instance.new("RemoteEvent")
@@ -40,6 +58,7 @@ function PlayerManager:setupRemoteEvents()
 	end
 	self.remoteEvents.InventoryUpdate = inventoryEvent
 
+	-- Currency updates
 	local currencyEvent = remoteEventsFolder:FindFirstChild("CurrencyUpdate")
 	if not currencyEvent then
 		currencyEvent = Instance.new("RemoteEvent")
@@ -48,6 +67,7 @@ function PlayerManager:setupRemoteEvents()
 	end
 	self.remoteEvents.CurrencyUpdate = currencyEvent
 
+	-- Weapon loadout updates
 	local loadoutEvent = remoteEventsFolder:FindFirstChild("WeaponLoadoutUpdate")
 	if not loadoutEvent then
 		loadoutEvent = Instance.new("RemoteEvent")
@@ -56,10 +76,7 @@ function PlayerManager:setupRemoteEvents()
 	end
 	self.remoteEvents.WeaponLoadoutUpdate = loadoutEvent
 
-
-
-
-	-- NEW: Player health
+	-- NEW: Player health updates
 	local healthEvent = remoteEventsFolder:FindFirstChild("PlayerHealthUpdate")
 	if not healthEvent then
 		healthEvent = Instance.new("RemoteEvent")
@@ -68,6 +85,10 @@ function PlayerManager:setupRemoteEvents()
 	end
 	self.remoteEvents.PlayerHealthUpdate = healthEvent
 end
+
+----------------------------------------------------------------
+-- Player lifecycle
+----------------------------------------------------------------
 
 function PlayerManager:addPlayer(player)
 	if not player or not player.UserId then
@@ -86,9 +107,11 @@ function PlayerManager:addPlayer(player)
 		isAlive = true,
 		cureComponents = {},
 		lastBetrayalTime = 0,
+
 		inventory = {},
 		weapons = { [startingWeapon] = true },
 		equippedWeapon = startingWeapon,
+
 		currency = GameConfig.STARTING_CURRENCY,
 		upgrades = {},
 	}
@@ -98,7 +121,7 @@ function PlayerManager:addPlayer(player)
 	self:sendCurrencyUpdate(player)
 	self:sendInventoryUpdate(player)
 	self:sendWeaponLoadout(player)
-	self:sendHealthUpdate(player)  -- NEW
+	self:sendHealthUpdate(player)
 
 	return true, "Player added successfully"
 end
@@ -118,6 +141,15 @@ function PlayerManager:getPlayerData(player)
 	end
 	return self.players[player.UserId]
 end
+
+-- Aliased accessor, in case something uses GetPlayerData
+function PlayerManager:GetPlayerData(player)
+	return self:getPlayerData(player)
+end
+
+----------------------------------------------------------------
+-- Currency
+----------------------------------------------------------------
 
 function PlayerManager:addCurrency(player, amount)
 	-- Only allow non-negative amounts to be added. Use deductCurrency for deductions.
@@ -159,6 +191,10 @@ function PlayerManager:getCurrency(player)
 	return playerData and playerData.currency or 0
 end
 
+----------------------------------------------------------------
+-- Weapons
+----------------------------------------------------------------
+
 function PlayerManager:addWeapon(player, weaponId)
 	local playerData = self.players[player.UserId]
 	if not playerData or not weaponId then
@@ -169,28 +205,7 @@ function PlayerManager:addWeapon(player, weaponId)
 	self:sendWeaponLoadout(player)
 	return true
 end
-function PlayerManager:damagePlayer(player, damage)
-	local playerData = self.players[player.UserId]
-	if not playerData or not playerData.isAlive then
-		return false
-	end
 
-	if type(damage) ~= "number" or damage <= 0 then
-		return false
-	end
-
-	playerData.health = math.max(0, playerData.health - damage)
-
-	-- NEW: notify client
-	self:sendHealthUpdate(player)
-
-	if playerData.health <= 0 then
-		playerData.isAlive = false
-		return true -- Player died
-	end
-
-	return false
-end
 function PlayerManager:ownsWeapon(player, weaponId)
 	local playerData = self.players[player.UserId]
 	if not playerData or not weaponId then
@@ -233,6 +248,70 @@ function PlayerManager:getWeapons(player)
 	return list
 end
 
+----------------------------------------------------------------
+-- Health (game health + Humanoid sync)
+----------------------------------------------------------------
+
+function PlayerManager:damagePlayer(player, damage)
+	local playerData = self.players[player.UserId]
+	if not playerData or not playerData.isAlive then
+		return false
+	end
+
+	if type(damage) ~= "number" or damage <= 0 then
+		return false
+	end
+
+	playerData.health = math.max(0, playerData.health - damage)
+
+	-- Notify client UI
+	self:sendHealthUpdate(player)
+
+	if playerData.health <= 0 then
+		playerData.isAlive = false
+
+		-- OPTIONAL: actually kill the humanoid so the character dies in the world
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 then
+				humanoid.Health = 0
+			end
+		end
+
+		return true -- Player died in game logic
+	end
+
+	return false
+end
+
+function PlayerManager:healPlayer(player, amount)
+	local playerData = self.players[player.UserId]
+	if not playerData then
+		return false
+	end
+
+	if type(amount) ~= "number" or amount <= 0 then
+		return false
+	end
+
+	-- If they were dead but you want to allow revives, flip isAlive back on
+	if playerData.health <= 0 and amount > 0 then
+		playerData.isAlive = true
+	end
+
+	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
+
+	-- Notify client UI
+	self:sendHealthUpdate(player)
+
+	return true
+end
+
+----------------------------------------------------------------
+-- Inventory
+----------------------------------------------------------------
+
 function PlayerManager:addInventoryItem(player, itemName, amount)
 	local playerData = self.players[player.UserId]
 	if not playerData or not itemName then
@@ -248,23 +327,7 @@ function PlayerManager:addInventoryItem(player, itemName, amount)
 	self:sendInventoryUpdate(player)
 	return true
 end
-function PlayerManager:healPlayer(player, amount)
-	local playerData = self.players[player.UserId]
-	if not playerData or not playerData.isAlive then
-		return false
-	end
 
-	if type(amount) ~= "number" or amount <= 0 then
-		return false
-	end
-
-	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
-
-	-- NEW: notify client
-	self:sendHealthUpdate(player)
-
-	return true
-end
 function PlayerManager:consumeInventoryItem(player, itemName, amount)
 	local playerData = self.players[player.UserId]
 	if not playerData or not itemName then
@@ -299,90 +362,36 @@ function PlayerManager:getInventory(player)
 	return playerData.inventory
 end
 
-function PlayerManager:sendInventoryUpdate(player)
-	if self.remoteEvents.InventoryUpdate and player then
-		self.remoteEvents.InventoryUpdate:FireClient(player, {
-			inventory = self:getInventory(player),
-		})
-	end
-end
+----------------------------------------------------------------
+-- Cure components
+----------------------------------------------------------------
 
-function PlayerManager:sendCurrencyUpdate(player)
-	if self.remoteEvents.CurrencyUpdate and player then
-		self.remoteEvents.CurrencyUpdate:FireClient(player, {
-			balance = self:getCurrency(player),
-		})
-	end
-end
-function PlayerManager:sendHealthUpdate(player)
-	if not player or not player.UserId then
-		return
+function PlayerManager:addCureComponent(player, componentName)
+	local playerData = self.players[player.UserId]
+	if not playerData or not componentName then
+		return false
 	end
 
+	if not playerData.cureComponents[componentName] then
+		playerData.cureComponents[componentName] = 0
+	end
+
+	playerData.cureComponents[componentName] = playerData.cureComponents[componentName] + 1
+	return true
+end
+
+function PlayerManager:getCureComponents(player)
 	local playerData = self.players[player.UserId]
 	if not playerData then
-		return
+		return {}
 	end
 
-	if not self.remoteEvents.PlayerHealthUpdate then
-		return
-	end
-
-	self.remoteEvents.PlayerHealthUpdate:FireClient(player, {
-		current = playerData.health,
-		max = GameConfig.STARTING_HEALTH,
-	})
+	return playerData.cureComponents
 end
 
-function PlayerManager:sendWeaponLoadout(player)
-	if not self.remoteEvents.WeaponLoadoutUpdate or not player then
-		return
-	end
-
-	local weaponStats = {}
-
-	-- Gather stats for all owned weapons (with upgrades applied)
-	if self.weaponService then
-		local weapons = self:getWeapons(player)
-		for _, weaponId in ipairs(weapons) do
-			local stats = self.weaponService:getModifiedStats(player, weaponId)
-			if stats then
-				weaponStats[weaponId] = stats
-			else
-				warn(string.format(
-					"[PlayerManager] Warning: No modified stats found for player '%s' weaponId '%s'",
-					tostring(player), tostring(weaponId)
-					))
-			end
-		end
-	end
-
-	self.remoteEvents.WeaponLoadoutUpdate:FireClient(player, {
-		weapons = self:getWeapons(player),
-		equipped = self:getEquippedWeapon(player),
-		stats = weaponStats,
-	})
-end
-
-
-
-function PlayerManager:getActivePlayers()
-	local active = {}
-	for _, playerData in pairs(self.players) do
-		if playerData.isAlive then
-			table.insert(active, playerData.player)
-		end
-	end
-	return active
-end
-
-function PlayerManager:getAllPlayers()
-	local all = {}
-	for _, playerData in pairs(self.players) do
-		table.insert(all, playerData.player)
-	end
-	return all
-end
+----------------------------------------------------------------
+-- Alliances
+----------------------------------------------------------------
 
 function PlayerManager:addAlliance(player1, player2)
 	if not player1 or not player2 then
@@ -476,27 +485,96 @@ function PlayerManager:areAllied(player1, player2)
 	return false
 end
 
-function PlayerManager:addCureComponent(player, componentName)
-	local playerData = self.players[player.UserId]
-	if not playerData or not componentName then
-		return false
-	end
+----------------------------------------------------------------
+-- Queries
+----------------------------------------------------------------
 
-	if not playerData.cureComponents[componentName] then
-		playerData.cureComponents[componentName] = 0
+function PlayerManager:getActivePlayers()
+	local active = {}
+	for _, playerData in pairs(self.players) do
+		if playerData.isAlive then
+			table.insert(active, playerData.player)
+		end
 	end
-
-	playerData.cureComponents[componentName] = playerData.cureComponents[componentName] + 1
-	return true
+	return active
 end
 
-function PlayerManager:getCureComponents(player)
-	local playerData = self.players[player.UserId]
-	if not playerData then
-		return {}
+function PlayerManager:getAllPlayers()
+	local all = {}
+	for _, playerData in pairs(self.players) do
+		table.insert(all, playerData.player)
+	end
+	return all
+end
+
+----------------------------------------------------------------
+-- Remote send helpers
+----------------------------------------------------------------
+
+function PlayerManager:sendInventoryUpdate(player)
+	if self.remoteEvents.InventoryUpdate and player then
+		self.remoteEvents.InventoryUpdate:FireClient(player, {
+			inventory = self:getInventory(player),
+		})
+	end
+end
+
+function PlayerManager:sendCurrencyUpdate(player)
+	if self.remoteEvents.CurrencyUpdate and player then
+		self.remoteEvents.CurrencyUpdate:FireClient(player, {
+			balance = self:getCurrency(player),
+		})
+	end
+end
+
+function PlayerManager:sendHealthUpdate(player)
+	if not player or not player.UserId then
+		return
 	end
 
-	return playerData.cureComponents
+	local playerData = self.players[player.UserId]
+	if not playerData then
+		return
+	end
+
+	if not self.remoteEvents.PlayerHealthUpdate then
+		return
+	end
+
+	self.remoteEvents.PlayerHealthUpdate:FireClient(player, {
+		current = playerData.health,
+		max = GameConfig.STARTING_HEALTH,
+	})
+end
+
+function PlayerManager:sendWeaponLoadout(player)
+	if not self.remoteEvents.WeaponLoadoutUpdate or not player then
+		return
+	end
+
+	local weaponStats = {}
+
+	-- Gather stats for all owned weapons (with upgrades applied)
+	if self.weaponService then
+		local weapons = self:getWeapons(player)
+		for _, weaponId in ipairs(weapons) do
+			local stats = self.weaponService:getModifiedStats(player, weaponId)
+			if stats then
+				weaponStats[weaponId] = stats
+			else
+				warn(string.format(
+					"[PlayerManager] Warning: No modified stats found for player '%s' weaponId '%s'",
+					tostring(player), tostring(weaponId)
+					))
+			end
+		end
+	end
+
+	self.remoteEvents.WeaponLoadoutUpdate:FireClient(player, {
+		weapons = self:getWeapons(player),
+		equipped = self:getEquippedWeapon(player),
+		stats = weaponStats,
+	})
 end
 
 return PlayerManager
