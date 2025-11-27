@@ -9,13 +9,21 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Create ScreenGui
+-- Config (get max health from shared GameConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+
+local DEFAULT_MAX_HEALTH = GameConfig.BASE_HEALTH or 1000
+
+----------------------------------------------------------------
+-- UI creation
+----------------------------------------------------------------
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BaseHealthUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Main Frame
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UDim2.new(0, 300, 0, 60)
@@ -26,12 +34,10 @@ mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(100, 200, 255)
 mainFrame.Parent = screenGui
 
--- Add corner
 local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = mainFrame
 
--- Title Label
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
 titleLabel.Size = UDim2.new(1, -20, 0, 20)
@@ -44,7 +50,6 @@ titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
--- Health Bar Background
 local healthBarBg = Instance.new("Frame")
 healthBarBg.Name = "HealthBarBg"
 healthBarBg.Size = UDim2.new(1, -20, 0, 25)
@@ -57,7 +62,6 @@ local healthBarCorner = Instance.new("UICorner")
 healthBarCorner.CornerRadius = UDim.new(0, 5)
 healthBarCorner.Parent = healthBarBg
 
--- Health Bar Fill
 local healthBarFill = Instance.new("Frame")
 healthBarFill.Name = "HealthBarFill"
 healthBarFill.Size = UDim2.new(1, 0, 1, 0)
@@ -70,42 +74,55 @@ local fillCorner = Instance.new("UICorner")
 fillCorner.CornerRadius = UDim.new(0, 5)
 fillCorner.Parent = healthBarFill
 
--- Health Text
 local healthText = Instance.new("TextLabel")
 healthText.Name = "HealthText"
 healthText.Size = UDim2.new(1, 0, 1, 0)
 healthText.BackgroundTransparency = 1
-healthText.Text = "1000 / 1000"
+healthText.Text = "0 / 0"
 healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
 healthText.TextSize = 14
 healthText.Font = Enum.Font.GothamBold
 healthText.ZIndex = 2
 healthText.Parent = healthBarBg
 
+----------------------------------------------------------------
 -- State
-local currentHealth = 1000
-local maxHealth = 1000
+----------------------------------------------------------------
 
--- Functions
+local currentHealth = DEFAULT_MAX_HEALTH
+local maxHealth = DEFAULT_MAX_HEALTH
+
+----------------------------------------------------------------
+-- Update logic
+----------------------------------------------------------------
+
 local function updateHealthBar(health, max)
-	currentHealth = health or currentHealth
-	maxHealth = max or maxHealth
+	if type(health) == "number" then
+		currentHealth = health
+	end
+	if type(max) == "number" and max > 0 then
+		maxHealth = max
+	end
 
-	local healthPercent = currentHealth / maxHealth
+	if maxHealth <= 0 then
+		maxHealth = 1
+	end
+
+	local healthPercent = math.clamp(currentHealth / maxHealth, 0, 1)
 
 	-- Update bar size
 	healthBarFill:TweenSize(
 		UDim2.new(healthPercent, 0, 1, 0),
 		Enum.EasingDirection.Out,
 		Enum.EasingStyle.Quad,
-		0.3,
+		0.2,
 		true
 	)
 
 	-- Update text
-	healthText.Text = math.floor(currentHealth) .. " / " .. maxHealth
+	healthText.Text = string.format("%d / %d", math.floor(currentHealth), maxHealth)
 
-	-- Change color based on health percentage
+	-- Colour + critical effect
 	if healthPercent > 0.6 then
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255) -- Blue
 	elseif healthPercent > 0.3 then
@@ -113,59 +130,72 @@ local function updateHealthBar(health, max)
 	else
 		healthBarFill.BackgroundColor3 = Color3.fromRGB(255, 100, 100) -- Red
 
-		-- Pulse effect when critical
 		if healthPercent > 0 then
+			-- small pulse
 			healthBarFill:TweenSize(
 				UDim2.new(healthPercent * 1.05, 0, 1, 0),
 				Enum.EasingDirection.InOut,
 				Enum.EasingStyle.Sine,
-				0.5,
+				0.4,
 				true
 			)
 		end
 	end
 end
 
--- Remote Event Handlers
+----------------------------------------------------------------
+-- Remote event wiring
+----------------------------------------------------------------
+
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
--- Base Health Update
-local baseHealthEvent = remoteEvents:WaitForChild("BaseHealthUpdate", 10)
-if baseHealthEvent then
+-- 1) Direct BaseHealthUpdate event (if server fires it)
+local baseHealthEvent = remoteEvents:FindFirstChild("BaseHealthUpdate")
+if baseHealthEvent and baseHealthEvent:IsA("RemoteEvent") then
 	baseHealthEvent.OnClientEvent:Connect(function(health, max)
-		updateHealthBar(health, max)
+		updateHealthBar(health, max or DEFAULT_MAX_HEALTH)
 	end)
 end
 
--- Game State Update (also contains base health)
-local gameStateEvent = remoteEvents:WaitForChild("GameStateUpdate")
-gameStateEvent.OnClientEvent:Connect(function(stateData)
-	if stateData.baseHealth then
-		-- Assuming max health is 1000 (or get from config)
-		updateHealthBar(stateData.baseHealth, maxHealth)
-	end
-end)
-
--- Monitor base health value if it exists in workspace
-task.spawn(function()
-	local base = workspace:WaitForChild("Base", 10)
-	if base then
-		local healthValue = base:FindFirstChild("Health") or base:FindFirstChild("Core")
-		if healthValue and healthValue:IsA("NumberValue") then
-			-- Initial update
-			maxHealth = healthValue.Value
-			currentHealth = healthValue.Value
-			updateHealthBar(currentHealth, maxHealth)
-
-			-- Listen for changes
-			healthValue:GetPropertyChangedSignal("Value"):Connect(function()
-				updateHealthBar(healthValue.Value, maxHealth)
-			end)
+-- 2) GameStateUpdate snapshot (expects .baseHealth in the payload)
+local gameStateEvent = remoteEvents:FindFirstChild("GameStateUpdate")
+if gameStateEvent and gameStateEvent:IsA("RemoteEvent") then
+	gameStateEvent.OnClientEvent:Connect(function(stateData)
+		if stateData and stateData.baseHealth then
+			-- Use config max health unless server sends a max
+			local max = stateData.baseHealthMax or DEFAULT_MAX_HEALTH
+			updateHealthBar(stateData.baseHealth, max)
 		end
+	end)
+end
+
+----------------------------------------------------------------
+-- Optional: watch a NumberValue on the base model (BaseCaptureZone.Health)
+----------------------------------------------------------------
+
+task.spawn(function()
+	-- Match your actual base hierarchy: BaseCaptureZone (Model) with Health (NumberValue)
+	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
+	if not baseModel then
+		return
+	end
+
+	local healthValue = baseModel:FindFirstChild("Health", true)
+	if healthValue and healthValue:IsA("NumberValue") then
+		maxHealth = healthValue.Value
+		currentHealth = healthValue.Value
+		updateHealthBar(currentHealth, maxHealth)
+
+		healthValue:GetPropertyChangedSignal("Value"):Connect(function()
+			updateHealthBar(healthValue.Value, maxHealth)
+		end)
 	end
 end)
 
--- Initial update
-updateHealthBar(1000, 1000)
+----------------------------------------------------------------
+-- Initial visual state
+----------------------------------------------------------------
+
+updateHealthBar(DEFAULT_MAX_HEALTH, DEFAULT_MAX_HEALTH)
 
 print("BaseHealthUI initialized")
