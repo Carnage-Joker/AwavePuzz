@@ -173,12 +173,12 @@ local function updateTimer()
 	if not currentPuzzle or not currentPuzzle.timeLimit then
 		return
 	end
-	
+
 	local elapsed = tick() - puzzleStartTime
 	local remaining = math.max(0, currentPuzzle.timeLimit - elapsed)
-	
+
 	timerLabel.Text = string.format("Time: %ds", math.ceil(remaining))
-	
+
 	-- Change color based on remaining time
 	if remaining <= 10 then
 		timerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
@@ -187,7 +187,7 @@ local function updateTimer()
 	else
 		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
 	end
-	
+
 	-- Auto-close if time runs out
 	if remaining <= 0 then
 		closePuzzle()
@@ -198,7 +198,7 @@ end
 -- Mathematical puzzle UI
 local function createMathPuzzleUI(puzzleData)
 	clearContent()
-	
+
 	local mathLabel = Instance.new("TextLabel")
 	mathLabel.Size = UDim2.new(1, -40, 0, 80)
 	mathLabel.Position = UDim2.new(0, 20, 0, 20)
@@ -207,7 +207,7 @@ local function createMathPuzzleUI(puzzleData)
 	mathLabel.TextSize = 32
 	mathLabel.Font = Enum.Font.GothamBold
 	mathLabel.Parent = contentFrame
-	
+
 	-- Display the sequence or equation
 	if puzzleData.equation then
 		mathLabel.Text = puzzleData.equation
@@ -225,7 +225,7 @@ local function createMathPuzzleUI(puzzleData)
 		end
 		mathLabel.Text = sequenceText
 	end
-	
+
 	-- Answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
@@ -239,18 +239,18 @@ local function createMathPuzzleUI(puzzleData)
 	answerBox.Font = Enum.Font.Gotham
 	answerBox.ClearTextOnFocus = false
 	answerBox.Parent = contentFrame
-	
+
 	local answerCorner = Instance.new("UICorner")
 	answerCorner.CornerRadius = UDim.new(0, 8)
 	answerCorner.Parent = answerBox
-	
+
 	return answerBox
 end
 
 -- Pattern puzzle UI
 local function createPatternPuzzleUI(puzzleData)
 	clearContent()
-	
+
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 40)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
@@ -260,32 +260,32 @@ local function createPatternPuzzleUI(puzzleData)
 	instructionLabel.TextSize = 20
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.Parent = contentFrame
-	
+
 	-- Display sequence
 	local sequenceFrame = Instance.new("Frame")
 	sequenceFrame.Size = UDim2.new(1, -40, 0, 80)
 	sequenceFrame.Position = UDim2.new(0, 20, 0, 60)
 	sequenceFrame.BackgroundTransparency = 1
 	sequenceFrame.Parent = contentFrame
-	
+
 	local listLayout = Instance.new("UIListLayout")
 	listLayout.FillDirection = Enum.FillDirection.Horizontal
 	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 	listLayout.Padding = UDim.new(0, 10)
 	listLayout.Parent = sequenceFrame
-	
+
 	if puzzleData.sequence then
 		for i = 1, #puzzleData.sequence + 1 do
 			local item = Instance.new("Frame")
 			item.Size = UDim2.new(0, 60, 0, 60)
 			item.BackgroundColor3 = puzzleData.sequence[i] and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
 			item.Parent = sequenceFrame
-			
+
 			local itemCorner = Instance.new("UICorner")
 			itemCorner.CornerRadius = UDim.new(0, 8)
 			itemCorner.Parent = item
-			
+
 			local itemLabel = Instance.new("TextLabel")
 			itemLabel.Size = UDim2.new(1, 0, 1, 0)
 			itemLabel.BackgroundTransparency = 1
@@ -296,7 +296,7 @@ local function createPatternPuzzleUI(puzzleData)
 			itemLabel.Parent = item
 		end
 	end
-	
+
 	-- Answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
@@ -309,18 +309,18 @@ local function createPatternPuzzleUI(puzzleData)
 	answerBox.TextSize = 24
 	answerBox.Font = Enum.Font.Gotham
 	answerBox.Parent = contentFrame
-	
+
 	local answerCorner = Instance.new("UICorner")
 	answerCorner.CornerRadius = UDim.new(0, 8)
 	answerCorner.Parent = answerBox
-	
+
 	return answerBox
 end
 
 -- Color puzzle UI
 local function createColorPuzzleUI(puzzleData)
 	clearContent()
-	
+
 	local instructionLabel = Instance.new("TextLabel")
 	instructionLabel.Size = UDim2.new(1, -40, 0, 40)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
@@ -331,7 +331,7 @@ local function createColorPuzzleUI(puzzleData)
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
-	
+
 	-- Create draggable color blocks
 	local colorFrame = Instance.new("Frame")
 	colorFrame.Name = "ColorFrame"
@@ -339,7 +339,7 @@ local function createColorPuzzleUI(puzzleData)
 	colorFrame.Position = UDim2.new(0, 20, 0, 60)
 	colorFrame.BackgroundTransparency = 1
 	colorFrame.Parent = contentFrame
-	
+
 	local colorLayout = Instance.new("UIGridLayout")
 	colorLayout.CellSize = UDim2.new(0, 70, 0, 70)
 	colorLayout.CellPadding = UDim2.new(0, 10, 0, 10)
@@ -347,9 +347,9 @@ local function createColorPuzzleUI(puzzleData)
 	colorLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 	colorLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	colorLayout.Parent = colorFrame
-	
+
 	local colorBlocks = {}
-	
+
 	if puzzleData.shuffled then
 		for i, color in ipairs(puzzleData.shuffled) do
 			local block = Instance.new("TextButton")
@@ -362,19 +362,19 @@ local function createColorPuzzleUI(puzzleData)
 			block.Font = Enum.Font.GothamBold
 			block.LayoutOrder = i
 			block.Parent = colorFrame
-			
+
 			local blockCorner = Instance.new("UICorner")
 			blockCorner.CornerRadius = UDim.new(0, 8)
 			blockCorner.Parent = block
-			
+
 			block:SetAttribute("ColorIndex", i)
 			colorBlocks[i] = {frame = block, color = color}
-			
+
 			-- Simple swap on click (click two blocks to swap)
 			block.MouseButton1Click:Connect(function()
 				local currentIndex = block:GetAttribute("ColorIndex")
 				if not currentIndex then return end
-				
+
 				-- Implement simple selection and swap logic
 				if not colorFrame:GetAttribute("FirstSelected") then
 					colorFrame:SetAttribute("FirstSelected", currentIndex)
@@ -389,14 +389,14 @@ local function createColorPuzzleUI(puzzleData)
 						local tempOrder = firstBlock.LayoutOrder
 						firstBlock.LayoutOrder = secondBlock.LayoutOrder
 						secondBlock.LayoutOrder = tempOrder
-						
+
 						-- Update indices
 						firstBlock:SetAttribute("ColorIndex", currentIndex)
 						block:SetAttribute("ColorIndex", firstIndex)
-						
+
 						-- Swap in table
 						colorBlocks[firstIndex], colorBlocks[currentIndex] = colorBlocks[currentIndex], colorBlocks[firstIndex]
-						
+
 						firstBlock.BorderSizePixel = 0
 					else
 						block.BorderSizePixel = 0
@@ -406,14 +406,14 @@ local function createColorPuzzleUI(puzzleData)
 			end)
 		end
 	end
-	
+
 	return colorBlocks
 end
 
 -- Logic puzzle UI (simplified)
 local function createLogicPuzzleUI(puzzleData)
 	clearContent()
-	
+
 	-- TODO: Implement full deduction grid UI with clues and interactive selection
 	-- Full implementation would include:
 	--   1. Grid layout (3x3 or 4x4) showing element/person/location combinations
@@ -434,7 +434,7 @@ local function createLogicPuzzleUI(puzzleData)
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
-	
+
 	-- For now, simple answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
@@ -447,18 +447,18 @@ local function createLogicPuzzleUI(puzzleData)
 	answerBox.TextSize = 20
 	answerBox.Font = Enum.Font.Gotham
 	answerBox.Parent = contentFrame
-	
+
 	local answerCorner = Instance.new("UICorner")
 	answerCorner.CornerRadius = UDim.new(0, 8)
 	answerCorner.Parent = answerBox
-	
+
 	return answerBox
 end
 
 -- Abstract puzzle UI (simplified)
 local function createAbstractPuzzleUI(puzzleData)
 	clearContent()
-	
+
 	-- TODO: Implement full node connection UI with drag-and-drop or click-to-connect
 	-- Full implementation would include:
 	--   1. Node visualization (circles/points positioned on canvas)
@@ -481,7 +481,7 @@ local function createAbstractPuzzleUI(puzzleData)
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
-	
+
 	-- Simple answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
@@ -494,11 +494,11 @@ local function createAbstractPuzzleUI(puzzleData)
 	answerBox.TextSize = 20
 	answerBox.Font = Enum.Font.Gotham
 	answerBox.Parent = contentFrame
-	
+
 	local answerCorner = Instance.new("UICorner")
 	answerCorner.CornerRadius = UDim.new(0, 8)
 	answerCorner.Parent = answerBox
-	
+
 	return answerBox
 end
 
@@ -507,15 +507,15 @@ local function openPuzzle(componentName, puzzle)
 	currentPuzzle = puzzle
 	currentComponentName = componentName
 	puzzleStartTime = tick()
-	
+
 	-- Update UI elements
 	titleLabel.Text = puzzle.name or "Puzzle"
 	descLabel.Text = puzzle.description or "Solve the puzzle"
 	timerLabel.Text = string.format("Time: %ds", puzzle.timeLimit or 60)
-	
+
 	-- Create puzzle-specific UI
 	local answerElement = nil
-	
+
 	if puzzle.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL then
 		answerElement = createMathPuzzleUI(puzzle.data)
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
@@ -527,10 +527,10 @@ local function openPuzzle(componentName, puzzle)
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		answerElement = createAbstractPuzzleUI(puzzle.data)
 	end
-	
+
 	-- Show frame
 	puzzleFrame.Visible = true
-	
+
 	-- Start timer updates
 	if timerConnection then
 		timerConnection:Disconnect()
@@ -543,12 +543,12 @@ submitButton.MouseButton1Click:Connect(function()
 	if not currentPuzzle or not currentComponentName then
 		return
 	end
-	
+
 	local answer = nil
-	
+
 	-- Get answer based on puzzle type
 	if currentPuzzle.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL or 
-	   currentPuzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
+		currentPuzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
 		local answerBox = contentFrame:FindFirstChild("AnswerBox")
 		if answerBox and answerBox:IsA("TextBox") then
 			answer = tonumber(answerBox.Text) or answerBox.Text
@@ -574,19 +574,19 @@ submitButton.MouseButton1Click:Connect(function()
 			end
 		end
 	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.LOGIC or 
-	       currentPuzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
+		currentPuzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		local answerBox = contentFrame:FindFirstChild("AnswerBox")
 		if answerBox and answerBox:IsA("TextBox") then
 			answer = answerBox.Text
 		end
 	end
-	
+
 	-- Send to server
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("SubmitPuzzleAnswer") then
 		remoteEvents.SubmitPuzzleAnswer:FireServer(currentComponentName, answer)
 	end
-	
+
 	-- Close UI (server will notify if correct/incorrect)
 	closePuzzle()
 end)
@@ -615,11 +615,11 @@ puzzleCompletedEvent.OnClientEvent:Connect(function(data)
 	notification.TextSize = 24
 	notification.Font = Enum.Font.GothamBold
 	notification.Parent = screenGui
-	
+
 	local notifCorner = Instance.new("UICorner")
 	notifCorner.CornerRadius = UDim.new(0, 12)
 	notifCorner.Parent = notification
-	
+
 	-- Fade out and remove
 	task.wait(3)
 	notification:Destroy()
@@ -638,11 +638,11 @@ puzzleFailedEvent.OnClientEvent:Connect(function(message)
 	notification.TextSize = 20
 	notification.Font = Enum.Font.GothamBold
 	notification.Parent = screenGui
-	
+
 	local notifCorner = Instance.new("UICorner")
 	notifCorner.CornerRadius = UDim.new(0, 12)
 	notifCorner.Parent = notification
-	
+
 	-- Fade out and remove
 	task.wait(3)
 	notification:Destroy()
