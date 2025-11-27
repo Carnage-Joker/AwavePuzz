@@ -6,6 +6,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
+-- Constants
+local REMOTE_EVENT_TIMEOUT = 10 -- Seconds to wait for remote event
+
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -188,7 +191,7 @@ end)
 -- Listen for scoreboard updates from server
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
-local scoreboardUpdateEvent = remoteEvents:WaitForChild("ScoreboardUpdate", 10)
+local scoreboardUpdateEvent = remoteEvents:WaitForChild("ScoreboardUpdate", REMOTE_EVENT_TIMEOUT)
 if scoreboardUpdateEvent then
 	scoreboardUpdateEvent.OnClientEvent:Connect(function(data)
 		if type(data) == "table" then

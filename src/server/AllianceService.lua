@@ -288,9 +288,11 @@ function AllianceService:transferBetrayalResources(betrayer, victim, transferRat
 		victimData.currency = victimData.currency - transferAmount
 		betrayerData.currency = betrayerData.currency + transferAmount
 		
-		-- Send currency updates to clients
-		self.playerManager:sendCurrencyUpdate(victim)
-		self.playerManager:sendCurrencyUpdate(betrayer)
+		-- Send currency updates to clients (with method existence check)
+		if self.playerManager.sendCurrencyUpdate then
+			self.playerManager:sendCurrencyUpdate(victim)
+			self.playerManager:sendCurrencyUpdate(betrayer)
+		end
 		
 		print(betrayer.Name .. " stole " .. transferAmount .. " currency from " .. victim.Name)
 	end

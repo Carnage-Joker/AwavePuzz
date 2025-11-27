@@ -9,6 +9,9 @@ local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
 local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
+-- Constants
+local DEFAULT_SPAWN_INTERVAL = 0.5 -- Default seconds between zombie spawns
+
 local Spawner = {}
 Spawner.__index = Spawner
 
@@ -26,7 +29,7 @@ function Spawner.new(weaponService, baseManager, playerManager)
 	-- Spawn queue for staggered spawning
 	self.spawnQueue = {}
 	self.spawnTimer = 0
-	self.spawnInterval = GameConfig.Spawning and GameConfig.Spawning.SPAWN_INTERVAL or 0.5
+	self.spawnInterval = GameConfig.Spawning and GameConfig.Spawning.SPAWN_INTERVAL or DEFAULT_SPAWN_INTERVAL
 	self.lastUsedSpawnIndex = 0
 
 	-- Setup zombie folder in workspace

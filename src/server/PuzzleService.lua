@@ -622,7 +622,12 @@ function PuzzleService:onSurvivorVictory(survivor, betrayer)
 
 	-- Transfer ALL solved puzzles from betrayer to survivor
 	for componentName, puzzleState in pairs(betrayerPuzzles) do
-		if puzzleState.solved and survivorPuzzles[componentName] and not survivorPuzzles[componentName].solved then
+		local survivorPuzzleState = survivorPuzzles[componentName]
+		local betrayerHasSolved = puzzleState.solved
+		local survivorHasPuzzle = survivorPuzzleState ~= nil
+		local survivorNotSolved = survivorHasPuzzle and not survivorPuzzleState.solved
+		
+		if betrayerHasSolved and survivorNotSolved then
 			survivorPuzzles[componentName].solved = true
 			print("[PuzzleService]", survivor.Name, "claimed", componentName, "puzzle from defeated betrayer", betrayer.Name)
 		end
