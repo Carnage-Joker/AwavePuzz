@@ -1,9 +1,14 @@
 -- WeaponService.lua
 -- Handles player weapon logic, raycast validation, and kill rewards
+-- ToDo: Ensure the gun is properly cloned and positioned	
+-- ToDo: Handle weapon switching and cleanup
+-- ToDo: Ensure gun fires the way its facing and projectile hits target
+
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local ServerStorage = game:GetService("ServerStorage")
 
 local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
 
@@ -17,6 +22,40 @@ end
 
 local WeaponService = {}
 WeaponService.__index = WeaponService
+
+--[[
+    cloneGunModel( gunId )
+    Safely clones a gun model from ServerStorage.Guns.
+    Returns the cloned Model (named "EquippedWeaponModel") or nil if anything is missing.
+--]]
+function WeaponService:cloneGunModel(gunId)
+	-- Grab the Guns folder (once per call – cheap)
+	local gunsFolder = ServerStorage:FindFirstChild("Guns")
+	if not gunsFolder then
+		warn("[WeaponService] Guns folder missing in ServerStorage")
+		return nil
+	end
+
+	-- Resolve the model name from the weapon config (fallback to the id itself)
+	local weaponConfig = WeaponConfig.getWeapon(gunId)
+	local modelName = weaponConfig
+		and (weaponConfig.ModelName or weaponConfig.Name)
+		or gunId
+
+	local template = gunsFolder:FindFirstChild(modelName)
+	if not template then
+		warn(string.format(
+			"[WeaponService] Gun model '%s' not found in ServerStorage.Guns",
+			modelName
+			))
+		return nil
+	end
+
+	-- Clone, rename, and give it a predictable name
+	local clone = template:Clone()
+	clone.Name = "EquippedWeaponModel"
+	return clone
+end
 
 function WeaponService.new(playerManager, allianceService)
 	local self = setmetatable({}, WeaponService)
@@ -291,74 +330,86 @@ local ServerStorage = game:GetService("ServerStorage")  -- at top of file if not
 
 function WeaponService:_equipVisualWeapon(player, weaponId)
 	local character = player.Character
-	if not character then
-		return
-	end
+	if not character then return end
 
+	-- Validate the weapon config first
 	local weaponConfig = WeaponConfig.getWeapon(weaponId)
 	if not weaponConfig then
 		warn("[WeaponService] No weapon config for id:", weaponId)
 		return
 	end
 
-	local gunsFolder = ServerStorage:FindFirstChild("Guns")
-	if not gunsFolder then
-		warn("[WeaponService] Guns folder missing in ServerStorage")
+	-- -----------------------------------------------------------------
+	-- 1️⃣  Get (or create) the visual model using the safe helper
+	-- -----------------------------------------------------------------
+	local gunModel = self:cloneGunModel(weaponId)
+	if not gunModel then
+		-- cloneGunModel already warned – just bail out
 		return
 	end
-
-	local modelName = weaponConfig.ModelName or weaponConfig.Name or weaponId
-	local template = gunsFolder:FindFirstChild(modelName)
-	if not template then
-		warn(string.format("[WeaponService] Gun model '%s' not found in ServerStorage.Guns", modelName))
+	-- Ensure the cloned asset is a Model or BasePart
+	if not (gunModel:IsA("Model") or gunModel:IsA("BasePart")) then
+		warn("[WeaponService] Unexpected gun model type:", gunModel.ClassName)
 		return
 	end
-
-	-- Remove any existing equipped gun model
+	-- -----------------------------------------------------------------
+	-- 2️⃣  Clean up any previously‑equipped visual
+	-- -----------------------------------------------------------------
 	local old = character:FindFirstChild("EquippedWeaponModel")
-	if old then
-		old:Destroy()
-	end
+	if old then old:Destroy() end
 
-	local gunModel = template:Clone()
-	gunModel.Name = "EquippedWeaponModel"
+	-- Parent the new model to the character
 	gunModel.Parent = character
 
-	-- Ensure we have a primary part to weld from
-	if not gunModel.PrimaryPart then
-		-- try common names
-		gunModel.PrimaryPart =
-			gunModel:FindFirstChild("Main") or
-			gunModel:FindFirstChild("Base") or
-			gunModel:FindFirstChild("Body") or
-			gunModel:FindFirstChildWhichIsA("BasePart")
+	-- -----------------------------------------------------------------
+	-- 3️⃣  Determine the primary part for welding (handles Model or single Part)
+	-- -----------------------------------------------------------------
+	local primaryPart
+	if gunModel:IsA("Model") then
+		if not gunModel.PrimaryPart then
+			gunModel.PrimaryPart = gunModel:FindFirstChild("Main")
+				or gunModel:FindFirstChild("Base")
+				or gunModel:FindFirstChild("Body")
+				or gunModel:FindFirstChildWhichIsA("BasePart")
+		end
+		primaryPart = gunModel.PrimaryPart
+		if not primaryPart then
+			warn("[WeaponService] Gun model has no PrimaryPart or base part:", weaponConfig.Name or weaponId)
+			return
+		end
+	else
+		-- gunModel is a single Part; use it directly
+		primaryPart = gunModel
 	end
 
-	local primary = gunModel.PrimaryPart
-	if not primary then
-		warn("[WeaponService] Gun model has no PrimaryPart or base part:", modelName)
-		return
-	end
-
-	-- Attach to hand/arm
+	-- -----------------------------------------------------------------
+	-- 4️⃣  Attach the model/part to the player’s hand (R15) or arm (R6)
+	-- -----------------------------------------------------------------
 	local rightHand = character:FindFirstChild("RightHand")
-		or character:FindFirstChild("Right Arm") -- R6 fallback
+		or character:FindFirstChild("Right Arm")   -- R6 fallback
 
 	if not rightHand then
 		warn("[WeaponService] No RightHand / Right Arm to attach gun to for player:", player.Name)
 		return
 	end
 
-	-- Position + weld
-	gunModel:SetPrimaryPartCFrame(
-		rightHand.CFrame
-			* CFrame.new(0, -0.5, 0.3)               -- tweak offset
-			* CFrame.Angles(0, math.rad(90), 0)      -- tweak rotation
-	)
+	-- Position the model or part (tweak offsets/rotations if needed)
+	if gunModel:IsA("Model") then
+		gunModel:SetPrimaryPartCFrame(
+			rightHand.CFrame
+				* CFrame.new(0, -0.5, 0.3)
+				* CFrame.Angles(0, math.rad(90), 0)
+		)
+	else
+		gunModel.CFrame = rightHand.CFrame
+			* CFrame.new(0, -0.5, 0.3)
+			* CFrame.Angles(0, math.rad(90), 0)
+	end
 
+	-- Weld the primary part (or the single part) to the hand
 	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = primary
+	weld.Part0 = primaryPart
 	weld.Part1 = rightHand
-	weld.Parent = primary
+	weld.Parent = primaryPart
 end
 return WeaponService
