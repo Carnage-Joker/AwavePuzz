@@ -254,6 +254,12 @@ function Spawner:spawnWave(waveComposition)
 	-- Priority: Walkers first, then Runners, Spitters, Brutes, Boss last
 	local spawnOrder = {"Walker", "Runner", "Spitter", "Brute", "Boss"}
 	
+	-- Create a set of priority types for O(1) lookup
+	local prioritySet = {}
+	for _, zombieType in ipairs(spawnOrder) do
+		prioritySet[zombieType] = true
+	end
+	
 	local totalToSpawn = 0
 	
 	-- Queue zombies in strategic order
@@ -267,14 +273,7 @@ function Spawner:spawnWave(waveComposition)
 	
 	-- Queue any other zombie types not in the priority list
 	for zombieType, count in pairs(waveComposition) do
-		local found = false
-		for _, priorityType in ipairs(spawnOrder) do
-			if zombieType == priorityType then
-				found = true
-				break
-			end
-		end
-		if not found then
+		if not prioritySet[zombieType] then
 			for _ = 1, count do
 				self:queueSpawn(zombieType)
 				totalToSpawn = totalToSpawn + 1

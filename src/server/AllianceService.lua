@@ -280,7 +280,7 @@ function AllianceService:transferBetrayalResources(betrayer, victim, transferRat
 		return
 	end
 	
-	-- Transfer currency (75% of victim's currency)
+	-- Transfer currency based on transferRatio (e.g., 0.75 for betrayal, 1.0 for survivor victory)
 	local victimCurrency = victimData.currency or 0
 	local transferAmount = math.floor(victimCurrency * transferRatio)
 	
@@ -346,6 +346,7 @@ function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
 		self:onBetrayerKilled(deadPlayer, killerPlayer)
 	end
 end
+
 function AllianceService:createAlliance(player1, player2)
 	local userId1 = player1.UserId
 	local userId2 = player2.UserId

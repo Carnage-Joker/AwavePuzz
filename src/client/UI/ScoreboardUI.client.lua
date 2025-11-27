@@ -107,8 +107,6 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 end)
 
--- Store scoreboard data
-
 -- Function to create a player row
 local function createPlayerRow(playerStats, layoutOrder)
 	local rowFrame = Instance.new("Frame")
@@ -190,11 +188,12 @@ end)
 -- Listen for scoreboard updates from server
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
-local scoreboardUpdateEvent = remoteEvents:WaitForChild("ScoreboardUpdate", REMOTE_EVENT_TIMEOUT)
-if scoreboardUpdateEvent then
+local scoreboardUpdateEvent = remoteEvents:WaitForChild("ScoreboardUpdate", REMOTE_EVENT_WAIT_TIMEOUT)
+if not scoreboardUpdateEvent then
+	warn("ScoreboardUpdate event not found - scoreboard will not receive updates")
+else
 	scoreboardUpdateEvent.OnClientEvent:Connect(function(data)
 		if type(data) == "table" then
-			scoreboardData = data
 			updateScoreboard(data)
 		end
 	end)
