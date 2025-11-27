@@ -38,12 +38,18 @@ end
 -----------------------------------------------------
 function BaseManager:broadcastHealthUpdate()
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if remoteEvents then
-		local baseHealthEvent = remoteEvents:FindFirstChild("BaseHealthUpdate")
-		if baseHealthEvent then
-			baseHealthEvent:FireAllClients(self.health, self.maxHealth)
-		end
+	if not remoteEvents then
+		warn("[BaseManager] RemoteEvents folder not found")
+		return
 	end
+	
+	local baseHealthEvent = remoteEvents:FindFirstChild("BaseHealthUpdate")
+	if not baseHealthEvent then
+		warn("[BaseManager] BaseHealthUpdate event not found")
+		return
+	end
+	
+	baseHealthEvent:FireAllClients(self.health, self.maxHealth)
 end
 
 -----------------------------------------------------
