@@ -7,6 +7,7 @@
 -- - Attack animation support
 -- - Server-authoritative damage dealing
 -- - Base reference caching for performance
+-- ToDo: Increase difficulty by  
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
@@ -36,7 +37,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager)
 	self.rootPart = rootPart
 	self.stats = stats or {}
 	self.isActive = true
-	
+
 	-- Managers for dealing damage
 	self.baseManager = baseManager
 	self.playerManager = playerManager
@@ -46,16 +47,16 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager)
 	self.repathInterval = GameConfig.ZOMBIE_REPATH_INTERVAL or 1.0
 	self.currentTarget = nil
 	self.currentTargetType = nil -- "player" or "base"
-	
+
 	-- Cache base reference for performance (avoids repeated FindFirstChild)
 	self.cachedBase = nil
-	
+
 	-- Attack system
 	self.attackCooldown = 0
 	self.attackInterval = GameConfig.ZOMBIE_ATTACK_INTERVAL or 1.5
 	self.attackRange = GameConfig.ZOMBIE_ATTACK_RANGE or 6
 	self.attackDamage = self.stats.Damage or GameConfig.ZOMBIE_DAMAGE or 10
-	
+
 	-- Animation support
 	self.attackAnimationTrack = nil
 	self:loadAttackAnimation()
@@ -75,7 +76,7 @@ function ZombieBrain:loadAttackAnimation()
 		animator = Instance.new("Animator")
 		animator.Parent = self.humanoid
 	end
-	
+
 	-- Try to find attack animation in the zombie model
 	local attackAnim = self.zombieModel:FindFirstChild("AttackAnimation", true)
 	if attackAnim and attackAnim:IsA("Animation") then
@@ -92,27 +93,37 @@ end
 
 -- Get the base position from workspace (with caching)
 function ZombieBrain:getBasePosition()
-	-- Return cached base if still valid (within workspace and not destroyed)
-	if self.cachedBase and self.cachedBase.Parent and self.cachedBase:IsDescendantOf(workspace) then
+	-- Return cached base if still valid
+	if self.cachedBase 
+		and self.cachedBase.Parent 
+		and self.cachedBase:IsDescendantOf(workspace) then
+
 		if self.cachedBase:IsA("Model") then
 			return self.cachedBase:GetPivot().Position
 		elseif self.cachedBase:IsA("BasePart") then
 			return self.cachedBase.Position
 		end
 	end
-	
-	-- Cache expired, invalid, or doesn't exist - find base again
-	local base = workspace:FindFirstChild("Base")
-	if base then
-		self.cachedBase = base
-		if base:IsA("Model") then
-			return base:GetPivot().Position
-		elseif base:IsA("BasePart") then
-			return base.Position
+
+	-- FIX: match your real base name
+	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
+	if baseModel then
+		self.cachedBase = baseModel
+
+		-- Look for HitBox first
+		local hitbox = baseModel:FindFirstChild("HitBox", true)
+		if hitbox and hitbox:IsA("BasePart") then
+			return hitbox.Position
+		end
+
+		-- Fallback: pivot
+		if baseModel:IsA("Model") then
+			return baseModel:GetPivot().Position
+		elseif baseModel:IsA("BasePart") then
+			return baseModel.Position
 		end
 	end
-	
-	-- Base not found
+
 	self.cachedBase = nil
 	return nil
 end
@@ -145,20 +156,20 @@ end
 function ZombieBrain:selectBestTarget()
 	local playerPos, playerDist, player = getNearestPlayerPosition(self.rootPart)
 	local basePos = self:getBasePosition()
-	
+
 	if not playerPos and not basePos then
 		return nil, nil, nil
 	end
-	
+
 	-- If only one target exists, choose that
 	if playerPos and not basePos then
 		return playerPos, "player", player
 	end
-	
+
 	if basePos and not playerPos then
 		return basePos, "base", nil
 	end
-	
+
 	-- Both exist, choose closest
 	local baseDist = (basePos - self.rootPart.Position).Magnitude
 	if playerDist < baseDist then
@@ -173,19 +184,19 @@ function ZombieBrain:tryAttack()
 	if not self.rootPart or self.attackCooldown > 0 then
 		return false
 	end
-	
+
 	local targetPos, targetType, targetPlayer = self:selectBestTarget()
 	if not targetPos then
 		return false
 	end
-	
+
 	local distance = (targetPos - self.rootPart.Position).Magnitude
-	
+
 	-- Check if in attack range
 	if distance <= self.attackRange then
 		self.attackCooldown = self.attackInterval
 		self:playAttackAnimation()
-		
+
 		-- Deal damage to appropriate target
 		if targetType == "player" and targetPlayer then
 			-- Validate player still exists and has character
@@ -202,10 +213,10 @@ function ZombieBrain:tryAttack()
 				self.baseManager:damageBase(self.attackDamage)
 			end
 		end
-		
+
 		return true
 	end
-	
+
 	return false
 end
 
@@ -223,7 +234,7 @@ function ZombieBrain:update(deltaTime)
 		self.isActive = false
 		return
 	end
-	
+
 	-- Update attack cooldown
 	if self.attackCooldown > 0 then
 		self.attackCooldown = math.max(0, self.attackCooldown - deltaTime)
@@ -231,7 +242,7 @@ function ZombieBrain:update(deltaTime)
 
 	-- Try to attack if in range
 	local didAttack = self:tryAttack()
-	
+
 	-- Update movement cooldown
 	self.moveCooldown -= deltaTime
 	if self.moveCooldown > 0 then
@@ -249,7 +260,7 @@ function ZombieBrain:update(deltaTime)
 	if not targetPos then
 		return
 	end
-	
+
 	-- Store current target info
 	self.currentTarget = targetPos
 	self.currentTargetType = targetType
@@ -260,13 +271,13 @@ end
 
 function ZombieBrain:destroy()
 	self.isActive = false
-	
+
 	-- Stop and cleanup animation
 	if self.attackAnimationTrack then
 		self.attackAnimationTrack:Stop()
 		self.attackAnimationTrack = nil
 	end
-	
+
 	self.zombieModel = nil
 	self.humanoid = nil
 	self.rootPart = nil
