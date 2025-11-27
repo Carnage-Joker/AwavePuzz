@@ -1,35 +1,40 @@
 -- MainServer.lua
 -- Main server initialization script
 -- Place this as a Script (not ModuleScript) in ServerScriptService
+-- ToDo : add a way to disable the server
+
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
--- Require managers
+-- Require managers / services
 local GameManager = require(script.Parent.GameManager)
 local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
-local PlayerManager = require(script.Parent.PlayerManager)
 
 print("=== AwavePuzz Server Starting ===")
 
--- Initialize alliance service first (needed by GameManager)
+----------------------------------------------------------------
+-- Service initialisation
+----------------------------------------------------------------
+
+-- Alliance service (used by GameManager and others)
 local allianceService = AllianceService.new()
 print("AllianceService initialized")
 
--- Initialize game manager (will create WeaponService with AllianceService reference)
+-- GameManager wires up GameServer, Spawner, WeaponService, PlayerManager, BaseManager, etc.
 local gameManager = GameManager.new(allianceService)
 print("GameManager initialized")
 
--- Get player manager from game manager
+-- Get the shared PlayerManager from the GameManager
 local playerManager = gameManager:getPlayerManager()
 
--- Initialize cure service (needs reference to game manager & player manager)
+-- Cure service (needs reference to game manager & player manager)
 local cureService = CureService.new(gameManager, playerManager)
 print("CureService initialized")
 
--- Initialize puzzle service (needs cure service and player manager)
+-- Puzzle service (needs cure service and player manager)
 local puzzleService = PuzzleService.new(cureService, playerManager)
 print("PuzzleService initialized")
 
@@ -41,34 +46,34 @@ gameManager:setCureService(cureService)
 print("Services linked")
 
 -- Setup cure stations
-local cureStationSetup = require(script.Parent.CureStationSetup)
+local cureStationSetup = require(game.ReplicatedStorage.Shared.CureStationSetup)
 if not cureStationSetup then
-    warn("Cure station setup failed")
+	warn("Cure station setup failed")
 end
 print("Cure stations setup complete")
 
-
-
+----------------------------------------------------------------
 -- Player connection handlers
+----------------------------------------------------------------
+
 Players.PlayerAdded:Connect(function(player)
 	print(player.Name .. " joined the game")
 
-	-- Initialize player services
+	-- Initialise player across systems
 	gameManager:onPlayerAdded(player)
 	allianceService:initializePlayer(player)
 	cureService:initializePlayer(player)
 	puzzleService:initializePlayer(player)
 
-	-- Setup player character
+	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
 		print(player.Name .. "'s character loaded")
 
-		-- Wait for humanoid
 		local humanoid = character:WaitForChild("Humanoid", 5)
 		if humanoid then
-			-- Setup health tracking
 			humanoid.Died:Connect(function()
 				print(player.Name .. " died")
+				-- GameManager will typically delegate lose-condition checks to GameServer / PlayerManager
 				gameManager:checkLoseConditions()
 			end)
 		end
@@ -83,34 +88,37 @@ Players.PlayerRemoving:Connect(function(player)
 	allianceService:removePlayer(player)
 end)
 
+----------------------------------------------------------------
 -- Main game loop
+----------------------------------------------------------------
+
 local lastUpdate = tick()
+
 RunService.Heartbeat:Connect(function()
 	local currentTime = tick()
 	local deltaTime = currentTime - lastUpdate
 	lastUpdate = currentTime
 
-	-- Update game manager (handles waves, timers, etc.)
+	-- GameManager handles waves, timers, and GameServer.update()
 	gameManager:update(deltaTime)
 end)
 
--- Wait for minimum players and start game automatically
--- (Optional: you can add a lobby system here)
+----------------------------------------------------------------
+-- Auto-start logic
+----------------------------------------------------------------
+
 task.spawn(function()
 	print("Waiting for players...")
 
-	-- Wait until at least 1 player joins
+	-- Simple “auto start when someone joins” behaviour
 	repeat
 		task.wait(1)
 	until #Players:GetPlayers() >= 1
 
 	print("Starting game with " .. #Players:GetPlayers() .. " players")
 
-	-- Game will auto-start from GameManager's update loop
-	-- when it detects players in WAITING state
+	-- GameManager's internal update loop should transition from WAITING to IN_PROGRESS
+	-- when conditions are met (player count, etc.)
 end)
-
--- Debug commands (optional)
--- You can add admin commands here for testing
 
 print("=== Server Ready ===")
