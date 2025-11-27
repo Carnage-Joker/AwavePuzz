@@ -108,7 +108,6 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 -- Store scoreboard data
-local scoreboardData = {}
 
 -- Function to create a player row
 local function createPlayerRow(playerStats, layoutOrder)
