@@ -1,6 +1,6 @@
 -- AllianceService.lua
 -- Server script that manages player alliances and betrayals
-
+--TODO make sure Alliance system is working, allied players share resources and puzzles, betraying allies transfers all resources and puzzles to the winner
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -16,7 +16,7 @@ function AllianceService.new()
 	self.alliances = {}           -- player UserId -> set of allied UserIds
 	self.pendingRequests = {}     -- player UserId -> set of pending request UserIds
 	self.betrayalCooldowns = {}   -- player UserId -> timestamp of last betrayal
-	
+
 	-- References to other services
 	self.puzzleService = nil      -- Will be set later
 	self.cureService = nil        -- Will be set later
@@ -225,7 +225,7 @@ function AllianceService:handleBreakAlliance(player, target)
 
 	-- Set betrayal cooldown
 	self.betrayalCooldowns[player.UserId] = os.time()
-	
+
 	-- Trigger puzzle/component stealing mechanics
 	if self.puzzleService then
 		self.puzzleService:onBetrayal(player, target)
