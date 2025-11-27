@@ -26,7 +26,7 @@ PuzzleConfig.ComponentPuzzles = {
 		-- Example: 2, 4, 8, ?, 32 (answer: 16)
 		timeLimit = 60, -- seconds
 	},
-	
+
 	["Chemical B"] = {
 		type = PuzzleConfig.PuzzleTypes.PATTERN,
 		name = "Pattern Recognition",
@@ -36,7 +36,7 @@ PuzzleConfig.ComponentPuzzles = {
 		-- Example: Circle, Square, Triangle, Circle, Square, ? (answer: Triangle)
 		timeLimit = 60,
 	},
-	
+
 	["Biological Sample"] = {
 		type = PuzzleConfig.PuzzleTypes.COLOR,
 		name = "Chromatic Alignment",
@@ -46,7 +46,7 @@ PuzzleConfig.ComponentPuzzles = {
 		-- Example: Arrange RGB gradient correctly
 		timeLimit = 45,
 	},
-	
+
 	["Research Notes"] = {
 		type = PuzzleConfig.PuzzleTypes.LOGIC,
 		name = "Deduction Grid",
@@ -56,7 +56,7 @@ PuzzleConfig.ComponentPuzzles = {
 		-- Example: 3 scientists, 3 elements, 3 locations - match correctly using clues
 		timeLimit = 90,
 	},
-	
+
 	["Catalyst"] = {
 		type = PuzzleConfig.PuzzleTypes.ABSTRACT,
 		name = "Neural Network",
