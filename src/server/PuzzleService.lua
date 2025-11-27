@@ -624,10 +624,8 @@ function PuzzleService:onSurvivorVictory(survivor, betrayer)
 	for componentName, puzzleState in pairs(betrayerPuzzles) do
 		local survivorPuzzleState = survivorPuzzles[componentName]
 		local betrayerHasSolved = puzzleState.solved
-		local survivorHasPuzzle = survivorPuzzleState ~= nil
-		local survivorNotSolved = survivorHasPuzzle and not survivorPuzzleState.solved
 		
-		if betrayerHasSolved and survivorNotSolved then
+		if betrayerHasSolved and survivorPuzzleState and not survivorPuzzleState.solved then
 			survivorPuzzles[componentName].solved = true
 			print("[PuzzleService]", survivor.Name, "claimed", componentName, "puzzle from defeated betrayer", betrayer.Name)
 		end
