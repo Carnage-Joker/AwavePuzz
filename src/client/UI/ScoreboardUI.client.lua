@@ -211,7 +211,7 @@ task.delay(3, function()
 	hint.TextColor3 = Color3.fromRGB(255, 255, 255)
 	hint.TextSize = 14
 	hint.Font = Enum.Font.Gotham
-	hint.Parent = playerGui
+	hint.Parent = screenGui
 	
 	local hintCorner = Instance.new("UICorner")
 	hintCorner.CornerRadius = UDim.new(0, 8)
