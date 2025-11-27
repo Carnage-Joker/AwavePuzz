@@ -1,6 +1,8 @@
 -- MapConfig.lua
 -- Describes available maps and the helper utilities for the multi-map system
--- ToDo : vote for map between rounds
+-- Note: Map voting between rounds can be implemented by:
+--   1. Calling MapConfig.getRandom() or collecting player votes
+--   2. Passing the selected mapId to MapManager:load(mapId)
 
 -- Map definitions
 -- Each map is a table with the following fields:

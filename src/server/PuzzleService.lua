@@ -609,4 +609,32 @@ function PuzzleService:onBetrayal(betrayer, victim)
 	end
 end
 
+-- Survivor victory: when victim kills betrayer, transfer ALL puzzles
+function PuzzleService:onSurvivorVictory(survivor, betrayer)
+	local survivorUserId = survivor.UserId
+	local betrayerUserId = betrayer.UserId
+
+	self:initializePlayer(survivor)
+	self:initializePlayer(betrayer)
+
+	local survivorPuzzles = self.playerPuzzles[survivorUserId]
+	local betrayerPuzzles = self.playerPuzzles[betrayerUserId]
+
+	-- Transfer ALL solved puzzles from betrayer to survivor
+	for componentName, puzzleState in pairs(betrayerPuzzles) do
+		if puzzleState.solved and survivorPuzzles[componentName] and not survivorPuzzles[componentName].solved then
+			survivorPuzzles[componentName].solved = true
+			print("[PuzzleService]", survivor.Name, "claimed", componentName, "puzzle from defeated betrayer", betrayer.Name)
+		end
+	end
+
+	-- Reset betrayer's puzzles (they lost everything)
+	for componentName, puzzleState in pairs(betrayerPuzzles) do
+		puzzleState.solved = false
+		puzzleState.attempts = 0
+	end
+	
+	print("[PuzzleService]", survivor.Name, "claimed all puzzles from defeated betrayer", betrayer.Name)
+end
+
 return PuzzleService
