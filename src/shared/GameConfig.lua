@@ -27,8 +27,8 @@ GameConfig.BASE_ZOMBIES_PER_WAVE = 5
 -- Zombie Settings
 GameConfig.ZOMBIE_HEALTH = 50
 GameConfig.ZOMBIE_DAMAGE = 10  -- Increased from 1 to make zombie attacks meaningful. 
-                                -- With 100 player HP: 10 hits to kill player
-                                -- With 1000 base HP: 100 hits to destroy base
+-- With 100 player HP: 10 hits to kill player
+-- With 1000 base HP: 100 hits to destroy base
 GameConfig.ZOMBIE_SPEED = 16
 GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.2 -- Health increase per wave
 GameConfig.ZOMBIE_ATTACK_RANGE = 6 -- Range at which zombies attack (studs)
@@ -57,7 +57,7 @@ GameConfig.ALLIANCE_DAMAGE_MULTIPLIER = 0 -- Allies can't damage each other
 GameConfig.BETRAYAL_COOLDOWN = 60 -- Seconds before can betray again
 
 -- Resource Settings
-GameConfig.RESOURCE_SPAWN_RATE = 45 -- Seconds between resource spawns
+GameConfig.RESOURCE_SPAWN_RATE = 20 -- Seconds between resource spawns
 GameConfig.MAX_RESOURCES_ON_MAP = 10
 
 -- Map Settings
