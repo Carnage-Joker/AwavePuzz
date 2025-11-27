@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 -- Constants
-local REMOTE_EVENT_TIMEOUT = 10 -- Seconds to wait for remote event
+local REMOTE_EVENT_WAIT_TIMEOUT = 10 -- Seconds to wait for RemoteEvent to exist
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
