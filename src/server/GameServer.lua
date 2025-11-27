@@ -2,8 +2,10 @@
 -- Main server-side game controller
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local GameState = require(ReplicatedStorage.Shared.GameState)
+
 local PlayerManager = require(script.Parent.PlayerManager)
 local WaveManager = require(script.Parent.WaveManager)
 local BaseManager = require(script.Parent.BaseManager)
@@ -15,10 +17,15 @@ GameServer.__index = GameServer
 function GameServer.new()
 	local self = setmetatable({}, GameServer)
 
+	-- Core state
 	self.gameState = GameState.new()
-	self.playerManager = PlayerManager.new()
+
+	-- Use singletons so everything (zombies, UI, etc.) shares the same managers
+	self.playerManager = PlayerManager.getInstance()
+	self.baseManager = BaseManager.getInstance()
+
+	-- Wave + cure systems can stay as regular instances
 	self.waveManager = WaveManager.new()
-	self.baseManager = BaseManager.new()
 	self.cureManager = CureCraftingManager.new()
 
 	self.waveTimer = 0
@@ -26,6 +33,10 @@ function GameServer.new()
 
 	return self
 end
+
+----------------------------------------------------------------
+-- Game flow
+----------------------------------------------------------------
 
 function GameServer:startGame()
 	if self.gameStarted then
@@ -39,7 +50,9 @@ function GameServer:startGame()
 
 	self.gameStarted = true
 	self.gameState:setState(GameState.States.IN_PROGRESS)
-	self.gameState:setBaseHealth(GameConfig.BASE_HEALTH)
+
+	-- Sync gameState base health from the BaseManager
+	self.gameState:setBaseHealth(self.baseManager:getHealth())
 
 	-- Start first wave
 	self:startNextWave()
@@ -50,9 +63,12 @@ end
 function GameServer:startNextWave()
 	local waveInfo = self.waveManager:startWave()
 	self.gameState:incrementWave()
-
 	return waveInfo
 end
+
+----------------------------------------------------------------
+-- Player lifecycle
+----------------------------------------------------------------
 
 function GameServer:onPlayerJoin(player)
 	local success, message = self.playerManager:addPlayer(player)
@@ -63,7 +79,12 @@ function GameServer:onPlayerLeave(player)
 	self.playerManager:removePlayer(player)
 end
 
+----------------------------------------------------------------
+-- Damage routing
+----------------------------------------------------------------
+
 function GameServer:damagePlayer(player, damage)
+	-- Delegate to PlayerManager; it handles health, UI, and Humanoid death.
 	local died = self.playerManager:damagePlayer(player, damage)
 
 	if died then
@@ -74,8 +95,10 @@ function GameServer:damagePlayer(player, damage)
 end
 
 function GameServer:damageBase(damage)
+	-- Delegate to BaseManager for actual HP changes
 	local destroyed = self.baseManager:damageBase(damage)
 
+	-- Keep GameState's base health synced to the manager
 	self.gameState:setBaseHealth(self.baseManager:getHealth())
 
 	if destroyed then
@@ -84,6 +107,10 @@ function GameServer:damageBase(damage)
 
 	return destroyed
 end
+
+----------------------------------------------------------------
+-- Cure components / victory
+----------------------------------------------------------------
 
 function GameServer:collectCureComponent(player, componentName)
 	local success, message = self.cureManager:addComponent(componentName)
@@ -100,6 +127,10 @@ function GameServer:collectCureComponent(player, componentName)
 	return success, message
 end
 
+----------------------------------------------------------------
+-- Alliances
+----------------------------------------------------------------
+
 function GameServer:createAlliance(player1, player2)
 	return self.playerManager:addAlliance(player1, player2)
 end
@@ -108,14 +139,22 @@ function GameServer:breakAlliance(player1, player2)
 	return self.playerManager:removeAlliance(player1, player2)
 end
 
+----------------------------------------------------------------
+-- Zombies / waves
+----------------------------------------------------------------
+
 function GameServer:onZombieKilled()
 	local waveComplete = self.waveManager:onZombieDeath()
 
 	if waveComplete then
-		-- Start next wave after delay
+		-- Start next wave after a delay
 		self.waveTimer = GameConfig.WAVE_DELAY
 	end
 end
+
+----------------------------------------------------------------
+-- Lose / win conditions
+----------------------------------------------------------------
 
 function GameServer:checkLoseCondition()
 	local activePlayers = self.playerManager:getActivePlayers()
@@ -131,37 +170,50 @@ function GameServer:onVictory()
 end
 
 function GameServer:onDefeat(reason)
+	-- You can log or broadcast 'reason' if needed
 	self.gameState:setState(GameState.States.DEFEAT)
 	self.gameStarted = false
 end
+
+----------------------------------------------------------------
+-- Per-frame update
+----------------------------------------------------------------
 
 function GameServer:update(deltaTime)
 	if not self.gameStarted then
 		return
 	end
 
-	-- Update wave timer
+	-- Wave delay timer between waves
 	if self.waveTimer > 0 then
-		self.waveTimer = self.waveTimer - deltaTime
+		self.waveTimer -= deltaTime
 
 		if self.waveTimer <= 0 then
 			self:startNextWave()
 		end
 	end
 
-	-- Check game conditions
+	-- Check game conditions (all players dead, etc.)
 	self:checkLoseCondition()
 end
 
+----------------------------------------------------------------
+-- Snapshot for UI / clients
+----------------------------------------------------------------
+
 function GameServer:getGameState()
+	-- Always pull current base health from BaseManager singleton
+	local baseHealth = self.baseManager:getHealth()
+	self.gameState:setBaseHealth(baseHealth)
+
 	return {
 		state = self.gameState:getState(),
 		wave = self.gameState.currentWave,
-		baseHealth = self.baseManager:getHealth(),
+		baseHealth = baseHealth,
 		baseHealthPercent = self.baseManager:getHealthPercentage(),
 		cureProgress = self.cureManager:getCureProgress(),
 		zombiesRemaining = self.waveManager:getZombiesRemaining(),
-		playersAlive = #self.playerManager:getActivePlayers()
+		playersAlive = #self.playerManager:getActivePlayers(),
 	}
 end
 
