@@ -1,5 +1,13 @@
 -- GameManager.lua
 -- Main server-side game manager that orchestrates waves, base health, win/lose conditions
+-- TODO : add base health to game manager
+-- TODO : add player manager to game manager
+-- TODO : add weapon service to game manager
+-- TODO : add spawner to game manager
+-- TODO : add resource spawner to game manager
+-- TODO : add map manager to game manager
+-- TODO : implement respawn at end of round with dead players wwatching the rest of the round
+-- TODO : implement scoreboard with player stats including round wins, losses, kills, deaths, etc.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,7 +42,7 @@ function GameManager.new(allianceService)
 	self.allianceService = allianceService
 
 	-- Managers
-	self.baseManager = BaseManager.new()
+	self.baseManager = BaseManager.getInstance()
 	self.playerManager = PlayerManager.new()
 	self.weaponService = WeaponService.new(self.playerManager, allianceService)
 	self.shopService = ShopService.new(self.playerManager, self.weaponService)
