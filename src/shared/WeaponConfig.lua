@@ -1,9 +1,14 @@
 -- WeaponConfig.lua
 -- Defines the available weapons, upgrades, and shop items for AWavePuzz
+-- ToDo: add a "level" field to each weapon, and a "level" field to each upgrade
+-- ToDo: add a "level" field to each shop item
+-- ToDo: add a "level" field to each weapon type
+-- ToDo: ensure weapons are held the right direction and fire in the direction they are pointed
+
 
 local WeaponConfig = {}
 
-WeaponConfig.DefaultWeapon = "Pistol"
+WeaponConfig.DefaultWeapon = "Standard Issue Pistol"
 
 WeaponConfig.Weapons = {
 	Pistol = {
