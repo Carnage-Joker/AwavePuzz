@@ -1,3 +1,4 @@
+
 -- AllianceUI.client.lua
 -- Client script for alliance management UI
 -- Place in StarterGui as a LocalScript
@@ -311,7 +312,7 @@ local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 
-	if input.KeyCode == Enum.KeyCode.Tab then
+	if input.KeyCode == Enum.KeyCode.LeftShift then
 		mainFrame.Visible = not mainFrame.Visible
 		if mainFrame.Visible then
 			updatePlayerList()
@@ -322,7 +323,7 @@ end)
 -- Remote Event Handlers
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
--- Alliance Update
+	-- Alliance Update
 local allianceUpdateEvent = remoteEvents:WaitForChild("AllianceUpdate")
 allianceUpdateEvent.OnClientEvent:Connect(function(data)
 	if data.type == "request" then
@@ -408,6 +409,6 @@ end)
 updatePlayerList()
 
 -- Show hint
-showNotification("Press Tab to open Alliance Menu", 5)
+showNotification("Press LeftShift to open Alliance Menu", 5)
 
 print("AllianceUI initialized")
