@@ -173,8 +173,6 @@ controlsHint.Font = Enum.Font.Gotham
 controlsHint.Parent = screenGui
 
 -- Camera control variables
-local spectatorCamera = nil
-local cameraOffset = Vector3.new(0, 5, 15)
 
 -- Function to set camera on target
 local function updateCamera()
