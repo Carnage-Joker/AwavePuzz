@@ -231,7 +231,7 @@ function UIScaleManager.applyScaling(guiElement, options)
     end
     
     -- Scale text if applicable
-    if baseTextSize and guiElement:IsA("TextLabel") or guiElement:IsA("TextButton") or guiElement:IsA("TextBox") then
+    if baseTextSize and (guiElement:IsA("TextLabel") or guiElement:IsA("TextButton") or guiElement:IsA("TextBox")) then
         guiElement.TextSize = UIScaleManager.scaleTextSize(baseTextSize)
     end
     
