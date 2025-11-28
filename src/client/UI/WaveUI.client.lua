@@ -221,6 +221,24 @@ gameStateEvent.OnClientEvent:Connect(function(stateData)
 		timeLabel.Text = ""
 		zombieLabel.Text = ""
 
+	elseif state == "Lobby" then
+		currentAnnouncementId += 1
+		announcementFrame.Visible = false
+		waveLabel.Text = "Map Selection"
+		timeLabel.Text = "Vote now!"
+		zombieLabel.Text = ""
+
+	elseif state == "Countdown" then
+		showAnnouncement("ROUND STARTING...", 3)
+		waveLabel.Text = "Get Ready!"
+		timeLabel.Text = ""
+		zombieLabel.Text = ""
+
+	elseif state == "Scoreboard" then
+		waveLabel.Text = "Round Over"
+		timeLabel.Text = ""
+		zombieLabel.Text = ""
+
 	elseif state == "Intermission" then
 		showAnnouncement("Wave Complete! Next wave soon...", 3)
 	end

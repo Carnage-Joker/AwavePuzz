@@ -73,8 +73,8 @@ Players.PlayerAdded:Connect(function(player)
 		if humanoid then
 			humanoid.Died:Connect(function()
 				print(player.Name .. " died")
-				-- GameManager will typically delegate lose-condition checks to GameServer / PlayerManager
-				gameManager:checkLoseConditions()
+				-- Handle player death - puts them in spectator mode and checks lose conditions
+				gameManager:onPlayerDied(player)
 			end)
 		end
 	end)
@@ -115,9 +115,9 @@ task.spawn(function()
 		task.wait(1)
 	until #Players:GetPlayers() >= 1
 
-	print("Starting game with " .. #Players:GetPlayers() .. " players")
+	print("Starting lobby with " .. #Players:GetPlayers() .. " players")
 
-	-- GameManager's internal update loop should transition from WAITING to IN_PROGRESS
+	-- GameManager's internal update loop should transition from WAITING to LOBBY
 	-- when conditions are met (player count, etc.)
 end)
 
