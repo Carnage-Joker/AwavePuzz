@@ -186,7 +186,7 @@ listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = componentsList
 
 -- Function to update UI scaling when screen size changes
-local function updateProgressFrameScaling()
+local function updateUIScaling()
 	progressFrame.Size = UIScaleManager.scaleSize(300, 100, "hudElements", "cureProgress")
 	progressFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 0)
 	progressFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
