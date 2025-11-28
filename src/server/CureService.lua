@@ -341,9 +341,9 @@ end
 function CureService:onAllianceFormed(player1, player2)
 	print("[CureService] Alliance formed between", player1.Name, "and", player2.Name, "- pooling resources")
 	
-	-- Update progress for both players (they now share pooled resources)
+	-- Explicitly update progress for both players (they now share pooled resources)
 	self:updatePlayerCureProgress(player1)
-	-- player2 will get updated as an ally of player1
+	self:updatePlayerCureProgress(player2)
 end
 
 -- Called when an alliance is broken - update progress for both players
