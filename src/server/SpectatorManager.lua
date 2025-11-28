@@ -54,6 +54,10 @@ function SpectatorManager:setupRemoteEvents()
 	-- Listen for cycle requests from clients
 	if self.remoteEvents.SpectatorCycleTarget then
 		self.remoteEvents.SpectatorCycleTarget.OnServerEvent:Connect(function(player, direction)
+			-- Validate direction input from client
+			if direction ~= "next" and direction ~= "prev" then
+				return
+			end
 			self:cycleSpectatorTarget(player, direction)
 		end)
 	end
