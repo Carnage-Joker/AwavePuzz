@@ -377,7 +377,16 @@ function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
 	if self.pendingBetrayals and self.pendingBetrayals[killerPlayer.UserId] then
 		local pendingBetrayal = self.pendingBetrayals[killerPlayer.UserId]
 		if pendingBetrayal.victimUserId == deadPlayer.UserId then
-			self:onBetrayerKillsVictim(killerPlayer, deadPlayer)
+			local success, err = pcall(function()
+				self:onBetrayerKillsVictim(killerPlayer, deadPlayer)
+			end)
+			-- Ensure cleanup of recentBetrayals even if error occurs
+			if self.recentBetrayals then
+				self.recentBetrayals[killerPlayer.UserId] = nil
+			end
+			if not success then
+				warn("[AllianceService] Error in onBetrayerKillsVictim:", err)
+			end
 			return
 		end
 	end
