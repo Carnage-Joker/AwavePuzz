@@ -132,7 +132,7 @@ listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 -- Function to update UI scaling when screen size changes
-local function updatePuzzleMenuScaling()
+local function updateUIScaling()
 	menuFrame.Size = UIScaleManager.scaleSize(500, 600, "menuElements", "menuDialog")
 	menuCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 	
