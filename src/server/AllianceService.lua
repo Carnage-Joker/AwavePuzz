@@ -24,6 +24,9 @@ function AllianceService.new()
 	
 	-- Track recent betrayals for survivor mechanics
 	self.recentBetrayals = {}     -- betrayer UserId -> victim UserId
+	
+	-- Track pending betrayals (resources transfer only on successful elimination)
+	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp}
 
 	-- References to other services
 	self.puzzleService = nil      -- Will be set later
@@ -245,9 +248,6 @@ function AllianceService:handleBreakAlliance(player, target)
 	self.recentBetrayals[player.UserId] = target.UserId
 	
 	-- Mark this as a pending betrayal (resources transfer only on successful elimination)
-	if not self.pendingBetrayals then
-		self.pendingBetrayals = {}
-	end
 	self.pendingBetrayals[player.UserId] = {
 		victimUserId = target.UserId,
 		timestamp = os.time()
