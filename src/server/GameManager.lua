@@ -352,8 +352,11 @@ function GameManager:resetForNewRound()
 		-- Reload character
 		if player.Character then
 			local humanoid = player.Character:FindFirstChild("Humanoid")
-			if humanoid then
+			if humanoid and humanoid.Health then
 				humanoid.Health = humanoid.MaxHealth
+			else
+				-- Character exists but Humanoid is invalid, reload character
+				player:LoadCharacter()
 			end
 		else
 			player:LoadCharacter()
