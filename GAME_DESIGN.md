@@ -42,8 +42,15 @@ AwavePuzz is a multiplayer zombie survival game that combines intense wave-based
 
 **Abilities**
 - Movement and combat
+- Sprint (Left Shift): 1.5x speed, consumes stamina
 - Component collection
 - Alliance management
+
+**Stamina**
+- Starting/Max: 100
+- Depletion rate: 20 per second (while sprinting)
+- Regeneration rate: 15 per second (when not sprinting)
+- Regeneration delay: 1 second after stopping sprint
 
 ### Wave System
 

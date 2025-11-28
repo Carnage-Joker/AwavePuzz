@@ -14,6 +14,14 @@ GameConfig.STARTING_CURRENCY = 150
 GameConfig.CURRENCY_PER_WAVE = 75
 GameConfig.DEFAULT_WEAPON = "Pistol"
 
+-- Sprint Settings
+GameConfig.SPRINT_SPEED_MULTIPLIER = 1.5 -- How much faster sprinting is compared to walking
+GameConfig.STAMINA_MAX = 100 -- Maximum stamina
+GameConfig.STAMINA_DEPLETION_RATE = 20 -- Stamina lost per second while sprinting
+GameConfig.STAMINA_REGEN_RATE = 15 -- Stamina gained per second while not sprinting
+GameConfig.STAMINA_REGEN_DELAY = 1.0 -- Seconds to wait after stopping sprint before regen starts
+GameConfig.SPRINT_HOTKEY = "LeftShift" -- Key to hold for sprinting
+
 -- Base Settings
 GameConfig.BASE_HEALTH = 1000
 GameConfig.BASE_REGEN_RATE = 0 -- No regeneration by default
