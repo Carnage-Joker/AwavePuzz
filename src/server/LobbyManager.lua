@@ -61,6 +61,10 @@ function LobbyManager:setupRemoteEvents()
 	-- Listen for player votes
 	if self.remoteEvents.CastMapVote then
 		self.remoteEvents.CastMapVote.OnServerEvent:Connect(function(player, mapId)
+			-- Validate mapId: must be a string and exist in MapConfig.Maps
+			if not mapId or type(mapId) ~= "string" or not MapConfig.Maps[mapId] then
+				return
+			end
 			self:handlePlayerVote(player, mapId)
 		end)
 	end
