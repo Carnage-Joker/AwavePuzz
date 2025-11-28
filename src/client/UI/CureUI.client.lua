@@ -16,6 +16,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -28,6 +29,9 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Minimum touch target from config
+local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -148,7 +152,7 @@ detailTitle.Font = Enum.Font.GothamBold
 detailTitle.Parent = detailFrame
 
 -- Close Button (ensure minimum touch target size on mobile)
-local closeButtonSize = math.max(getScaledValue(30, "menuElements"), 44)
+local closeButtonSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
 closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
@@ -210,7 +214,7 @@ local function updateUIScaling()
 	detailCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 	detailTitle.TextSize = getScaledTextSize(20)
 	
-	local newCloseSize = math.max(getScaledValue(30, "menuElements"), 44)
+	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 	closeButton.TextSize = getScaledTextSize(18)

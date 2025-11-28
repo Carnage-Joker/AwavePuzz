@@ -13,6 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -25,6 +26,9 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Minimum touch target from config
+local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -62,7 +66,7 @@ titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
 -- Close button with minimum touch target
-local closeButtonSize = math.max(getScaledValue(30, "menuElements"), 44)
+local closeButtonSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 local mainCloseButton = Instance.new("TextButton")
 mainCloseButton.Name = "CloseButton"
 mainCloseButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
@@ -129,7 +133,7 @@ requestLabel.TextWrapped = true
 requestLabel.Parent = requestFrame
 
 -- Buttons with minimum touch target sizes
-local buttonHeight = math.max(getScaledValue(40, "menuElements"), 44)
+local buttonHeight = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 local buttonWidth = getScaledValue(120, "menuElements")
 
 local acceptButton = Instance.new("TextButton")
@@ -201,7 +205,7 @@ local function updateUIScaling()
 	titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 	titleLabel.TextSize = getScaledTextSize(20)
 	
-	local newCloseSize = math.max(getScaledValue(30, "menuElements"), 44)
+	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 	mainCloseButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	mainCloseButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	mainCloseButton.TextSize = getScaledTextSize(18)
@@ -216,7 +220,7 @@ local function updateUIScaling()
 	requestCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 	requestLabel.TextSize = getScaledTextSize(16)
 	
-	local newButtonHeight = math.max(getScaledValue(40, "menuElements"), 44)
+	local newButtonHeight = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 	local newButtonWidth = getScaledValue(120, "menuElements")
 	acceptButton.Size = UDim2.new(0, newButtonWidth, 0, newButtonHeight)
 	acceptButton.Position = UDim2.new(0, getScaledValue(15, "padding"), 0, getScaledValue(70, "padding"))

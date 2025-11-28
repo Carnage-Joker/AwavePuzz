@@ -13,6 +13,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -25,6 +26,9 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Minimum touch target from config
+local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -77,7 +81,7 @@ titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = titleBar
 
 -- Close button with minimum touch target
-local closeButtonSize = math.max(getScaledValue(40, "menuElements"), 44)
+local closeButtonSize = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
 closeButton.Position = UDim2.new(1, -closeButtonSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
@@ -140,7 +144,7 @@ local function updateUIScaling()
 	titleBarCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 	titleLabel.TextSize = getScaledTextSize(22)
 	
-	local newCloseSize = math.max(getScaledValue(40, "menuElements"), 44)
+	local newCloseSize = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	closeButton.TextSize = getScaledTextSize(24)

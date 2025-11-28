@@ -102,7 +102,9 @@ UIScaleConfig.MinSizes = {
     inventory = { width = 140, height = 70 },
     baseHealth = { width = 160, height = 40 },
     menuDialog = { width = 280, height = 300 },
-    touchTarget = { width = 44, height = 44 },  -- Minimum touch target size
+    -- Minimum touch target size per iOS Human Interface Guidelines (44pt)
+    -- Android Material Design recommends 48dp, but 44px works well for Roblox cross-platform
+    touchTarget = { width = 44, height = 44 },
 }
 
 -- Opacity settings for mobile (can make UI more transparent)

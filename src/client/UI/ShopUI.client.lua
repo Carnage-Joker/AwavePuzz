@@ -11,6 +11,7 @@ local player = Players.LocalPlayer
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -27,6 +28,9 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Minimum touch target from config
+local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ShopUI"
@@ -60,7 +64,7 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = frame
 
 -- Close button with minimum touch target
-local closeButtonSize = math.max(getScaledValue(30, "menuElements"), 44)
+local closeButtonSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
 closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
@@ -123,7 +127,7 @@ local function updateUIScaling()
 	title.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	title.TextSize = getScaledTextSize(20)
 	
-	local newCloseSize = math.max(getScaledValue(30, "menuElements"), 44)
+	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	closeButton.TextSize = getScaledTextSize(18)
