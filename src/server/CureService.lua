@@ -435,6 +435,11 @@ function CureService:transferComponents(fromPlayer, toPlayer, transferRatio)
 	if not fromPlayer or not toPlayer or not transferRatio then
 		return
 	end
+	-- Validate transferRatio is a number between 0 and 1 (inclusive)
+	if typeof(transferRatio) ~= "number" or transferRatio < 0 or transferRatio > 1 then
+		warn("[CureService] Invalid transferRatio: must be between 0 and 1. Got:", transferRatio)
+		return
+	end
 	
 	self:initializePlayer(fromPlayer)
 	self:initializePlayer(toPlayer)
