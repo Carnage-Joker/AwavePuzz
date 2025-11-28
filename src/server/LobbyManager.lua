@@ -224,10 +224,13 @@ function LobbyManager:update(deltaTime)
 		return
 	end
 
+	-- Track previous second before updating timer
+	local lastSecond = math.floor(self.votingTimer)
 	self.votingTimer = self.votingTimer - deltaTime
+	local currentSecond = math.floor(self.votingTimer)
 
-	-- Broadcast timer updates periodically (every second)
-	if math.floor(self.votingTimer) ~= math.floor(self.votingTimer + deltaTime) then
+	-- Broadcast timer updates when the second changes
+	if lastSecond ~= currentSecond then
 		self:broadcastVoteCounts()
 	end
 

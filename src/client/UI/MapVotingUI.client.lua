@@ -188,7 +188,8 @@ local function createMapCard(mapData, layoutOrder)
 		card = card,
 		button = voteButton,
 		voteCount = voteCount,
-		stroke = cardStroke
+		stroke = cardStroke,
+		connection = nil  -- Will store the click connection
 	}
 	
 	return card
@@ -235,6 +236,10 @@ end
 -- Function to clear map cards
 local function clearMapCards()
 	for _, buttonData in pairs(mapButtons) do
+		-- Disconnect click handler to prevent memory leaks
+		if buttonData.connection then
+			buttonData.connection:Disconnect()
+		end
 		buttonData.card:Destroy()
 	end
 	mapButtons = {}
@@ -276,10 +281,10 @@ if mapVoteStartEvent then
 		for i, mapData in ipairs(maps) do
 			local card = createMapCard(mapData, i)
 			
-			-- Connect vote button
+			-- Connect vote button and store the connection
 			local buttonData = mapButtons[mapData.id]
 			if buttonData and buttonData.button then
-				buttonData.button.MouseButton1Click:Connect(function()
+				buttonData.connection = buttonData.button.MouseButton1Click:Connect(function()
 					castVote(mapData.id)
 				end)
 			end

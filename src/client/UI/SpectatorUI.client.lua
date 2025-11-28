@@ -280,6 +280,7 @@ local function exitSpectatorMode()
 				end
 			end)
 		end
+	end
 	
 	-- Animate out
 	TweenService:Create(spectatorBanner, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
