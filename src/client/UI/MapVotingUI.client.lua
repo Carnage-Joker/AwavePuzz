@@ -324,17 +324,19 @@ if mapVoteEndEvent then
 			highlightVote(data.selectedMapId)
 		end
 		
-		-- Animate out after a delay
-		task.delay(2, function()
+		-- Animate out after a delay (use spawn for cleaner sequential operations)
+		task.spawn(function()
+			task.wait(2) -- Wait before starting exit animation
+			
 			TweenService:Create(votingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
 				Position = UDim2.new(0.5, -300, 1.5, 0)
 			}):Play()
 			
-			task.delay(0.5, function()
-				screenGui.Enabled = false
-				titleLabel.Text = "VOTE FOR NEXT MAP"
-				titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-			end)
+			task.wait(0.5) -- Wait for animation to complete
+			
+			screenGui.Enabled = false
+			titleLabel.Text = "VOTE FOR NEXT MAP"
+			titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 		end)
 	end)
 end

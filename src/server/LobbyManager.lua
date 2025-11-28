@@ -169,19 +169,29 @@ function LobbyManager:endVoting()
 
 	self.votingActive = false
 
-	-- Count votes and find winner
+	-- Count votes and find winner(s) - handle ties
 	local winningMapId = nil
-	local maxVotes = -1
+	local maxVotes = 0
+	local tiedMaps = {}
 
 	for mapId, voterList in pairs(self.votes) do
-		if #voterList > maxVotes then
-			maxVotes = #voterList
-			winningMapId = mapId
+		local voteCount = #voterList
+		if voteCount > maxVotes then
+			maxVotes = voteCount
+			tiedMaps = { mapId }
+		elseif voteCount == maxVotes and voteCount > 0 then
+			table.insert(tiedMaps, mapId)
 		end
 	end
 
-	-- If no votes, pick a random map
-	if maxVotes <= 0 then
+	-- If there are tied maps or no votes, pick randomly from tied or all maps
+	if #tiedMaps > 1 then
+		-- Random selection among tied maps
+		winningMapId = tiedMaps[math.random(1, #tiedMaps)]
+	elseif #tiedMaps == 1 then
+		winningMapId = tiedMaps[1]
+	else
+		-- No votes at all, pick a random map
 		winningMapId = MapConfig.getRandom()
 	end
 
