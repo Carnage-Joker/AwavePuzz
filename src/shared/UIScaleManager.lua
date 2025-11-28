@@ -282,44 +282,40 @@ function UIScaleManager.initialize()
     currentScaleFactors = nil -- Force recalculation
     UIScaleManager.getScaleFactors()
     
-    -- Watch for camera/viewport changes
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-            local newViewport = camera.ViewportSize
-            if newViewport ~= currentViewportSize then
-                currentViewportSize = newViewport
-                currentScaleFactors = nil -- Force recalculation
-                currentDeviceType = UIScaleManager.getDeviceType()
-                
-                -- Notify all registered callbacks
-                for _, callback in ipairs(updateCallbacks) do
-                    task.spawn(callback)
-                end
-            end
-        end)
-    end
+    -- Track the active ViewportSize connection to avoid duplicates
+    local viewportConnection = nil
     
-    -- Also listen for camera changes
-    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-        local newCamera = workspace.CurrentCamera
-        if newCamera then
-            currentViewportSize = newCamera.ViewportSize
-            currentScaleFactors = nil
-            
-            newCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-                local viewport = newCamera.ViewportSize
-                if viewport ~= currentViewportSize then
-                    currentViewportSize = viewport
-                    currentScaleFactors = nil
+    -- Helper to connect to the current camera's ViewportSize changes
+    local function connectViewportSizeListener(camera)
+        if viewportConnection then
+            viewportConnection:Disconnect()
+            viewportConnection = nil
+        end
+        if camera then
+            currentViewportSize = camera.ViewportSize
+            currentScaleFactors = nil -- Force recalculation
+            viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+                local newViewport = camera.ViewportSize
+                if newViewport ~= currentViewportSize then
+                    currentViewportSize = newViewport
+                    currentScaleFactors = nil -- Force recalculation
                     currentDeviceType = UIScaleManager.getDeviceType()
                     
+                    -- Notify all registered callbacks
                     for _, callback in ipairs(updateCallbacks) do
                         task.spawn(callback)
                     end
                 end
             end)
         end
+    end
+    
+    -- Initial connection for current camera
+    connectViewportSizeListener(workspace.CurrentCamera)
+    
+    -- Listen for camera changes and reconnect
+    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        connectViewportSizeListener(workspace.CurrentCamera)
     end)
     
     return UIScaleManager
