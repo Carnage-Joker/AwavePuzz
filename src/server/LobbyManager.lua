@@ -178,12 +178,16 @@ function LobbyManager:endVoting()
 	local maxVotes = 0
 	local tiedMaps = {}
 
+	-- Only maps with actual votes are included in tiedMaps.
+	-- If no votes are cast (maxVotes == 0), tiedMaps will be empty,
+	-- and the fallback to MapConfig.getRandom() below will select a random map.
 	for mapId, voterList in pairs(self.votes) do
 		local voteCount = #voterList
 		if voteCount > maxVotes then
 			maxVotes = voteCount
 			tiedMaps = { mapId }
 		elseif voteCount == maxVotes and voteCount > 0 then
+			-- Only include maps with actual votes in tie-breaking
 			table.insert(tiedMaps, mapId)
 		end
 	end
