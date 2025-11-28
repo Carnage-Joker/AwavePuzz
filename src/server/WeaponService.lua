@@ -285,20 +285,40 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
 		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
 	
-	-- Check if target died from this damage
-	if humanoid.Health <= 0 and healthBefore > 0 then
-		print(string.format("[WeaponService] PvP Kill: %s eliminated %s", 
-			attackingPlayer.Name, targetPlayer.Name))
-		
-		-- Notify AllianceService of the kill for betrayal mechanics
-		if self.allianceService and self.allianceService.onPlayerKilled then
-			local callSuccess, callErr = pcall(function()
-				self.allianceService:onPlayerKilled(targetPlayer, attackingPlayer)
-			end)
-			if not callSuccess then
-				warn("[WeaponService] Error notifying AllianceService of kill: " .. tostring(callErr))
+	-- Track last attacker for kill credit
+	-- Use an attribute to store the last attacker on the humanoid
+	if attackingPlayer and attackingPlayer.UserId then
+		humanoid:SetAttribute("LastAttackerUserId", attackingPlayer.UserId)
+	end
+
+	-- Connect Died event for kill registration (only once)
+	if not humanoid:GetAttribute("WeaponServiceDiedConnected") then
+		humanoid:SetAttribute("WeaponServiceDiedConnected", true)
+		humanoid.Died:Connect(function()
+			local lastAttackerUserId = humanoid:GetAttribute("LastAttackerUserId")
+			local lastAttacker = nil
+			if lastAttackerUserId then
+				for _, player in ipairs(Players:GetPlayers()) do
+					if player.UserId == lastAttackerUserId then
+						lastAttacker = player
+						break
+					end
+				end
 			end
-		end
+			if lastAttacker then
+				print(string.format("[WeaponService] PvP Kill: %s eliminated %s", 
+					lastAttacker.Name, targetPlayer.Name))
+				-- Notify AllianceService of the kill for betrayal mechanics
+				if self.allianceService and self.allianceService.onPlayerKilled then
+					local callSuccess, callErr = pcall(function()
+						self.allianceService:onPlayerKilled(targetPlayer, lastAttacker)
+					end)
+					if not callSuccess then
+						warn("[WeaponService] Error notifying AllianceService of kill: " .. tostring(callErr))
+					end
+				end
+			end
+		end)
 	end
 end
 
