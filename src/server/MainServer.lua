@@ -11,6 +11,7 @@ local GameManager = require(script.Parent.GameManager)
 local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
+local SprintService = require(script.Parent.SprintService)
 
 print("=== AwavePuzz Server Starting ===")
 
@@ -28,6 +29,10 @@ print("GameManager initialized")
 
 -- Get the shared PlayerManager from the GameManager
 local playerManager = gameManager:getPlayerManager()
+
+-- Sprint service (server-authoritative stamina management)
+local sprintService = SprintService.new(playerManager)
+print("SprintService initialized")
 
 -- Cure service (needs reference to game manager & player manager)
 local cureService = CureService.new(gameManager, playerManager)
@@ -64,10 +69,14 @@ Players.PlayerAdded:Connect(function(player)
 	allianceService:initializePlayer(player)
 	cureService:initializePlayer(player)
 	puzzleService:initializePlayer(player)
+	sprintService:initializePlayer(player)
 
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
 		print(player.Name .. "'s character loaded")
+
+		-- Initialize sprint service for new character
+		sprintService:onCharacterAdded(player, character)
 
 		local humanoid = character:WaitForChild("Humanoid", 5)
 		if humanoid then
@@ -86,6 +95,7 @@ Players.PlayerRemoving:Connect(function(player)
 	-- Clean up player from services
 	gameManager:onPlayerRemoving(player)
 	allianceService:removePlayer(player)
+	sprintService:removePlayer(player)
 end)
 
 ----------------------------------------------------------------
