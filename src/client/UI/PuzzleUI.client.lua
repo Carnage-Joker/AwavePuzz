@@ -159,7 +159,7 @@ submitCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 submitCorner.Parent = submitButton
 
 -- Function to update UI scaling when screen size changes
-local function updatePuzzleUIScaling()
+local function updateUIScaling()
 	puzzleFrame.Size = UIScaleManager.scaleSize(600, 500, "menuElements", "menuDialog")
 	puzzleCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 	
