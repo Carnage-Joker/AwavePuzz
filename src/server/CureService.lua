@@ -355,8 +355,9 @@ function CureService:onAllianceBroken(player1, player2)
 	self:updatePlayerCureProgress(player2)
 end
 
--- Update global cure progress (for UI display)
--- Note: This is a wrapper for updateGlobalCureProgress() maintained for backwards compatibility
+-- DEPRECATED: This method is maintained only for backwards compatibility.
+-- Used for GameManager/victory condition checking, not just UI display.
+-- Prefer calling updateGlobalCureProgress() directly in new code.
 function CureService:updateCureProgress()
 	self:updateGlobalCureProgress()
 end
