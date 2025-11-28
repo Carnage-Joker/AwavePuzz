@@ -1,16 +1,22 @@
 -- ScoreboardUI.client.lua
 -- Client script for displaying player scoreboard with stats
 -- Press TAB to toggle scoreboard visibility
+-- Also shows automatically at end of round
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 -- Constants
 local REMOTE_EVENT_WAIT_TIMEOUT = 10 -- Seconds to wait for RemoteEvent to exist
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- State
+local isEndOfRoundDisplay = false
+local tabHeld = false
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -175,13 +181,21 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	
 	if input.KeyCode == Enum.KeyCode.Tab then
-		screenGui.Enabled = true
+		tabHeld = true
+		-- Don't show TAB scoreboard if end of round display is active
+		if not isEndOfRoundDisplay then
+			screenGui.Enabled = true
+		end
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Tab then
-		screenGui.Enabled = false
+		tabHeld = false
+		-- Don't hide if end of round display is active
+		if not isEndOfRoundDisplay then
+			screenGui.Enabled = false
+		end
 	end
 end)
 
@@ -196,6 +210,60 @@ else
 		if type(data) == "table" then
 			updateScoreboard(data)
 		end
+	end)
+end
+
+-- Handle end of round scoreboard display
+local showScoreboardEvent = remoteEvents:WaitForChild("ShowScoreboard", REMOTE_EVENT_WAIT_TIMEOUT)
+if showScoreboardEvent then
+	showScoreboardEvent.OnClientEvent:Connect(function(data)
+		if typeof(data) ~= "table" then return end
+		
+		isEndOfRoundDisplay = true
+		
+		-- Update title for end of round
+		titleLabel.Text = "ROUND COMPLETE"
+		titleLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+		
+		-- Update scores if provided
+		if data.scores then
+			updateScoreboard(data.scores)
+		end
+		
+		-- Show the scoreboard
+		screenGui.Enabled = true
+		
+		-- Animate in from top
+		scoreboardFrame.Position = UDim2.new(0.5, -250, -0.5, 0)
+		TweenService:Create(scoreboardFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = UDim2.new(0.5, -250, 0.5, -200)
+		}):Play()
+	end)
+end
+
+-- Handle hiding end of round scoreboard
+local hideScoreboardEvent = remoteEvents:WaitForChild("HideScoreboard", REMOTE_EVENT_WAIT_TIMEOUT)
+if hideScoreboardEvent then
+	hideScoreboardEvent.OnClientEvent:Connect(function()
+		isEndOfRoundDisplay = false
+		
+		-- Reset title
+		titleLabel.Text = "SCOREBOARD"
+		titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+		
+		-- Animate out
+		TweenService:Create(scoreboardFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+			Position = UDim2.new(0.5, -250, 1.5, 0)
+		}):Play()
+		
+		task.delay(0.3, function()
+			-- Only hide if TAB isn't being held
+			if not tabHeld then
+				screenGui.Enabled = false
+			end
+			-- Reset position for next time
+			scoreboardFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+		end)
 	end)
 end
 

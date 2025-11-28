@@ -71,4 +71,11 @@ GameConfig.MAX_RESOURCES_ON_MAP = 10
 -- Map Settings
 GameConfig.ENABLE_MULTI_MAP = true
 
+-- Lobby & Round Settings
+GameConfig.LOBBY_VOTING_TIME = 20 -- Seconds for map voting
+GameConfig.LOBBY_MIN_PLAYERS = 1 -- Minimum players to start voting
+GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after round
+GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
+GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
+
 return GameConfig
