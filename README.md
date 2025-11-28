@@ -112,6 +112,10 @@ AwavePuzz/
 - Purchase or upgrade weapons at the shop (default key **B**)
 - Can form and break alliances
 - Collect cure components to contribute to victory
+- **Sprint**: Hold **Left Shift** to sprint (1.5x speed)
+  - Stamina depletes while sprinting
+  - Stamina regenerates when not sprinting (after 1 second delay)
+  - Visual stamina bar in HUD
 
 ### Base Mechanics
 - Starting health: 1000 HP

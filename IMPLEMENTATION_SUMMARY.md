@@ -15,10 +15,10 @@ All game systems are implemented and functional:
 
 ## Implementation Statistics
 
-- **Total Lua Files**: 32 (all in src/ directory)
+- **Total Lua Files**: 33 (all in src/ directory)
 - **Documentation Files**: 6 (README, INSTALLATION, API_DOCUMENTATION, GAME_DESIGN, IMPLEMENTATION_SUMMARY, PUZZLE_SYSTEM)
 - **Server Scripts**: 15 modules
-- **Client Scripts**: 9 scripts
+- **Client Scripts**: 10 scripts
 - **Shared Modules**: 7 config modules
 
 ## Features Implemented
@@ -29,7 +29,14 @@ All game systems are implemented and functional:
    - Player health tracking
    - Death system (no respawns)
 
-2. **Wave-Based Zombie Combat**
+2. **Sprint System** ✅ NEW
+   - Hold Left Shift to sprint (1.5x speed multiplier)
+   - Stamina system that depletes while sprinting (100 max stamina)
+   - Stamina regenerates after stopping sprint (1 second delay)
+   - Visual stamina bar in HUD
+   - Sprint indicator shows when actively sprinting
+
+3. **Wave-Based Zombie Combat**
    - 10 pre-configured waves with increasing difficulty
    - 5 zombie types: Walker, Runner, Brute, Spitter, Boss
    - Dynamic zombie spawning
@@ -130,9 +137,10 @@ AwavePuzz/
 │   └── AIScripts/
 │       └── ZombieBrain.lua - Zombie AI
 │
-├── src/client/ (9 files) ✨ UPDATED
+├── src/client/ (10 files) ✨ UPDATED
 │   ├── ClientController.lua - Client controller
 │   ├── WeaponController.client.lua - Weapon controls
+│   ├── SprintController.client.lua - ✨ NEW: Sprint and stamina system
 │   └── UI/
 │       ├── WaveUI.client.lua
 │       ├── BaseHealthUI.client.lua
@@ -140,29 +148,18 @@ AwavePuzz/
 │       ├── AllianceUI.client.lua
 │       ├── ShopUI.client.lua
 │       ├── InventoryUI.client.lua
-│       ├── PlayerHUD.client.lua
+│       ├── PlayerHUD.client.lua - ✨ UPDATED: Added stamina bar
 │       ├── PuzzleUI.client.lua - ✨ NEW: Puzzle mini-games
 │       └── PuzzleMenuUI.client.lua - ✨ NEW: Puzzle selection
 │
 └── src/shared/ (7 files) ✨ UPDATED
-    ├── GameConfig.lua - Configuration
+    ├── GameConfig.lua - Configuration ✨ UPDATED: Added sprint settings
     ├── PuzzleConfig.lua - ✨ NEW: Puzzle definitions
     ├── GameState.lua - State management
     ├── ZombieTypes.lua - Zombie definitions
     ├── WaveConfig.lua - Wave configurations
     ├── WeaponConfig.lua - Weapon definitions
     └── MapConfig.lua - Map configurations
-```
-│       ├── WaveUI.client.lua
-│       ├── BaseHealthUI.client.lua
-│       ├── CureUI.client.lua
-│       └── AllianceUI.client.lua
-│
-└── src/shared/ (4 files)
-    ├── GameConfig.lua - Configuration
-    ├── GameState.lua - State management
-    ├── ZombieTypes.lua - Zombie definitions
-    └── WaveConfig.lua - Wave configurations
 ```
 
 ## Key Design Decisions

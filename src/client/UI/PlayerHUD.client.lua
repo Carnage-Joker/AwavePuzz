@@ -33,7 +33,7 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 local healthFrame = Instance.new("Frame")
 healthFrame.Name = "HealthFrame"
 healthFrame.Size = UDim2.new(0, 250, 0, 24)
-healthFrame.Position = UDim2.new(0, 20, 1, -60)
+healthFrame.Position = UDim2.new(0, 20, 1, -80)
 healthFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 healthFrame.BorderSizePixel = 0
 healthFrame.Parent = screenGui
@@ -128,6 +128,67 @@ local resourceMarkerCorner = Instance.new("UICorner")
 resourceMarkerCorner.CornerRadius = UDim.new(0, 3)
 resourceMarkerCorner.Parent = resourceMarker
 
+-- Stamina bar container (below health bar)
+local staminaFrame = Instance.new("Frame")
+staminaFrame.Name = "StaminaFrame"
+staminaFrame.Size = UDim2.new(0, 250, 0, 16)
+staminaFrame.Position = UDim2.new(0, 20, 1, -52)
+staminaFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+staminaFrame.BorderSizePixel = 0
+staminaFrame.Parent = screenGui
+
+local staminaOutline = Instance.new("UIStroke")
+staminaOutline.Thickness = 1
+staminaOutline.Color = Color3.fromRGB(80, 80, 80)
+staminaOutline.Parent = staminaFrame
+
+local staminaCorner = Instance.new("UICorner")
+staminaCorner.CornerRadius = UDim.new(0, 4)
+staminaCorner.Parent = staminaFrame
+
+local staminaFill = Instance.new("Frame")
+staminaFill.Name = "StaminaFill"
+staminaFill.Size = UDim2.new(1, -4, 1, -4)
+staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
+staminaFill.BorderSizePixel = 0
+staminaFill.AnchorPoint = Vector2.new(0, 0.5)
+staminaFill.Position = UDim2.new(0, 2, 0.5, 0)
+staminaFill.Parent = staminaFrame
+
+local staminaFillCorner = Instance.new("UICorner")
+staminaFillCorner.CornerRadius = UDim.new(0, 3)
+staminaFillCorner.Parent = staminaFill
+
+local staminaLabel = Instance.new("TextLabel")
+staminaLabel.Name = "StaminaLabel"
+staminaLabel.Size = UDim2.new(1, -8, 1, 0)
+staminaLabel.Position = UDim2.new(0, 4, 0, 0)
+staminaLabel.BackgroundTransparency = 1
+staminaLabel.TextColor3 = Color3.new(1, 1, 1)
+staminaLabel.TextXAlignment = Enum.TextXAlignment.Left
+staminaLabel.Font = Enum.Font.GothamBold
+staminaLabel.TextSize = 12
+staminaLabel.Text = "STAMINA"
+staminaLabel.Parent = staminaFrame
+
+-- Sprint indicator (shows when sprinting)
+local sprintIndicator = Instance.new("TextLabel")
+sprintIndicator.Name = "SprintIndicator"
+sprintIndicator.Size = UDim2.new(0, 60, 0, 16)
+sprintIndicator.Position = UDim2.new(0, 280, 1, -52)
+sprintIndicator.BackgroundColor3 = Color3.fromRGB(60, 140, 180)
+sprintIndicator.BorderSizePixel = 0
+sprintIndicator.TextColor3 = Color3.new(1, 1, 1)
+sprintIndicator.Font = Enum.Font.GothamBold
+sprintIndicator.TextSize = 10
+sprintIndicator.Text = "SPRINT"
+sprintIndicator.Visible = false
+sprintIndicator.Parent = screenGui
+
+local sprintIndicatorCorner = Instance.new("UICorner")
+sprintIndicatorCorner.CornerRadius = UDim.new(0, 4)
+sprintIndicatorCorner.Parent = sprintIndicator
+
 -- ========== HEALTH HANDLING ==========
 
 local currentHealth = 100
@@ -163,6 +224,58 @@ healthEvent.OnClientEvent:Connect(function(data)
 end)
 
 updateHealthUI()
+
+-- ========== STAMINA HANDLING ==========
+
+local currentStamina = 100
+local maxStamina = 100
+
+local function updateStaminaUI()
+	local ratio = 0
+	if maxStamina > 0 then
+		ratio = math.clamp(currentStamina / maxStamina, 0, 1)
+	end
+
+	staminaFill.Size = UDim2.fromScale(ratio, 1)
+
+	-- Color feedback based on stamina level
+	if ratio > 0.5 then
+		staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
+	elseif ratio > 0.25 then
+		staminaFill.BackgroundColor3 = Color3.fromRGB(180, 180, 80)
+	else
+		staminaFill.BackgroundColor3 = Color3.fromRGB(220, 100, 80)
+	end
+end
+
+-- Listen for stamina updates from SprintController via BindableEvent
+local function setupStaminaListener()
+	local playerGui = player:WaitForChild("PlayerGui")
+	
+	-- Wait for BindableEvents folder and StaminaUpdate event created by SprintController
+	local bindableFolder = playerGui:WaitForChild("BindableEvents")
+	
+	local staminaEvent = bindableFolder:WaitForChild("StaminaUpdate")
+	
+	staminaEvent.Event:Connect(function(data)
+		if typeof(data) ~= "table" then
+			return
+		end
+
+		currentStamina = data.current or currentStamina
+		maxStamina = data.max or maxStamina
+		
+		-- Show/hide sprint indicator
+		sprintIndicator.Visible = data.isSprinting or false
+		
+		updateStaminaUI()
+	end)
+end
+
+-- Initialize stamina listener in a coroutine to avoid blocking
+task.spawn(setupStaminaListener)
+
+updateStaminaUI()
 
 -- ========== COMPASS / DIRECTION UTILS ==========
 

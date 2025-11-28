@@ -38,6 +38,16 @@ STARTING_HEALTH = 100          -- Player starting health
 RESPAWN_ENABLED = false        -- Whether respawning is allowed
 ```
 
+#### Sprint Settings
+```lua
+SPRINT_SPEED_MULTIPLIER = 1.5  -- How much faster sprinting is compared to walking
+STAMINA_MAX = 100              -- Maximum stamina
+STAMINA_DEPLETION_RATE = 20    -- Stamina lost per second while sprinting
+STAMINA_REGEN_RATE = 15        -- Stamina gained per second while not sprinting
+STAMINA_REGEN_DELAY = 1.0      -- Seconds to wait after stopping sprint before regen starts
+SPRINT_HOTKEY = "LeftShift"    -- Key to hold for sprinting
+```
+
 #### Base Settings
 ```lua
 BASE_HEALTH = 1000            -- Base starting health
