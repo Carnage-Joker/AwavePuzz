@@ -13,6 +13,8 @@ This document describes the API for each module in the AwavePuzz game system.
 - [CureCraftingManager](#curecraftingmanager)
 - [Spawner](#spawner)
 - [ResourceSpawner](#resourcespawner)
+- [CureService](#cureservice)
+- [AllianceService](#allianceservice)
 - [WeaponService](#weaponservice)
 - [ShopService](#shopservice)
 - [ZombieBrain](#zombiebrain)
@@ -861,6 +863,190 @@ Updates timers and spawns resources periodically.
 ResourceSpawner:getActiveResourceCount() -> number
 ```
 Returns count of active resources on map.
+
+---
+
+## CureService
+
+**Location**: `src/server/CureService.lua`
+**Type**: Class
+**Description**: Handles cure component deposits, puzzle integration, and cure synthesis. Features per-player cure inventory and alliance resource pooling.
+
+### Features
+
+- Each player has their own separate inventory for cure resources
+- Each player has their own cure progress meter
+- When players form an alliance, their resources are pooled together
+- Both allied players see the combined progress of the alliance
+
+### Constructor
+
+```lua
+CureService.new(gameManager, playerManager) -> CureService
+```
+
+### Methods
+
+#### setPuzzleService
+```lua
+CureService:setPuzzleService(puzzleService) -> void
+```
+Links the PuzzleService for puzzle integration.
+
+#### setAllianceService
+```lua
+CureService:setAllianceService(allianceService) -> void
+```
+Links the AllianceService for alliance pooling.
+
+#### initializePlayer
+```lua
+CureService:initializePlayer(player) -> void
+```
+Initializes player component tracking.
+
+#### handleDepositComponent
+```lua
+CureService:handleDepositComponent(player, componentName) -> boolean
+```
+Handles when a player collects a cure component.
+
+#### getEffectiveComponentCount
+```lua
+CureService:getEffectiveComponentCount(player, componentName) -> number
+```
+Returns the effective component count (pooled with allies if in alliance).
+
+#### getPooledComponents
+```lua
+CureService:getPooledComponents(player) -> table
+```
+Returns all component counts pooled with allies.
+
+#### calculatePlayerCureProgress
+```lua
+CureService:calculatePlayerCureProgress(player) -> number
+```
+Calculates cure progress for a player (individual or pooled with allies).
+
+#### getPlayerComponents
+```lua
+CureService:getPlayerComponents(player) -> table
+```
+Returns player's individual component counts (not pooled).
+
+#### getPlayerEffectiveComponents
+```lua
+CureService:getPlayerEffectiveComponents(player) -> table
+```
+Returns player's effective component counts (pooled if in alliance).
+
+#### onAllianceFormed
+```lua
+CureService:onAllianceFormed(player1, player2) -> void
+```
+Called when an alliance is formed - updates progress for both players.
+
+#### onAllianceBroken
+```lua
+CureService:onAllianceBroken(player1, player2) -> void
+```
+Called when an alliance is broken - updates progress for both players.
+
+---
+
+## AllianceService
+
+**Location**: `src/server/AllianceService.lua`
+**Type**: Class
+**Description**: Manages player alliances and betrayals with resource pooling and conditional resource transfer.
+
+### Features
+
+- Allied players pool their cure resources and see combined progress
+- Breaking an alliance initiates a betrayal (resources NOT transferred immediately)
+- Betrayal is only successful when the instigator eliminates the victim
+- If victim kills the betrayer instead, the victim claims ALL of the betrayer's resources
+
+### Constructor
+
+```lua
+AllianceService.new() -> AllianceService
+```
+
+### Methods
+
+#### setPuzzleService
+```lua
+AllianceService:setPuzzleService(puzzleService) -> void
+```
+Links the PuzzleService.
+
+#### setCureService
+```lua
+AllianceService:setCureService(cureService) -> void
+```
+Links the CureService.
+
+#### setPlayerManager
+```lua
+AllianceService:setPlayerManager(playerManager) -> void
+```
+Links the PlayerManager.
+
+#### initializePlayer
+```lua
+AllianceService:initializePlayer(player) -> void
+```
+Initializes alliance tracking for a player.
+
+#### createAlliance
+```lua
+AllianceService:createAlliance(player1, player2) -> void
+```
+Creates an alliance between two players.
+
+#### breakAlliance
+```lua
+AllianceService:breakAlliance(player1, player2) -> void
+```
+Breaks an alliance (internal method, use handleBreakAlliance for full betrayal logic).
+
+#### areAllied
+```lua
+AllianceService:areAllied(player1, player2) -> boolean
+```
+Checks if two players are allied.
+
+#### getAllies
+```lua
+AllianceService:getAllies(player) -> table
+```
+Returns array of a player's allies.
+
+#### onPlayerKilled
+```lua
+AllianceService:onPlayerKilled(deadPlayer, killerPlayer) -> void
+```
+Integration point - call when a player kills another player. Handles betrayal completion and survivor mechanics.
+
+#### onBetrayerKillsVictim
+```lua
+AllianceService:onBetrayerKillsVictim(betrayer, victim) -> void
+```
+Called when a betrayer successfully eliminates their victim. Transfers 75% of resources.
+
+#### onBetrayerKilled
+```lua
+AllianceService:onBetrayerKilled(betrayer, killer) -> void
+```
+Called when a betrayer is killed by their victim. Transfers 100% of resources to survivor.
+
+#### transferCureComponents
+```lua
+AllianceService:transferCureComponents(recipient, source, transferRatio) -> void
+```
+Transfers cure components from one player to another.
 
 ---
 

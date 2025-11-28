@@ -269,17 +269,32 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 		return
 	end
 
+	-- Store health before damage
+	local healthBefore = humanoid.Health
+
 	-- Apply PvP damage (non-allied players can damage each other)
 	local success, err = pcall(function()
 		humanoid:TakeDamage(stats.Damage)
 	end)
 	if not success then
 		warn("[WeaponService] Failed to apply PvP damage: " .. tostring(err))
+		return
 	end
 
 	-- Log the PvP hit for potential tracking/stats
 	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
 		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
+	
+	-- Check if target died from this damage
+	if humanoid.Health <= 0 and healthBefore > 0 then
+		print(string.format("[WeaponService] PvP Kill: %s eliminated %s", 
+			attackingPlayer.Name, targetPlayer.Name))
+		
+		-- Notify AllianceService of the kill for betrayal mechanics
+		if self.allianceService and self.allianceService.onPlayerKilled then
+			self.allianceService:onPlayerKilled(targetPlayer, attackingPlayer)
+		end
+	end
 end
 
 function WeaponService:onZombieKilled(zombieModel)

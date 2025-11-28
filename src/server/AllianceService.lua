@@ -1,9 +1,11 @@
 -- AllianceService.lua
 -- Server script that manages player alliances and betrayals
 -- Features:
--- - Allied players share resources and puzzles automatically
--- - Betraying allies transfers 3/4 of resources/puzzles to the betrayer
--- - Surviving a betrayal (when victim kills betrayer) transfers all to survivor
+-- - Allied players pool their cure resources and see combined progress
+-- - Breaking an alliance initiates a betrayal (resources NOT transferred immediately)
+-- - Betrayal is only successful when the instigator eliminates the alliance member they betrayed
+-- - If victim kills the betrayer instead, the victim claims ALL of the betrayer's resources
+-- - Surviving a betrayal (when victim kills betrayer) transfers all resources to survivor
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -238,15 +240,26 @@ function AllianceService:handleBreakAlliance(player, target)
 	-- Set betrayal cooldown
 	self.betrayalCooldowns[player.UserId] = os.time()
 	
-	-- Track this betrayal for survivor mechanics
+	-- Track this betrayal for mechanics - betrayal is only successful on elimination
+	-- Store both the betrayer->victim relationship AND the pending transfer
 	self.recentBetrayals[player.UserId] = target.UserId
+	
+	-- Mark this as a pending betrayal (resources transfer only on successful elimination)
+	if not self.pendingBetrayals then
+		self.pendingBetrayals = {}
+	end
+	self.pendingBetrayals[player.UserId] = {
+		victimUserId = target.UserId,
+		timestamp = os.time()
+	}
+	
+	-- NOTE: Resources are NOT transferred immediately anymore
+	-- They are only transferred when the betrayer successfully kills the victim
+	-- See onBetrayerKillsVictim() method
 
-	-- Transfer 3/4 of victim's resources and puzzles to betrayer
-	self:transferBetrayalResources(player, target, 0.75)
-
-	-- Trigger puzzle stealing mechanics
-	if self.puzzleService then
-		self.puzzleService:onBetrayal(player, target)
+	-- Notify CureService that alliance is broken (resources no longer pooled)
+	if self.cureService and self.cureService.onAllianceBroken then
+		self.cureService:onAllianceBroken(player, target)
 	end
 
 	-- Notify both players
@@ -255,6 +268,7 @@ function AllianceService:handleBreakAlliance(player, target)
 		with = target,
 		withName = target.Name,
 		betrayer = true,
+		message = "Betrayal initiated! Eliminate " .. target.Name .. " to claim their resources."
 	})
 
 	self.remoteEvents.AllianceUpdate:FireClient(target, {
@@ -262,9 +276,10 @@ function AllianceService:handleBreakAlliance(player, target)
 		with = player,
 		withName = player.Name,
 		betrayer = false,
+		message = "You have been betrayed by " .. player.Name .. "! Defeat them to claim their resources."
 	})
 
-	print(player.Name .. " betrayed alliance with " .. target.Name)
+	print(player.Name .. " initiated betrayal against " .. target.Name .. " - resources pending elimination")
 end
 
 -- Transfer resources from victim to betrayer
@@ -313,6 +328,11 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 	-- Clear the betrayal tracking
 	self.recentBetrayals[betrayer.UserId] = nil
 	
+	-- Clear any pending betrayal
+	if self.pendingBetrayals then
+		self.pendingBetrayals[betrayer.UserId] = nil
+	end
+	
 	-- Transfer ALL resources from betrayer to survivor
 	self:transferBetrayalResources(killer, betrayer, 1.0)
 	
@@ -321,12 +341,17 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 		self.puzzleService:onSurvivorVictory(killer, betrayer)
 	end
 	
+	-- Transfer ALL cure components from betrayer to survivor
+	if self.cureService then
+		self:transferCureComponents(killer, betrayer, 1.0)
+	end
+	
 	-- Notify survivor
 	if self.remoteEvents.AllianceUpdate then
 		self.remoteEvents.AllianceUpdate:FireClient(killer, {
 			type = "survivor_victory",
 			betrayer = betrayer.Name,
-			message = "You survived the betrayal! All resources and puzzles transferred to you."
+			message = "You survived the betrayal! All resources, puzzles, and cure components transferred to you."
 		})
 	end
 	
@@ -340,11 +365,103 @@ function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
 	if not deadPlayer or not killerPlayer then
 		return
 	end
-	-- Check if deadPlayer was a betrayer and killerPlayer was their recent victim
+	
+	-- Check if deadPlayer was a betrayer and killerPlayer was their recent victim (survivor mechanics)
 	local victimUserId = self.recentBetrayals and self.recentBetrayals[deadPlayer.UserId]
 	if victimUserId and killerPlayer.UserId == victimUserId then
 		self:onBetrayerKilled(deadPlayer, killerPlayer)
+		return
 	end
+	
+	-- Check if killerPlayer was a betrayer and deadPlayer was their victim (successful betrayal)
+	if self.pendingBetrayals and self.pendingBetrayals[killerPlayer.UserId] then
+		local pendingBetrayal = self.pendingBetrayals[killerPlayer.UserId]
+		if pendingBetrayal.victimUserId == deadPlayer.UserId then
+			self:onBetrayerKillsVictim(killerPlayer, deadPlayer)
+			return
+		end
+	end
+end
+
+-- Called when a betrayer successfully eliminates their victim
+-- This completes the betrayal and transfers resources
+function AllianceService:onBetrayerKillsVictim(betrayer, victim)
+	print("[AllianceService]", betrayer.Name, "successfully eliminated", victim.Name, "- completing betrayal")
+	
+	-- Clear the pending betrayal
+	if self.pendingBetrayals then
+		self.pendingBetrayals[betrayer.UserId] = nil
+	end
+	
+	-- Clear the recent betrayal tracking
+	if self.recentBetrayals then
+		self.recentBetrayals[betrayer.UserId] = nil
+	end
+	
+	-- NOW transfer resources since betrayal was successful
+	self:transferBetrayalResources(betrayer, victim, 0.75)
+	
+	-- Trigger puzzle stealing mechanics
+	if self.puzzleService then
+		self.puzzleService:onBetrayal(betrayer, victim)
+	end
+	
+	-- Transfer cure components from victim to betrayer
+	if self.cureService then
+		self:transferCureComponents(betrayer, victim, 0.75)
+	end
+	
+	-- Notify betrayer of successful betrayal
+	if self.remoteEvents.AllianceUpdate then
+		self.remoteEvents.AllianceUpdate:FireClient(betrayer, {
+			type = "betrayal_success",
+			victim = victim.Name,
+			message = "Betrayal successful! You have claimed " .. victim.Name .. "'s resources and cure components."
+		})
+	end
+	
+	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed their resources!")
+end
+
+-- Transfer cure components from one player to another
+function AllianceService:transferCureComponents(recipient, source, transferRatio)
+	if not self.cureService then
+		return
+	end
+	
+	local sourceUserId = source.UserId
+	local recipientUserId = recipient.UserId
+	
+	-- Get source's components from CureService
+	local sourceComponents = self.cureService:getPlayerComponents(source)
+	if not sourceComponents then
+		return
+	end
+	
+	-- Initialize recipient if needed
+	self.cureService:initializePlayer(recipient)
+	
+	-- Transfer components based on ratio
+	for componentName, count in pairs(sourceComponents) do
+		local transferCount = math.floor(count * transferRatio)
+		if transferCount > 0 then
+			-- Add to recipient
+			if self.cureService.playerComponents[recipientUserId] then
+				self.cureService.playerComponents[recipientUserId][componentName] = 
+					(self.cureService.playerComponents[recipientUserId][componentName] or 0) + transferCount
+			end
+			
+			-- Remove from source
+			self.cureService.playerComponents[sourceUserId][componentName] = 
+				math.max(0, count - transferCount)
+			
+			print("[AllianceService] Transferred", transferCount, componentName, "from", source.Name, "to", recipient.Name)
+		end
+	end
+	
+	-- Update cure progress for both players
+	self.cureService:updatePlayerCureProgress(recipient)
+	self.cureService:updatePlayerCureProgress(source)
 end
 
 function AllianceService:createAlliance(player1, player2)
@@ -360,6 +477,11 @@ function AllianceService:createAlliance(player1, player2)
 
 	self.alliances[userId1][userId2] = true
 	self.alliances[userId2][userId1] = true
+	
+	-- Notify CureService that alliance is formed (resources now pooled)
+	if self.cureService and self.cureService.onAllianceFormed then
+		self.cureService:onAllianceFormed(player1, player2)
+	end
 end
 
 function AllianceService:breakAlliance(player1, player2)

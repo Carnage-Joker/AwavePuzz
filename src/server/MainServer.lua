@@ -39,6 +39,7 @@ print("PuzzleService initialized")
 
 -- Link services together
 cureService:setPuzzleService(puzzleService)
+cureService:setAllianceService(allianceService)
 allianceService:setPuzzleService(puzzleService)
 allianceService:setCureService(cureService)
 allianceService:setPlayerManager(playerManager)
