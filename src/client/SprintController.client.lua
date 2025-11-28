@@ -146,7 +146,7 @@ end
 local function onCharacterAdded(character)
 	-- Reset sprint state on character spawn
 	isSprinting = false
-	isSprintKeyHeld = false
+	isSprintKeyHeld = UserInputService:IsKeyDown(Enum.KeyCode[SPRINT_HOTKEY])
 	currentStamina = STAMINA_MAX
 	timeSinceSprintStopped = 0
 	
