@@ -269,17 +269,57 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 		return
 	end
 
+	-- Store health before damage
+	local healthBefore = humanoid.Health
+
 	-- Apply PvP damage (non-allied players can damage each other)
 	local success, err = pcall(function()
 		humanoid:TakeDamage(stats.Damage)
 	end)
 	if not success then
 		warn("[WeaponService] Failed to apply PvP damage: " .. tostring(err))
+		return
 	end
 
 	-- Log the PvP hit for potential tracking/stats
 	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
 		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
+	
+	-- Track last attacker for kill credit
+	-- Use an attribute to store the last attacker on the humanoid
+	if attackingPlayer and attackingPlayer.UserId then
+		humanoid:SetAttribute("LastAttackerUserId", attackingPlayer.UserId)
+	end
+
+	-- Connect Died event for kill registration (only once)
+	if not humanoid:GetAttribute("WeaponServiceDiedConnected") then
+		humanoid:SetAttribute("WeaponServiceDiedConnected", true)
+		humanoid.Died:Connect(function()
+			local lastAttackerUserId = humanoid:GetAttribute("LastAttackerUserId")
+			local lastAttacker = nil
+			if lastAttackerUserId then
+				for _, player in ipairs(Players:GetPlayers()) do
+					if player.UserId == lastAttackerUserId then
+						lastAttacker = player
+						break
+					end
+				end
+			end
+			if lastAttacker then
+				print(string.format("[WeaponService] PvP Kill: %s eliminated %s", 
+					lastAttacker.Name, targetPlayer.Name))
+				-- Notify AllianceService of the kill for betrayal mechanics
+				if self.allianceService and self.allianceService.onPlayerKilled then
+					local callSuccess, callErr = pcall(function()
+						self.allianceService:onPlayerKilled(targetPlayer, lastAttacker)
+					end)
+					if not callSuccess then
+						warn("[WeaponService] Error notifying AllianceService of kill: " .. tostring(callErr))
+					end
+				end
+			end
+		end)
+	end
 end
 
 function WeaponService:onZombieKilled(zombieModel)

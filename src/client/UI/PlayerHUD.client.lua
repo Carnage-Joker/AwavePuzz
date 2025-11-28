@@ -214,6 +214,58 @@ end)
 
 updateHealthUI()
 
+-- ========== STAMINA HANDLING ==========
+
+local currentStamina = 100
+local maxStamina = 100
+
+local function updateStaminaUI()
+	local ratio = 0
+	if maxStamina > 0 then
+		ratio = math.clamp(currentStamina / maxStamina, 0, 1)
+	end
+
+	staminaFill.Size = UDim2.fromScale(ratio, 1)
+
+	-- Color feedback based on stamina level
+	if ratio > 0.5 then
+		staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
+	elseif ratio > 0.25 then
+		staminaFill.BackgroundColor3 = Color3.fromRGB(180, 180, 80)
+	else
+		staminaFill.BackgroundColor3 = Color3.fromRGB(220, 100, 80)
+	end
+end
+
+-- Listen for stamina updates from SprintController via BindableEvent
+local function setupStaminaListener()
+	local playerGui = player:WaitForChild("PlayerGui")
+	
+	-- Wait for BindableEvents folder and StaminaUpdate event created by SprintController
+	local bindableFolder = playerGui:WaitForChild("BindableEvents")
+	
+	local staminaEvent = bindableFolder:WaitForChild("StaminaUpdate")
+	
+	staminaEvent.Event:Connect(function(data)
+		if typeof(data) ~= "table" then
+			return
+		end
+
+		currentStamina = data.current or currentStamina
+		maxStamina = data.max or maxStamina
+		
+		-- Show/hide sprint indicator
+		sprintIndicator.Visible = data.isSprinting or false
+		
+		updateStaminaUI()
+	end)
+end
+
+-- Initialize stamina listener in a coroutine to avoid blocking
+task.spawn(setupStaminaListener)
+
+updateStaminaUI()
+
 -- ========== COMPASS / DIRECTION UTILS ==========
 
 local function getCharacterRoot()
