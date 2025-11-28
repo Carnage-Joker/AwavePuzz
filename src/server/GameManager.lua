@@ -337,6 +337,9 @@ function GameManager:resetForNewRound()
 	-- Reset spectator manager
 	self.spectatorManager:reset()
 	
+	-- Reset lobby manager for new voting session
+	self.lobbyManager:reset()
+	
 	-- Respawn all players for new round
 	for _, player in ipairs(Players:GetPlayers()) do
 		-- Reset player health
