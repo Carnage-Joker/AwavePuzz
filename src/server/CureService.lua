@@ -249,7 +249,7 @@ end
 -- Send cure progress update to a specific player
 function CureService:sendCureProgressUpdate(player, progress, components)
 	-- Check if player is still valid before sending updates
-	if not player or not player:IsDescendantOf(game) then
+	if not player or not Players:GetPlayerByUserId(player.UserId) then
 		return
 	end
 	
