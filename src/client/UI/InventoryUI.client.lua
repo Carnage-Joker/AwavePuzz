@@ -92,7 +92,6 @@ componentsLabel.Parent = frame
 local function updateUIScaling()
 	frame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "inventory")
 	frame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, getInventoryYOffset())
-	frame.AnchorPoint = Vector2.new(0, 0)
 	frame.BackgroundTransparency = UIScaleManager.isMobile() and 0.45 or 0.35
 	frameCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 	

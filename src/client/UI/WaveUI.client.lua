@@ -129,7 +129,6 @@ local function updateUIScaling()
 	-- Always update sizes and positions (these depend on viewport)
 	mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
 	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
-	mainFrame.AnchorPoint = Vector2.new(0, 0)
 	
 	waveLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
 	waveLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
