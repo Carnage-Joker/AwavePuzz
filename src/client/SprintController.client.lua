@@ -57,15 +57,6 @@ local function getHumanoid()
 	return nil
 end
 
--- Get the humanoid root part
-local function getHumanoidRootPart()
-	local character = player.Character
-	if character then
-		return character:FindFirstChild("HumanoidRootPart")
-	end
-	return nil
-end
-
 -- Check if player is moving
 local function isPlayerMoving()
 	local humanoid = getHumanoid()
