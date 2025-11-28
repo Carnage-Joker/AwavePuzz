@@ -563,6 +563,9 @@ function GameManager:onPlayerDied(player)
 	-- Put player in spectator mode
 	self.spectatorManager:onPlayerDied(player)
 	
+	-- Notify other spectators if they were watching this player
+	self.spectatorManager:onSpectatorTargetDied(player.UserId)
+	
 	-- Update spectator list for all spectators
 	self.spectatorManager:broadcastAliveList()
 	
