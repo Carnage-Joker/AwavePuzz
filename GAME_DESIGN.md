@@ -165,10 +165,33 @@ Zombie Health = Base HP × (Health Multiplier ^ (Wave - 1))
 2. All players eliminated (0 survivors)
 
 **Game States**
-- Waiting: Pre-game lobby
-- In Progress: Active gameplay
+- Waiting: Waiting for minimum players
+- Lobby: Map voting phase
+- Countdown: Pre-round countdown
+- WaveActive: Active wave gameplay
+- Intermission: Break between waves
 - Victory: Cure crafted successfully
 - Defeat: Failure condition met
+- Scoreboard: End-of-round scoreboard display
+
+### Round Flow
+
+Each game round follows this flow:
+1. **Lobby Phase**: Players vote on which map to play (20 seconds)
+2. **Countdown**: Brief countdown before round starts (5 seconds)
+3. **Gameplay**: Waves of zombies attack, players have ONE life per round
+4. **Death**: Dead players enter spectator mode to watch remaining players
+5. **Round End**: Victory (cure completed) or Defeat (all dead/base destroyed)
+6. **Scoreboard**: Display player stats and scores (10 seconds)
+7. **Return to Lobby**: Cycle repeats with new map vote
+
+### Spectator Mode
+
+When a player dies during a round:
+- They enter spectator mode (no respawn during round)
+- Can cycle through alive players with Q/E keys
+- See who they're spectating and how many players remain
+- Exit spectator mode when round ends
 
 ## Map Design Requirements
 
