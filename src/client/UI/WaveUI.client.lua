@@ -32,11 +32,10 @@ screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
--- Main Frame (positioned top-center left of compass, accounting for safe area)
+-- Main Frame (positioned top-left to avoid overlapping with compass at top-center)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
--- Position top-left to avoid overlapping with compass at top-center
 mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
 mainFrame.AnchorPoint = Vector2.new(0, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -118,12 +117,19 @@ announcementLabel.Font = Enum.Font.GothamBold
 announcementLabel.TextScaled = true
 announcementLabel.Parent = announcementFrame
 
+-- Track last device type for optimization
+local lastDeviceType = UIScaleManager.getDeviceType()
+
 -- Function to update UI scaling when screen size changes
 local function updateUIScaling()
+	local currentDeviceType = UIScaleManager.getDeviceType()
+	local deviceChanged = lastDeviceType ~= currentDeviceType
+	lastDeviceType = currentDeviceType
+	
+	-- Always update sizes and positions (these depend on viewport)
 	mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
 	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
-	mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
-	corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	mainFrame.AnchorPoint = Vector2.new(0, 0)
 	
 	waveLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
 	waveLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
@@ -138,8 +144,14 @@ local function updateUIScaling()
 	zombieLabel.TextSize = getScaledTextSize(18)
 	
 	announcementFrame.Size = UIScaleManager.scaleSize(400, 80, "menuElements")
-	announcementCorner.CornerRadius = UDim.new(0, getScaledValue(15, "padding"))
 	announcementLabel.TextSize = getScaledTextSize(36)
+	
+	-- Only update static properties when device type changes
+	if deviceChanged then
+		mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
+		corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+		announcementCorner.CornerRadius = UDim.new(0, getScaledValue(15, "padding"))
+	end
 end
 
 -- Register for scale changes

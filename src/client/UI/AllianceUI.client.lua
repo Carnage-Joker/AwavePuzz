@@ -229,7 +229,7 @@ local function updateUIScaling()
 	declineCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 	
 	notificationFrame.Size = UIScaleManager.scaleSize(300, 60, "menuElements")
-	notificationFrame.Position = UDim2.new(0.5, 0, 0, UIScaleManager.getSafeAreaInsets().top + getScaledValue(150, "padding"))
+	notificationFrame.Position = UIScaleManager.getPositionWithSafeArea("topCenter", 0, 150)
 	notifCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 	notificationLabel.TextSize = getScaledTextSize(14)
 end

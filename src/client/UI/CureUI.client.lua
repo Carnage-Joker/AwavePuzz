@@ -223,7 +223,7 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updateProgressFrameScaling)
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- State
 local cureProgress = 0

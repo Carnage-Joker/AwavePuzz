@@ -24,6 +24,7 @@ local currentScaleFactors = nil
 local currentDeviceType = "DESKTOP"
 local currentViewportSize = Vector2.new(1920, 1080)
 local updateCallbacks = {}
+local initialized = false
 
 -- Forward declaration
 local UIScaleConfig = nil
@@ -275,6 +276,9 @@ end
 
 -- Initialize scale manager (call from client scripts)
 function UIScaleManager.initialize()
+    if initialized then return UIScaleManager end
+    initialized = true
+    
     loadConfig()
     
     -- Initial calculation
