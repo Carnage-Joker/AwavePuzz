@@ -1,6 +1,7 @@
 -- PuzzleUI.client.lua
 -- Client-side puzzle interface for cure synthesis
 -- Displays puzzle mini-games when player has collected 5 of a component type
+-- Updated with dynamic UI scaling for mobile devices.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,7 +12,21 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Get config
-local PuzzleConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PuzzleConfig"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
+local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+
+-- Initialize scale manager
+UIScaleManager.initialize()
+
+-- Helper functions
+local function getScaledValue(baseValue, scaleType)
+	return UIScaleManager.scalePixels(baseValue, scaleType or "menuElements")
+end
+
+local function getScaledTextSize(baseSize)
+	return UIScaleManager.scaleTextSize(baseSize)
+end
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -21,11 +36,12 @@ screenGui.Enabled = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Main puzzle frame (hidden by default)
+-- Main puzzle frame (hidden by default) - centered with scaled size
 local puzzleFrame = Instance.new("Frame")
 puzzleFrame.Name = "PuzzleFrame"
-puzzleFrame.Size = UDim2.new(0, 600, 0, 500)
-puzzleFrame.Position = UDim2.new(0.5, -300, 0.5, -250)
+puzzleFrame.Size = UIScaleManager.scaleSize(600, 500, "menuElements", "menuDialog")
+puzzleFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+puzzleFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 puzzleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 puzzleFrame.BackgroundTransparency = 0.05
 puzzleFrame.BorderSizePixel = 3
@@ -35,59 +51,60 @@ puzzleFrame.ZIndex = 100
 puzzleFrame.Parent = screenGui
 
 local puzzleCorner = Instance.new("UICorner")
-puzzleCorner.CornerRadius = UDim.new(0, 12)
+puzzleCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 puzzleCorner.Parent = puzzleFrame
 
 -- Title bar
 local titleBar = Instance.new("Frame")
 titleBar.Name = "TitleBar"
-titleBar.Size = UDim2.new(1, 0, 0, 50)
+titleBar.Size = UDim2.new(1, 0, 0, getScaledValue(50, "padding"))
 titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 titleBar.BorderSizePixel = 0
 titleBar.Parent = puzzleFrame
 
 local titleBarCorner = Instance.new("UICorner")
-titleBarCorner.CornerRadius = UDim.new(0, 12)
+titleBarCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 titleBarCorner.Parent = titleBar
 
 -- Title text
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -60, 1, 0)
-titleLabel.Position = UDim2.new(0, 10, 0, 0)
+titleLabel.Size = UDim2.new(1, -getScaledValue(60, "padding"), 1, 0)
+titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, 0)
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Puzzle"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 24
+titleLabel.TextSize = getScaledTextSize(24)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = titleBar
 
--- Close button
+-- Close button with minimum touch target
+local closeButtonSize = math.max(getScaledValue(40, "menuElements"), 44)
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -45, 0, 5)
+closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
+closeButton.Position = UDim2.new(1, -closeButtonSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeButton.Text = "✕"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 24
+closeButton.TextSize = getScaledTextSize(24)
 closeButton.Font = Enum.Font.GothamBold
 closeButton.Parent = titleBar
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 closeCorner.Parent = closeButton
 
 -- Description label
 local descLabel = Instance.new("TextLabel")
 descLabel.Name = "Description"
-descLabel.Size = UDim2.new(1, -20, 0, 40)
-descLabel.Position = UDim2.new(0, 10, 0, 60)
+descLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(40, "padding"))
+descLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
 descLabel.BackgroundTransparency = 1
 descLabel.Text = "Solve the puzzle to progress"
 descLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-descLabel.TextSize = 16
+descLabel.TextSize = getScaledTextSize(16)
 descLabel.Font = Enum.Font.Gotham
 descLabel.TextWrapped = true
 descLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -96,48 +113,88 @@ descLabel.Parent = puzzleFrame
 -- Timer label
 local timerLabel = Instance.new("TextLabel")
 timerLabel.Name = "Timer"
-timerLabel.Size = UDim2.new(0, 150, 0, 30)
-timerLabel.Position = UDim2.new(1, -160, 0, 105)
+timerLabel.Size = UDim2.new(0, getScaledValue(150, "padding"), 0, getScaledValue(30, "padding"))
+timerLabel.Position = UDim2.new(1, -getScaledValue(160, "padding"), 0, getScaledValue(105, "padding"))
 timerLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 timerLabel.Text = "Time: 60s"
 timerLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
-timerLabel.TextSize = 18
+timerLabel.TextSize = getScaledTextSize(18)
 timerLabel.Font = Enum.Font.GothamBold
 timerLabel.Parent = puzzleFrame
 
 local timerCorner = Instance.new("UICorner")
-timerCorner.CornerRadius = UDim.new(0, 8)
+timerCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 timerCorner.Parent = timerLabel
 
 -- Content frame (where puzzle is displayed)
 local contentFrame = Instance.new("Frame")
 contentFrame.Name = "Content"
-contentFrame.Size = UDim2.new(1, -20, 1, -200)
-contentFrame.Position = UDim2.new(0, 10, 0, 140)
+contentFrame.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(200, "padding"))
+contentFrame.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(140, "padding"))
 contentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 contentFrame.BackgroundTransparency = 0.5
 contentFrame.BorderSizePixel = 0
 contentFrame.Parent = puzzleFrame
 
 local contentCorner = Instance.new("UICorner")
-contentCorner.CornerRadius = UDim.new(0, 8)
+contentCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 contentCorner.Parent = contentFrame
 
--- Submit button
+-- Submit button with minimum touch target
+local submitButtonHeight = math.max(getScaledValue(45, "menuElements"), 44)
 local submitButton = Instance.new("TextButton")
 submitButton.Name = "SubmitButton"
-submitButton.Size = UDim2.new(0, 200, 0, 45)
-submitButton.Position = UDim2.new(0.5, -100, 1, -60)
+submitButton.Size = UDim2.new(0, getScaledValue(200, "menuElements"), 0, submitButtonHeight)
+submitButton.Position = UDim2.new(0.5, 0, 1, -getScaledValue(60, "padding"))
+submitButton.AnchorPoint = Vector2.new(0.5, 0)
 submitButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
 submitButton.Text = "Submit Answer"
 submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-submitButton.TextSize = 20
+submitButton.TextSize = getScaledTextSize(20)
 submitButton.Font = Enum.Font.GothamBold
 submitButton.Parent = puzzleFrame
 
 local submitCorner = Instance.new("UICorner")
-submitCorner.CornerRadius = UDim.new(0, 10)
+submitCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 submitCorner.Parent = submitButton
+
+-- Function to update UI scaling when screen size changes
+local function updatePuzzleUIScaling()
+	puzzleFrame.Size = UIScaleManager.scaleSize(600, 500, "menuElements", "menuDialog")
+	puzzleCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
+	
+	titleBar.Size = UDim2.new(1, 0, 0, getScaledValue(50, "padding"))
+	titleBarCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
+	titleLabel.TextSize = getScaledTextSize(24)
+	
+	local newCloseSize = math.max(getScaledValue(40, "menuElements"), 44)
+	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
+	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
+	closeButton.TextSize = getScaledTextSize(24)
+	closeCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+	
+	descLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(40, "padding"))
+	descLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
+	descLabel.TextSize = getScaledTextSize(16)
+	
+	timerLabel.Size = UDim2.new(0, getScaledValue(150, "padding"), 0, getScaledValue(30, "padding"))
+	timerLabel.Position = UDim2.new(1, -getScaledValue(160, "padding"), 0, getScaledValue(105, "padding"))
+	timerLabel.TextSize = getScaledTextSize(18)
+	timerCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+	
+	contentFrame.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(200, "padding"))
+	contentFrame.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(140, "padding"))
+	contentCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+	
+	local newSubmitHeight = math.max(getScaledValue(45, "menuElements"), 44)
+	submitButton.Size = UDim2.new(0, getScaledValue(200, "menuElements"), 0, newSubmitHeight)
+	submitButton.Position = UDim2.new(0.5, 0, 1, -getScaledValue(60, "padding"))
+	submitButton.TextSize = getScaledTextSize(20)
+	submitCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+end
+
+-- Register for scale changes
+UIScaleManager.onScaleChanged(updatePuzzleUIScaling)
 
 -- State
 local currentPuzzle = nil

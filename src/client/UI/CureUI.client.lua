@@ -4,6 +4,7 @@
 -- Features:
 -- - When 5 like components are collected, player must solve puzzle at cure station
 -- - After all 5 component puzzles solved, final synthesis puzzle triggers cure win
+-- Updated with dynamic UI scaling for mobile devices.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +13,21 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Get config
-local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+
+-- Initialize scale manager
+UIScaleManager.initialize()
+
+-- Helper functions
+local function getScaledValue(baseValue, scaleType)
+	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
+end
+
+local function getScaledTextSize(baseSize)
+	return UIScaleManager.scaleTextSize(baseSize)
+end
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -21,31 +36,32 @@ screenGui.ResetOnSpawn = false
 screenGui.Enabled = true
 screenGui.Parent = playerGui
 
--- Progress Frame (always visible)
+-- Progress Frame (always visible - positioned top-right with safe area)
 local progressFrame = Instance.new("Frame")
 progressFrame.Name = "ProgressFrame"
-progressFrame.Size = UDim2.new(0, 300, 0, 100)
-progressFrame.Position = UDim2.new(1, -310, 0, 10)
+progressFrame.Size = UIScaleManager.scaleSize(300, 100, "hudElements", "cureProgress")
+progressFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 0)
+progressFrame.AnchorPoint = Vector2.new(1, 0)
 progressFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-progressFrame.BackgroundTransparency = 0.3
+progressFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 progressFrame.BorderSizePixel = 2
 progressFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
 progressFrame.Active = true
 progressFrame.Parent = screenGui
 
 local progressCorner = Instance.new("UICorner")
-progressCorner.CornerRadius = UDim.new(0, 10)
+progressCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 progressCorner.Parent = progressFrame
 
 -- Title
 local progressTitle = Instance.new("TextLabel")
 progressTitle.Name = "Title"
-progressTitle.Size = UDim2.new(1, -20, 0, 25)
-progressTitle.Position = UDim2.new(0, 10, 0, 5)
+progressTitle.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+progressTitle.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
 progressTitle.BackgroundTransparency = 1
 progressTitle.Text = "Cure Progress"
 progressTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-progressTitle.TextSize = 18
+progressTitle.TextSize = getScaledTextSize(18)
 progressTitle.Font = Enum.Font.GothamBold
 progressTitle.TextXAlignment = Enum.TextXAlignment.Left
 progressTitle.Parent = progressFrame
@@ -53,14 +69,14 @@ progressTitle.Parent = progressFrame
 -- Progress Bar Background
 local progressBarBg = Instance.new("Frame")
 progressBarBg.Name = "ProgressBarBg"
-progressBarBg.Size = UDim2.new(1, -20, 0, 30)
-progressBarBg.Position = UDim2.new(0, 10, 0, 35)
+progressBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+progressBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(35, "padding"))
 progressBarBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 progressBarBg.BorderSizePixel = 0
 progressBarBg.Parent = progressFrame
 
 local progressBarCorner = Instance.new("UICorner")
-progressBarCorner.CornerRadius = UDim.new(0, 5)
+progressBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 progressBarCorner.Parent = progressBarBg
 
 -- Progress Bar Fill
@@ -72,7 +88,7 @@ progressBarFill.BorderSizePixel = 0
 progressBarFill.Parent = progressBarBg
 
 local progressFillCorner = Instance.new("UICorner")
-progressFillCorner.CornerRadius = UDim.new(0, 5)
+progressFillCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 progressFillCorner.Parent = progressBarFill
 
 -- Progress Text
@@ -82,7 +98,7 @@ progressText.Size = UDim2.new(1, 0, 1, 0)
 progressText.BackgroundTransparency = 1
 progressText.Text = "0%"
 progressText.TextColor3 = Color3.fromRGB(255, 255, 255)
-progressText.TextSize = 16
+progressText.TextSize = getScaledTextSize(16)
 progressText.Font = Enum.Font.GothamBold
 progressText.ZIndex = 2
 progressText.Parent = progressBarBg
@@ -90,21 +106,22 @@ progressText.Parent = progressBarBg
 -- Components Info
 local componentsLabel = Instance.new("TextLabel")
 componentsLabel.Name = "ComponentsLabel"
-componentsLabel.Size = UDim2.new(1, -20, 0, 25)
-componentsLabel.Position = UDim2.new(0, 10, 0, 70)
+componentsLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+componentsLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(70, "padding"))
 componentsLabel.BackgroundTransparency = 1
 componentsLabel.Text = "0 / 0 Components"
 componentsLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-componentsLabel.TextSize = 14
+componentsLabel.TextSize = getScaledTextSize(14)
 componentsLabel.Font = Enum.Font.Gotham
 componentsLabel.TextXAlignment = Enum.TextXAlignment.Left
 componentsLabel.Parent = progressFrame
 
--- Detailed Components Frame (shows on click or interaction)
+-- Detailed Components Frame (shows on click or interaction - centered, scaled for menus)
 local detailFrame = Instance.new("Frame")
 detailFrame.Name = "DetailFrame"
-detailFrame.Size = UDim2.new(0, 350, 0, 250)
-detailFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+detailFrame.Size = UIScaleManager.scaleSize(350, 250, "menuElements", "menuDialog")
+detailFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+detailFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 detailFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 detailFrame.BackgroundTransparency = 0.1
 detailFrame.BorderSizePixel = 3
@@ -115,35 +132,36 @@ detailFrame.Active = true
 detailFrame.Parent = screenGui
 
 local detailCorner = Instance.new("UICorner")
-detailCorner.CornerRadius = UDim.new(0, 10)
+detailCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 detailCorner.Parent = detailFrame
 
 -- Detail Title
 local detailTitle = Instance.new("TextLabel")
 detailTitle.Name = "Title"
-detailTitle.Size = UDim2.new(1, -20, 0, 30)
-detailTitle.Position = UDim2.new(0, 10, 0, 10)
+detailTitle.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+detailTitle.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 detailTitle.BackgroundTransparency = 1
 detailTitle.Text = "Cure Components"
 detailTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-detailTitle.TextSize = 20
+detailTitle.TextSize = getScaledTextSize(20)
 detailTitle.Font = Enum.Font.GothamBold
 detailTitle.Parent = detailFrame
 
--- Close Button
+-- Close Button (ensure minimum touch target size on mobile)
+local closeButtonSize = math.max(getScaledValue(30, "menuElements"), 44)
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 30, 0, 30)
-closeButton.Position = UDim2.new(1, -40, 0, 10)
+closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
+closeButton.Position = UDim2.new(1, -closeButtonSize - getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeButton.Text = "X"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 18
+closeButton.TextSize = getScaledTextSize(18)
 closeButton.Font = Enum.Font.GothamBold
 closeButton.Parent = detailFrame
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 5)
+closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
@@ -153,19 +171,59 @@ end)
 -- Components List (ScrollingFrame)
 local componentsList = Instance.new("ScrollingFrame")
 componentsList.Name = "ComponentsList"
-componentsList.Size = UDim2.new(1, -20, 1, -60)
-componentsList.Position = UDim2.new(0, 10, 0, 50)
+componentsList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(60, "padding"))
+componentsList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(50, "padding"))
 componentsList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 componentsList.BackgroundTransparency = 0.5
 componentsList.BorderSizePixel = 0
-componentsList.ScrollBarThickness = 6
+componentsList.ScrollBarThickness = getScaledValue(6, "padding")
 componentsList.CanvasSize = UDim2.new(0, 0, 0, 0)
 componentsList.Parent = detailFrame
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 5)
+listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = componentsList
+
+-- Function to update UI scaling when screen size changes
+local function updateProgressFrameScaling()
+	progressFrame.Size = UIScaleManager.scaleSize(300, 100, "hudElements", "cureProgress")
+	progressFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 0)
+	progressFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
+	progressCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	
+	progressTitle.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+	progressTitle.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
+	progressTitle.TextSize = getScaledTextSize(18)
+	
+	progressBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+	progressBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(35, "padding"))
+	progressBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	progressFillCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	progressText.TextSize = getScaledTextSize(16)
+	
+	componentsLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+	componentsLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(70, "padding"))
+	componentsLabel.TextSize = getScaledTextSize(14)
+	
+	detailFrame.Size = UIScaleManager.scaleSize(350, 250, "menuElements", "menuDialog")
+	detailCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	detailTitle.TextSize = getScaledTextSize(20)
+	
+	local newCloseSize = math.max(getScaledValue(30, "menuElements"), 44)
+	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
+	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
+	closeButton.TextSize = getScaledTextSize(18)
+	closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	
+	componentsList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(60, "padding"))
+	componentsList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(50, "padding"))
+	componentsList.ScrollBarThickness = getScaledValue(6, "padding")
+	listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
+end
+
+-- Register for scale changes
+UIScaleManager.onScaleChanged(updateProgressFrameScaling)
 
 -- State
 local cureProgress = 0
