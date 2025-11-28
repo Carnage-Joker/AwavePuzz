@@ -319,6 +319,9 @@ end)
 -- Remote Event Handlers
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
+-- State for alliance indicator
+local isPooledWithAllies = false
+
 -- Cure Update
 local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
 cureUpdateEvent.OnClientEvent:Connect(function(data)
@@ -346,7 +349,52 @@ cureUpdateEvent.OnClientEvent:Connect(function(data)
 				cureProgress = math.clamp(data.progress, 0, 100)
 			end
 			updateComponentsList()
+			
+		elseif data.type == "component_collected" then
+			-- Update specific component count
+			if data.componentName and data.count then
+				componentsCollected[data.componentName] = data.count
+				updateProgress(cureProgress, componentsCollected)
+				if detailFrame.Visible then
+					updateComponentsList()
+				end
+			end
 		end
+	end
+end)
+
+-- Player Cure Progress Update (per-player progress with alliance pooling)
+local playerCureProgressEvent = remoteEvents:WaitForChild("PlayerCureProgressUpdate")
+playerCureProgressEvent.OnClientEvent:Connect(function(data)
+	if type(data) ~= "table" then
+		return
+	end
+	
+	-- Update progress and components
+	if data.progress then
+		cureProgress = data.progress
+	end
+	if data.components then
+		componentsCollected = data.components
+	end
+	
+	-- Track if resources are pooled with allies
+	isPooledWithAllies = data.isPooled or false
+	
+	-- Update the UI
+	updateProgress(cureProgress, componentsCollected)
+	
+	-- Update title to show pooled status
+	if isPooledWithAllies then
+		progressTitle.Text = "Cure Progress (Allied)"
+		progressTitle.TextColor3 = Color3.fromRGB(100, 200, 255) -- Blue tint for allied
+	else
+		progressTitle.Text = "Cure Progress"
+		progressTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+	end
+	
+	if detailFrame.Visible then
+		updateComponentsList()
 	end
 end)
 
