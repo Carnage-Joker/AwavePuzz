@@ -236,7 +236,7 @@ local function updateStaminaUI()
 		ratio = math.clamp(currentStamina / maxStamina, 0, 1)
 	end
 
-	staminaFill.Size = UDim2.new(ratio, -4, 1, -4)
+	staminaFill.Size = UDim2.fromScale(ratio, 1)
 
 	-- Color feedback based on stamina level
 	if ratio > 0.5 then
