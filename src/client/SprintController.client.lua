@@ -26,9 +26,7 @@ local isSprinting = false
 local isSprintKeyHeld = false
 local timeSinceSprintStopped = 0
 local baseWalkSpeed = 16 -- Default Roblox walk speed
-
--- Remote event for stamina updates to UI
-local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
+local DEFAULT_WALK_SPEED = 16 -- Roblox default walk speed constant
 
 -- Create or get the stamina update event (client-side bindable for UI communication)
 local staminaEvent = nil
@@ -85,7 +83,7 @@ local function updateSprint()
 	end
 	
 	-- Store base walk speed if not stored
-	if baseWalkSpeed == 16 and humanoid.WalkSpeed ~= 16 * SPRINT_SPEED_MULTIPLIER then
+	if baseWalkSpeed == DEFAULT_WALK_SPEED and humanoid.WalkSpeed ~= DEFAULT_WALK_SPEED * SPRINT_SPEED_MULTIPLIER then
 		baseWalkSpeed = humanoid.WalkSpeed
 	end
 	

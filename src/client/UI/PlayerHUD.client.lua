@@ -149,7 +149,6 @@ staminaCorner.Parent = staminaFrame
 local staminaFill = Instance.new("Frame")
 staminaFill.Name = "StaminaFill"
 staminaFill.Size = UDim2.new(1, -4, 1, -4)
-staminaFill.Position = UDim2.new(0, 2, 0, 2)
 staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
 staminaFill.BorderSizePixel = 0
 staminaFill.AnchorPoint = Vector2.new(0, 0.5)
