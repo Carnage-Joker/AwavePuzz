@@ -429,39 +429,8 @@ function AllianceService:transferCureComponents(recipient, source, transferRatio
 		return
 	end
 	
-	local sourceUserId = source.UserId
-	local recipientUserId = recipient.UserId
-	
-	-- Get source's components from CureService
-	local sourceComponents = self.cureService:getPlayerComponents(source)
-	if not sourceComponents then
-		return
-	end
-	
-	-- Initialize recipient if needed
-	self.cureService:initializePlayer(recipient)
-	
-	-- Transfer components based on ratio
-	for componentName, count in pairs(sourceComponents) do
-		local transferCount = math.floor(count * transferRatio)
-		if transferCount > 0 then
-			-- Add to recipient
-			if self.cureService.playerComponents[recipientUserId] then
-				self.cureService.playerComponents[recipientUserId][componentName] = 
-					(self.cureService.playerComponents[recipientUserId][componentName] or 0) + transferCount
-			end
-			
-			-- Remove from source
-			self.cureService.playerComponents[sourceUserId][componentName] = 
-				math.max(0, count - transferCount)
-			
-			print("[AllianceService] Transferred", transferCount, componentName, "from", source.Name, "to", recipient.Name)
-		end
-	end
-	
-	-- Update cure progress for both players
-	self.cureService:updatePlayerCureProgress(recipient)
-	self.cureService:updatePlayerCureProgress(source)
+	-- Use CureService's transfer method to maintain proper encapsulation
+	self.cureService:transferComponents(source, recipient, transferRatio)
 end
 
 function AllianceService:createAlliance(player1, player2)

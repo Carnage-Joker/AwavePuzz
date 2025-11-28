@@ -248,22 +248,37 @@ end
 
 -- Send cure progress update to a specific player
 function CureService:sendCureProgressUpdate(player, progress, components)
+	-- Check if player is still valid before sending updates
+	if not player or not player:IsDescendantOf(game) then
+		return
+	end
+	
 	if self.remoteEvents and self.remoteEvents.PlayerCureProgressUpdate then
-		self.remoteEvents.PlayerCureProgressUpdate:FireClient(player, {
-			progress = progress,
-			components = components,
-			isPooled = self.allianceService and #self.allianceService:getAllies(player) > 0
-		})
+		local success, err = pcall(function()
+			self.remoteEvents.PlayerCureProgressUpdate:FireClient(player, {
+				progress = progress,
+				components = components,
+				isPooled = self.allianceService and #self.allianceService:getAllies(player) > 0
+			})
+		end)
+		if not success then
+			warn("[CureService] Failed to send cure progress update to " .. player.Name .. ": " .. tostring(err))
+		end
 	end
 	
 	-- Also update via CureUpdate for compatibility
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		remoteEvents.CureUpdate:FireClient(player, {
-			type = "progress",
-			progress = progress,
-			components = components
-		})
+		local success, err = pcall(function()
+			remoteEvents.CureUpdate:FireClient(player, {
+				type = "progress",
+				progress = progress,
+				components = components
+			})
+		end)
+		if not success then
+			warn("[CureService] Failed to send CureUpdate to " .. player.Name .. ": " .. tostring(err))
+		end
 	end
 end
 
@@ -340,7 +355,8 @@ function CureService:onAllianceBroken(player1, player2)
 	self:updatePlayerCureProgress(player2)
 end
 
--- Update global cure progress (for UI display) - Legacy method for compatibility
+-- Update global cure progress (for UI display)
+-- Note: This is a wrapper for updateGlobalCureProgress() maintained for backwards compatibility
 function CureService:updateCureProgress()
 	self:updateGlobalCureProgress()
 end
@@ -377,6 +393,74 @@ end
 -- Get player's effective component counts (pooled if in alliance)
 function CureService:getPlayerEffectiveComponents(player)
 	return self:getPooledComponents(player)
+end
+
+-- Add components to a player's inventory (used for transfers)
+function CureService:addComponentsToPlayer(player, componentName, amount)
+	if not player or not componentName or not amount or amount <= 0 then
+		return false
+	end
+	
+	self:initializePlayer(player)
+	local userId = player.UserId
+	
+	if self.playerComponents[userId] then
+		self.playerComponents[userId][componentName] = 
+			(self.playerComponents[userId][componentName] or 0) + amount
+		return true
+	end
+	return false
+end
+
+-- Remove components from a player's inventory (used for transfers)
+function CureService:removeComponentsFromPlayer(player, componentName, amount)
+	if not player or not componentName or not amount or amount <= 0 then
+		return 0
+	end
+	
+	self:initializePlayer(player)
+	local userId = player.UserId
+	
+	if self.playerComponents[userId] then
+		local currentCount = self.playerComponents[userId][componentName] or 0
+		local actualRemoved = math.min(currentCount, amount)
+		self.playerComponents[userId][componentName] = currentCount - actualRemoved
+		return actualRemoved
+	end
+	return 0
+end
+
+-- Transfer components from one player to another
+function CureService:transferComponents(fromPlayer, toPlayer, transferRatio)
+	if not fromPlayer or not toPlayer or not transferRatio then
+		return
+	end
+	
+	self:initializePlayer(fromPlayer)
+	self:initializePlayer(toPlayer)
+	
+	local fromUserId = fromPlayer.UserId
+	local sourceComponents = self.playerComponents[fromUserId]
+	if not sourceComponents then
+		return
+	end
+	
+	-- Transfer components based on ratio
+	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
+		local count = sourceComponents[componentName] or 0
+		local transferCount = math.floor(count * transferRatio)
+		if transferCount > 0 then
+			local actualTransferred = self:removeComponentsFromPlayer(fromPlayer, componentName, transferCount)
+			if actualTransferred > 0 then
+				self:addComponentsToPlayer(toPlayer, componentName, actualTransferred)
+				print("[CureService] Transferred", actualTransferred, componentName, "from", fromPlayer.Name, "to", toPlayer.Name)
+			end
+		end
+	end
+	
+	-- Update cure progress for both players
+	self:updatePlayerCureProgress(fromPlayer)
+	self:updatePlayerCureProgress(toPlayer)
 end
 
 -- Check if player can attempt final synthesis

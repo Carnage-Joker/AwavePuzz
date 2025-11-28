@@ -292,7 +292,12 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 		
 		-- Notify AllianceService of the kill for betrayal mechanics
 		if self.allianceService and self.allianceService.onPlayerKilled then
-			self.allianceService:onPlayerKilled(targetPlayer, attackingPlayer)
+			local callSuccess, callErr = pcall(function()
+				self.allianceService:onPlayerKilled(targetPlayer, attackingPlayer)
+			end)
+			if not callSuccess then
+				warn("[WeaponService] Error notifying AllianceService of kill: " .. tostring(callErr))
+			end
 		end
 	end
 end
