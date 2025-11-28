@@ -459,10 +459,14 @@ function GameManager:onVictory()
 	-- Exit all spectators
 	self.spectatorManager:endRound()
 	
-	-- Update scoreboard stats - all surviving players get round win
+	-- Update scoreboard stats - only surviving (non-spectating) players get round win
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
-		self.playerStats[player.UserId].roundWins = self.playerStats[player.UserId].roundWins + 1
+		if not self.spectatorManager:isPlayerDead(player) then
+			self.playerStats[player.UserId].roundWins = self.playerStats[player.UserId].roundWins + 1
+		else
+			self.playerStats[player.UserId].roundLosses = self.playerStats[player.UserId].roundLosses + 1
+		end
 	end
 	self:broadcastScoreboard()
 	
