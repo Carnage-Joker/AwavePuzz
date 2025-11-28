@@ -252,21 +252,10 @@ end
 local function setupStaminaListener()
 	local playerGui = player:WaitForChild("PlayerGui")
 	
-	-- Wait for or create the BindableEvents folder
-	local bindableFolder = playerGui:WaitForChild("BindableEvents", 5)
-	if not bindableFolder then
-		bindableFolder = Instance.new("Folder")
-		bindableFolder.Name = "BindableEvents"
-		bindableFolder.Parent = playerGui
-	end
+	-- Wait for BindableEvents folder and StaminaUpdate event created by SprintController
+	local bindableFolder = playerGui:WaitForChild("BindableEvents")
 	
-	-- Wait for or create the StaminaUpdate event
-	local staminaEvent = bindableFolder:WaitForChild("StaminaUpdate", 5)
-	if not staminaEvent then
-		staminaEvent = Instance.new("BindableEvent")
-		staminaEvent.Name = "StaminaUpdate"
-		staminaEvent.Parent = bindableFolder
-	end
+	local staminaEvent = bindableFolder:WaitForChild("StaminaUpdate")
 	
 	staminaEvent.Event:Connect(function(data)
 		if typeof(data) ~= "table" then
