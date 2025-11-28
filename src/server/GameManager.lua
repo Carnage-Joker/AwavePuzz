@@ -323,6 +323,11 @@ function GameManager:resetForNewRound()
 	self.currentWave = 0
 	self.cureProgress = 0
 	
+	-- Reset cure service if it exists
+	if self.cureService and self.cureService.reset then
+		self.cureService:reset()
+	end
+	
 	-- Reset base health
 	self.baseManager:reset()
 	
