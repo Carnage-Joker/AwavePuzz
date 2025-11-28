@@ -263,10 +263,23 @@ local function exitSpectatorMode()
 	
 	-- Reset camera
 	local camera = workspace.CurrentCamera
-	if camera and player.Character then
+	if camera then
 		camera.CameraType = Enum.CameraType.Custom
-		camera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
-	end
+		if player.Character then
+			camera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
+		else
+			-- Wait for character to load, then set camera subject
+			local conn
+			conn = player.CharacterAdded:Connect(function(char)
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				if humanoid then
+					camera.CameraSubject = humanoid
+				end
+				if conn then
+					conn:Disconnect()
+				end
+			end)
+		end
 	
 	-- Animate out
 	TweenService:Create(spectatorBanner, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
