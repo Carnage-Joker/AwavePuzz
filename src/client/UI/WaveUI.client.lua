@@ -1,12 +1,29 @@
 -- WaveUI.client.lua
 -- Client script for displaying wave information
 -- Place in StarterGui as a LocalScript
+-- Updated with dynamic UI scaling for mobile devices.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- Load UI scaling utilities
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+
+-- Initialize scale manager
+UIScaleManager.initialize()
+
+-- Helper functions
+local function getScaledValue(baseValue, scaleType)
+	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
+end
+
+local function getScaledTextSize(baseSize)
+	return UIScaleManager.scaleTextSize(baseSize)
+end
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -15,31 +32,32 @@ screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
--- Main Frame
+-- Main Frame (positioned top-left to avoid overlapping with compass at top-center)
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 250, 0, 120)
-mainFrame.Position = UDim2.new(0.5, -125, 0, 10)
+mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
+mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
+mainFrame.AnchorPoint = Vector2.new(0, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.3
+mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 165, 0)
 mainFrame.Parent = screenGui
 
 -- Add corner
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 corner.Parent = mainFrame
 
 -- Wave Number Label
 local waveLabel = Instance.new("TextLabel")
 waveLabel.Name = "WaveLabel"
-waveLabel.Size = UDim2.new(1, -20, 0, 30)
-waveLabel.Position = UDim2.new(0, 10, 0, 10)
+waveLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+waveLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 waveLabel.BackgroundTransparency = 1
 waveLabel.Text = "Wave: 0"
 waveLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-waveLabel.TextSize = 24
+waveLabel.TextSize = getScaledTextSize(24)
 waveLabel.Font = Enum.Font.GothamBold
 waveLabel.TextXAlignment = Enum.TextXAlignment.Left
 waveLabel.Parent = mainFrame
@@ -47,12 +65,12 @@ waveLabel.Parent = mainFrame
 -- Time Remaining Label
 local timeLabel = Instance.new("TextLabel")
 timeLabel.Name = "TimeLabel"
-timeLabel.Size = UDim2.new(1, -20, 0, 25)
-timeLabel.Position = UDim2.new(0, 10, 0, 45)
+timeLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+timeLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(45, "padding"))
 timeLabel.BackgroundTransparency = 1
 timeLabel.Text = "Time: 0:00"
 timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-timeLabel.TextSize = 18
+timeLabel.TextSize = getScaledTextSize(18)
 timeLabel.Font = Enum.Font.Gotham
 timeLabel.TextXAlignment = Enum.TextXAlignment.Left
 timeLabel.Parent = mainFrame
@@ -60,21 +78,22 @@ timeLabel.Parent = mainFrame
 -- Zombies Remaining Label
 local zombieLabel = Instance.new("TextLabel")
 zombieLabel.Name = "ZombieLabel"
-zombieLabel.Size = UDim2.new(1, -20, 0, 25)
-zombieLabel.Position = UDim2.new(0, 10, 0, 75)
+zombieLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+zombieLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(75, "padding"))
 zombieLabel.BackgroundTransparency = 1
 zombieLabel.Text = "Zombies: 0"
 zombieLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-zombieLabel.TextSize = 18
+zombieLabel.TextSize = getScaledTextSize(18)
 zombieLabel.Font = Enum.Font.Gotham
 zombieLabel.TextXAlignment = Enum.TextXAlignment.Left
 zombieLabel.Parent = mainFrame
 
--- Wave Announcement Frame (for big announcements)
+-- Wave Announcement Frame (for big announcements - centered, scaled)
 local announcementFrame = Instance.new("Frame")
 announcementFrame.Name = "AnnouncementFrame"
-announcementFrame.Size = UDim2.new(0, 400, 0, 80)
-announcementFrame.Position = UDim2.new(0.5, -200, 0.3, -40)
+announcementFrame.Size = UIScaleManager.scaleSize(400, 80, "menuElements")
+announcementFrame.Position = UDim2.new(0.5, 0, 0.3, 0)
+announcementFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 announcementFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 announcementFrame.BackgroundTransparency = 0.2
 announcementFrame.BorderSizePixel = 3
@@ -83,20 +102,59 @@ announcementFrame.Visible = false
 announcementFrame.Parent = screenGui
 
 local announcementCorner = Instance.new("UICorner")
-announcementCorner.CornerRadius = UDim.new(0, 15)
+announcementCorner.CornerRadius = UDim.new(0, getScaledValue(15, "padding"))
 announcementCorner.Parent = announcementFrame
 
 local announcementLabel = Instance.new("TextLabel")
 announcementLabel.Name = "AnnouncementLabel"
-announcementLabel.Size = UDim2.new(1, -20, 1, -20)
-announcementLabel.Position = UDim2.new(0, 10, 0, 10)
+announcementLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(20, "padding"))
+announcementLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 announcementLabel.BackgroundTransparency = 1
 announcementLabel.Text = "WAVE 1 STARTING!"
 announcementLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-announcementLabel.TextSize = 36
+announcementLabel.TextSize = getScaledTextSize(36)
 announcementLabel.Font = Enum.Font.GothamBold
 announcementLabel.TextScaled = true
 announcementLabel.Parent = announcementFrame
+
+-- Track last device type for optimization
+local lastDeviceType = UIScaleManager.getDeviceType()
+
+-- Function to update UI scaling when screen size changes
+local function updateUIScaling()
+	local currentDeviceType = UIScaleManager.getDeviceType()
+	local deviceChanged = lastDeviceType ~= currentDeviceType
+	lastDeviceType = currentDeviceType
+	
+	-- Always update sizes and positions (these depend on viewport)
+	mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
+	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
+	
+	waveLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+	waveLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
+	waveLabel.TextSize = getScaledTextSize(24)
+	
+	timeLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+	timeLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(45, "padding"))
+	timeLabel.TextSize = getScaledTextSize(18)
+	
+	zombieLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+	zombieLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(75, "padding"))
+	zombieLabel.TextSize = getScaledTextSize(18)
+	
+	announcementFrame.Size = UIScaleManager.scaleSize(400, 80, "menuElements")
+	announcementLabel.TextSize = getScaledTextSize(36)
+	
+	-- Only update static properties when device type changes
+	if deviceChanged then
+		mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
+		corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+		announcementCorner.CornerRadius = UDim.new(0, getScaledValue(15, "padding"))
+	end
+end
+
+-- Register for scale changes
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- Helpers
 local currentAnnouncementId = 0
