@@ -229,7 +229,7 @@ local function updateUIScaling()
 	-- Update stamina frame
 	staminaFrame.Size = UIScaleManager.scaleSize(250, 16, "hudElements", "healthBar")
 	staminaFrame.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 10, 70)
-	staminaCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+	staminaCorner.CornerRadius = UDim.new(0, getScaledValue(6, "padding"))
 	staminaFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
 	staminaLabel.TextSize = getScaledTextSize(12)
 	staminaFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
