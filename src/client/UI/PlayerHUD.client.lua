@@ -117,10 +117,11 @@ staminaCorner.Parent = staminaFrame
 
 local staminaFill = Instance.new("Frame")
 staminaFill.Name = "StaminaFill"
-staminaFill.Size = UDim2.new(1, 0, 1, 0)
-staminaFill.Position = UDim2.new(0, 0, 0, 0)
+staminaFill.Size = UDim2.new(1, -4, 1, -4)
+staminaFill.Position = UDim2.new(0, 2, 0.5, 0)
 staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
 staminaFill.BorderSizePixel = 0
+staminaFill.AnchorPoint = Vector2.new(0, 0.5)
 staminaFill.Parent = staminaFrame
 
 local staminaFillCorner = Instance.new("UICorner")
@@ -303,7 +304,7 @@ local function updateStaminaUI()
 		ratio = math.clamp(currentStamina / maxStamina, 0, 1)
 	end
 
-	staminaFill.Size = UDim2.fromScale(ratio, 1)
+	staminaFill.Size = UDim2.new(ratio, -4, 1, -4)
 
 	-- Color feedback based on stamina level
 	if ratio > 0.5 then
