@@ -14,6 +14,10 @@ local REMOTE_EVENT_WAIT_TIMEOUT = 10 -- Seconds to wait for RemoteEvent to exist
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- State variables for scoreboard visibility
+local tabHeld = false
+local isEndOfRoundDisplay = false
+
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
