@@ -95,6 +95,70 @@ healthLabel.TextSize = getScaledTextSize(16)
 healthLabel.Text = "HP: 100 / 100"
 healthLabel.Parent = healthFrame
 
+-- Stamina bar container (above health bar)
+local staminaFrame = Instance.new("Frame")
+staminaFrame.Name = "StaminaFrame"
+staminaFrame.Size = UIScaleManager.scaleSize(250, 16, "hudElements", "healthBar")
+staminaFrame.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 10, 70)
+staminaFrame.AnchorPoint = Vector2.new(0, 1)
+staminaFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+staminaFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
+staminaFrame.BorderSizePixel = 0
+staminaFrame.Parent = screenGui
+
+local staminaOutline = Instance.new("UIStroke")
+staminaOutline.Thickness = 1
+staminaOutline.Color = Color3.fromRGB(60, 80, 100)
+staminaOutline.Parent = staminaFrame
+
+local staminaCorner = Instance.new("UICorner")
+staminaCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+staminaCorner.Parent = staminaFrame
+
+local staminaFill = Instance.new("Frame")
+staminaFill.Name = "StaminaFill"
+staminaFill.Size = UDim2.new(1, 0, 1, 0)
+staminaFill.Position = UDim2.new(0, 0, 0, 0)
+staminaFill.BackgroundColor3 = Color3.fromRGB(80, 180, 220)
+staminaFill.BorderSizePixel = 0
+staminaFill.Parent = staminaFrame
+
+local staminaFillCorner = Instance.new("UICorner")
+staminaFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+staminaFillCorner.Parent = staminaFill
+
+local staminaLabel = Instance.new("TextLabel")
+staminaLabel.Name = "StaminaLabel"
+staminaLabel.Size = UDim2.new(1, -4, 1, 0)
+staminaLabel.Position = UDim2.new(0, 2, 0, 0)
+staminaLabel.BackgroundTransparency = 1
+staminaLabel.TextColor3 = Color3.new(1, 1, 1)
+staminaLabel.TextXAlignment = Enum.TextXAlignment.Left
+staminaLabel.Font = Enum.Font.GothamBold
+staminaLabel.TextSize = getScaledTextSize(12)
+staminaLabel.Text = "STAMINA"
+staminaLabel.Parent = staminaFrame
+
+-- Sprint indicator (shows when sprinting)
+local sprintIndicator = Instance.new("TextLabel")
+sprintIndicator.Name = "SprintIndicator"
+sprintIndicator.Size = UIScaleManager.scaleSize(80, 20, "hudElements", "healthBar")
+sprintIndicator.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 270, 40)
+sprintIndicator.AnchorPoint = Vector2.new(0, 1)
+sprintIndicator.BackgroundColor3 = Color3.fromRGB(60, 120, 180)
+sprintIndicator.BackgroundTransparency = 0.2
+sprintIndicator.BorderSizePixel = 0
+sprintIndicator.TextColor3 = Color3.new(1, 1, 1)
+sprintIndicator.Font = Enum.Font.GothamBold
+sprintIndicator.TextSize = getScaledTextSize(14)
+sprintIndicator.Text = "SPRINT"
+sprintIndicator.Visible = false
+sprintIndicator.Parent = screenGui
+
+local sprintCorner = Instance.new("UICorner")
+sprintCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+sprintCorner.Parent = sprintIndicator
+
 -- Compass bar (top centre with safe area - positioned to avoid Roblox menu)
 local compassFrame = Instance.new("Frame")
 compassFrame.Name = "CompassFrame"
@@ -161,6 +225,20 @@ local function updateUIScaling()
 	healthFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
 	healthLabel.TextSize = getScaledTextSize(16)
 	healthFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
+	
+	-- Update stamina frame
+	staminaFrame.Size = UIScaleManager.scaleSize(250, 16, "hudElements", "healthBar")
+	staminaFrame.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 10, 70)
+	staminaCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+	staminaFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+	staminaLabel.TextSize = getScaledTextSize(12)
+	staminaFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
+	
+	-- Update sprint indicator
+	sprintIndicator.Size = UIScaleManager.scaleSize(80, 20, "hudElements", "healthBar")
+	sprintIndicator.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 270, 40)
+	sprintIndicator.TextSize = getScaledTextSize(14)
+	sprintCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
 	
 	-- Update compass
 	compassFrame.Size = UIScaleManager.scaleSize(300, 30, "hudElements", "compass")
