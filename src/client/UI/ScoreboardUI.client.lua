@@ -156,7 +156,7 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updateScoreboardScaling)
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- Function to create a player row
 local function createPlayerRow(playerStats, layoutOrder)
