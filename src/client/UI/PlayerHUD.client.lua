@@ -112,7 +112,7 @@ staminaOutline.Color = Color3.fromRGB(60, 80, 100)
 staminaOutline.Parent = staminaFrame
 
 local staminaCorner = Instance.new("UICorner")
-staminaCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
+staminaCorner.CornerRadius = UDim.new(0, getScaledValue(6, "padding"))
 staminaCorner.Parent = staminaFrame
 
 local staminaFill = Instance.new("Frame")
