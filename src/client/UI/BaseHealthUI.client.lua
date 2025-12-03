@@ -1,6 +1,7 @@
 -- BaseHealthUI.client.lua
 -- Client script for displaying base health
 -- Place in StarterGui as a LocalScript
+-- Updated with dynamic UI scaling for mobile devices.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,8 +13,21 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Config (get max health from shared GameConfig)
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+
+-- Initialize scale manager
+UIScaleManager.initialize()
 
 local DEFAULT_MAX_HEALTH = GameConfig.BASE_HEALTH or 1000
+
+-- Helper functions
+local function getScaledValue(baseValue, scaleType)
+	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
+end
+
+local function getScaledTextSize(baseSize)
+	return UIScaleManager.scaleTextSize(baseSize)
+end
 
 ----------------------------------------------------------------
 -- UI creation
@@ -24,42 +38,45 @@ screenGui.Name = "BaseHealthUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
+-- Main frame positioned below wave info on left side
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 60)
-mainFrame.Position = UDim2.new(0, 10, 0, 140)
+mainFrame.Size = UIScaleManager.scaleSize(300, 60, "hudElements", "baseHealth")
+-- Position below the WaveUI frame (which is at top-left)
+mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 130)
+mainFrame.AnchorPoint = Vector2.new(0, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.3
+mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(100, 200, 255)
 mainFrame.Parent = screenGui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 corner.Parent = mainFrame
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "TitleLabel"
-titleLabel.Size = UDim2.new(1, -20, 0, 20)
-titleLabel.Position = UDim2.new(0, 10, 0, 5)
+titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(20, "padding"))
+titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Base Health"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 16
+titleLabel.TextSize = getScaledTextSize(16)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = mainFrame
 
 local healthBarBg = Instance.new("Frame")
 healthBarBg.Name = "HealthBarBg"
-healthBarBg.Size = UDim2.new(1, -20, 0, 25)
-healthBarBg.Position = UDim2.new(0, 10, 0, 30)
+healthBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+healthBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(30, "padding"))
 healthBarBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 healthBarBg.BorderSizePixel = 0
 healthBarBg.Parent = mainFrame
 
 local healthBarCorner = Instance.new("UICorner")
-healthBarCorner.CornerRadius = UDim.new(0, 5)
+healthBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 healthBarCorner.Parent = healthBarBg
 
 local healthBarFill = Instance.new("Frame")
@@ -71,7 +88,7 @@ healthBarFill.BorderSizePixel = 0
 healthBarFill.Parent = healthBarBg
 
 local fillCorner = Instance.new("UICorner")
-fillCorner.CornerRadius = UDim.new(0, 5)
+fillCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 fillCorner.Parent = healthBarFill
 
 local healthText = Instance.new("TextLabel")
@@ -80,10 +97,31 @@ healthText.Size = UDim2.new(1, 0, 1, 0)
 healthText.BackgroundTransparency = 1
 healthText.Text = "0 / 0"
 healthText.TextColor3 = Color3.fromRGB(255, 255, 255)
-healthText.TextSize = 14
+healthText.TextSize = getScaledTextSize(14)
 healthText.Font = Enum.Font.GothamBold
 healthText.ZIndex = 2
 healthText.Parent = healthBarBg
+
+-- Function to update UI scaling when screen size changes
+local function updateUIScaling()
+	mainFrame.Size = UIScaleManager.scaleSize(300, 60, "hudElements", "baseHealth")
+	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 130)
+	mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
+	corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	
+	titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(20, "padding"))
+	titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
+	titleLabel.TextSize = getScaledTextSize(16)
+	
+	healthBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
+	healthBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(30, "padding"))
+	healthBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	fillCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	healthText.TextSize = getScaledTextSize(14)
+end
+
+-- Register for scale changes
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 ----------------------------------------------------------------
 -- State

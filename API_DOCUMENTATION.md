@@ -19,6 +19,8 @@ This document describes the API for each module in the AwavePuzz game system.
 - [ShopService](#shopservice)
 - [ZombieBrain](#zombiebrain)
 - [MapManager](#mapmanager)
+- [LobbyManager](#lobbymanager)
+- [SpectatorManager](#spectatormanager)
 - [ClientController](#clientcontroller)
 
 ---
@@ -36,6 +38,16 @@ This document describes the API for each module in the AwavePuzz game system.
 MAX_PLAYERS = 8                -- Maximum players per server
 STARTING_HEALTH = 100          -- Player starting health
 RESPAWN_ENABLED = false        -- Whether respawning is allowed
+```
+
+#### Sprint Settings
+```lua
+SPRINT_SPEED_MULTIPLIER = 1.5  -- How much faster sprinting is compared to walking
+STAMINA_MAX = 100              -- Maximum stamina
+STAMINA_DEPLETION_RATE = 20    -- Stamina lost per second while sprinting
+STAMINA_REGEN_RATE = 15        -- Stamina gained per second while not sprinting
+STAMINA_REGEN_DELAY = 1.0      -- Seconds to wait after stopping sprint before regen starts
+SPRINT_HOTKEY = "LeftShift"    -- Key to hold for sprinting
 ```
 
 #### Base Settings
@@ -73,6 +85,15 @@ CURE_COMPONENT_NAMES = {              -- Available components
     "Research Notes",
     "Catalyst"
 }
+```
+
+#### Lobby & Round Settings
+```lua
+LOBBY_VOTING_TIME = 20        -- Seconds for map voting
+LOBBY_MIN_PLAYERS = 1         -- Minimum players to start voting
+SCOREBOARD_DISPLAY_TIME = 10  -- Seconds to show scoreboard after round
+ROUND_COUNTDOWN_TIME = 5      -- Countdown before round starts after voting
+ONE_LIFE_PER_ROUND = true     -- Players only have one life per round
 ```
 
 ---
@@ -1265,6 +1286,204 @@ end)
 - `getZombieSpawnPoints()` – Returns table of zombie spawn `Vector3`s.
 - `getResourceSpawnPoints()` – Returns table of resource spawn `Vector3`s.
 - `getCurrentMapId()` – Returns the active map identifier for UI announcements.
+
+---
+
+## LobbyManager
+
+**Location**: `src/server/LobbyManager.lua`
+**Type**: Class
+**Description**: Manages the pre-round lobby where players vote on maps. Handles the game flow between rounds.
+
+### Constructor
+
+```lua
+LobbyManager.new() -> LobbyManager
+```
+
+Creates a new LobbyManager instance.
+
+### Methods
+
+#### setMapManager
+```lua
+LobbyManager:setMapManager(mapManager: MapManager) -> void
+```
+Sets the MapManager reference for loading selected maps.
+
+#### setGameManager
+```lua
+LobbyManager:setGameManager(gameManager: GameManager) -> void
+```
+Sets the GameManager reference for game state coordination.
+
+#### getMapOptions
+```lua
+LobbyManager:getMapOptions() -> table
+```
+Returns array of available maps for voting.
+
+**Returns:**
+```lua
+{
+    { id = "MapId", name = "Map Name", description = "Map description" },
+    ...
+}
+```
+
+#### startVoting
+```lua
+LobbyManager:startVoting() -> boolean
+```
+Starts the map voting phase. Broadcasts MapVoteStart to all clients.
+
+#### handlePlayerVote
+```lua
+LobbyManager:handlePlayerVote(player: Player, mapId: string) -> void
+```
+Handles a player's vote for a map. Updates vote counts and broadcasts to clients.
+
+#### endVoting
+```lua
+LobbyManager:endVoting() -> string|nil
+```
+Ends voting and selects the winning map. Handles ties with random selection.
+
+**Returns:**
+- Selected map ID, or nil if voting wasn't active
+
+#### update
+```lua
+LobbyManager:update(deltaTime: number) -> void
+```
+Updates the lobby state timer. Called from game loop.
+
+#### isVotingActive
+```lua
+LobbyManager:isVotingActive() -> boolean
+```
+Returns whether map voting is currently active.
+
+#### getSelectedMapId
+```lua
+LobbyManager:getSelectedMapId() -> string|nil
+```
+Returns the map ID selected after voting ends.
+
+#### reset
+```lua
+LobbyManager:reset() -> void
+```
+Resets the lobby manager for a new round.
+
+#### onPlayerLeave
+```lua
+LobbyManager:onPlayerLeave(player: Player) -> void
+```
+Cleans up player's vote when they leave the game.
+
+### Remote Events
+
+- `MapVoteStart` (Server → Client): Voting has started, includes map options
+- `MapVoteUpdate` (Server → Client): Vote count updates and timer
+- `MapVoteEnd` (Server → Client): Voting ended, shows selected map
+- `CastMapVote` (Client → Server): Player casts their vote
+
+---
+
+## SpectatorManager
+
+**Location**: `src/server/SpectatorManager.lua`
+**Type**: Class
+**Description**: Manages spectator mode for players who have died during a round. Dead players can spectate other living players until the round ends.
+
+### Constructor
+
+```lua
+SpectatorManager.new() -> SpectatorManager
+```
+
+Creates a new SpectatorManager instance.
+
+### Methods
+
+#### onPlayerDied
+```lua
+SpectatorManager:onPlayerDied(player: Player) -> void
+```
+Marks a player as dead and puts them into spectator mode. Finds an alive player to spectate.
+
+#### findAlivePlayer
+```lua
+SpectatorManager:findAlivePlayer(excludeUserId: number, spectator: Player) -> Player|nil
+```
+Finds an alive player to spectate, excluding the given user ID.
+
+#### getAlivePlayers
+```lua
+SpectatorManager:getAlivePlayers() -> table
+```
+Returns array of all alive players.
+
+#### cycleSpectatorTarget
+```lua
+SpectatorManager:cycleSpectatorTarget(player: Player, direction: string) -> void
+```
+Cycles the spectator's target to next/previous alive player.
+
+**Parameters:**
+- `player` (Player): The spectating player
+- `direction` (string): "next" or "prev"
+
+#### onSpectatorTargetDied
+```lua
+SpectatorManager:onSpectatorTargetDied(targetUserId: number) -> void
+```
+Called when a spectated player dies. Automatically cycles spectators to next target.
+
+#### exitSpectatorMode
+```lua
+SpectatorManager:exitSpectatorMode(player: Player) -> void
+```
+Removes a player from spectator mode.
+
+#### endRound
+```lua
+SpectatorManager:endRound() -> void
+```
+Exits all players from spectator mode at end of round.
+
+#### reset
+```lua
+SpectatorManager:reset() -> void
+```
+Resets the spectator manager for a new round.
+
+#### isPlayerDead
+```lua
+SpectatorManager:isPlayerDead(player: Player) -> boolean
+```
+Checks if a player is marked as dead this round.
+
+#### isSpectating
+```lua
+SpectatorManager:isSpectating(player: Player) -> boolean
+```
+Checks if a player is currently in spectator mode.
+
+#### broadcastAliveList
+```lua
+SpectatorManager:broadcastAliveList() -> void
+```
+Sends updated alive player list to all spectators.
+
+### Remote Events
+
+- `EnterSpectatorMode` (Server → Client): Put player into spectator mode
+- `ExitSpectatorMode` (Server → Client): Remove player from spectator mode
+- `SpectatorTargetUpdate` (Server → Client): Update who player is spectating
+- `SpectatorCycleTarget` (Client → Server): Player wants to cycle target
+- `SpectatorStateUpdate` (Server → Client): Update list of alive players
 
 ---
 

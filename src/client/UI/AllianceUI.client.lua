@@ -2,6 +2,7 @@
 -- AllianceUI.client.lua
 -- Client script for alliance management UI
 -- Place in StarterGui as a LocalScript
+-- Updated with dynamic UI scaling for mobile devices.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,61 +10,104 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Load UI scaling utilities
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+
+-- Initialize scale manager
+UIScaleManager.initialize()
+
+-- Helper functions
+local function getScaledValue(baseValue, scaleType)
+	return UIScaleManager.scalePixels(baseValue, scaleType or "menuElements")
+end
+
+local function getScaledTextSize(baseSize)
+	return UIScaleManager.scaleTextSize(baseSize)
+end
+
+-- Minimum touch target from config
+local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
+
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AllianceUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Main Frame (player list)
+-- Main Frame (player list) - positioned right side, centered vertically
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 250, 0, 300)
-mainFrame.Position = UDim2.new(1, -260, 0.5, -150)
+mainFrame.Size = UIScaleManager.scaleSize(250, 300, "menuElements", "menuDialog")
+mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 120)
+mainFrame.AnchorPoint = Vector2.new(1, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.3
+mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 200, 100)
 mainFrame.Visible = false -- Hidden by default, toggle with key
 mainFrame.Parent = screenGui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 10)
+mainCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 mainCorner.Parent = mainFrame
 
 -- Title
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, -20, 0, 30)
-titleLabel.Position = UDim2.new(0, 10, 0, 10)
+titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "Player Alliances"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 20
+titleLabel.TextSize = getScaledTextSize(20)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
+
+-- Close button with minimum touch target
+local closeButtonSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
+local mainCloseButton = Instance.new("TextButton")
+mainCloseButton.Name = "CloseButton"
+mainCloseButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
+mainCloseButton.Position = UDim2.new(1, -closeButtonSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
+mainCloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+mainCloseButton.Text = "X"
+mainCloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+mainCloseButton.TextSize = getScaledTextSize(18)
+mainCloseButton.Font = Enum.Font.GothamBold
+mainCloseButton.Parent = mainFrame
+
+local mainCloseCorner = Instance.new("UICorner")
+mainCloseCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+mainCloseCorner.Parent = mainCloseButton
+
+mainCloseButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+end)
 
 -- Player List (ScrollingFrame)
 local playerList = Instance.new("ScrollingFrame")
 playerList.Name = "PlayerList"
-playerList.Size = UDim2.new(1, -20, 1, -55)
-playerList.Position = UDim2.new(0, 10, 0, 45)
+playerList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(55, "padding"))
+playerList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(45, "padding"))
 playerList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 playerList.BackgroundTransparency = 0.5
 playerList.BorderSizePixel = 0
-playerList.ScrollBarThickness = 6
+playerList.ScrollBarThickness = getScaledValue(6, "padding")
 playerList.Parent = mainFrame
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 5)
+listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = playerList
 
--- Request Frame (shows when receiving alliance request)
+-- Request Frame (shows when receiving alliance request) - centered
 local requestFrame = Instance.new("Frame")
 requestFrame.Name = "RequestFrame"
-requestFrame.Size = UDim2.new(0, 300, 0, 120)
-requestFrame.Position = UDim2.new(0.5, -150, 0.5, -60)
+requestFrame.Size = UIScaleManager.scaleSize(300, 120, "menuElements")
+requestFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+requestFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 requestFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 requestFrame.BackgroundTransparency = 0.1
 requestFrame.BorderSizePixel = 3
@@ -73,56 +117,61 @@ requestFrame.ZIndex = 20
 requestFrame.Parent = screenGui
 
 local requestCorner = Instance.new("UICorner")
-requestCorner.CornerRadius = UDim.new(0, 10)
+requestCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 requestCorner.Parent = requestFrame
 
 local requestLabel = Instance.new("TextLabel")
 requestLabel.Name = "RequestLabel"
-requestLabel.Size = UDim2.new(1, -20, 0, 50)
-requestLabel.Position = UDim2.new(0, 10, 0, 10)
+requestLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))
+requestLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 requestLabel.BackgroundTransparency = 1
 requestLabel.Text = "PlayerName wants to ally with you!"
 requestLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-requestLabel.TextSize = 16
+requestLabel.TextSize = getScaledTextSize(16)
 requestLabel.Font = Enum.Font.Gotham
 requestLabel.TextWrapped = true
 requestLabel.Parent = requestFrame
 
+-- Buttons with minimum touch target sizes
+local buttonHeight = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
+local buttonWidth = getScaledValue(120, "menuElements")
+
 local acceptButton = Instance.new("TextButton")
 acceptButton.Name = "AcceptButton"
-acceptButton.Size = UDim2.new(0, 120, 0, 40)
-acceptButton.Position = UDim2.new(0, 15, 0, 70)
+acceptButton.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+acceptButton.Position = UDim2.new(0, getScaledValue(15, "padding"), 0, getScaledValue(70, "padding"))
 acceptButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
 acceptButton.Text = "Accept"
 acceptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-acceptButton.TextSize = 16
+acceptButton.TextSize = getScaledTextSize(16)
 acceptButton.Font = Enum.Font.GothamBold
 acceptButton.Parent = requestFrame
 
 local acceptCorner = Instance.new("UICorner")
-acceptCorner.CornerRadius = UDim.new(0, 8)
+acceptCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 acceptCorner.Parent = acceptButton
 
 local declineButton = Instance.new("TextButton")
 declineButton.Name = "DeclineButton"
-declineButton.Size = UDim2.new(0, 120, 0, 40)
-declineButton.Position = UDim2.new(1, -135, 0, 70)
+declineButton.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+declineButton.Position = UDim2.new(1, -buttonWidth - getScaledValue(15, "padding"), 0, getScaledValue(70, "padding"))
 declineButton.BackgroundColor3 = Color3.fromRGB(200, 100, 100)
 declineButton.Text = "Decline"
 declineButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-declineButton.TextSize = 16
+declineButton.TextSize = getScaledTextSize(16)
 declineButton.Font = Enum.Font.GothamBold
 declineButton.Parent = requestFrame
 
 local declineCorner = Instance.new("UICorner")
-declineCorner.CornerRadius = UDim.new(0, 8)
+declineCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 declineCorner.Parent = declineButton
 
 -- Notification Frame (for messages)
 local notificationFrame = Instance.new("Frame")
 notificationFrame.Name = "NotificationFrame"
-notificationFrame.Size = UDim2.new(0, 300, 0, 60)
-notificationFrame.Position = UDim2.new(0.5, -150, 0, 150)
+notificationFrame.Size = UIScaleManager.scaleSize(300, 60, "menuElements")
+notificationFrame.Position = UIScaleManager.getPositionWithSafeArea("topCenter", 0, 150)
+notificationFrame.AnchorPoint = Vector2.new(0.5, 0)
 notificationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 notificationFrame.BackgroundTransparency = 0.2
 notificationFrame.BorderSizePixel = 2
@@ -131,19 +180,66 @@ notificationFrame.Visible = false
 notificationFrame.Parent = screenGui
 
 local notifCorner = Instance.new("UICorner")
-notifCorner.CornerRadius = UDim.new(0, 10)
+notifCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 notifCorner.Parent = notificationFrame
 
 local notificationLabel = Instance.new("TextLabel")
-notificationLabel.Size = UDim2.new(1, -20, 1, -20)
-notificationLabel.Position = UDim2.new(0, 10, 0, 10)
+notificationLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(20, "padding"))
+notificationLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 notificationLabel.BackgroundTransparency = 1
 notificationLabel.Text = "Notification"
 notificationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-notificationLabel.TextSize = 14
+notificationLabel.TextSize = getScaledTextSize(14)
 notificationLabel.Font = Enum.Font.Gotham
 notificationLabel.TextWrapped = true
 notificationLabel.Parent = notificationFrame
+
+-- Function to update UI scaling when screen size changes
+local function updateUIScaling()
+	mainFrame.Size = UIScaleManager.scaleSize(250, 300, "menuElements", "menuDialog")
+	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 120)
+	mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
+	mainCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	
+	titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
+	titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
+	titleLabel.TextSize = getScaledTextSize(20)
+	
+	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
+	mainCloseButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
+	mainCloseButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
+	mainCloseButton.TextSize = getScaledTextSize(18)
+	mainCloseCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
+	
+	playerList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(55, "padding"))
+	playerList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(45, "padding"))
+	playerList.ScrollBarThickness = getScaledValue(6, "padding")
+	listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
+	
+	requestFrame.Size = UIScaleManager.scaleSize(300, 120, "menuElements")
+	requestCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	requestLabel.TextSize = getScaledTextSize(16)
+	
+	local newButtonHeight = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
+	local newButtonWidth = getScaledValue(120, "menuElements")
+	acceptButton.Size = UDim2.new(0, newButtonWidth, 0, newButtonHeight)
+	acceptButton.Position = UDim2.new(0, getScaledValue(15, "padding"), 0, getScaledValue(70, "padding"))
+	acceptButton.TextSize = getScaledTextSize(16)
+	acceptCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+	
+	declineButton.Size = UDim2.new(0, newButtonWidth, 0, newButtonHeight)
+	declineButton.Position = UDim2.new(1, -newButtonWidth - getScaledValue(15, "padding"), 0, getScaledValue(70, "padding"))
+	declineButton.TextSize = getScaledTextSize(16)
+	declineCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+	
+	notificationFrame.Size = UIScaleManager.scaleSize(300, 60, "menuElements")
+	notificationFrame.Position = UIScaleManager.getPositionWithSafeArea("topCenter", 0, 150)
+	notifCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+	notificationLabel.TextSize = getScaledTextSize(14)
+end
+
+-- Register for scale changes
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- State
 local myAlliances = {}

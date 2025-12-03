@@ -11,6 +11,7 @@ local GameManager = require(script.Parent.GameManager)
 local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
+local SprintService = require(script.Parent.SprintService)
 
 print("=== AwavePuzz Server Starting ===")
 
@@ -28,6 +29,10 @@ print("GameManager initialized")
 
 -- Get the shared PlayerManager from the GameManager
 local playerManager = gameManager:getPlayerManager()
+
+-- Sprint service (server-authoritative stamina management)
+local sprintService = SprintService.new(playerManager)
+print("SprintService initialized")
 
 -- Cure service (needs reference to game manager & player manager)
 local cureService = CureService.new(gameManager, playerManager)
@@ -65,17 +70,21 @@ Players.PlayerAdded:Connect(function(player)
 	allianceService:initializePlayer(player)
 	cureService:initializePlayer(player)
 	puzzleService:initializePlayer(player)
+	sprintService:initializePlayer(player)
 
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
 		print(player.Name .. "'s character loaded")
 
+		-- Initialize sprint service for new character
+		sprintService:onCharacterAdded(player, character)
+
 		local humanoid = character:WaitForChild("Humanoid", 5)
 		if humanoid then
 			humanoid.Died:Connect(function()
 				print(player.Name .. " died")
-				-- GameManager will typically delegate lose-condition checks to GameServer / PlayerManager
-				gameManager:checkLoseConditions()
+				-- Handle player death - puts them in spectator mode and checks lose conditions
+				gameManager:onPlayerDied(player)
 			end)
 		end
 	end)
@@ -87,6 +96,7 @@ Players.PlayerRemoving:Connect(function(player)
 	-- Clean up player from services
 	gameManager:onPlayerRemoving(player)
 	allianceService:removePlayer(player)
+	sprintService:removePlayer(player)
 end)
 
 ----------------------------------------------------------------
@@ -116,9 +126,9 @@ task.spawn(function()
 		task.wait(1)
 	until #Players:GetPlayers() >= 1
 
-	print("Starting game with " .. #Players:GetPlayers() .. " players")
+	print("Starting lobby with " .. #Players:GetPlayers() .. " players")
 
-	-- GameManager's internal update loop should transition from WAITING to IN_PROGRESS
+	-- GameManager's internal update loop should transition from WAITING to LOBBY
 	-- when conditions are met (player count, etc.)
 end)
 
