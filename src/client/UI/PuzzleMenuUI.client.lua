@@ -161,7 +161,7 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updatePuzzleMenuScaling)
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- Function to create puzzle button
 local function createPuzzleButton(componentName, puzzleConfig, available, componentCount)
