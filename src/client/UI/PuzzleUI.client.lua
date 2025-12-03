@@ -198,7 +198,7 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updatePuzzleUIScaling)
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- State
 local currentPuzzle = nil
