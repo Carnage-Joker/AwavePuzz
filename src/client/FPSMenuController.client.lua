@@ -15,6 +15,11 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 
+-- Utility: clamp function
+local function clamp(value, min, max)
+	return math.max(min, math.min(max, value))
+end
+
 --------------------------------------------------------------------------------
 -- STATE
 --------------------------------------------------------------------------------
@@ -415,7 +420,7 @@ local function adjustValue(direction)
 		local currentValue = tonumber(item.valueLabel.Text) or options.default
 		local step = options.step or 1
 		local newValue = currentValue + (direction * step)
-		newValue = math.clamp(newValue, options.min, options.max)
+		newValue = clamp(newValue, options.min, options.max)
 		item.valueLabel.Text = tostring(newValue)
 		
 		if item.callback then

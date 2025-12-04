@@ -1,10 +1,39 @@
-# AwavePuzz - Zombie Wave Survival Game
+# AwavePuzz - Zombie Wave Survival FPS
 
-A multiplayer Roblox zombie survival game featuring wave-based combat, cure-crafting puzzles, and alliance systems.
+A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, and alliance systems. Now with full FPS mechanics including recoil, ADS, dynamic crosshairs, and more!
 
 ## 🎮 Game Overview
 
-**AwavePuzz** is a cooperative survival game where up to 8 players defend a base against increasingly difficult waves of zombies. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
+**AwavePuzz** is a cooperative survival FPS where up to 8 players defend a base against increasingly difficult waves of zombies. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
+
+## 🔫 NEW: First-Person Shooter Features
+
+### True First-Person Experience
+- **First-person camera** locked to the player's head
+- **Mouse-locked gameplay** - no cursor during combat
+- **Configurable FOV** (50-120 degrees)
+- **Mouse sensitivity** and invert Y-axis options
+
+### Modern FPS Gunplay
+- **Recoil system** - Camera kick with recovery
+- **Spread system** - Dynamic accuracy based on movement/firing
+- **ADS (Aim Down Sights)** - Right-click for precision aiming
+- **Fire modes** - Semi-auto, burst, and full-auto weapons
+- **Reload system** - Manual reload with R, auto-reload when empty
+- **Magazine + reserve ammo** tracking
+
+### Polished FPS HUD
+- **Dynamic crosshair** that expands with spread
+- **Ammo counter** with low-ammo warnings
+- **Hitmarkers** for hits, headshots, and kills
+- **Damage vignette** and low-health indicators
+
+### Controller-Friendly Menus
+- **Keyboard navigation** - No mouse required
+- **Settings menu** - Sensitivity, FOV, volume controls
+- **Controls display** - In-game keybind reference
+
+See [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) for complete FPS system documentation.
 
 ## 🌟 Key Features
 
@@ -81,18 +110,28 @@ A multiplayer Roblox zombie survival game featuring wave-based combat, cure-craf
 ```
 AwavePuzz/
 ├── src/
-│   ├── server/          # Server-side game logic
-│   │   ├── GameServer.lua         # Main game controller
+│   ├── server/                    # Server-side game logic
+│   │   ├── GameManager.lua        # Main game controller
 │   │   ├── PlayerManager.lua      # Player data and health management
 │   │   ├── WaveManager.lua        # Wave spawning and progression
 │   │   ├── BaseManager.lua        # Base health and defense
-│   │   ├── CureCraftingManager.lua # Cure puzzle system
-│   │   └── ResourceSpawner.lua    # Resource spawn management
-│   ├── client/          # Client-side UI and controls
-│   │   └── ClientController.lua   # Client game controller
-│   └── shared/          # Shared modules
-│       ├── GameConfig.lua         # Game configuration and constants
-│       └── GameState.lua          # Game state management
+│   │   ├── WeaponService.lua      # Weapon system
+│   │   ├── FPSWeaponService.lua   # FPS ammo/reload validation
+│   │   └── ...                    # Other services
+│   ├── client/                    # Client-side UI and controls
+│   │   ├── FirstPersonCamera.client.lua      # FPS camera controller
+│   │   ├── FPSMovementController.client.lua  # Movement with crouch/sprint
+│   │   ├── FPSWeaponController.client.lua    # Weapon mechanics
+│   │   ├── FPSMenuController.client.lua      # Pause/settings menus
+│   │   ├── FPSAudioController.client.lua     # Sound management
+│   │   └── UI/
+│   │       ├── FPSHUD.client.lua             # Crosshair, ammo, hitmarkers
+│   │       └── ...                           # Other UI scripts
+│   └── shared/                    # Shared modules
+│       ├── GameConfig.lua         # Game configuration
+│       ├── FPSConfig.lua          # FPS-specific configuration
+│       └── ...                    # Other configs
+├── FPS_DOCUMENTATION.md           # FPS system documentation
 ├── README.md
 └── LICENSE
 ```
@@ -116,6 +155,24 @@ AwavePuzz/
   - Stamina depletes while sprinting
   - Stamina regenerates when not sprinting (after 1 second delay)
   - Visual stamina bar in HUD
+- **Crouch**: Toggle **Left Ctrl** (slower speed, smaller hitbox)
+
+### FPS Controls
+
+| Action | Key |
+|--------|-----|
+| Move | W/A/S/D |
+| Look | Mouse |
+| Fire | Left Click |
+| Aim (ADS) | Right Click |
+| Reload | R |
+| Sprint | Left Shift (hold) |
+| Crouch | Left Ctrl (toggle) |
+| Jump | Space |
+| Weapon Slots | 1, 2, 3, 4 |
+| Shop | B |
+| Alliance Menu | Tab |
+| Pause Menu | Escape |
 
 ### Base Mechanics
 - Starting health: 1000 HP
@@ -136,6 +193,12 @@ AwavePuzz/
 - Additional weapons: SMG, Shotgun, Rifle
 - Damage/Firerate upgrade chips apply permanent buffs per player
 - Raycast validation runs on the server to prevent exploits
+- **FPS Weapon Features:**
+  - Recoil with camera kick and recovery
+  - Dynamic spread based on movement/firing
+  - ADS (Aim Down Sights) for precision
+  - Magazine + reserve ammo system
+  - Manual reload with R key
 
 ### Map Rotation
 - `ServerStorage.Maps` can contain themed arenas (e.g., Research Outpost, Desert Ruins)
@@ -229,6 +292,7 @@ This game is built using:
 
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
+- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ NEW: FPS system documentation and tuning guide
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
 - **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements documentation
@@ -240,6 +304,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🎯 Current Features
 
 The game currently includes:
+- ✅ **First-Person Shooter Experience** (NEW!)
+  - First-person camera with configurable FOV
+  - Recoil, spread, and ADS mechanics
+  - Dynamic crosshair and hitmarkers
+  - Controller-friendly menus
 - ✅ Multiplayer support (up to 8 players)
 - ✅ Wave-based zombie combat with progressive difficulty
 - ✅ Server-authoritative raycast weapon system
@@ -256,9 +325,10 @@ The game currently includes:
 For detailed information, see:
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
+- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ NEW: FPS system documentation and tuning guide
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
-- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - ✨ NEW: Puzzle mechanics, types, and integration guide
+- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - Puzzle mechanics, types, and integration guide
 
 ## 🤔 Contributing
 

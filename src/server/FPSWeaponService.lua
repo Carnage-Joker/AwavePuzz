@@ -207,18 +207,55 @@ function FPSWeaponService:isHeadshot(hitPart)
 end
 
 -- Body part damage multiplier
+-- Uses lookup table for cleaner code
+local BODY_PARTS = {
+	-- Head parts
+	head = "head",
+	-- Torso parts (R15 and R6)
+	torso = "body",
+	uppertorso = "body",
+	lowertorso = "body",
+	humanoidrootpart = "body",
+	-- Arms
+	leftupperarm = "limb",
+	leftlowerarm = "limb",
+	lefthand = "limb",
+	rightupperarm = "limb",
+	rightlowerarm = "limb",
+	righthand = "limb",
+	["left arm"] = "limb",
+	["right arm"] = "limb",
+	-- Legs
+	leftupperleg = "limb",
+	leftlowerleg = "limb",
+	leftfoot = "limb",
+	rightupperleg = "limb",
+	rightlowerleg = "limb",
+	rightfoot = "limb",
+	["left leg"] = "limb",
+	["right leg"] = "limb",
+}
+
 function FPSWeaponService:getDamageMultiplier(hitPart)
 	if not hitPart then return 1.0 end
 	
 	local partName = hitPart.Name:lower()
 	
-	if partName == "head" or partName:find("head") ~= nil then
+	-- Check direct match first
+	local partType = BODY_PARTS[partName]
+	
+	-- Fallback: check if name contains "head"
+	if not partType and partName:find("head") then
+		partType = "head"
+	end
+	
+	-- Return multiplier based on part type
+	if partType == "head" then
 		return FPSConfig.Weapons.HeadshotMultiplier
-	elseif partName == "torso" or partName == "uppertorso" or partName == "lowertorso" 
-		or partName == "humanoidrootpart" then
+	elseif partType == "body" then
 		return FPSConfig.Weapons.BodyshotMultiplier
 	else
-		-- Limbs
+		-- Limbs or unknown parts
 		return FPSConfig.Weapons.LimbshotMultiplier
 	end
 end
