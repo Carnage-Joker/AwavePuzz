@@ -733,6 +733,10 @@ function GameManager:getPlayerManager()
 	return self.playerManager
 end
 
+function GameManager:getWeaponService()
+	return self.weaponService
+end
+
 function GameManager:getGameState()
 	return {
 		state = self.currentState,

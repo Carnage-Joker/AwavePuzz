@@ -60,10 +60,16 @@ function WeaponService.new(playerManager, allianceService)
 	local self = setmetatable({}, WeaponService)
 	self.playerManager = playerManager
 	self.allianceService = allianceService
+	self.fpsWeaponService = nil  -- Set via setFPSWeaponService
 	self.playerWeaponState = {} -- userId -> state
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
 	return self
+end
+
+-- Set FPSWeaponService reference for ammo validation
+function WeaponService:setFPSWeaponService(fpsWeaponService)
+	self.fpsWeaponService = fpsWeaponService
 end
 
 function WeaponService:setupRemoteEvents()
@@ -200,6 +206,24 @@ function WeaponService:handleWeaponFire(player, payload)
 	local now = tick()
 	if now - (state.lastShot or 0) < stats.FireRate then
 		return -- still on cooldown
+	end
+
+	-- SECURITY: Validate and consume ammo server-side (if FPSWeaponService is available)
+	if self.fpsWeaponService then
+		-- Check if player is reloading
+		if self.fpsWeaponService:isReloading(player) then
+			return -- Can't fire while reloading
+		end
+		
+		-- Validate ammo availability
+		if not self.fpsWeaponService:validateShot(player, weaponId) then
+			return -- No ammo
+		end
+		
+		-- Consume ammo server-side
+		if not self.fpsWeaponService:consumeAmmo(player, weaponId, 1) then
+			return -- Failed to consume ammo
+		end
 	end
 
 	state.lastShot = now
