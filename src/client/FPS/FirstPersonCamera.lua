@@ -59,7 +59,7 @@ function FirstPersonCamera:_bindCharacter(character)
         local hrp = character:WaitForChild("HumanoidRootPart", 5)
         if hrp then
                 local lookVector = hrp.CFrame.LookVector
-                self.yaw = math.deg(math.atan2(-lookVector.Z, -lookVector.X))
+                self.yaw = math.deg(math.atan2(-lookVector.X, -lookVector.Z))
         end
 end
 
