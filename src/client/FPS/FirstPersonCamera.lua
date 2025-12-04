@@ -77,7 +77,7 @@ function FirstPersonCamera:_update(dt)
         self._deltaAccumulator = Vector2.new(0, 0)
 
         if smooth > 0 then
-                delta = delta:Lerp(Vector2.new(), 1 - clamp(dt / smooth, 0, 1))
+                delta = delta * (1 - clamp(smooth, 0, 1))
         end
 
         self.yaw -= delta.X * sensitivity
