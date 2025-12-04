@@ -8,7 +8,7 @@ local FPSConfig = {
         MaxFOV = 110,
 
         MouseSensitivity = 0.15, -- Base multiplier for mouse delta
-        MouseSmoothing = 0.15, -- 0 disables smoothing, 0.05-0.2 recommended
+        MouseSmoothing = 0.02, -- 0 disables smoothing, 0.01-0.04 recommended (higher values cause input lag)
         PitchClamp = 80, -- Max up/down angle in degrees
 
         CameraOffset = Vector3.new(0, 0, 0), -- Applied after head position
