@@ -388,9 +388,11 @@ local function updateLowHealthVignette(healthPercent)
 	if healthPercent <= FPSConfig.HUD.LowHealthThreshold then
 		if not lowHealthPulseActive then
 			lowHealthPulseActive = true
-			-- Cancel any existing pulse thread
+			-- Cancel any existing pulse thread with error handling
 			if lowHealthPulseThread then
-				task.cancel(lowHealthPulseThread)
+				pcall(function()
+					task.cancel(lowHealthPulseThread)
+				end)
 				lowHealthPulseThread = nil
 			end
 			-- Start pulsing with iteration limit
@@ -417,9 +419,11 @@ local function updateLowHealthVignette(healthPercent)
 		end
 	else
 		lowHealthPulseActive = false
-		-- Cancel the pulse thread if it exists
+		-- Cancel the pulse thread if it exists with error handling
 		if lowHealthPulseThread then
-			task.cancel(lowHealthPulseThread)
+			pcall(function()
+				task.cancel(lowHealthPulseThread)
+			end)
 			lowHealthPulseThread = nil
 		end
 		lowHealthVignette.BackgroundTransparency = 1
