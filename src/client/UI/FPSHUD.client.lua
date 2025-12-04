@@ -379,6 +379,8 @@ lowHealthVignette.ZIndex = -1
 lowHealthVignette.Parent = screenGui
 
 local lowHealthPulseActive = false
+local lowHealthPulseThread = nil
+local MAX_PULSE_ITERATIONS = 1000 -- Safety limit to prevent infinite loops
 
 local function updateLowHealthVignette(healthPercent)
 	if not FPSConfig.HUD.LowHealthVignette then return end
@@ -386,9 +388,16 @@ local function updateLowHealthVignette(healthPercent)
 	if healthPercent <= FPSConfig.HUD.LowHealthThreshold then
 		if not lowHealthPulseActive then
 			lowHealthPulseActive = true
-			-- Start pulsing
-			task.spawn(function()
-				while lowHealthPulseActive do
+			-- Cancel any existing pulse thread
+			if lowHealthPulseThread then
+				task.cancel(lowHealthPulseThread)
+				lowHealthPulseThread = nil
+			end
+			-- Start pulsing with iteration limit
+			lowHealthPulseThread = task.spawn(function()
+				local iterations = 0
+				while lowHealthPulseActive and iterations < MAX_PULSE_ITERATIONS do
+					iterations = iterations + 1
 					local tweenIn = TweenService:Create(lowHealthVignette, TweenInfo.new(0.5), {
 						BackgroundTransparency = 0.7
 					})
@@ -403,10 +412,16 @@ local function updateLowHealthVignette(healthPercent)
 					tweenOut:Play()
 					tweenOut.Completed:Wait()
 				end
+				lowHealthPulseThread = nil
 			end)
 		end
 	else
 		lowHealthPulseActive = false
+		-- Cancel the pulse thread if it exists
+		if lowHealthPulseThread then
+			task.cancel(lowHealthPulseThread)
+			lowHealthPulseThread = nil
+		end
 		lowHealthVignette.BackgroundTransparency = 1
 	end
 end

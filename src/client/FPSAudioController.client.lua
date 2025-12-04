@@ -14,11 +14,6 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 
--- Utility: clamp function (uses native math.clamp in Roblox Luau)
-local function clamp(value, min, max)
-	return math.max(min, math.min(max, value))
-end
-
 --------------------------------------------------------------------------------
 -- SOUND CONFIGURATION
 -- Replace these placeholder IDs with actual Roblox sound asset IDs
@@ -285,7 +280,7 @@ local function updateFootsteps()
 			-- Adjust interval based on speed
 			local speed = humanoid.WalkSpeed
 			footstepInterval = 0.5 - (speed / 100) -- Faster steps at higher speeds
-			footstepInterval = clamp(footstepInterval, 0.2, 0.6)
+			footstepInterval = math.clamp(footstepInterval, 0.2, 0.6)
 			
 			FPSAudioController.playFootstep(material)
 		end

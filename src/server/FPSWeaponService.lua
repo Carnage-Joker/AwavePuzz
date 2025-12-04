@@ -19,6 +19,9 @@ function FPSWeaponService.new(playerManager, weaponService)
 	-- Player ammo state: userId -> { weaponId -> { current, reserve, max } }
 	self.playerAmmo = {}
 	
+	-- Player reload state: userId -> { isReloading, reloadStartTime, weaponId }
+	self.playerReloadState = {}
+	
 	-- Remote events
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
@@ -70,7 +73,9 @@ function FPSWeaponService:initializePlayer(player)
 end
 
 function FPSWeaponService:removePlayer(player)
-	self.playerAmmo[player.UserId] = nil
+	local userId = player.UserId
+	self.playerAmmo[userId] = nil
+	self.playerReloadState[userId] = nil
 end
 
 function FPSWeaponService:initializeWeaponAmmo(player, weaponId)
@@ -138,13 +143,45 @@ end
 function FPSWeaponService:handleReload(player, payload)
 	if typeof(payload) ~= "table" then return end
 	
+	local userId = player.UserId
 	local weaponId = payload.weaponId
+	
+	-- If no weaponId provided, use equipped weapon
 	if not weaponId then
 		weaponId = self.playerManager:getEquippedWeapon(player)
 	end
 	
 	if not weaponId then return end
 	
+	-- SECURITY: Validate that the player owns this weapon
+	if not self.playerManager:ownsWeapon(player, weaponId) then
+		warn(string.format("[FPSWeaponService] %s tried to reload weapon they don't own: %s",
+			player.Name, weaponId))
+		return
+	end
+	
+	-- SECURITY: Validate that this is the currently equipped weapon
+	local equippedWeapon = self.playerManager:getEquippedWeapon(player)
+	if equippedWeapon ~= weaponId then
+		warn(string.format("[FPSWeaponService] %s tried to reload non-equipped weapon: %s (equipped: %s)",
+			player.Name, weaponId, tostring(equippedWeapon)))
+		return
+	end
+	
+	-- SECURITY: Check if player is already reloading (prevent spam)
+	local reloadState = self.playerReloadState[userId]
+	if reloadState and reloadState.isReloading then
+		local elapsed = tick() - reloadState.reloadStartTime
+		local stats = FPSConfig.getWeaponStats(reloadState.weaponId)
+		local reloadTime = stats and stats.ReloadTime or 2.0
+		
+		-- If still within reload time, ignore the request
+		if elapsed < reloadTime then
+			return
+		end
+	end
+	
+	-- Get or initialize ammo for this weapon (only for weapons player owns)
 	local ammo = self:getAmmo(player, weaponId)
 	if not ammo then
 		self:initializeWeaponAmmo(player, weaponId)
@@ -156,20 +193,57 @@ function FPSWeaponService:handleReload(player, payload)
 	if ammo.current >= ammo.max then return end
 	if ammo.reserve <= 0 then return end
 	
-	-- Calculate ammo to transfer
-	local ammoNeeded = ammo.max - ammo.current
-	local ammoToAdd = math.min(ammoNeeded, ammo.reserve)
+	-- Get weapon stats for reload timing
+	local stats = FPSConfig.getWeaponStats(weaponId)
+	local reloadTime = stats and stats.ReloadTime or 2.0
 	
-	-- Server validates reload timing through weapon service cooldowns
-	-- For now, we trust the client timing and update state
-	ammo.current = ammo.current + ammoToAdd
-	ammo.reserve = ammo.reserve - ammoToAdd
+	-- Mark player as reloading
+	self.playerReloadState[userId] = {
+		isReloading = true,
+		reloadStartTime = tick(),
+		weaponId = weaponId,
+	}
 	
-	-- Send update to client
-	self:sendAmmoUpdate(player, weaponId)
-	
-	print(string.format("[FPSWeaponService] %s reloaded %s: %d/%d",
-		player.Name, weaponId, ammo.current, ammo.reserve))
+	-- Schedule the actual ammo transfer after reload time
+	task.delay(reloadTime, function()
+		-- Verify player is still valid and still reloading
+		if not player or not player.Parent then return end
+		
+		local currentReloadState = self.playerReloadState[userId]
+		if not currentReloadState or not currentReloadState.isReloading then return end
+		if currentReloadState.weaponId ~= weaponId then return end
+		
+		-- Verify player still has this weapon equipped
+		local currentEquipped = self.playerManager:getEquippedWeapon(player)
+		if currentEquipped ~= weaponId then
+			self.playerReloadState[userId] = nil
+			return
+		end
+		
+		-- Re-fetch ammo state (may have changed)
+		local currentAmmo = self:getAmmo(player, weaponId)
+		if not currentAmmo then
+			self.playerReloadState[userId] = nil
+			return
+		end
+		
+		-- Calculate ammo to transfer
+		local ammoNeeded = currentAmmo.max - currentAmmo.current
+		local ammoToAdd = math.min(ammoNeeded, currentAmmo.reserve)
+		
+		-- Transfer ammo
+		currentAmmo.current = currentAmmo.current + ammoToAdd
+		currentAmmo.reserve = currentAmmo.reserve - ammoToAdd
+		
+		-- Clear reload state
+		self.playerReloadState[userId] = nil
+		
+		-- Send update to client
+		self:sendAmmoUpdate(player, weaponId)
+		
+		print(string.format("[FPSWeaponService] %s reloaded %s: %d/%d",
+			player.Name, weaponId, currentAmmo.current, currentAmmo.reserve))
+	end)
 end
 
 function FPSWeaponService:sendAmmoUpdate(player, weaponId)
@@ -183,7 +257,23 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 	})
 end
 
+-- Cancel reload when player switches weapons or dies
+function FPSWeaponService:cancelReload(player)
+	local userId = player.UserId
+	self.playerReloadState[userId] = nil
+end
+
+-- Check if player is currently reloading
+function FPSWeaponService:isReloading(player)
+	local userId = player.UserId
+	local state = self.playerReloadState[userId]
+	return state and state.isReloading or false
+end
+
 function FPSWeaponService:onWeaponEquipped(player, weaponId)
+	-- Cancel any ongoing reload when switching weapons
+	self:cancelReload(player)
+	
 	-- Initialize ammo if this is a new weapon
 	local userId = player.UserId
 	if not self.playerAmmo[userId] then
