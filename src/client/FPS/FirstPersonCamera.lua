@@ -17,7 +17,7 @@ function FirstPersonCamera.new(config)
         self.config = config
         self.yaw = 0
         self.pitch = 0
-        self._deltaAccumulator = Vector2.new(0, 0)
+        self._pendingDelta = Vector2.new(0, 0)
         self._connections = {}
         self._character = nil
         self._head = nil
@@ -43,7 +43,7 @@ function FirstPersonCamera:_bindInput()
                         return
                 end
                 if input.UserInputType == Enum.UserInputType.MouseMovement then
-                        self._deltaAccumulator += Vector2.new(input.Delta.x, input.Delta.y)
+                        self._pendingDelta += Vector2.new(input.Delta.x, input.Delta.y)
                 end
         end)
 end
@@ -80,8 +80,8 @@ function FirstPersonCamera:_update(dt)
         local smooth = self.config.MouseSmoothing or 0
         local sensitivity = self.config.MouseSensitivity or 0.1
 
-        local delta = self._deltaAccumulator
-        self._deltaAccumulator = Vector2.new(0, 0)
+        local delta = self._pendingDelta
+        self._pendingDelta = Vector2.new(0, 0)
 
         if smooth > 0 then
                 delta = delta * (1 - clamp(smooth, 0, 1))
