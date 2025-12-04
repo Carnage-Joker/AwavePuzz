@@ -255,7 +255,7 @@ The game currently includes:
 
 - The new first-person camera runs client-side (see `src/client/FPS/FirstPersonController.client.lua`).
 - Tune FOV, mouse sensitivity, smoothing, and head offsets in `src/shared/FPSConfig.lua`.
-- Mouse cursor is hidden and locked to centre during play; Roblox shift-lock is suppressed.
+- Mouse cursor is hidden and locked to center during play; Roblox shift-lock is suppressed.
 - Characters are locally hidden in first-person to reduce clipping—disable by setting `HideCharacterInFirstPerson` to `false` in the config.
 - To adjust how quickly the camera responds, tweak `MouseSensitivity` (base multiplier) and `MouseSmoothing` (lerp window seconds) in `FPSConfig`.
 
