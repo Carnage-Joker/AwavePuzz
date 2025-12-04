@@ -12,6 +12,7 @@ local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
 local SprintService = require(script.Parent.SprintService)
+local FPSWeaponService = require(script.Parent.FPSWeaponService)
 
 print("=== AwavePuzz Server Starting ===")
 
@@ -27,8 +28,17 @@ print("AllianceService initialized")
 local gameManager = GameManager.new(allianceService)
 print("GameManager initialized")
 
--- Get the shared PlayerManager from the GameManager
+-- Get the shared PlayerManager and WeaponService from the GameManager
 local playerManager = gameManager:getPlayerManager()
+local weaponService = gameManager:getWeaponService()
+
+-- FPS Weapon Service (server-authoritative ammo and reload management)
+local fpsWeaponService = FPSWeaponService.new(playerManager, weaponService)
+print("FPSWeaponService initialized")
+
+-- Link FPSWeaponService to WeaponService for ammo validation
+weaponService:setFPSWeaponService(fpsWeaponService)
+print("FPSWeaponService linked to WeaponService")
 
 -- Sprint service (server-authoritative stamina management)
 local sprintService = SprintService.new(playerManager)
@@ -71,6 +81,7 @@ Players.PlayerAdded:Connect(function(player)
 	cureService:initializePlayer(player)
 	puzzleService:initializePlayer(player)
 	sprintService:initializePlayer(player)
+	fpsWeaponService:initializePlayer(player)
 
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
@@ -83,6 +94,8 @@ Players.PlayerAdded:Connect(function(player)
 		if humanoid then
 			humanoid.Died:Connect(function()
 				print(player.Name .. " died")
+				-- Cancel any ongoing reload
+				fpsWeaponService:cancelReload(player)
 				-- Handle player death - puts them in spectator mode and checks lose conditions
 				gameManager:onPlayerDied(player)
 			end)
@@ -97,6 +110,7 @@ Players.PlayerRemoving:Connect(function(player)
 	gameManager:onPlayerRemoving(player)
 	allianceService:removePlayer(player)
 	sprintService:removePlayer(player)
+	fpsWeaponService:removePlayer(player)
 end)
 
 ----------------------------------------------------------------
