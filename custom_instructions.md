@@ -4,7 +4,7 @@
 - Refactor the Roblox project into a polished first-person shooter comparable in feel to modern titles (e.g., Call of Duty).
 - Convert the experience to a true first-person camera: head-locked view, optional viewmodel arms/weapon, configurable FOV and mouse sensitivity/smoothing, and hidden mouse cursor during gameplay.
 - Build a robust FPS character controller: WASD, jump, crouch, sprint (with stamina/cooldown), smooth transitions between movement states, ADS vs. hip-fire, with optional slide/vault/mantle and limited air control.
-- Implement modular weapon handling: per-weapon data (damage, fire rate, mag size, reload time, recoil/spread, ADS FOV, fire modes), server-authoritative damage/ammo/hit validation, recoil and spread differences for hip-fire/ADS, reload flow and cancelation, and optional semi/burst/auto modes.
+- Implement modular weapon handling: per-weapon data (damage, fire rate, mag size, reload time, recoil/spread, ADS FOV, fire modes), server-authoritative damage/ammo/hit validation, recoil and spread differences for hip-fire/ADS, reload flow and cancellation, and optional semi/burst/auto modes.
 - Add first-person viewmodel and animations: idle/walk/run/sprint, firing/recoil, reload, equip/unequip (and optional inspect), ensuring first-person-friendly placement and minimal clipping.
 - Design controller-friendly menus (main and pause) without free cursor: keyboard/controller navigation with clear selection states.
 - Build an FPS HUD: crosshair (with optional spread feedback), ammo counter, health indicator, weapon name/fire mode, hitmarkers (with headshot feedback), and optional minimap/radar/killfeed, scaling well on different resolutions.
