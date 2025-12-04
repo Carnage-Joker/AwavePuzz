@@ -583,5 +583,5 @@ Systems communicate via `BindableEvent`s in `PlayerGui.BindableEvents`:
 ---
 
 **Document Version:** 1.0
-**Last Updated:** 2024
+**Last Updated:** 2025
 **Author:** GitHub Copilot
