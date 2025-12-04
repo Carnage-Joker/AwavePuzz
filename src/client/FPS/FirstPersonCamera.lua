@@ -56,6 +56,13 @@ function FirstPersonCamera:_bindCharacter(character)
                         setCharacterTransparency(character, false)
         end
 
+        -- Restore visibility when character is removed (e.g., player dies)
+        self._connections[#self._connections + 1] = character.AncestryChanged:Connect(function(_, parent)
+                if not parent and self.config.HideCharacterInFirstPerson then
+                        setCharacterTransparency(character, true)
+                end
+        end)
+
         local hrp = character:WaitForChild("HumanoidRootPart", 5)
         if hrp then
                 local lookVector = hrp.CFrame.LookVector
@@ -122,6 +129,12 @@ function FirstPersonCamera:stop()
         end
         table.clear(self._connections)
         self._running = false
+
+        -- Restore character visibility before clearing references
+        if self._character and self.config.HideCharacterInFirstPerson then
+                setCharacterTransparency(self._character, true)
+        end
+
         self._character = nil
         self._head = nil
 
