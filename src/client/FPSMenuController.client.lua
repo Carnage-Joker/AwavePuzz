@@ -16,9 +16,6 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 
 -- Utility: clamp function
-local function clamp(value, min, max)
-	return math.max(min, math.min(max, value))
-end
 
 --------------------------------------------------------------------------------
 -- STATE
