@@ -330,6 +330,30 @@ function FPSAudioController.setLowHealth(lowHealth)
 	end
 end
 
+-- Cleanup heartbeat sound on character death/respawn
+local function cleanupHeartbeatSound()
+	if heartbeatSound then
+		heartbeatSound:Stop()
+		heartbeatSound:Destroy()
+		heartbeatSound = nil
+		isLowHealth = false
+	end
+end
+
+-- Connect to character events for cleanup
+local function onCharacterAdded(character)
+	cleanupHeartbeatSound()
+end
+
+local function onCharacterRemoving(character)
+	cleanupHeartbeatSound()
+end
+
+if player.Character then
+	onCharacterAdded(player.Character)
+end
+player.CharacterAdded:Connect(onCharacterAdded)
+player.CharacterRemoving:Connect(onCharacterRemoving)
 --------------------------------------------------------------------------------
 -- UI SOUNDS
 --------------------------------------------------------------------------------
