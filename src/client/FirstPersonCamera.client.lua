@@ -63,7 +63,7 @@ local userSettings = {
 --------------------------------------------------------------------------------
 
 local function clamp(value, min, max)
-	return math.max(min, math.min(max, value))
+	return math.clamp(value, min, max)
 end
 
 local function lerp(a, b, t)
