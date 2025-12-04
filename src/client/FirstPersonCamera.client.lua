@@ -392,8 +392,7 @@ local function initialize()
 	player.CharacterAdded:Connect(onCharacterAdded)
 	
 	-- Main update loop
-	RunService:BindToRenderStep("FirstPersonCamera", Enum.RenderPriority.Camera.Value, function()
-		local deltaTime = RunService.RenderStepped:Wait()
+	RunService:BindToRenderStep("FirstPersonCamera", Enum.RenderPriority.Camera.Value, function(deltaTime)
 		updateCamera(deltaTime)
 	end)
 	
