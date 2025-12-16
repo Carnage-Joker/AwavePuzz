@@ -94,15 +94,15 @@ local function updateUIScaling()
 	frame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, getInventoryYOffset())
 	frame.BackgroundTransparency = UIScaleManager.isMobile() and 0.45 or 0.35
 	frameCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
-	
+
 	title.Size = UDim2.new(1, -getScaledValue(10, "padding"), 0, getScaledValue(20, "padding"))
 	title.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	title.TextSize = getScaledTextSize(16)
-	
+
 	currencyLabel.Size = UDim2.new(1, -getScaledValue(10, "padding"), 0, getScaledValue(20, "padding"))
 	currencyLabel.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(30, "padding"))
 	currencyLabel.TextSize = getScaledTextSize(14)
-	
+
 	componentsLabel.Size = UDim2.new(1, -getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
 	componentsLabel.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(55, "padding"))
 	componentsLabel.TextSize = getScaledTextSize(13)
