@@ -1,5 +1,10 @@
 -- FirstPersonController.client.lua
--- Bootstraps the first-person camera on the local client and reconnects on respawn.
+-- Bootstrap script for the MODULAR first-person camera
+--
+-- NOTE: This bootstraps the FPS/FirstPersonCamera.lua module.
+-- This is an ALTERNATIVE to the standalone FirstPersonCamera.client.lua
+--
+-- See CODE_ARCHITECTURE.md for details on the dual camera setup.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

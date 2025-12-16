@@ -1,7 +1,18 @@
 -- CureCraftingManager.lua
--- Manages the puzzle system for crafting the cure
--- Integrated with PuzzleService, CureService and PuzzleUI for
--- component collection, progress tracking, and cure completion.
+-- SIMPLE cure progress calculator (HELPER/LEGACY)
+--
+-- NOTE: This is a SIMPLE helper class for cure progress calculation.
+-- The ACTIVE game uses CureService.lua which has full puzzle and alliance integration.
+--
+-- This manager is used by GameServer.lua (which is legacy).
+-- The main game flow uses CureService with GameManager.
+--
+-- Features:
+-- - Component collection tracking
+-- - Progress percentage calculation (0-100%)
+-- - Cure completion checking
+--
+-- See CODE_ARCHITECTURE.md for details on the active vs. legacy cure systems.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)

@@ -1,6 +1,18 @@
 -- FirstPersonCamera.client.lua
--- First-person camera controller with mouse lock, FOV transitions, and look smoothing
--- Handles camera positioning, character transparency, and input management
+-- STANDALONE first-person camera controller (PRIMARY implementation)
+--
+-- NOTE: This is the PRIMARY FPS camera implementation documented in FPS_DOCUMENTATION.md
+-- For a modular alternative, see FPS/FirstPersonCamera.lua + FPS/FirstPersonController.client.lua
+--
+-- Features:
+-- - First-person camera with mouse lock, FOV transitions, and look smoothing
+-- - Character transparency management (hides body in first-person)
+-- - Configurable sensitivity, FOV, and mouse smoothing
+-- - Recoil application support
+-- - Sprint and ADS FOV transitions
+--
+-- Architecture: Monolithic - all camera logic in this single file for simplicity
+-- See CODE_ARCHITECTURE.md for comparison with the modular camera alternative.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
