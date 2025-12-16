@@ -145,12 +145,7 @@ function AllianceService:removePlayer(player)
 	-- Also cancel any active betrayal timers where this player is the victim
 	if self.pendingBetrayals then
 		for betrayerId, betrayalData in pairs(self.pendingBetrayals) do
-			if betrayalData and betrayalData.victimId == userId then
-				-- Cancel the timer/connection if stored
-				if betrayalData.timer and typeof(betrayalData.timer) == "RBXScriptConnection" then
-					betrayalData.timer:Disconnect()
-				end
-
+			if betrayalData and betrayalData.victimUserId == userId then
 				-- Clear the pending betrayal and active window for the betrayer
 				self.pendingBetrayals[betrayerId] = nil
 				self.activeWindows[betrayerId] = nil
