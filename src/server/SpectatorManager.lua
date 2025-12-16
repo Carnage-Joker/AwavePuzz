@@ -183,10 +183,21 @@ function SpectatorManager:onPlayerDied(player)
 	self.deadPlayers[player.UserId] = true
 	
 	-- Mark player as spectating with an attribute for zombie AI to ignore
-	if player.Character then
-		player.Character:SetAttribute("IsSpectating", true)
+	-- Ensure that if the character respawns while the player is still dead,
+	-- the IsSpectating attribute is re-applied to the new character.
+	local function applySpectatorAttribute(character)
+		if self.deadPlayers[player.UserId] and character then
+			character:SetAttribute("IsSpectating", true)
+		end
 	end
 
+	if player.Character then
+		applySpectatorAttribute(player.Character)
+	end
+
+	player.CharacterAdded:Connect(function(newCharacter)
+		applySpectatorAttribute(newCharacter)
+	end)
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
 		targetUserId = target and target.UserId or nil,
