@@ -12,7 +12,6 @@ local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
 local SprintService = require(script.Parent.SprintService)
-local FPSWeaponService = require(script.Parent.FPSWeaponService)
 
 print("=== AwavePuzz Server Starting ===")
 
@@ -28,17 +27,36 @@ print("AllianceService initialized")
 local gameManager = GameManager.new(allianceService)
 print("GameManager initialized")
 
--- Get the shared PlayerManager and WeaponService from the GameManager
+-- Optional non-breaking wiring:
+-- If GameManager exposes getSpawner/getResourceSpawner, link them so resources can use zombie spawns.
+do
+	local ok1, spawner = pcall(function()
+		return gameManager.getSpawner and gameManager:getSpawner() or nil
+	end)
+	local ok2, resourceSpawner = pcall(function()
+		return gameManager.getResourceSpawner and gameManager:getResourceSpawner() or nil
+	end)
+
+	if ok1 and ok2 and spawner and resourceSpawner and spawner.setResourceSpawner then
+		spawner:setResourceSpawner(resourceSpawner)
+	end
+end
+
+-- Get shared PlayerManager and WeaponService from GameManager
 local playerManager = gameManager:getPlayerManager()
 local weaponService = gameManager:getWeaponService()
 
--- FPS Weapon Service (server-authoritative ammo and reload management)
-local fpsWeaponService = FPSWeaponService.new(playerManager, weaponService)
-print("FPSWeaponService initialized")
+-- Get FPS Weapon Service from GameManager (already created there)
+local fpsWeaponService = gameManager.fpsWeaponService
+print("FPSWeaponService retrieved from GameManager")
 
--- Link FPSWeaponService to WeaponService for ammo validation
-weaponService:setFPSWeaponService(fpsWeaponService)
-print("FPSWeaponService linked to WeaponService")
+-- Link FPSWeaponService to WeaponService for ammo validation (should already be linked)
+if not weaponService.fpsWeaponService then
+	weaponService:setFPSWeaponService(fpsWeaponService)
+	print("FPSWeaponService linked to WeaponService")
+else
+	print("FPSWeaponService already linked to WeaponService")
+end
 
 -- Sprint service (server-authoritative stamina management)
 local sprintService = SprintService.new(playerManager)
@@ -135,7 +153,7 @@ end)
 task.spawn(function()
 	print("Waiting for players...")
 
-	-- Simple “auto start when someone joins” behaviour
+	-- Simple "auto start when someone joins" behaviour
 	repeat
 		task.wait(1)
 	until #Players:GetPlayers() >= 1
