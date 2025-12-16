@@ -38,7 +38,7 @@ end
 
 function PuzzleService:setupRemoteEvents()
 	-- Use shared utility to create remote events
-	local events = RemoteEventUtil.getOrCreateEvents({
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"RequestPuzzle",      -- Client requests to start a puzzle
 		"SubmitPuzzleAnswer", -- Client submits puzzle solution
 		"PuzzleUpdate",       -- Server sends puzzle state updates
@@ -49,15 +49,15 @@ function PuzzleService:setupRemoteEvents()
 	})
 
 	-- Connect event handlers
-	events.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
+	self.remoteEvents.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
 		self:handlePuzzleRequest(player, componentName)
 	end)
 
-	events.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
+	self.remoteEvents.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
 		self:handlePuzzleAnswer(player, componentName, answer)
 	end)
 
-	events.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
+	self.remoteEvents.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
 		self:sendPuzzleProgress(player)
 	end)
 end

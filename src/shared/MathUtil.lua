@@ -22,6 +22,11 @@ end
 
 -- Map a value from one range to another
 function MathUtil.map(value, inMin, inMax, outMin, outMax)
+	-- Validate input range to prevent division by zero
+	if inMin == inMax then
+		warn("[MathUtil.map] Input range is zero (inMin == inMax). Returning outMin.")
+		return outMin
+	end
 	return outMin + (outMax - outMin) * ((value - inMin) / (inMax - inMin))
 end
 
