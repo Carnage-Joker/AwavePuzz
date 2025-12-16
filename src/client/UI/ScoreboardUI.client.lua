@@ -92,7 +92,7 @@ for i, header in ipairs(columnHeaders) do
 	for j = 1, i - 1 do
 		startX = startX + columnWidths[j]
 	end
-	
+
 	local headerCol = Instance.new("TextLabel")
 	headerCol.Name = "Header" .. i
 	headerCol.Size = UDim2.new(columnWidths[i], 0, 1, 0)
@@ -135,15 +135,15 @@ end)
 local function updateUIScaling()
 	scoreboardFrame.Size = UIScaleManager.scaleSize(500, 400, "menuElements", "menuDialog")
 	frameCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
-	
+
 	titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(40, "padding"))
 	titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 	titleLabel.TextSize = getScaledTextSize(28)
-	
+
 	headerFrame.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(35, "padding"))
 	headerFrame.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(55, "padding"))
 	headerCorner.CornerRadius = UDim.new(0, getScaledValue(6, "padding"))
-	
+
 	-- Update header column text sizes
 	for i = 1, 5 do
 		local col = headerFrame:FindFirstChild("Header" .. i)
@@ -151,7 +151,7 @@ local function updateUIScaling()
 			col.TextSize = getScaledTextSize(14)
 		end
 	end
-	
+
 	playerList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(110, "padding"))
 	playerList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(95, "padding"))
 	playerList.ScrollBarThickness = getScaledValue(6, "padding")
@@ -171,16 +171,16 @@ local function createPlayerRow(playerStats, layoutOrder)
 	rowFrame.BorderSizePixel = 0
 	rowFrame.LayoutOrder = layoutOrder
 	rowFrame.Parent = playerList
-	
+
 	local rowCorner = Instance.new("UICorner")
 	rowCorner.CornerRadius = UDim.new(0, 6)
 	rowCorner.Parent = rowFrame
-	
+
 	-- Highlight current player's row
 	if playerStats.userId == player.UserId then
 		rowFrame.BackgroundColor3 = Color3.fromRGB(60, 80, 60)
 	end
-	
+
 	-- Create columns
 	local values = {
 		playerStats.playerName or "Unknown",
@@ -189,13 +189,13 @@ local function createPlayerRow(playerStats, layoutOrder)
 		tostring(playerStats.roundWins or 0),
 		tostring(playerStats.componentsCollected or 0)
 	}
-	
+
 	for i, value in ipairs(values) do
 		local startX = 0
 		for j = 1, i - 1 do
 			startX = startX + columnWidths[j]
 		end
-		
+
 		local colLabel = Instance.new("TextLabel")
 		colLabel.Size = UDim2.new(columnWidths[i], 0, 1, 0)
 		colLabel.Position = UDim2.new(startX, 0, 0, 0)
@@ -206,7 +206,7 @@ local function createPlayerRow(playerStats, layoutOrder)
 		colLabel.Font = i == 1 and Enum.Font.GothamBold or Enum.Font.Gotham
 		colLabel.Parent = rowFrame
 	end
-	
+
 	return rowFrame
 end
 
@@ -218,7 +218,7 @@ local function updateScoreboard(data)
 			child:Destroy()
 		end
 	end
-	
+
 	-- Create new rows
 	for i, playerStats in ipairs(data) do
 		createPlayerRow(playerStats, i)
@@ -228,7 +228,7 @@ end
 -- Toggle scoreboard with TAB key
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
-	
+
 	if input.KeyCode == Enum.KeyCode.Tab then
 		tabHeld = true
 		-- Don't show TAB scoreboard if end of round display is active
@@ -267,21 +267,21 @@ local showScoreboardEvent = remoteEvents:WaitForChild("ShowScoreboard", REMOTE_E
 if showScoreboardEvent then
 	showScoreboardEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
-		
+
 		isEndOfRoundDisplay = true
-		
+
 		-- Update title for end of round
 		titleLabel.Text = "ROUND COMPLETE"
 		titleLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-		
+
 		-- Update scores if provided
 		if data.scores then
 			updateScoreboard(data.scores)
 		end
-		
+
 		-- Show the scoreboard
 		screenGui.Enabled = true
-		
+
 		-- Animate in from top
 		scoreboardFrame.Position = UDim2.new(0.5, -250, -0.5, 0)
 		TweenService:Create(scoreboardFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -295,16 +295,16 @@ local hideScoreboardEvent = remoteEvents:WaitForChild("HideScoreboard", REMOTE_E
 if hideScoreboardEvent then
 	hideScoreboardEvent.OnClientEvent:Connect(function()
 		isEndOfRoundDisplay = false
-		
+
 		-- Reset title
 		titleLabel.Text = "SCOREBOARD"
 		titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-		
+
 		-- Animate out
 		TweenService:Create(scoreboardFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
 			Position = UDim2.new(0.5, -250, 1.5, 0)
 		}):Play()
-		
+
 		task.delay(0.3, function()
 			-- Only hide if TAB isn't being held
 			if not tabHeld then
@@ -328,11 +328,11 @@ task.delay(3, function()
 	hint.TextSize = 14
 	hint.Font = Enum.Font.Gotham
 	hint.Parent = screenGui
-	
+
 	local hintCorner = Instance.new("UICorner")
 	hintCorner.CornerRadius = UDim.new(0, 8)
 	hintCorner.Parent = hint
-	
+
 	task.wait(5)
 	hint:Destroy()
 end)
