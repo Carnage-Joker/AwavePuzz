@@ -23,7 +23,9 @@ task.spawn(function()
 	local success, cam = pcall(function()
 		return require(player.PlayerScripts:WaitForChild("FirstPersonCamera.client", 5))
 	end)
-	if not success then
+	if success then
+		FirstPersonCamera = cam
+	else
 		-- Camera module runs as a separate script, communicate via events
 		FirstPersonCamera = nil
 	end
@@ -48,6 +50,9 @@ end
 --------------------------------------------------------------------------------
 
 local FPSMovementController = {}
+
+-- internal bindable reference for stamina → HUD
+FPSMovementController._staminaBindable = nil
 
 -- Movement state
 local isSprinting = false
@@ -97,15 +102,15 @@ end
 local function checkGrounded(character)
 	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	
+
 	if not humanoidRootPart or not humanoid then
 		return true
 	end
-	
+
 	-- Use humanoid floor material as primary check
 	local floorMaterial = humanoid.FloorMaterial
 	isGrounded = floorMaterial ~= Enum.Material.Air
-	
+
 	return isGrounded
 end
 
@@ -115,18 +120,18 @@ end
 
 local function calculateMoveSpeed(humanoid)
 	local baseSpeed = FPSConfig.Movement.WalkSpeed
-	
+
 	-- Priority: Crouch > ADS > Sprint > Walk
 	if isCrouching then
 		return FPSConfig.Movement.CrouchSpeed
 	end
-	
+
 	-- Note: ADS speed is handled by weapon controller
-	
+
 	if isSprinting and currentStamina > 0 then
 		return FPSConfig.Movement.SprintSpeed
 	end
-	
+
 	return baseSpeed
 end
 
@@ -137,21 +142,21 @@ end
 local function updateSprint(deltaTime)
 	local character = player.Character
 	if not character then return end
-	
+
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	
+
 	-- Check if we can sprint
-	local canSprint = wantsToSprint and 
-	                  isGrounded and 
-	                  isMoving and 
-	                  not isCrouching and 
-	                  currentStamina > 0 and
-	                  keysHeld.forward -- Only sprint when moving forward
-	
+	local canSprint = wantsToSprint
+		and isGrounded
+		and isMoving
+		and not isCrouching
+		and currentStamina > 0
+		and keysHeld.forward -- Only sprint when moving forward
+
 	local wasSprinting = isSprinting
 	isSprinting = canSprint
-	
+
 	-- Update camera FOV if sprint state changed
 	if wasSprinting ~= isSprinting then
 		-- Broadcast sprint state change via bindable if needed
@@ -163,7 +168,7 @@ local function updateSprint(deltaTime)
 			end
 		end
 	end
-	
+
 	-- Local stamina prediction (server is authoritative)
 	if isSprinting then
 		currentStamina = math.max(0, currentStamina - FPSConfig.Movement.SprintStaminaDrain * deltaTime)
@@ -177,29 +182,29 @@ end
 local function updateCrouch(deltaTime)
 	local character = player.Character
 	if not character then return end
-	
+
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	
+
 	-- Toggle crouch
 	local wasCrouching = isCrouching
 	isCrouching = wantsToCrouch
-	
+
 	-- Set target height
 	targetCrouchHeight = isCrouching and FPSConfig.Movement.CrouchHeight or FPSConfig.Movement.StandHeight
-	
+
 	-- Smooth crouch transition
 	local transitionSpeed = FPSConfig.Movement.CrouchTransitionSpeed * deltaTime
 	currentCrouchHeight = lerp(currentCrouchHeight, targetCrouchHeight, transitionSpeed)
-	
+
 	-- Apply crouch height to humanoid
 	humanoid.HipHeight = currentCrouchHeight
-	
+
 	-- Stop sprinting if crouching
 	if isCrouching and isSprinting then
 		isSprinting = false
 	end
-	
+
 	-- Notify server of crouch state change
 	if wasCrouching ~= isCrouching then
 		crouchEvent:FireServer(isCrouching)
@@ -213,29 +218,25 @@ end
 local function updateMovement(deltaTime)
 	local character = player.Character
 	if not character then return end
-	
+
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	
+
 	-- Check if player is moving
 	isMoving = keysHeld.forward or keysHeld.backward or keysHeld.left or keysHeld.right
-	
+
 	-- Check grounded state
 	checkGrounded(character)
-	
+
 	-- Update sprint and crouch
 	updateSprint(deltaTime)
 	updateCrouch(deltaTime)
-	
+
 	-- Calculate and apply move speed
 	local moveSpeed = calculateMoveSpeed(humanoid)
-	
-	-- Apply air control penalty when not grounded
-	if not isGrounded then
-		-- Air control is handled by character physics, but we can reduce input response
-		-- This is more of a feel adjustment
-	end
-	
+
+	-- Air control could be tweaked here if needed
+
 	humanoid.WalkSpeed = moveSpeed
 end
 
@@ -245,17 +246,18 @@ end
 
 local function onInputBegan(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
-	
+	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
 	-- Sprint key
 	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.SprintKey] then
 		wantsToSprint = true
 	end
-	
+
 	-- Crouch key (toggle)
 	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.CrouchKey] then
 		wantsToCrouch = not wantsToCrouch
 	end
-	
+
 	-- Movement keys
 	if input.KeyCode == FPSConfig.Controls.MoveForward then
 		keysHeld.forward = true
@@ -269,11 +271,13 @@ local function onInputBegan(input, gameProcessedEvent)
 end
 
 local function onInputEnded(input, gameProcessedEvent)
+	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
 	-- Sprint key
 	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.SprintKey] then
 		wantsToSprint = false
 	end
-	
+
 	-- Movement keys
 	if input.KeyCode == FPSConfig.Controls.MoveForward then
 		keysHeld.forward = false
@@ -287,7 +291,7 @@ local function onInputEnded(input, gameProcessedEvent)
 end
 
 --------------------------------------------------------------------------------
--- STAMINA SYNC (from server)
+-- STAMINA SYNC (from server) → Bindable for HUD
 --------------------------------------------------------------------------------
 
 local staminaUpdateEvent = remoteEventsFolder:FindFirstChild("StaminaUpdate")
@@ -296,6 +300,15 @@ if staminaUpdateEvent then
 		if typeof(data) == "table" then
 			currentStamina = data.current or currentStamina
 			maxStamina = data.max or maxStamina
+
+			-- Tell the HUD via bindable
+			local staminaBindable = FPSMovementController._staminaBindable
+			if staminaBindable then
+				staminaBindable:Fire({
+					current = currentStamina,
+					max = maxStamina,
+				})
+			end
 		end
 	end)
 end
@@ -307,22 +320,22 @@ end
 local function onCharacterAdded(character)
 	-- Wait for humanoid
 	local humanoid = character:WaitForChild("Humanoid")
-	
+
 	-- Store original values
 	originalWalkSpeed = humanoid.WalkSpeed
 	originalJumpPower = humanoid.JumpPower
 	originalHipHeight = humanoid.HipHeight
-	
+
 	-- Set initial values
 	humanoid.WalkSpeed = FPSConfig.Movement.WalkSpeed
 	humanoid.JumpPower = FPSConfig.Movement.JumpPower
-	
+
 	-- Reset state
 	isSprinting = false
 	isCrouching = false
 	wantsToCrouch = false
 	currentCrouchHeight = FPSConfig.Movement.StandHeight
-	
+
 	-- Reset stamina to max on spawn
 	currentStamina = maxStamina
 end
@@ -364,19 +377,19 @@ local function initialize()
 	-- Connect input events
 	UserInputService.InputBegan:Connect(onInputBegan)
 	UserInputService.InputEnded:Connect(onInputEnded)
-	
+
 	-- Connect character events
 	if player.Character then
 		onCharacterAdded(player.Character)
 	end
 	player.CharacterAdded:Connect(onCharacterAdded)
-	
+
 	-- Main update loop
 	RunService.Heartbeat:Connect(function(deltaTime)
 		updateMovement(deltaTime)
 	end)
-	
-	-- Create bindable event for other scripts to listen to sprint state
+
+	-- Create bindable events folder
 	local playerGui = player:WaitForChild("PlayerGui")
 	local bindableFolder = playerGui:FindFirstChild("BindableEvents")
 	if not bindableFolder then
@@ -384,18 +397,36 @@ local function initialize()
 		bindableFolder.Name = "BindableEvents"
 		bindableFolder.Parent = playerGui
 	end
-	
+
+	-- Sprint state event (already there)
 	local sprintStateEvent = bindableFolder:FindFirstChild("SprintStateChanged")
 	if not sprintStateEvent then
 		sprintStateEvent = Instance.new("BindableEvent")
 		sprintStateEvent.Name = "SprintStateChanged"
 		sprintStateEvent.Parent = bindableFolder
 	end
-	
+
+	-- Stamina event for PlayerHUD.client
+	local staminaBindable = bindableFolder:FindFirstChild("StaminaUpdate")
+	if not staminaBindable then
+		staminaBindable = Instance.new("BindableEvent")
+		staminaBindable.Name = "StaminaUpdate"
+		staminaBindable.Parent = bindableFolder
+	end
+
+	-- Store for remote → HUD bridge
+	FPSMovementController._staminaBindable = staminaBindable
+
+	-- Optionally push an initial value so HUD draws immediately
+	staminaBindable:Fire({
+		current = currentStamina,
+		max = maxStamina,
+	})
+
 	print("[FPSMovementController] Initialized")
 end
 
--- Initialize
+-- 🔹 IMPORTANT: actually start the controller
 initialize()
 
 return FPSMovementController
