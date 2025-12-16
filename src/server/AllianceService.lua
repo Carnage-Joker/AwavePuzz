@@ -137,12 +137,9 @@ function AllianceService:removePlayer(player)
 		end
 	end
 
-	-- Cancel any active betrayal timers
-	if self.pendingBetrayals[userId] then
-		local pendingBetrayal = self.pendingBetrayals[userId]
-		if pendingBetrayal.timerConnection then
-			task.cancel(pendingBetrayal.timerConnection)
-		end
+	-- Cancel any active betrayal timers by clearing the active window flag
+	if self.activeWindows[userId] then
+		self.activeWindows[userId] = nil
 	end
 
 	-- Clean up
@@ -265,8 +262,7 @@ function AllianceService:handleBreakAlliance(player, target)
 	-- Mark this as a pending betrayal with timestamp
 	self.pendingBetrayals[player.UserId] = {
 		victimUserId = target.UserId,
-		timestamp = os.time(),
-		timerConnection = nil
+		timestamp = os.time()
 	}
 
 	-- Notify CureService that alliance is broken (resources no longer pooled)
@@ -309,25 +305,38 @@ function AllianceService:startBetrayalWindow(betrayer, victim)
 	-- Mark window as active
 	self.activeWindows[betrayerId] = true
 	
-	-- Create timer connection using task.delay
-	local timerConnection = task.delay(GameConfig.BETRAYAL_WINDOW, function()
+	-- Create timer using task.delay
+	task.delay(GameConfig.BETRAYAL_WINDOW, function()
+		-- Check if window is still active (not cancelled)
+		if not self.activeWindows[betrayerId] then
+			return
+		end
+		
+		-- Validate players still exist
+		local betrayerPlayer = Players:GetPlayerByUserId(betrayerId)
+		local victimPlayer = Players:GetPlayerByUserId(victimId)
+		
+		if not betrayerPlayer or not victimPlayer then
+			-- Cleanup if either player left
+			self.activeWindows[betrayerId] = nil
+			if self.pendingBetrayals[betrayerId] then
+				self.pendingBetrayals[betrayerId] = nil
+			end
+			return
+		end
+		
 		-- After 30 seconds, check if betrayal is still pending
 		if self.pendingBetrayals[betrayerId] then
 			local pendingBetrayal = self.pendingBetrayals[betrayerId]
 			if pendingBetrayal.victimUserId == victimId then
 				-- Outcome 2: Victim survived the 30-second window
-				self:onVictimSurvives(betrayer, victim)
+				self:onVictimSurvives(betrayerPlayer, victimPlayer)
 			end
 		end
 		
 		-- Cleanup
 		self.activeWindows[betrayerId] = nil
 	end)
-	
-	-- Store timer connection for potential cancellation
-	if self.pendingBetrayals[betrayerId] then
-		self.pendingBetrayals[betrayerId].timerConnection = timerConnection
-	end
 end
 
 -- Outcome 2: Victim survives the 30-second betrayal window
@@ -420,22 +429,18 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 
 	print("[AllianceService]", killer.Name, "killed betrayer", betrayer.Name, "- victim gets 100% (Outcome 3)")
 
-	-- Cancel the 30-second timer since victim won
+	-- Cancel the 30-second timer by clearing active window flag
+	if self.activeWindows[betrayer.UserId] then
+		self.activeWindows[betrayer.UserId] = nil
+	end
+
+	-- Clear the pending betrayal
 	if self.pendingBetrayals[betrayer.UserId] then
-		local pendingBetrayal = self.pendingBetrayals[betrayer.UserId]
-		if pendingBetrayal.timerConnection then
-			task.cancel(pendingBetrayal.timerConnection)
-		end
 		self.pendingBetrayals[betrayer.UserId] = nil
 	end
 
 	-- Clear the betrayal tracking
 	self.recentBetrayals[betrayer.UserId] = nil
-	
-	-- Clear active window
-	if self.activeWindows[betrayer.UserId] then
-		self.activeWindows[betrayer.UserId] = nil
-	end
 
 	-- Outcome 3: Transfer ALL (100%) resources from betrayer to survivor
 	self:transferBetrayalResources(killer, betrayer, 1.0)
@@ -501,13 +506,8 @@ end
 function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 	print("[AllianceService]", betrayer.Name, "successfully eliminated", victim.Name, "within 30s - completing betrayal (Outcome 1: 65%)")
 
-	-- Clear the pending betrayal and cancel timer
+	-- Clear the pending betrayal and cancel timer by removing active window flag
 	if self.pendingBetrayals[betrayer.UserId] then
-		local pendingBetrayal = self.pendingBetrayals[betrayer.UserId]
-		-- Cancel the 30-second timer since betrayer succeeded
-		if pendingBetrayal.timerConnection then
-			task.cancel(pendingBetrayal.timerConnection)
-		end
 		self.pendingBetrayals[betrayer.UserId] = nil
 	end
 
@@ -516,7 +516,7 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 		self.recentBetrayals[betrayer.UserId] = nil
 	end
 	
-	-- Clear active window
+	-- Clear active window flag to cancel timer
 	if self.activeWindows[betrayer.UserId] then
 		self.activeWindows[betrayer.UserId] = nil
 	end

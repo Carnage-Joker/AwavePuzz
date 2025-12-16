@@ -11,6 +11,14 @@ local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local PuzzleService = {}
 PuzzleService.__index = PuzzleService
 
+-- Helper function to normalize string answers for consistent validation
+local function normalizeAnswer(answer)
+	if type(answer) ~= "string" then
+		return nil
+	end
+	return answer:lower():gsub("%s+", "")
+end
+
 function PuzzleService.new(cureService, playerManager)
 	local self = setmetatable({}, PuzzleService)
 
@@ -377,14 +385,6 @@ function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	else
 		self:onPuzzleFailed(player, componentName, "Incorrect answer")
 	end
-end
-
--- Helper function to normalize string answers
-local function normalizeAnswer(answer)
-	if type(answer) ~= "string" then
-		return nil
-	end
-	return answer:lower():gsub("%s+", "")
 end
 
 function PuzzleService:validateAnswer(puzzle, answer)

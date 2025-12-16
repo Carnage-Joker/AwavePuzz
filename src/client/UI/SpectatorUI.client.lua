@@ -169,9 +169,12 @@ RunService.RenderStepped:Connect(function()
 	local targetPos = part.Position
 	local targetLook = part.CFrame.LookVector
 	
+	-- Calculate camera offset behind the target
+	local horizontalOffset = targetLook * SPECTATOR_CAMERA_DISTANCE
+	local verticalOffset = Vector3.new(0, SPECTATOR_CAMERA_HEIGHT, 0)
+	
 	-- Position camera behind and above the target for third-person view
-	local cameraOffset = Vector3.new(0, SPECTATOR_CAMERA_HEIGHT, SPECTATOR_CAMERA_DISTANCE)
-	local desiredPos = targetPos - (targetLook * cameraOffset.Z) + Vector3.new(0, cameraOffset.Y, 0)
+	local desiredPos = targetPos - horizontalOffset + verticalOffset
 	
 	-- Look at target
 	local cf = CFrame.new(desiredPos, targetPos)
