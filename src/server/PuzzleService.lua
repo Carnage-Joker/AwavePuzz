@@ -429,8 +429,8 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
 		
-		-- Use helper function to normalize answer
-		local normalizedAnswer = normalizeAnswer(answer)
+		-- Use helper function to normalize answer (handles string and number conversion)
+		local normalizedAnswer = normalizeAnswer(tostring(answer))
 		if not normalizedAnswer then
 			return false
 		end
@@ -456,8 +456,8 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
 		
-		-- Use helper function to normalize answer
-		local normalizedAnswer = normalizeAnswer(answer)
+		-- Use helper function to normalize answer (handles string and number conversion)
+		local normalizedAnswer = normalizeAnswer(tostring(answer))
 		if not normalizedAnswer then
 			return false
 		end
