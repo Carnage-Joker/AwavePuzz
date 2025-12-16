@@ -5,8 +5,10 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local PuzzleConfig = require(ReplicatedStorage.Shared.PuzzleConfig)
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local PuzzleService = {}
 PuzzleService.__index = PuzzleService
@@ -35,43 +37,27 @@ function PuzzleService.new(cureService, playerManager)
 end
 
 function PuzzleService:setupRemoteEvents()
-	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEvents then
-		remoteEvents = Instance.new("Folder")
-		remoteEvents.Name = "RemoteEvents"
-		remoteEvents.Parent = ReplicatedStorage
-	end
-
-	-- Create puzzle-related remote events
-	local eventNames = {
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"RequestPuzzle",      -- Client requests to start a puzzle
 		"SubmitPuzzleAnswer", -- Client submits puzzle solution
 		"PuzzleUpdate",       -- Server sends puzzle state updates
 		"PuzzleFailed",       -- Server notifies puzzle failure
 		"PuzzleCompleted",    -- Server notifies puzzle completion
 		"OpenPuzzleUI",       -- Server tells client to open puzzle UI
-		"RequestPuzzleProgress", -- Client requests puzzle progress data
-	}
-
-	for _, eventName in ipairs(eventNames) do
-		local event = remoteEvents:FindFirstChild(eventName)
-		if not event then
-			event = Instance.new("RemoteEvent")
-			event.Name = eventName
-			event.Parent = remoteEvents
-		end
-	end
+		"RequestPuzzleProgress" -- Client requests puzzle progress data
+	})
 
 	-- Connect event handlers
-	remoteEvents.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
+	self.remoteEvents.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
 		self:handlePuzzleRequest(player, componentName)
 	end)
 
-	remoteEvents.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
+	self.remoteEvents.SubmitPuzzleAnswer.OnServerEvent:Connect(function(player, componentName, answer)
 		self:handlePuzzleAnswer(player, componentName, answer)
 	end)
 
-	remoteEvents.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
+	self.remoteEvents.RequestPuzzleProgress.OnServerEvent:Connect(function(player)
 		self:sendPuzzleProgress(player)
 	end)
 end

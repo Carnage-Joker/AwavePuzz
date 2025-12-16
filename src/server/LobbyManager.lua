@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local MapConfig = require(SharedFolder:WaitForChild("MapConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local LobbyManager = {}
 LobbyManager.__index = LobbyManager
@@ -33,41 +34,23 @@ function LobbyManager.new()
 end
 
 function LobbyManager:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	local eventNames = {
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"MapVoteStart",    -- Server -> Client: Voting has started, send map options
 		"MapVoteUpdate",   -- Server -> Client: Update vote counts
 		"MapVoteEnd",      -- Server -> Client: Voting ended, show selected map
 		"CastMapVote",     -- Client -> Server: Player casts a vote
 		"LobbyStateUpdate" -- Server -> Client: Update lobby state (timer, etc.)
-	}
-
-	for _, eventName in ipairs(eventNames) do
-		local event = remoteEventsFolder:FindFirstChild(eventName)
-		if not event then
-			event = Instance.new("RemoteEvent")
-			event.Name = eventName
-			event.Parent = remoteEventsFolder
-		end
-		self.remoteEvents[eventName] = event
-	end
+	})
 
 	-- Listen for player votes
-	if self.remoteEvents.CastMapVote then
-		self.remoteEvents.CastMapVote.OnServerEvent:Connect(function(player, mapId)
-			-- Validate mapId: must be a string and exist in MapConfig.Maps
-			if not mapId or type(mapId) ~= "string" or not MapConfig.Maps[mapId] then
-				return
-			end
-			self:handlePlayerVote(player, mapId)
-		end)
-	end
+	self.remoteEvents.CastMapVote.OnServerEvent:Connect(function(player, mapId)
+		-- Validate mapId: must be a string and exist in MapConfig.Maps
+		if not mapId or type(mapId) ~= "string" or not MapConfig.Maps[mapId] then
+			return
+		end
+		self:handlePlayerVote(player, mapId)
+	end)
 end
 
 function LobbyManager:setMapManager(mapManager)

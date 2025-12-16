@@ -1,6 +1,19 @@
 -- FPSWeaponController.client.lua
--- Client-side weapon controller for FPS mechanics
--- Handles weapon firing, reloading, ammo management, and visual feedback
+-- ADVANCED weapon controller for full FPS mechanics
+--
+-- NOTE: This is the ADVANCED/FULL FPS weapon controller.
+-- For a simpler version, see WeaponController.client.lua
+--
+-- Features:
+-- - Recoil system with camera kick and recovery
+-- - Dynamic spread based on movement/firing
+-- - ADS (Aim Down Sights) with right-click
+-- - Fire modes: Semi-auto, Burst, Full-auto
+-- - Magazine + reserve ammo system
+-- - Manual reload with R key
+-- - Spread recovery and crosshair updates
+--
+-- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")

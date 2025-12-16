@@ -1,5 +1,15 @@
 -- WeaponController.client.lua
--- Handles local firing input and communicates with the server weapon service
+-- BASIC weapon input handling (simplified version)
+-- 
+-- NOTE: This is the BASIC/SIMPLE weapon controller for testing or fallback.
+-- For full FPS features (recoil, ADS, spread, reload), use FPSWeaponController.client.lua
+--
+-- Features:
+-- - Simple left-click to fire
+-- - Weapon switching with number keys (1-4)
+-- - Basic server communication
+--
+-- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")

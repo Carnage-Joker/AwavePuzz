@@ -14,6 +14,7 @@ local player = Players.LocalPlayer
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 
 -- Wait for camera module (will be available after initialization)
 local FirstPersonCamera = nil
@@ -87,13 +88,9 @@ local originalHipHeight = nil
 -- UTILITY
 --------------------------------------------------------------------------------
 
-local function lerp(a, b, t)
-	return a + (b - a) * t
-end
-
-local function clamp(value, min, max)
-	return math.max(min, math.min(max, value))
-end
+-- Use shared utility functions
+local lerp = MathUtil.lerp
+local clamp = MathUtil.clamp
 
 --------------------------------------------------------------------------------
 -- GROUND CHECK

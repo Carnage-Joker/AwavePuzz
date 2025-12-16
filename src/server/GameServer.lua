@@ -1,5 +1,13 @@
 -- GameServer.lua
--- Main server-side game controller
+-- LEGACY game controller (NOT CURRENTLY USED)
+--
+-- NOTE: This is a LEGACY file kept for reference.
+-- The ACTIVE game controller is GameManager.lua (used in MainServer.lua)
+--
+-- This file is not currently used in the main game flow.
+-- See GameManager.lua for the active implementation.
+--
+-- See CODE_ARCHITECTURE.md for details on the migration from GameServer to GameManager.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

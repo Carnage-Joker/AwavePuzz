@@ -1,17 +1,24 @@
 -- CureService
--- Handles cure component deposits, puzzle integration, and cure synthesis
--- Integrated with PuzzleService, CureCraftingManager and PuzzleUI for
--- component collection, progress tracking, and final cure completion.
--- 
+-- ACTIVE cure system with puzzle integration and alliance support (PRIMARY implementation)
+--
+-- NOTE: This is the ACTIVE cure system used in the main game (MainServer.lua)
+-- For a simpler cure progress calculator, see CureCraftingManager.lua
+--
 -- Features:
--- - Each player has their own separate inventory for cure resources
--- - Each player has their own cure progress meter
--- - When players form an alliance, their resources are pooled together
--- - Both allied players see the combined progress of the alliance
+-- - Per-player component tracking
+-- - Alliance resource pooling (allied players share cure progress)
+-- - Integration with PuzzleService for puzzle-based component unlocking
+-- - Integration with AllianceService for shared resources
+-- - Server-authoritative cure progress validation
+--
+-- See CODE_ARCHITECTURE.md for details on cure system architecture.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local CureService = {}
 CureService.__index = CureService
@@ -41,22 +48,10 @@ end
 
 -- Setup remote events for cure progress updates
 function CureService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	-- Individual cure progress update
-	local cureProgressEvent = remoteEventsFolder:FindFirstChild("PlayerCureProgressUpdate")
-	if not cureProgressEvent then
-		cureProgressEvent = Instance.new("RemoteEvent")
-		cureProgressEvent.Name = "PlayerCureProgressUpdate"
-		cureProgressEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents = self.remoteEvents or {}
-	self.remoteEvents.PlayerCureProgressUpdate = cureProgressEvent
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"PlayerCureProgressUpdate"
+	})
 end
 
 -- Set puzzle service reference (called after both services are created)

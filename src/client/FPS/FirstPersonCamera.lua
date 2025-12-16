@@ -1,10 +1,21 @@
 -- FirstPersonCamera.lua
--- Handles scriptable first-person camera with configurable FOV, sensitivity, and smoothing.
--- This module is purely client-side and does not alter character movement physics.
+-- MODULAR first-person camera (ALTERNATIVE implementation)
+--
+-- NOTE: This is an ALTERNATIVE modular camera implementation.
+-- The PRIMARY implementation is FirstPersonCamera.client.lua (standalone)
+--
+-- This ModuleScript is used by FPS/FirstPersonController.client.lua
+-- 
+-- Architecture: Modular - camera logic separated into this module for better testability
+-- See CODE_ARCHITECTURE.md for comparison with the standalone camera.
 
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -25,9 +36,8 @@ function FirstPersonCamera.new(config)
         return self
 end
 
-local function clamp(value, min, max)
-        return math.max(min, math.min(max, value))
-end
+-- Use shared clamp function
+local clamp = MathUtil.clamp
 
 local function setCharacterTransparency(character, visible)
         for _, part in ipairs(character:GetDescendants()) do
