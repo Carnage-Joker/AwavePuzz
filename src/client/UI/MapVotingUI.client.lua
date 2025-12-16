@@ -94,16 +94,16 @@ local function createMapCard(mapData, layoutOrder)
 	card.BorderSizePixel = 0
 	card.LayoutOrder = layoutOrder
 	card.Parent = mapsContainer
-	
+
 	local cardCorner = Instance.new("UICorner")
 	cardCorner.CornerRadius = UDim.new(0, 12)
 	cardCorner.Parent = card
-	
+
 	local cardStroke = Instance.new("UIStroke")
 	cardStroke.Thickness = 2
 	cardStroke.Color = Color3.fromRGB(80, 80, 100)
 	cardStroke.Parent = card
-	
+
 	-- Map name
 	local nameLabel = Instance.new("TextLabel")
 	nameLabel.Name = "MapName"
@@ -116,7 +116,7 @@ local function createMapCard(mapData, layoutOrder)
 	nameLabel.Font = Enum.Font.GothamBold
 	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 	nameLabel.Parent = card
-	
+
 	-- Description
 	local descLabel = Instance.new("TextLabel")
 	descLabel.Name = "Description"
@@ -131,7 +131,7 @@ local function createMapCard(mapData, layoutOrder)
 	descLabel.TextYAlignment = Enum.TextYAlignment.Top
 	descLabel.TextWrapped = true
 	descLabel.Parent = card
-	
+
 	-- Vote count
 	local voteCount = Instance.new("TextLabel")
 	voteCount.Name = "VoteCount"
@@ -143,11 +143,11 @@ local function createMapCard(mapData, layoutOrder)
 	voteCount.TextSize = 24
 	voteCount.Font = Enum.Font.GothamBold
 	voteCount.Parent = card
-	
+
 	local voteCorner = Instance.new("UICorner")
 	voteCorner.CornerRadius = UDim.new(0, 8)
 	voteCorner.Parent = voteCount
-	
+
 	-- Vote button
 	local voteButton = Instance.new("TextButton")
 	voteButton.Name = "VoteButton"
@@ -159,18 +159,18 @@ local function createMapCard(mapData, layoutOrder)
 	voteButton.TextSize = 16
 	voteButton.Font = Enum.Font.GothamBold
 	voteButton.Parent = card
-	
+
 	local buttonCorner = Instance.new("UICorner")
 	buttonCorner.CornerRadius = UDim.new(0, 8)
 	buttonCorner.Parent = voteButton
-	
+
 	-- Hover effect
 	voteButton.MouseEnter:Connect(function()
 		TweenService:Create(voteButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(70, 180, 70)
 		}):Play()
 	end)
-	
+
 	voteButton.MouseLeave:Connect(function()
 		if currentVote == mapData.id then
 			TweenService:Create(voteButton, TweenInfo.new(0.2), {
@@ -182,7 +182,7 @@ local function createMapCard(mapData, layoutOrder)
 			}):Play()
 		end
 	end)
-	
+
 	-- Store reference
 	mapButtons[mapData.id] = {
 		card = card,
@@ -191,7 +191,7 @@ local function createMapCard(mapData, layoutOrder)
 		stroke = cardStroke,
 		connection = nil  -- Will store the click connection
 	}
-	
+
 	return card
 end
 
@@ -201,10 +201,10 @@ local function updateVotes(voteCounts, timeRemaining)
 		local count = voteCounts[mapId] or 0
 		buttonData.voteCount.Text = tostring(count)
 	end
-	
+
 	if timeRemaining then
 		timerLabel.Text = tostring(math.max(0, math.floor(timeRemaining))) .. "s"
-		
+
 		-- Change color based on time
 		if timeRemaining <= 5 then
 			timerLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
@@ -250,7 +250,7 @@ end
 local function castVote(mapId)
 	currentVote = mapId
 	highlightVote(mapId)
-	
+
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents then
 		local castVoteEvent = remoteEvents:FindFirstChild("CastMapVote")
@@ -272,15 +272,15 @@ local mapVoteStartEvent = remoteEvents:WaitForChild("MapVoteStart", REMOTE_EVENT
 if mapVoteStartEvent then
 	mapVoteStartEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
-		
+
 		-- Clear existing cards
 		clearMapCards()
-		
+
 		-- Create cards for each map
 		local maps = data.maps or {}
 		for i, mapData in ipairs(maps) do
 			local card = createMapCard(mapData, i)
-			
+
 			-- Connect vote button and store the connection
 			local buttonData = mapButtons[mapData.id]
 			if buttonData and buttonData.button then
@@ -289,13 +289,13 @@ if mapVoteStartEvent then
 				end)
 			end
 		end
-		
+
 		-- Set initial timer
 		timerLabel.Text = tostring(data.duration or 20) .. "s"
-		
+
 		-- Show the UI
 		screenGui.Enabled = true
-		
+
 		-- Animate in
 		votingFrame.Position = UDim2.new(0.5, -300, -0.5, 0)
 		TweenService:Create(votingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -309,7 +309,7 @@ local mapVoteUpdateEvent = remoteEvents:WaitForChild("MapVoteUpdate", REMOTE_EVE
 if mapVoteUpdateEvent then
 	mapVoteUpdateEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
-		
+
 		updateVotes(data.votes or {}, data.timeRemaining)
 	end)
 end
@@ -319,26 +319,26 @@ local mapVoteEndEvent = remoteEvents:WaitForChild("MapVoteEnd", REMOTE_EVENT_WAI
 if mapVoteEndEvent then
 	mapVoteEndEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
-		
+
 		-- Show selected map
 		titleLabel.Text = "SELECTED: " .. (data.mapName or "Unknown")
 		titleLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-		
+
 		-- Highlight winning map
 		if data.selectedMapId then
 			highlightVote(data.selectedMapId)
 		end
-		
+
 		-- Animate out after a delay (use spawn for cleaner sequential operations)
 		task.spawn(function()
 			task.wait(2) -- Wait before starting exit animation
-			
+
 			TweenService:Create(votingFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
 				Position = UDim2.new(0.5, -300, 1.5, 0)
 			}):Play()
-			
+
 			task.wait(0.5) -- Wait for animation to complete
-			
+
 			screenGui.Enabled = false
 			titleLabel.Text = "VOTE FOR NEXT MAP"
 			titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
