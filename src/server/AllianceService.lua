@@ -28,7 +28,7 @@ function AllianceService.new()
 	self.recentBetrayals = {}     -- betrayer UserId -> victim UserId
 
 	-- Track pending betrayals (resources transfer based on outcome)
-	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp, timerConnection}
+	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp}
 	
 	-- Track active betrayal windows
 	self.activeWindows = {}       -- betrayer UserId -> true (for cleanup)
