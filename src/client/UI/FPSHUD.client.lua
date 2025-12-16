@@ -22,12 +22,41 @@ UIScaleManager.initialize()
 -- UI CREATION
 --------------------------------------------------------------------------------
 
+-- Prevent duplicate HUDs on respawn
+local existing = playerGui:FindFirstChild("FPSHUD")
+if existing then
+	existing:Destroy()
+end
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "FPSHUD"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.DisplayOrder = 10
 screenGui.Parent = playerGui
+
+--------------------------------------------------------------------------------
+-- SHARED HUD CONFIG / DEFAULTS
+--------------------------------------------------------------------------------
+
+local hudConfig = FPSConfig.HUD or {}
+local crosshairConfig = hudConfig
+
+local baseSize = crosshairConfig.CrosshairSize or 10
+local thickness = crosshairConfig.CrosshairThickness or 2
+local gap = crosshairConfig.CrosshairGap or 4
+local crosshairColor = crosshairConfig.CrosshairColor or Color3.new(1, 1, 1)
+local outlineColor = crosshairConfig.CrosshairOutlineColor or Color3.new(0, 0, 0)
+local lowAmmoThreshold = hudConfig.LowAmmoThreshold or 0.25
+local hitmarkerSize = hudConfig.HitmarkerSize or 20
+local hitmarkerColor = hudConfig.HitmarkerColor or Color3.new(1, 1, 1)
+local killHitmarkerColor = hudConfig.KillHitmarkerColor or Color3.fromRGB(255, 200, 0)
+local headshotHitmarkerColor = hudConfig.HeadshotHitmarkerColor or Color3.fromRGB(255, 50, 50)
+local damageIndicatorEnabled = (hudConfig.DamageIndicatorEnabled ~= false)
+local damageIndicatorDuration = hudConfig.DamageIndicatorDuration or 0.25
+local lowHealthVignetteEnabled = (hudConfig.LowHealthVignette ~= false)
+local lowHealthThreshold = hudConfig.LowHealthThreshold or 30
+local hitmarkerDuration = hudConfig.HitmarkerDuration or 0.15
 
 --------------------------------------------------------------------------------
 -- CROSSHAIR SYSTEM
@@ -39,15 +68,8 @@ crosshairContainer.Size = UDim2.new(0, 100, 0, 100)
 crosshairContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
 crosshairContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 crosshairContainer.BackgroundTransparency = 1
+crosshairContainer.ZIndex = 20
 crosshairContainer.Parent = screenGui
-
--- Crosshair lines
-local crosshairConfig = FPSConfig.HUD
-local baseSize = crosshairConfig.CrosshairSize
-local thickness = crosshairConfig.CrosshairThickness
-local gap = crosshairConfig.CrosshairGap
-local crosshairColor = crosshairConfig.CrosshairColor
-local outlineColor = crosshairConfig.CrosshairOutlineColor
 
 local function createCrosshairLine(name, sizeX, sizeY, posX, posY, anchorX, anchorY)
 	-- Outline
@@ -59,9 +81,10 @@ local function createCrosshairLine(name, sizeX, sizeY, posX, posY, anchorX, anch
 		outline.AnchorPoint = Vector2.new(anchorX, anchorY)
 		outline.BackgroundColor3 = outlineColor
 		outline.BorderSizePixel = 0
+		outline.ZIndex = 20
 		outline.Parent = crosshairContainer
 	end
-	
+
 	-- Main line
 	local line = Instance.new("Frame")
 	line.Name = name
@@ -70,8 +93,9 @@ local function createCrosshairLine(name, sizeX, sizeY, posX, posY, anchorX, anch
 	line.AnchorPoint = Vector2.new(anchorX, anchorY)
 	line.BackgroundColor3 = crosshairColor
 	line.BorderSizePixel = 0
+	line.ZIndex = 21
 	line.Parent = crosshairContainer
-	
+
 	return line
 end
 
@@ -91,8 +115,9 @@ if crosshairConfig.CrosshairDot then
 	centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
 	centerDot.BackgroundColor3 = crosshairColor
 	centerDot.BorderSizePixel = 0
+	centerDot.ZIndex = 21
 	centerDot.Parent = crosshairContainer
-	
+
 	local dotCorner = Instance.new("UICorner")
 	dotCorner.CornerRadius = UDim.new(1, 0)
 	dotCorner.Parent = centerDot
@@ -103,29 +128,31 @@ local currentCrosshairGap = gap
 local targetCrosshairGap = gap
 
 local function updateCrosshairSpread(spreadDegrees)
-	if not crosshairConfig.DynamicCrosshair then return end
-	
-	-- Convert spread degrees to pixel gap
-	-- Base gap is 4 pixels at 0 spread, max gap is about 30 pixels at max spread
+	if crosshairConfig.DynamicCrosshair == false then
+		return
+	end
+
+	-- Clamp spread and convert to pixel gap
+	local clampedSpread = math.clamp(spreadDegrees or 0, 0, hudConfig.MaxSpread or 10)
 	local spreadMultiplier = 3 -- pixels per degree of spread
-	targetCrosshairGap = gap + (spreadDegrees * spreadMultiplier)
+	targetCrosshairGap = gap + (clampedSpread * spreadMultiplier)
 end
 
 local function updateCrosshairPositions()
 	local g = math.floor(currentCrosshairGap + 0.5)
-	
+
 	-- Update line positions
 	topLine.Position = UDim2.new(0.5, 0, 0.5, -g)
 	bottomLine.Position = UDim2.new(0.5, 0, 0.5, g)
 	leftLine.Position = UDim2.new(0.5, -g, 0.5, 0)
 	rightLine.Position = UDim2.new(0.5, g, 0.5, 0)
-	
+
 	-- Update outlines
 	local topOutline = crosshairContainer:FindFirstChild("TopOutline")
 	local bottomOutline = crosshairContainer:FindFirstChild("BottomOutline")
 	local leftOutline = crosshairContainer:FindFirstChild("LeftOutline")
 	local rightOutline = crosshairContainer:FindFirstChild("RightOutline")
-	
+
 	if topOutline then topOutline.Position = UDim2.new(0.5, 0, 0.5, -g) end
 	if bottomOutline then bottomOutline.Position = UDim2.new(0.5, 0, 0.5, g) end
 	if leftOutline then leftOutline.Position = UDim2.new(0.5, -g, 0.5, 0) end
@@ -143,10 +170,9 @@ hitmarkerContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
 hitmarkerContainer.AnchorPoint = Vector2.new(0.5, 0.5)
 hitmarkerContainer.BackgroundTransparency = 1
 hitmarkerContainer.Visible = false
+hitmarkerContainer.ZIndex = 30
 hitmarkerContainer.Parent = screenGui
 
--- Create hitmarker lines (X shape)
-local hitmarkerSize = FPSConfig.HUD.HitmarkerSize
 local hitmarkerThickness = 2
 
 local function createHitmarkerLine(rotation)
@@ -155,8 +181,9 @@ local function createHitmarkerLine(rotation)
 	line.Position = UDim2.new(0.5, 0, 0.5, 0)
 	line.AnchorPoint = Vector2.new(0.5, 0.5)
 	line.Rotation = rotation
-	line.BackgroundColor3 = FPSConfig.HUD.HitmarkerColor
+	line.BackgroundColor3 = hitmarkerColor
 	line.BorderSizePixel = 0
+	line.ZIndex = 31
 	line.Parent = hitmarkerContainer
 	return line
 end
@@ -165,29 +192,29 @@ local hitmarkerLine1 = createHitmarkerLine(45)
 local hitmarkerLine2 = createHitmarkerLine(-45)
 
 local function showHitmarker(isHeadshot, isKill)
-	local color = FPSConfig.HUD.HitmarkerColor
-	
+	local color = hitmarkerColor
+
 	if isKill then
-		color = FPSConfig.HUD.KillHitmarkerColor
+		color = killHitmarkerColor
 	elseif isHeadshot then
-		color = FPSConfig.HUD.HeadshotHitmarkerColor
+		color = headshotHitmarkerColor
 	end
-	
+
 	hitmarkerLine1.BackgroundColor3 = color
 	hitmarkerLine2.BackgroundColor3 = color
 	hitmarkerContainer.Visible = true
-	
+
 	-- Animate
 	local tweenInfo = TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	
+
 	hitmarkerContainer.Size = UDim2.new(0, 30, 0, 30)
 	local expandTween = TweenService:Create(hitmarkerContainer, tweenInfo, {
 		Size = UDim2.new(0, 50, 0, 50)
 	})
 	expandTween:Play()
-	
+
 	-- Hide after duration
-	task.delay(FPSConfig.HUD.HitmarkerDuration, function()
+	task.delay(hitmarkerDuration, function()
 		hitmarkerContainer.Visible = false
 	end)
 end
@@ -204,6 +231,7 @@ ammoFrame.AnchorPoint = Vector2.new(1, 1)
 ammoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ammoFrame.BackgroundTransparency = 0.3
 ammoFrame.BorderSizePixel = 0
+ammoFrame.ZIndex = 10
 ammoFrame.Parent = screenGui
 
 local ammoCorner = Instance.new("UICorner")
@@ -221,6 +249,7 @@ currentAmmoLabel.TextXAlignment = Enum.TextXAlignment.Left
 currentAmmoLabel.Font = Enum.Font.GothamBold
 currentAmmoLabel.TextSize = 42
 currentAmmoLabel.Text = "30"
+currentAmmoLabel.ZIndex = 11
 currentAmmoLabel.Parent = ammoFrame
 
 -- Separator
@@ -233,6 +262,7 @@ ammoSeparator.TextColor3 = Color3.fromRGB(150, 150, 150)
 ammoSeparator.Font = Enum.Font.GothamBold
 ammoSeparator.TextSize = 28
 ammoSeparator.Text = "/"
+ammoSeparator.ZIndex = 11
 ammoSeparator.Parent = ammoFrame
 
 -- Reserve ammo (smaller)
@@ -246,6 +276,7 @@ reserveAmmoLabel.TextXAlignment = Enum.TextXAlignment.Left
 reserveAmmoLabel.Font = Enum.Font.Gotham
 reserveAmmoLabel.TextSize = 24
 reserveAmmoLabel.Text = "120"
+reserveAmmoLabel.ZIndex = 11
 reserveAmmoLabel.Parent = ammoFrame
 
 -- Reload indicator
@@ -260,22 +291,32 @@ reloadLabel.Font = Enum.Font.Gotham
 reloadLabel.TextSize = 14
 reloadLabel.Text = ""
 reloadLabel.Visible = false
+reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
+	-- Hide if no weapon / no max ammo information
+	if max == nil then
+		ammoFrame.Visible = false
+		return
+	end
+
+	ammoFrame.Visible = true
+
 	currentAmmoLabel.Text = tostring(current or 0)
 	reserveAmmoLabel.Text = tostring(reserve or 0)
-	
+
 	-- Color based on ammo level
-	local ammoRatio = (current or 0) / (max or 30)
-	if ammoRatio <= FPSConfig.HUD.LowAmmoThreshold then
+	local effectiveMax = math.max(max or 30, 1)
+	local ammoRatio = (current or 0) / effectiveMax
+	if ammoRatio <= lowAmmoThreshold then
 		currentAmmoLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 	else
 		currentAmmoLabel.TextColor3 = Color3.new(1, 1, 1)
 	end
-	
+
 	-- Reload indicator
-	reloadLabel.Visible = isReloading
+	reloadLabel.Visible = isReloading and true or false
 	if isReloading then
 		reloadLabel.Text = "RELOADING..."
 	end
@@ -293,6 +334,7 @@ weaponInfoFrame.AnchorPoint = Vector2.new(1, 1)
 weaponInfoFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 weaponInfoFrame.BackgroundTransparency = 0.5
 weaponInfoFrame.BorderSizePixel = 0
+weaponInfoFrame.ZIndex = 10
 weaponInfoFrame.Parent = screenGui
 
 local weaponCorner = Instance.new("UICorner")
@@ -309,6 +351,7 @@ weaponNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 weaponNameLabel.Font = Enum.Font.Gotham
 weaponNameLabel.TextSize = 14
 weaponNameLabel.Text = "PISTOL"
+weaponNameLabel.ZIndex = 11
 weaponNameLabel.Parent = weaponInfoFrame
 
 local fireModeLabel = Instance.new("TextLabel")
@@ -321,6 +364,7 @@ fireModeLabel.TextXAlignment = Enum.TextXAlignment.Right
 fireModeLabel.Font = Enum.Font.GothamBold
 fireModeLabel.TextSize = 12
 fireModeLabel.Text = "SEMI"
+fireModeLabel.ZIndex = 11
 fireModeLabel.Parent = weaponInfoFrame
 
 local function updateWeaponInfo(weaponName, fireMode)
@@ -332,14 +376,13 @@ end
 -- DAMAGE INDICATOR (screen vignette when hurt)
 --------------------------------------------------------------------------------
 
-local damageVignette = Instance.new("ImageLabel")
+local damageVignette = Instance.new("Frame")
 damageVignette.Name = "DamageVignette"
 damageVignette.Size = UDim2.new(1, 0, 1, 0)
 damageVignette.Position = UDim2.new(0, 0, 0, 0)
+damageVignette.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 damageVignette.BackgroundTransparency = 1
-damageVignette.ImageColor3 = Color3.fromRGB(255, 0, 0)
-damageVignette.ImageTransparency = 1
-damageVignette.ZIndex = 0
+damageVignette.ZIndex = 50
 damageVignette.Parent = screenGui
 
 -- Create a gradient for vignette effect
@@ -353,14 +396,14 @@ vignetteGradient.Rotation = 0
 vignetteGradient.Parent = damageVignette
 
 local function flashDamageIndicator(intensity)
-	if not FPSConfig.HUD.DamageIndicatorEnabled then return end
-	
-	local transparency = 1 - (intensity or 0.3)
-	damageVignette.ImageTransparency = transparency
-	
-	local tweenInfo = TweenInfo.new(FPSConfig.HUD.DamageIndicatorDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	if not damageIndicatorEnabled then return end
+
+	local t = 1 - (intensity or 0.3)
+	damageVignette.BackgroundTransparency = t
+
+	local tweenInfo = TweenInfo.new(damageIndicatorDuration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	local tween = TweenService:Create(damageVignette, tweenInfo, {
-		ImageTransparency = 1
+		BackgroundTransparency = 1
 	})
 	tween:Play()
 end
@@ -375,7 +418,7 @@ lowHealthVignette.Size = UDim2.new(1, 0, 1, 0)
 lowHealthVignette.Position = UDim2.new(0, 0, 0, 0)
 lowHealthVignette.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
 lowHealthVignette.BackgroundTransparency = 1
-lowHealthVignette.ZIndex = -1
+lowHealthVignette.ZIndex = 40
 lowHealthVignette.Parent = screenGui
 
 local lowHealthPulseActive = false
@@ -383,9 +426,9 @@ local lowHealthPulseThread = nil
 local MAX_PULSE_ITERATIONS = 1000 -- Safety limit to prevent infinite loops
 
 local function updateLowHealthVignette(healthPercent)
-	if not FPSConfig.HUD.LowHealthVignette then return end
-	
-	if healthPercent <= FPSConfig.HUD.LowHealthThreshold then
+	if not lowHealthVignetteEnabled then return end
+
+	if healthPercent <= lowHealthThreshold then
 		if not lowHealthPulseActive then
 			lowHealthPulseActive = true
 			-- Cancel any existing pulse thread with error handling
@@ -405,9 +448,9 @@ local function updateLowHealthVignette(healthPercent)
 					})
 					tweenIn:Play()
 					tweenIn.Completed:Wait()
-					
+
 					if not lowHealthPulseActive then break end
-					
+
 					local tweenOut = TweenService:Create(lowHealthVignette, TweenInfo.new(0.5), {
 						BackgroundTransparency = 0.9
 					})
@@ -441,7 +484,7 @@ local function setupBindableConnections()
 		bindableFolder.Name = "BindableEvents"
 		bindableFolder.Parent = playerGui
 	end
-	
+
 	-- Ammo update
 	local ammoEvent = bindableFolder:FindFirstChild("AmmoUpdate")
 	if not ammoEvent then
@@ -454,7 +497,7 @@ local function setupBindableConnections()
 			updateAmmoDisplay(data.current, data.reserve, data.max, data.isReloading)
 		end
 	end)
-	
+
 	-- Hitmarker
 	local hitmarkerEvent = bindableFolder:FindFirstChild("Hitmarker")
 	if not hitmarkerEvent then
@@ -467,7 +510,7 @@ local function setupBindableConnections()
 			showHitmarker(data.isHeadshot, data.isKill)
 		end
 	end)
-	
+
 	-- Crosshair update
 	local crosshairEvent = bindableFolder:FindFirstChild("CrosshairUpdate")
 	if not crosshairEvent then
@@ -482,7 +525,7 @@ local function setupBindableConnections()
 			crosshairContainer.Visible = not data.isADS
 		end
 	end)
-	
+
 	-- Weapon info update
 	local weaponInfoEvent = bindableFolder:FindFirstChild("WeaponInfoUpdate")
 	if not weaponInfoEvent then
@@ -495,7 +538,7 @@ local function setupBindableConnections()
 			updateWeaponInfo(data.weaponName or data.weaponId, data.fireMode)
 		end
 	end)
-	
+
 	-- Damage indicator
 	local damageEvent = bindableFolder:FindFirstChild("DamageTaken")
 	if not damageEvent then
@@ -533,9 +576,9 @@ end
 -- UPDATE LOOP
 --------------------------------------------------------------------------------
 
-RunService.Heartbeat:Connect(function(deltaTime)
+RunService.RenderStepped:Connect(function(deltaTime)
 	-- Smooth crosshair spread animation
-	if crosshairConfig.DynamicCrosshair then
+	if crosshairConfig.DynamicCrosshair ~= false then
 		currentCrosshairGap = currentCrosshairGap + (targetCrosshairGap - currentCrosshairGap) * 0.2
 		updateCrosshairPositions()
 	end
@@ -547,14 +590,12 @@ end)
 
 local function initialize()
 	setupBindableConnections()
-	
+
 	-- Initial UI state
 	updateAmmoDisplay(30, 120, 30, false)
 	updateWeaponInfo("Pistol", "Semi")
-	
+
 	print("[FPSHUD] Initialized")
 end
 
 initialize()
-
-return {}
