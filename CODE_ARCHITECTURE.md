@@ -120,7 +120,7 @@ The documentation primarily references the standalone version (`FirstPersonCamer
   - Alliance resource pooling
   - Integration with PuzzleService
   - Cure progress updates
-- **Lines:** 163
+- **Lines:** 477
 - **Status:** ✅ ACTIVE - Used in MainServer.lua
 
 #### CureCraftingManager.lua (Legacy/Helper)

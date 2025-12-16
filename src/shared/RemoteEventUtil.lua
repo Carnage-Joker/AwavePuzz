@@ -24,7 +24,13 @@ function RemoteEventUtil.getOrCreateEvent(eventName)
 	local folder = getRemoteEventsFolder()
 	local event = folder:FindFirstChild(eventName)
 	
-	if not event then
+	-- Verify the instance is actually a RemoteEvent, not some other type
+	if not event or not event:IsA("RemoteEvent") then
+		-- If wrong type exists, warn and recreate
+		if event then
+			warn(string.format("[RemoteEventUtil] Instance '%s' exists but is not a RemoteEvent (is %s). Recreating.", eventName, event.ClassName))
+			event:Destroy()
+		end
 		event = Instance.new("RemoteEvent")
 		event.Name = eventName
 		event.Parent = folder
@@ -53,7 +59,13 @@ function RemoteEventUtil.getOrCreateFunction(functionName)
 	local folder = getRemoteEventsFolder()
 	local remoteFunction = folder:FindFirstChild(functionName)
 	
-	if not remoteFunction then
+	-- Verify the instance is actually a RemoteFunction, not some other type
+	if not remoteFunction or not remoteFunction:IsA("RemoteFunction") then
+		-- If wrong type exists, warn and recreate
+		if remoteFunction then
+			warn(string.format("[RemoteEventUtil] Instance '%s' exists but is not a RemoteFunction (is %s). Recreating.", functionName, remoteFunction.ClassName))
+			remoteFunction:Destroy()
+		end
 		remoteFunction = Instance.new("RemoteFunction")
 		remoteFunction.Name = functionName
 		remoteFunction.Parent = folder
