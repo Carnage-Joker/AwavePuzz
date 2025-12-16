@@ -108,11 +108,11 @@ local function updateUIScaling()
 	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 130)
 	mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 	corner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
-	
+
 	titleLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(20, "padding"))
 	titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
 	titleLabel.TextSize = getScaledTextSize(16)
-	
+
 	healthBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
 	healthBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(30, "padding"))
 	healthBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
