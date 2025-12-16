@@ -5,12 +5,13 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local Players = game:GetService("Players")
 local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
 local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local IntelligentSpawnGenerator = require(script.Parent.IntelligentSpawnGenerator)
 
--- Constants
-local DEFAULT_SPAWN_INTERVAL = 0.5 -- Default seconds between zombie spawns
+local DEFAULT_SPAWN_INTERVAL = 0.5
 
 local Spawner = {}
 Spawner.__index = Spawner
@@ -25,14 +26,18 @@ function Spawner.new(weaponService, baseManager, playerManager)
 	self.activeZombies = {}
 	self.zombieBrains = {}
 	self.zombieCount = 0
-	
-	-- Spawn queue for staggered spawning
+
 	self.spawnQueue = {}
 	self.spawnTimer = 0
 	self.spawnInterval = GameConfig.Spawning and GameConfig.Spawning.SPAWN_INTERVAL or DEFAULT_SPAWN_INTERVAL
 	self.lastUsedSpawnIndex = 0
 
-	-- Setup zombie folder in workspace
+	self.spawnGenerator = IntelligentSpawnGenerator.new()
+	self.allSpawnPoints = {}
+
+	-- Optional integration
+	self.resourceSpawner = nil
+
 	if not workspace:FindFirstChild("Zombies") then
 		local zombiesFolder = Instance.new("Folder")
 		zombiesFolder.Name = "Zombies"
@@ -42,11 +47,15 @@ function Spawner.new(weaponService, baseManager, playerManager)
 	return self
 end
 
+-- NEW (non-breaking)
+function Spawner:setResourceSpawner(resourceSpawner)
+	self.resourceSpawner = resourceSpawner
+end
+
 function Spawner:setSpawnPoints(points)
 	if typeof(points) ~= "table" then
 		return
 	end
-
 	self.spawnPoints = points
 end
 
@@ -55,7 +64,6 @@ function Spawner:addSpawnPoint(position)
 end
 
 function Spawner:loadSpawnPoints()
-	-- Load spawn points from workspace (fallback if MapManager not available)
 	local spawnPointsFolder = workspace:FindFirstChild("ZombieSpawnPoints")
 	if spawnPointsFolder then
 		self.spawnPoints = {}
@@ -66,23 +74,43 @@ function Spawner:loadSpawnPoints()
 			end
 		end
 	end
-
-	print("Loaded " .. #self.spawnPoints .. " zombie spawn points")
+	print("Loaded " .. #self.spawnPoints .. " manual zombie spawn points")
 end
 
--- Get spawn point using round-robin distribution for better spread
+function Spawner:generateSpawnPointsForRound()
+	print("[Spawner] Generating intelligent spawn points for new round...")
+
+	self:loadSpawnPoints()
+
+	self.allSpawnPoints = self.spawnGenerator:generateSpawnPointsForRound()
+
+	-- Optional: inform ResourceSpawner about zombie spawns (manual + generated)
+	if self.resourceSpawner and self.resourceSpawner.setZombieSpawnPoints then
+		self.resourceSpawner:setZombieSpawnPoints(self.allSpawnPoints)
+	end
+
+	print("[Spawner] Total spawn points available:", #self.allSpawnPoints)
+end
+
+function Spawner:cleanupGeneratedSpawnPoints()
+	if self.spawnGenerator then
+		self.spawnGenerator:cleanupGeneratedSpawnPoints()
+	end
+	self.allSpawnPoints = {}
+	print("[Spawner] Cleaned up generated spawn points")
+end
+
 function Spawner:getNextSpawnPoint()
 	if #self.spawnPoints == 0 then
 		warn("No spawn points available! Using default position.")
 		return Vector3.new(0, 10, 0)
 	end
-	
-	-- Round-robin through spawn points
+
 	self.lastUsedSpawnIndex = self.lastUsedSpawnIndex + 1
 	if self.lastUsedSpawnIndex > #self.spawnPoints then
 		self.lastUsedSpawnIndex = 1
 	end
-	
+
 	return self.spawnPoints[self.lastUsedSpawnIndex]
 end
 
@@ -91,24 +119,26 @@ function Spawner:getRandomSpawnPoint()
 		warn("No spawn points available! Using default position.")
 		return Vector3.new(0, 10, 0)
 	end
-
 	return self.spawnPoints[math.random(1, #self.spawnPoints)]
 end
 
--- Strategic spawn point selection based on zombie type
 function Spawner:getStrategicSpawnPoint(zombieType)
-	if #self.spawnPoints == 0 then
+	if #self.allSpawnPoints == 0 then
+		warn("[Spawner] No spawn points available! Using default position.")
 		return Vector3.new(0, 10, 0)
 	end
-	
-	-- For now, use round-robin for better distribution
-	-- Future enhancement: select spawn points based on zombie type
-	-- (e.g., Brutes spawn farther away, Runners spawn closer)
-	return self:getNextSpawnPoint()
+
+	local playerPositions = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			table.insert(playerPositions, player.Character.HumanoidRootPart.Position)
+		end
+	end
+
+	return self.spawnGenerator:getStrategicSpawnPoint(zombieType, self.allSpawnPoints, playerPositions)
 end
 
 function Spawner:getZombieModel(zombieType)
-	-- Try to get zombie model from ServerStorage
 	local zombieModels = ServerStorage:FindFirstChild("ZombieModels")
 	if not zombieModels then
 		warn("ZombieModels folder not found in ServerStorage!")
@@ -125,21 +155,17 @@ function Spawner:getZombieModel(zombieType)
 end
 
 function Spawner:spawnZombie(zombieType)
-	-- Get zombie stats
 	local stats = ZombieTypes[zombieType]
 	if not stats then
 		warn("Unknown zombie type: " .. zombieType)
 		return nil
 	end
 
-	-- Get zombie model
 	local zombieModel = self:getZombieModel(stats.Model)
 	if not zombieModel then
-		-- Fallback: create a basic zombie model
 		zombieModel = self:createBasicZombieModel(zombieType)
 	end
 
-	-- Position zombie at spawn point (use strategic for better distribution)
 	local spawnPosition = self:getStrategicSpawnPoint(zombieType)
 	if zombieModel.PrimaryPart then
 		zombieModel:PivotTo(CFrame.new(spawnPosition + Vector3.new(0, 3, 0)))
@@ -147,16 +173,23 @@ function Spawner:spawnZombie(zombieType)
 		zombieModel.HumanoidRootPart.CFrame = CFrame.new(spawnPosition + Vector3.new(0, 3, 0))
 	end
 
-	-- Set zombie attributes
 	zombieModel:SetAttribute("IsZombie", true)
 	zombieModel:SetAttribute("ZombieType", zombieType)
 	zombieModel:SetAttribute("Reward", stats.Reward)
+	print("[Spawner] Set attributes for", zombieModel.Name, "IsZombie:", zombieModel:GetAttribute("IsZombie"))
 
-	-- Parent to workspace
+	local humanoid = zombieModel:FindFirstChild("Humanoid")
+	if humanoid then
+		humanoid.MaxHealth = stats.Health or 60
+		humanoid.Health = stats.Health or 60
+		print("[Spawner] Set " .. zombieType .. " health to", humanoid.Health, "/", humanoid.MaxHealth)
+	else
+		warn("[Spawner] No Humanoid found in zombie model:", zombieModel.Name)
+	end
+
 	zombieModel.Name = zombieType .. "_" .. self.zombieCount
 	zombieModel.Parent = workspace.Zombies
 
-	-- Initialize AI with baseManager and playerManager for attack system
 	local brain = ZombieBrain.new(zombieModel, stats, self.baseManager, self.playerManager)
 	if brain then
 		self.zombieBrains[zombieModel] = brain
@@ -164,8 +197,6 @@ function Spawner:spawnZombie(zombieType)
 		self.zombieCount = self.zombieCount + 1
 	end
 
-	-- Setup death handler
-	local humanoid = zombieModel:FindFirstChild("Humanoid")
 	if humanoid then
 		humanoid.Died:Connect(function()
 			self:onZombieDied(zombieModel)
@@ -176,22 +207,18 @@ function Spawner:spawnZombie(zombieType)
 end
 
 function Spawner:createBasicZombieModel(zombieType)
-	-- Fallback: Create a basic zombie model if no model exists
 	local zombie = Instance.new("Model")
 	zombie.Name = zombieType
 
-	-- Create humanoid
 	local humanoid = Instance.new("Humanoid")
 	humanoid.Parent = zombie
 
-	-- Create root part
 	local rootPart = Instance.new("Part")
 	rootPart.Name = "HumanoidRootPart"
 	rootPart.Size = Vector3.new(2, 2, 1)
 	rootPart.Transparency = 1
 	rootPart.Parent = zombie
 
-	-- Create torso
 	local torso = Instance.new("Part")
 	torso.Name = "Torso"
 	torso.Size = Vector3.new(2, 2, 1)
@@ -203,7 +230,6 @@ function Spawner:createBasicZombieModel(zombieType)
 	weld.Part1 = torso
 	weld.Parent = rootPart
 
-	-- Create head
 	local head = Instance.new("Part")
 	head.Name = "Head"
 	head.Size = Vector3.new(2, 1, 1)
@@ -222,22 +248,19 @@ function Spawner:createBasicZombieModel(zombieType)
 	return zombie
 end
 
--- Queue zombies for staggered spawning
 function Spawner:queueSpawn(zombieType)
 	table.insert(self.spawnQueue, zombieType)
 end
 
--- Process spawn queue for staggered spawning
 function Spawner:processSpawnQueue(deltaTime)
 	if #self.spawnQueue == 0 then
 		return
 	end
-	
+
 	self.spawnTimer = self.spawnTimer + deltaTime
 	if self.spawnTimer >= self.spawnInterval then
 		self.spawnTimer = 0
-		
-		-- Spawn the next zombie in queue
+
 		local zombieType = table.remove(self.spawnQueue, 1)
 		if zombieType then
 			self:spawnZombie(zombieType)
@@ -245,24 +268,18 @@ function Spawner:processSpawnQueue(deltaTime)
 	end
 end
 
--- Strategic wave spawning - queues zombies by type priority
 function Spawner:spawnWave(waveComposition)
-	-- Clear any existing spawn queue
 	self.spawnQueue = {}
-	
-	-- Sort zombie types by priority for strategic spawning
-	-- Priority: Walkers first, then Runners, Spitters, Brutes, Boss last
+
 	local spawnOrder = {"Walker", "Runner", "Spitter", "Brute", "Boss"}
-	
-	-- Create a set of priority types for O(1) lookup
+
 	local prioritySet = {}
 	for _, zombieType in ipairs(spawnOrder) do
 		prioritySet[zombieType] = true
 	end
-	
+
 	local totalToSpawn = 0
-	
-	-- Queue zombies in strategic order
+
 	for _, zombieType in ipairs(spawnOrder) do
 		local count = waveComposition[zombieType] or 0
 		for _ = 1, count do
@@ -270,8 +287,7 @@ function Spawner:spawnWave(waveComposition)
 			totalToSpawn = totalToSpawn + 1
 		end
 	end
-	
-	-- Queue any other zombie types not in the priority list
+
 	for zombieType, count in pairs(waveComposition) do
 		if not prioritySet[zombieType] then
 			for _ = 1, count do
@@ -286,7 +302,6 @@ function Spawner:spawnWave(waveComposition)
 end
 
 function Spawner:onZombieDied(zombie)
-	-- Remove from active list
 	for i, activeZombie in ipairs(self.activeZombies) do
 		if activeZombie == zombie then
 			table.remove(self.activeZombies, i)
@@ -298,7 +313,6 @@ function Spawner:onZombieDied(zombie)
 		self.weaponService:onZombieKilled(zombie)
 	end
 
-	-- Remove brain
 	if self.zombieBrains[zombie] then
 		self.zombieBrains[zombie]:destroy()
 		self.zombieBrains[zombie] = nil
@@ -308,10 +322,8 @@ function Spawner:onZombieDied(zombie)
 end
 
 function Spawner:update(deltaTime)
-	-- Process staggered spawn queue
 	self:processSpawnQueue(deltaTime)
-	
-	-- Update all zombie brains
+
 	for zombie, brain in pairs(self.zombieBrains) do
 		if brain.isActive then
 			brain:update(deltaTime)
@@ -320,15 +332,12 @@ function Spawner:update(deltaTime)
 end
 
 function Spawner:getActiveZombieCount()
-	-- Include zombies still in queue as "alive" for wave completion check
 	return #self.activeZombies + #self.spawnQueue
 end
 
 function Spawner:clearAllZombies()
-	-- Clear spawn queue
 	self.spawnQueue = {}
-	
-	-- Destroy all active zombies
+
 	for _, zombie in ipairs(self.activeZombies) do
 		if zombie and zombie.Parent then
 			zombie:Destroy()
@@ -338,6 +347,45 @@ function Spawner:clearAllZombies()
 	self.activeZombies = {}
 	self.zombieBrains = {}
 	print("All zombies cleared")
+end
+
+function Spawner:prepareForNewRound()
+	print("[Spawner] Preparing for new round...")
+
+	self:clearAllZombies()
+	self:generateSpawnPointsForRound()
+
+	print("[Spawner] Ready for new round with", #self.allSpawnPoints, "spawn points")
+end
+
+function Spawner:testSpawnGeneration()
+	print("=== Testing Spawn Generation ===")
+
+	if not self.spawnGenerator then
+		print("❌ Spawn generator not initialized")
+		return
+	end
+
+	print("\n1. Testing map analysis...")
+	self.spawnGenerator:analyzeMapBounds()
+
+	if self.spawnGenerator.mapBounds then
+		print("✅ Map bounds detected:")
+		print("   X:", self.spawnGenerator.mapBounds.minX, "to", self.spawnGenerator.mapBounds.maxX)
+		print("   Z:", self.spawnGenerator.mapBounds.minZ, "to", self.spawnGenerator.mapBounds.maxZ)
+	else
+		print("❌ Failed to detect map bounds")
+	end
+
+	print("\n2. Testing spawn point generation...")
+	local spawnPoints = self.spawnGenerator:generateSpawnPointsForRound()
+
+	print("✅ Generated", #spawnPoints, "spawn points:")
+	for i, pos in ipairs(spawnPoints) do
+		print("   Spawn Point", i, ":", pos)
+	end
+
+	print("\n=== Test Complete ===")
 end
 
 return Spawner
