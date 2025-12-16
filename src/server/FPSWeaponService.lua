@@ -5,7 +5,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local FPSConfig = require(ReplicatedStorage.Shared.FPSConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local FPSWeaponService = {}
 FPSWeaponService.__index = FPSWeaponService
@@ -26,30 +28,13 @@ function FPSWeaponService.new(playerManager, weaponService)
 end
 
 function FPSWeaponService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"WeaponReload",
+		"AmmoUpdate"
+	})
 
-	local reloadEvent = remoteEventsFolder:FindFirstChild("WeaponReload")
-	if not reloadEvent then
-		reloadEvent = Instance.new("RemoteEvent")
-		reloadEvent.Name = "WeaponReload"
-		reloadEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.WeaponReload = reloadEvent
-
-	local ammoUpdateEvent = remoteEventsFolder:FindFirstChild("AmmoUpdate")
-	if not ammoUpdateEvent then
-		ammoUpdateEvent = Instance.new("RemoteEvent")
-		ammoUpdateEvent.Name = "AmmoUpdate"
-		ammoUpdateEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.AmmoUpdate = ammoUpdateEvent
-
-	reloadEvent.OnServerEvent:Connect(function(player, payload)
+	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
 		self:handleReload(player, payload)
 	end)
 end

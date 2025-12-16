@@ -12,7 +12,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local AllianceService = {}
 AllianceService.__index = AllianceService
@@ -59,59 +61,24 @@ function AllianceService:setPlayerManager(playerManager)
 end
 
 function AllianceService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	-- Request Alliance
-	local requestEvent = remoteEventsFolder:FindFirstChild("RequestAlliance")
-	if not requestEvent then
-		requestEvent = Instance.new("RemoteEvent")
-		requestEvent.Name = "RequestAlliance"
-		requestEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.RequestAlliance = requestEvent
-
-	-- Respond to Alliance
-	local respondEvent = remoteEventsFolder:FindFirstChild("RespondAlliance")
-	if not respondEvent then
-		respondEvent = Instance.new("RemoteEvent")
-		respondEvent.Name = "RespondAlliance"
-		respondEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.RespondAlliance = respondEvent
-
-	-- Break Alliance
-	local breakEvent = remoteEventsFolder:FindFirstChild("BreakAlliance")
-	if not breakEvent then
-		breakEvent = Instance.new("RemoteEvent")
-		breakEvent.Name = "BreakAlliance"
-		breakEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.BreakAlliance = breakEvent
-
-	-- Alliance Update (server to client)
-	local updateEvent = remoteEventsFolder:FindFirstChild("AllianceUpdate")
-	if not updateEvent then
-		updateEvent = Instance.new("RemoteEvent")
-		updateEvent.Name = "AllianceUpdate"
-		updateEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.AllianceUpdate = updateEvent
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"RequestAlliance",
+		"RespondAlliance",
+		"BreakAlliance",
+		"AllianceUpdate"
+	})
 
 	-- Connect event handlers
-	requestEvent.OnServerEvent:Connect(function(player, targetPlayer)
+	self.remoteEvents.RequestAlliance.OnServerEvent:Connect(function(player, targetPlayer)
 		self:handleAllianceRequest(player, targetPlayer)
 	end)
 
-	respondEvent.OnServerEvent:Connect(function(player, requesterPlayer, accept)
+	self.remoteEvents.RespondAlliance.OnServerEvent:Connect(function(player, requesterPlayer, accept)
 		self:handleAllianceResponse(player, requesterPlayer, accept)
 	end)
 
-	breakEvent.OnServerEvent:Connect(function(player, targetPlayer)
+	self.remoteEvents.BreakAlliance.OnServerEvent:Connect(function(player, targetPlayer)
 		self:handleBreakAlliance(player, targetPlayer)
 	end)
 end

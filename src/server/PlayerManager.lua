@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local PlayerManager = {}
 PlayerManager.__index = PlayerManager
@@ -37,27 +38,13 @@ function PlayerManager:setWeaponService(weaponService)
 end
 
 function PlayerManager:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	local function getOrCreateRemote(name)
-		local ev = remoteEventsFolder:FindFirstChild(name)
-		if not ev then
-			ev = Instance.new("RemoteEvent")
-			ev.Name = name
-			ev.Parent = remoteEventsFolder
-		end
-		return ev
-	end
-
-	self.remoteEvents.InventoryUpdate = getOrCreateRemote("InventoryUpdate")
-	self.remoteEvents.CurrencyUpdate = getOrCreateRemote("CurrencyUpdate")
-	self.remoteEvents.WeaponLoadoutUpdate = getOrCreateRemote("WeaponLoadoutUpdate")
-	self.remoteEvents.PlayerHealthUpdate = getOrCreateRemote("PlayerHealthUpdate")
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"InventoryUpdate",
+		"CurrencyUpdate",
+		"WeaponLoadoutUpdate",
+		"PlayerHealthUpdate"
+	})
 end
 
 ----------------------------------------------------------------

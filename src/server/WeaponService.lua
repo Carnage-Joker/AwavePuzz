@@ -9,7 +9,9 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
-local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local function cloneTable(t)
 	local copy = {}
@@ -73,42 +75,18 @@ function WeaponService:setFPSWeaponService(fpsWeaponService)
 end
 
 function WeaponService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"WeaponFire",
+		"WeaponEquip",
+		"WeaponHitConfirm"
+	})
 
-	local fireEvent = remoteEventsFolder:FindFirstChild("WeaponFire")
-	if not fireEvent then
-		fireEvent = Instance.new("RemoteEvent")
-		fireEvent.Name = "WeaponFire"
-		fireEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.WeaponFire = fireEvent
-
-	local equipEvent = remoteEventsFolder:FindFirstChild("WeaponEquip")
-	if not equipEvent then
-		equipEvent = Instance.new("RemoteEvent")
-		equipEvent.Name = "WeaponEquip"
-		equipEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.WeaponEquip = equipEvent
-
-	local hitEvent = remoteEventsFolder:FindFirstChild("WeaponHitConfirm")
-	if not hitEvent then
-		hitEvent = Instance.new("RemoteEvent")
-		hitEvent.Name = "WeaponHitConfirm"
-		hitEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.WeaponHitConfirm = hitEvent
-
-	fireEvent.OnServerEvent:Connect(function(player, payload)
+	self.remoteEvents.WeaponFire.OnServerEvent:Connect(function(player, payload)
 		self:handleWeaponFire(player, payload)
 	end)
 
-	equipEvent.OnServerEvent:Connect(function(player, weaponId)
+	self.remoteEvents.WeaponEquip.OnServerEvent:Connect(function(player, weaponId)
 		self:handleEquipRequest(player, weaponId)
 	end)
 end

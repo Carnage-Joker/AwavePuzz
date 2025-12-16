@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local SprintService = {}
 SprintService.__index = SprintService
@@ -49,33 +50,14 @@ end
 --------------------------------------------------------------------------------
 
 function SprintService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	-- Client requests to start/stop sprinting
-	local sprintRequestEvent = remoteEventsFolder:FindFirstChild("SprintRequest")
-	if not sprintRequestEvent then
-		sprintRequestEvent = Instance.new("RemoteEvent")
-		sprintRequestEvent.Name = "SprintRequest"
-		sprintRequestEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.SprintRequest = sprintRequestEvent
-
-	-- Server sends stamina updates to client
-	local staminaUpdateEvent = remoteEventsFolder:FindFirstChild("StaminaUpdate")
-	if not staminaUpdateEvent then
-		staminaUpdateEvent = Instance.new("RemoteEvent")
-		staminaUpdateEvent.Name = "StaminaUpdate"
-		staminaUpdateEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents.StaminaUpdate = staminaUpdateEvent
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"SprintRequest",
+		"StaminaUpdate"
+	})
 
 	-- Handle sprint requests from clients
-	sprintRequestEvent.OnServerEvent:Connect(function(player, wantsSprint)
+	self.remoteEvents.SprintRequest.OnServerEvent:Connect(function(player, wantsSprint)
 		self:handleSprintRequest(player, wantsSprint)
 	end)
 end

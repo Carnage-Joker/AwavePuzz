@@ -3,7 +3,9 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local WeaponConfig = require(ReplicatedStorage.Shared.WeaponConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local ShopService = {}
 ShopService.__index = ShopService
@@ -12,26 +14,6 @@ local VALID_ACTIONS = {
 	catalog = true,
 	purchase = true,
 }
-
-local function getOrCreateRemoteFolder()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-	return remoteEventsFolder
-end
-
-local function getOrCreateRemoteEvent(parent, name)
-	local event = parent:FindFirstChild(name)
-	if not event then
-		event = Instance.new("RemoteEvent")
-		event.Name = name
-		event.Parent = parent
-	end
-	return event
-end
 
 function ShopService.new(playerManager, weaponService)
 	local self = setmetatable({}, ShopService)
@@ -46,15 +28,13 @@ function ShopService.new(playerManager, weaponService)
 end
 
 function ShopService:setupRemoteEvents()
-	local remoteEventsFolder = getOrCreateRemoteFolder()
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"ShopRequest",
+		"ShopUpdate"
+	})
 
-	local requestEvent = getOrCreateRemoteEvent(remoteEventsFolder, "ShopRequest")
-	local updateEvent = getOrCreateRemoteEvent(remoteEventsFolder, "ShopUpdate")
-
-	self.remoteEvents.ShopRequest = requestEvent
-	self.remoteEvents.ShopUpdate = updateEvent
-
-	requestEvent.OnServerEvent:Connect(function(player, action, data)
+	self.remoteEvents.ShopRequest.OnServerEvent:Connect(function(player, action, data)
 		self:handleRequest(player, action, data)
 	end)
 end

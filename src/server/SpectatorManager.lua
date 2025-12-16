@@ -11,21 +11,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local SpectatorManager = {}
 SpectatorManager.__index = SpectatorManager
 
 local DEFAULT_CYCLE_COOLDOWN = 0.25
-
-local function getOrCreateFolder(parent, name)
-	local f = parent:FindFirstChild(name)
-	if not f then
-		f = Instance.new("Folder")
-		f.Name = name
-		f.Parent = parent
-	end
-	return f
-end
 
 local function getHumanoid(player)
 	if not player then return nil end
@@ -59,25 +50,14 @@ function SpectatorManager.new()
 end
 
 function SpectatorManager:_setupRemoteEvents()
-	local remoteEventsFolder = getOrCreateFolder(ReplicatedStorage, "RemoteEvents")
-
-	local eventNames = {
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"EnterSpectatorMode",    -- Server -> Client
 		"ExitSpectatorMode",     -- Server -> Client
 		"SpectatorTargetUpdate", -- Server -> Client
 		"SpectatorCycleTarget",  -- Client -> Server
-		"SpectatorStateUpdate",  -- Server -> Client
-	}
-
-	for _, eventName in ipairs(eventNames) do
-		local ev = remoteEventsFolder:FindFirstChild(eventName)
-		if not ev then
-			ev = Instance.new("RemoteEvent")
-			ev.Name = eventName
-			ev.Parent = remoteEventsFolder
-		end
-		self.remoteEvents[eventName] = ev
-	end
+		"SpectatorStateUpdate"   -- Server -> Client
+	})
 
 	-- Client cycle requests
 	self.remoteEvents.SpectatorCycleTarget.OnServerEvent:Connect(function(player, direction)

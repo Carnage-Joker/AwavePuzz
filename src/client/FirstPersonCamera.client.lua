@@ -15,6 +15,7 @@ local camera = workspace.CurrentCamera
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 
 --------------------------------------------------------------------------------
 -- STATE
@@ -62,13 +63,9 @@ local userSettings = {
 -- UTILITY FUNCTIONS
 --------------------------------------------------------------------------------
 
-local function clamp(value, min, max)
-	return math.clamp(value, min, max)
-end
-
-local function lerp(a, b, t)
-	return a + (b - a) * t
-end
+-- Use shared utility functions
+local clamp = MathUtil.clamp
+local lerp = MathUtil.lerp
 
 --------------------------------------------------------------------------------
 -- CHARACTER TRANSPARENCY

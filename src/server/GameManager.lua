@@ -8,8 +8,10 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
-local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local WaveConfig = require(SharedFolder:WaitForChild("WaveConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local BaseManager = require(script.Parent.BaseManager)
 local Spawner = require(script.Parent.Spawner)
@@ -103,14 +105,8 @@ function GameManager.new(allianceService)
 end
 
 function GameManager:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	local eventNames = {
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WaveAnnounce",
 		"WaveUpdate",
 		"GameStateUpdate",
@@ -119,18 +115,8 @@ function GameManager:setupRemoteEvents()
 		"MapUpdate",
 		"ScoreboardUpdate",
 		"ShowScoreboard",
-		"HideScoreboard",
-	}
-
-	for _, eventName in ipairs(eventNames) do
-		local event = remoteEventsFolder:FindFirstChild(eventName)
-		if not event then
-			event = Instance.new("RemoteEvent")
-			event.Name = eventName
-			event.Parent = remoteEventsFolder
-		end
-		self.remoteEvents[eventName] = event
-	end
+		"HideScoreboard"
+	})
 end
 
 function GameManager:_hookSpectatorRemotes()

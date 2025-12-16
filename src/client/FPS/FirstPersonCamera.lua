@@ -5,6 +5,10 @@
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -25,9 +29,8 @@ function FirstPersonCamera.new(config)
         return self
 end
 
-local function clamp(value, min, max)
-        return math.max(min, math.min(max, value))
-end
+-- Use shared clamp function
+local clamp = MathUtil.clamp
 
 local function setCharacterTransparency(character, visible)
         for _, part in ipairs(character:GetDescendants()) do

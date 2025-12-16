@@ -11,7 +11,10 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local CureService = {}
 CureService.__index = CureService
@@ -41,22 +44,10 @@ end
 
 -- Setup remote events for cure progress updates
 function CureService:setupRemoteEvents()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then
-		remoteEventsFolder = Instance.new("Folder")
-		remoteEventsFolder.Name = "RemoteEvents"
-		remoteEventsFolder.Parent = ReplicatedStorage
-	end
-
-	-- Individual cure progress update
-	local cureProgressEvent = remoteEventsFolder:FindFirstChild("PlayerCureProgressUpdate")
-	if not cureProgressEvent then
-		cureProgressEvent = Instance.new("RemoteEvent")
-		cureProgressEvent.Name = "PlayerCureProgressUpdate"
-		cureProgressEvent.Parent = remoteEventsFolder
-	end
-	self.remoteEvents = self.remoteEvents or {}
-	self.remoteEvents.PlayerCureProgressUpdate = cureProgressEvent
+	-- Use shared utility to create remote events
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"PlayerCureProgressUpdate"
+	})
 end
 
 -- Set puzzle service reference (called after both services are created)
