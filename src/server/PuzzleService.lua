@@ -379,6 +379,14 @@ function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	end
 end
 
+-- Helper function to normalize string answers
+local function normalizeAnswer(answer)
+	if type(answer) ~= "string" then
+		return nil
+	end
+	return answer:lower():gsub("%s+", "")
+end
+
 function PuzzleService:validateAnswer(puzzle, answer)
 	if not puzzle or not puzzle.data then
 		return false
@@ -421,16 +429,18 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
 		
-		-- For now, accept predefined correct answers or simple keyword matching
-		if type(answer) == "string" then
-			local normalizedAnswer = answer:lower():gsub("%s+", "")
-			-- Accept "correct" as the MVP answer for logic puzzles
-			if normalizedAnswer == "correct" then
-				return true
-			end
-			-- Could also validate against specific arrangements like "smithx", "jonezy", "brownz"
-			-- Format: scientist initial + element initial (e.g., "sx" = Smith + Compound X)
+		-- Use helper function to normalize answer
+		local normalizedAnswer = normalizeAnswer(answer)
+		if not normalizedAnswer then
+			return false
 		end
+		
+		-- Accept "correct" as the MVP answer for logic puzzles
+		if normalizedAnswer == "correct" then
+			return true
+		end
+		-- Could also validate against specific arrangements like "smithx", "jonezy", "brownz"
+		-- Format: scientist initial + element initial (e.g., "sx" = Smith + Compound X)
 		
 		return false
 
@@ -446,15 +456,17 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
 		
-		-- For now, accept predefined correct answers
-		if type(answer) == "string" then
-			local normalizedAnswer = answer:lower():gsub("%s+", "")
-			-- Accept "circuit" as the MVP answer for abstract puzzles
-			if normalizedAnswer == "circuit" then
-				return true
-			end
-			-- Could also validate connection patterns like "1-2,2-3,3-4,4-5,5-6,6-1"
+		-- Use helper function to normalize answer
+		local normalizedAnswer = normalizeAnswer(answer)
+		if not normalizedAnswer then
+			return false
 		end
+		
+		-- Accept "circuit" as the MVP answer for abstract puzzles
+		if normalizedAnswer == "circuit" then
+			return true
+		end
+		-- Could also validate connection patterns like "1-2,2-3,3-4,4-5,5-6,6-1"
 		
 		return false
 

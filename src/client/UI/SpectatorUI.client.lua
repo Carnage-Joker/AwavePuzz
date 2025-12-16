@@ -10,6 +10,11 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
+-- Camera configuration
+local SPECTATOR_CAMERA_HEIGHT = 4 -- Studs above target
+local SPECTATOR_CAMERA_DISTANCE = 8 -- Studs behind target
+local CAMERA_LERP_ALPHA = 0.15 -- Camera smoothing factor
+
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 local EnterSpectatorMode = remoteEvents:WaitForChild("EnterSpectatorMode")
 local ExitSpectatorMode = remoteEvents:WaitForChild("ExitSpectatorMode")
@@ -165,12 +170,12 @@ RunService.RenderStepped:Connect(function()
 	local targetLook = part.CFrame.LookVector
 	
 	-- Position camera behind and above the target for third-person view
-	local cameraOffset = Vector3.new(0, 4, 8) -- 4 studs up, 8 studs back
+	local cameraOffset = Vector3.new(0, SPECTATOR_CAMERA_HEIGHT, SPECTATOR_CAMERA_DISTANCE)
 	local desiredPos = targetPos - (targetLook * cameraOffset.Z) + Vector3.new(0, cameraOffset.Y, 0)
 	
 	-- Look at target
 	local cf = CFrame.new(desiredPos, targetPos)
-	camera.CFrame = camera.CFrame:Lerp(cf, 0.15)
+	camera.CFrame = camera.CFrame:Lerp(cf, CAMERA_LERP_ALPHA)
 end)
 
 -- Client -> server cycle

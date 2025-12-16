@@ -1,10 +1,11 @@
 -- SpectatorManager.lua
 -- Server-side spectator mode manager
--- Dead players can spectate living players until round ends
--- TODO: when in spectator mode it needs to be clearly labled, 
--- so a different gui, one where you can cycle between players still,
--- alive to watch. Fix the camera to a sort of third person view of,
--- any player that is still alive. The spectator player should be invisible to the zombies
+-- Features:
+-- - Dead players can spectate living players until round ends
+-- - Spectator UI with clear labeling (see SpectatorUI.client.lua)
+-- - Player cycling with Q/E or A/D keys and UI buttons
+-- - Third-person camera view for spectating
+-- - Spectators are invisible to zombies (via IsSpectating attribute)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
