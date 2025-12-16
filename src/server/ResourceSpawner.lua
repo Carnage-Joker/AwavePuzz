@@ -6,12 +6,25 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 
 local sharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(sharedFolder:WaitForChild("GameConfig"))
 
 local ResourceSpawner = {}
 ResourceSpawner.__index = ResourceSpawner
+
+local CONFIG = {
+	GROUND_CHECK_DISTANCE = 120,
+	SPAWN_HEIGHT_OFFSET = 2,
+	VALIDATION_RADIUS = 6,
+	OPENNESS_RAY_LENGTH = 22,
+	OPENNESS_RAYS = 8,
+	MIN_DISTANCE_FROM_PLAYERS = 10,
+	MIN_DISTANCE_FROM_BASE = 20,
+	MAX_ATTEMPTS = 30,
+	OUTER_RING_MULTIPLIER = 1.10, -- > 110% of avg zombie ring distance
+}
 
 function ResourceSpawner.new()
 	local self = setmetatable({}, ResourceSpawner)
@@ -20,6 +33,9 @@ function ResourceSpawner.new()
 	self.activeResources = {}
 	self.spawnTimer = 0
 	self.spawnPoints = {}
+
+	-- NEW: optional externally provided zombie spawn points
+	self.zombieSpawnPoints = nil
 
 	-- Create resource folder in workspace
 	self.resourceFolder = workspace:FindFirstChild("CureResources")
@@ -41,6 +57,22 @@ function ResourceSpawner:setCureService(cureService)
 	self.cureService = cureService
 end
 
+-- NEW (non-breaking): spawner can inject combined zombie spawn points
+function ResourceSpawner:setZombieSpawnPoints(points)
+	if typeof(points) ~= "table" then
+		warn("[ResourceSpawner] setZombieSpawnPoints expected table, got", typeof(points))
+		self.zombieSpawnPoints = nil
+		return
+	end
+	local copy = {}
+	for _, p in ipairs(points) do
+		if typeof(p) == "Vector3" then
+			table.insert(copy, p)
+		end
+	end
+	self.zombieSpawnPoints = copy
+end
+
 function ResourceSpawner:setSpawnPoints(points)
 	if typeof(points) ~= "table" then
 		warn("[ResourceSpawner] setSpawnPoints expected table, got", typeof(points))
@@ -48,8 +80,6 @@ function ResourceSpawner:setSpawnPoints(points)
 	end
 
 	self.spawnPoints = {}
-
-	-- Defensive copy, in case the source table gets modified elsewhere
 	for _, pos in ipairs(points) do
 		table.insert(self.spawnPoints, pos)
 	end
@@ -57,8 +87,264 @@ function ResourceSpawner:setSpawnPoints(points)
 	print("[ResourceSpawner] Set spawn points:", #self.spawnPoints)
 end
 
+local function getPivotPosition(inst)
+	if not inst then return nil end
+	if inst:IsA("BasePart") then
+		return inst.Position
+	end
+	if inst:IsA("Model") then
+		return inst:GetPivot().Position
+	end
+	return nil
+end
+
+function ResourceSpawner:tryFindBasePosition()
+	-- Heuristic: look for common “base” objects across maps
+	local candidates = {
+		Workspace:FindFirstChild("Base"),
+		Workspace:FindFirstChild("BaseCore"),
+		Workspace:FindFirstChild("BaseStation"),
+		Workspace:FindFirstChild("CureStation1"),
+		Workspace:FindFirstChild("CureStations"),
+	}
+
+	for _, c in ipairs(candidates) do
+		local pos = getPivotPosition(c)
+		if pos then
+			return pos
+		end
+		-- If folder/model, try children
+		if c and c.GetDescendants then
+			for _, d in ipairs(c:GetDescendants()) do
+				local p = getPivotPosition(d)
+				if p then
+					return p
+				end
+			end
+		end
+	end
+
+	return Vector3.new(0, 0, 0)
+end
+
+function ResourceSpawner:getPlayerPositions()
+	local positions = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		local char = plr.Character
+		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			table.insert(positions, hrp.Position)
+		end
+	end
+	return positions
+end
+
+function ResourceSpawner:getPlayerCenter(playerPositions)
+	if not playerPositions or #playerPositions == 0 then
+		return nil
+	end
+	local sum = Vector3.new(0, 0, 0)
+	for _, p in ipairs(playerPositions) do
+		sum += p
+	end
+	return sum / #playerPositions
+end
+
+function ResourceSpawner:getZombieSpawnPointsFallback()
+	-- If we weren’t injected, read manual + generated markers from workspace
+	local points = {}
+
+	local manual = Workspace:FindFirstChild("ZombieSpawnPoints")
+	if manual then
+		for _, ch in ipairs(manual:GetChildren()) do
+			if ch:IsA("BasePart") then
+				table.insert(points, ch.Position)
+			elseif ch:IsA("Model") then
+				table.insert(points, ch:GetPivot().Position)
+			end
+		end
+	end
+
+	local generated = Workspace:FindFirstChild("GeneratedZombieSpawnPoints")
+	if generated then
+		for _, ch in ipairs(generated:GetChildren()) do
+			if ch:IsA("BasePart") then
+				table.insert(points, ch.Position)
+			end
+		end
+	end
+
+	return points
+end
+
+function ResourceSpawner:getZombieRingDistance(basePos, zombieSpawns)
+	if not zombieSpawns or #zombieSpawns == 0 then
+		return nil
+	end
+
+	local sum = 0
+	local count = 0
+	for _, z in ipairs(zombieSpawns) do
+		sum += (z - basePos).Magnitude
+		count += 1
+	end
+
+	if count == 0 then return nil end
+	return sum / count
+end
+
+function ResourceSpawner:raycastToGround(pos)
+	local rayStart = Vector3.new(pos.X, pos.Y + CONFIG.GROUND_CHECK_DISTANCE, pos.Z)
+	local rayDir = Vector3.new(0, -CONFIG.GROUND_CHECK_DISTANCE * 2, 0)
+
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = { self.resourceFolder }
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local result = Workspace:Raycast(rayStart, rayDir, params)
+	if result and result.Position then
+		return result.Position
+	end
+	return nil
+end
+
+function ResourceSpawner:isSpawnAreaClear(pos)
+	-- Quick obstacle check using radius box
+	local region = Region3.new(
+		Vector3.new(pos.X - CONFIG.VALIDATION_RADIUS, pos.Y - 3, pos.Z - CONFIG.VALIDATION_RADIUS),
+		Vector3.new(pos.X + CONFIG.VALIDATION_RADIUS, pos.Y + 8, pos.Z + CONFIG.VALIDATION_RADIUS)
+	)
+	local parts = Workspace:FindPartsInRegion3(region, nil, 80)
+	for _, part in ipairs(parts) do
+		if part and part.Parent and part.CanCollide and part.Transparency < 0.95 then
+			-- ignore our own resource folder
+			if not part:IsDescendantOf(self.resourceFolder) then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+function ResourceSpawner:getOpennessScore(pos)
+	-- Favour open spaces: fewer hits in radial raycasts
+	local hits = 0
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = { self.resourceFolder }
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	local origin = pos + Vector3.new(0, 3, 0)
+	for i = 1, CONFIG.OPENNESS_RAYS do
+		local angle = (i / CONFIG.OPENNESS_RAYS) * math.pi * 2
+		local dir = Vector3.new(math.cos(angle), 0, math.sin(angle)) * CONFIG.OPENNESS_RAY_LENGTH
+		local result = Workspace:Raycast(origin, dir, params)
+		if result and result.Instance and result.Instance.CanCollide then
+			hits += 1
+		end
+	end
+
+	-- 0 hits = best, more hits = more cover
+	return (CONFIG.OPENNESS_RAYS - hits) / CONFIG.OPENNESS_RAYS
+end
+
+function ResourceSpawner:pickSmartSpawnPoint()
+	local basePos = self:tryFindBasePosition()
+	local playerPositions = self:getPlayerPositions()
+	local playerCenter = self:getPlayerCenter(playerPositions)
+
+	local zombieSpawns = self.zombieSpawnPoints
+	if not zombieSpawns then
+		zombieSpawns = self:getZombieSpawnPointsFallback()
+	end
+
+	local zombieRing = self:getZombieRingDistance(basePos, zombieSpawns)
+	local minOuter = zombieRing and (zombieRing * CONFIG.OUTER_RING_MULTIPLIER) or nil
+
+	-- If we have no spawn points, fallback to default behaviour
+	if #self.spawnPoints == 0 then
+		return Vector3.new(0, 2, 0)
+	end
+
+	local bestPos = nil
+	local bestScore = -math.huge
+
+	-- Evaluate a handful of candidates
+	for attempt = 1, CONFIG.MAX_ATTEMPTS do
+		local candidate = self.spawnPoints[math.random(1, #self.spawnPoints)]
+		local grounded = self:raycastToGround(candidate)
+		if not grounded then
+			continue
+		end
+
+		local pos = Vector3.new(grounded.X, grounded.Y + CONFIG.SPAWN_HEIGHT_OFFSET, grounded.Z)
+
+		-- Safety constraints
+		local dBase = (pos - basePos).Magnitude
+		if dBase < CONFIG.MIN_DISTANCE_FROM_BASE then
+			continue
+		end
+
+		if minOuter and dBase < minOuter then
+			-- Must be beyond the average zombie ring to pull players outward
+			continue
+		end
+
+		if playerCenter then
+			local dPlayers = (pos - playerCenter).Magnitude
+			if dPlayers < CONFIG.MIN_DISTANCE_FROM_PLAYERS then
+				continue
+			end
+		end
+
+		if not self:isSpawnAreaClear(pos) then
+			continue
+		end
+
+		-- Scoring
+		local score = 0
+
+		-- Push outward from base (strong)
+		score += dBase * 1.0
+
+		-- Prefer opposite direction of current player push
+		if playerCenter then
+			local pv = (playerCenter - basePos)
+			if pv.Magnitude > 0.01 then
+				local playerDir = pv.Unit
+				local spawnDir = (pos - basePos).Unit
+				local alignment = playerDir:Dot(spawnDir) -- 1 = same direction, -1 = opposite
+				score += (-alignment * 80)
+			end
+		end
+
+		-- Prefer open areas (less cover)
+		local open = self:getOpennessScore(pos)
+		score += open * 60
+
+		-- Small randomness so it’s not chess-perfect
+		score += math.random(-10, 10)
+
+		if score > bestScore then
+			bestScore = score
+			bestPos = pos
+		end
+	end
+
+	-- Hard fallback
+	if not bestPos then
+		local fallback = self.spawnPoints[math.random(1, #self.spawnPoints)]
+		local grounded = self:raycastToGround(fallback)
+		if grounded then
+			bestPos = grounded + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
+		else
+			bestPos = fallback + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
+		end
+	end
+
+	return bestPos
+end
+
 function ResourceSpawner:findSpawnPoints()
-	-- Look for ItemSpawns or ResourceSpawns in workspace
 	local spawnPointsFolder = workspace:FindFirstChild("SpawnPoints")
 
 	if spawnPointsFolder then
@@ -73,17 +359,17 @@ function ResourceSpawner:findSpawnPoints()
 		end
 	end
 
-	-- If no spawn points found, create some defaults
 	if #self.spawnPoints == 0 then
 		warn("No resource spawn points found. Creating default spawn locations...")
 
-		-- Create spawn points in a circle around the origin
-		local radius = 40
+		-- Default around base (not origin) so multi-map doesn’t dump everything at 0,0,0
+		local basePos = self:tryFindBasePosition()
+		local radius = 80
 		for i = 1, 8 do
 			local angle = (i / 8) * math.pi * 2
-			local x = math.cos(angle) * radius
-			local z = math.sin(angle) * radius
-			table.insert(self.spawnPoints, Vector3.new(x, 2, z))
+			local x = basePos.X + math.cos(angle) * radius
+			local z = basePos.Z + math.sin(angle) * radius
+			table.insert(self.spawnPoints, Vector3.new(x, basePos.Y + 10, z))
 		end
 	end
 end
@@ -95,7 +381,7 @@ end
 
 function ResourceSpawner:getRandomSpawnPoint()
 	if #self.spawnPoints == 0 then
-		return Vector3.new(0, 2, 0) -- Fallback position
+		return Vector3.new(0, 2, 0)
 	end
 	return self.spawnPoints[math.random(1, #self.spawnPoints)]
 end
@@ -105,30 +391,25 @@ function ResourceSpawner:spawnResource()
 		return nil
 	end
 
-	local spawnPoint = self:getRandomSpawnPoint()
+	-- NEW: intelligent selection
+	local spawnPoint = self:pickSmartSpawnPoint()
 	local componentName = self:getRandomComponent()
 	local resourceId = "resource_" .. os.time() .. "_" .. math.random(1000, 9999)
 
-	-- Create visual resource part
 	local part = Instance.new("Part")
 	part.Name = componentName .. "_Resource"
 	part.Color = self:getComponentColor(componentName)
 	part.Material = Enum.Material.Neon
 	part.Size = Vector3.new(2, 0.5, 2)
-	part.Position = spawnPoint + Vector3.new(0, 2, 0)
+	part.Position = spawnPoint + Vector3.new(0, 0, 0)
 	part.Anchored = true
 	part.CanCollide = false
 	part:SetAttribute("ComponentName", componentName)
 	part:SetAttribute("ResourceId", resourceId)
 	part.Parent = self.resourceFolder
 
-	-- Add rotating effect (modern approach for anchored parts)
 	local RunService = game:GetService("RunService")
-	-- Store the initial CFrame for reference
-	local initialCFrame = part.CFrame
-	-- We'll rotate at 2 radians per second around Y axis
-	local rotationSpeed = 2 -- radians per second
-	-- Create a connection to rotate the part every Heartbeat
+	local rotationSpeed = 2
 	local rotationConnection
 	rotationConnection = RunService.Heartbeat:Connect(function(dt)
 		if not part or not part.Parent then
@@ -137,18 +418,15 @@ function ResourceSpawner:spawnResource()
 			end
 			return
 		end
-		-- Incremental rotation
 		part.CFrame = part.CFrame * CFrame.Angles(0, rotationSpeed * dt, 0)
 	end)
 
-	-- Optionally, store the connection for cleanup if you remove the part elsewhere
 	part.Destroying:Connect(function()
 		if rotationConnection then
 			rotationConnection:Disconnect()
 		end
 	end)
 
-	-- Add label
 	local billboard = Instance.new("BillboardGui")
 	billboard.Size = UDim2.new(0, 100, 0, 40)
 	billboard.AlwaysOnTop = true
@@ -165,7 +443,6 @@ function ResourceSpawner:spawnResource()
 	textLabel.Font = Enum.Font.GothamBold
 	textLabel.Parent = billboard
 
-	-- Touch detection
 	local debouncing = false
 	local touchConnection = part.Touched:Connect(function(hit)
 		if debouncing then
@@ -186,7 +463,6 @@ function ResourceSpawner:spawnResource()
 		self:onResourceCollected(player, resourceId, componentName, part)
 	end)
 
-	-- Store resource data
 	self.activeResources[resourceId] = {
 		component = componentName,
 		instance = part,
@@ -199,15 +475,13 @@ function ResourceSpawner:spawnResource()
 end
 
 function ResourceSpawner:getComponentColor(componentName)
-	-- Assign unique colors to each component type
 	local colors = {
-		["Chemical A"] = Color3.fromRGB(85, 170, 255),   -- Blue
-		["Chemical B"] = Color3.fromRGB(255, 170, 85),   -- Orange
-		["Biological Sample"] = Color3.fromRGB(85, 255, 85),  -- Green
-		["Research Notes"] = Color3.fromRGB(255, 255, 100),   -- Yellow
-		["Catalyst"] = Color3.fromRGB(255, 85, 255),     -- Purple
+		["Chemical A"] = Color3.fromRGB(85, 170, 255),
+		["Chemical B"] = Color3.fromRGB(255, 170, 85),
+		["Biological Sample"] = Color3.fromRGB(85, 255, 85),
+		["Research Notes"] = Color3.fromRGB(255, 255, 100),
+		["Catalyst"] = Color3.fromRGB(255, 85, 255),
 	}
-
 	return colors[componentName] or Color3.fromRGB(255, 255, 255)
 end
 
@@ -219,12 +493,10 @@ function ResourceSpawner:onResourceCollected(player, resourceId, componentName, 
 
 	print(player.Name .. " collected " .. componentName)
 
-	-- Notify CureService to add component
 	if self.cureService then
 		self.cureService:handleDepositComponent(player, componentName)
 	end
 
-	-- Clean up resource
 	if resource.connection then
 		resource.connection:Disconnect()
 	end
