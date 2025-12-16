@@ -137,20 +137,20 @@ local function setCameraToTarget(userId)
 	local targetPlayer = getPlayerByUserId(userId)
 	local hum = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 
-	-- Best behaviour: Spectate by setting CameraSubject
-	camera.CameraType = Enum.CameraType.Custom
+	-- Use Scriptable camera for third-person spectating
+	-- This gives better control over camera positioning
+	camera.CameraType = Enum.CameraType.Scriptable
+	
+	-- If target has humanoid, set as subject for tracking but camera stays scriptable
 	if hum then
 		camera.CameraSubject = hum
-	else
-		-- Fallback to scriptable follow
-		camera.CameraType = Enum.CameraType.Scriptable
 	end
 
 	local targetName = targetPlayer and targetPlayer.Name or "—"
 	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
 end
 
--- Smooth fallback follow if CameraSubject isn't available yet
+-- Third-person camera follow for spectating
 RunService.RenderStepped:Connect(function()
 	if not isSpectating then return end
 	if not targetUserId then return end
@@ -160,8 +160,16 @@ RunService.RenderStepped:Connect(function()
 	local part = getFocusPartForPlayer(t)
 	if not part then return end
 
-	local desiredPos = part.Position + Vector3.new(0, 6, 12)
-	local cf = CFrame.new(desiredPos, part.Position)
+	-- Third-person camera positioning (behind and above the target)
+	local targetPos = part.Position
+	local targetLook = part.CFrame.LookVector
+	
+	-- Position camera behind and above the target for third-person view
+	local cameraOffset = Vector3.new(0, 4, 8) -- 4 studs up, 8 studs back
+	local desiredPos = targetPos - (targetLook * cameraOffset.Z) + Vector3.new(0, cameraOffset.Y, 0)
+	
+	-- Look at target
+	local cf = CFrame.new(desiredPos, targetPos)
 	camera.CFrame = camera.CFrame:Lerp(cf, 0.15)
 end)
 

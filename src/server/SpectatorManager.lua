@@ -180,6 +180,11 @@ function SpectatorManager:onPlayerDied(player)
 	if not player or not player.UserId then return end
 
 	self.deadPlayers[player.UserId] = true
+	
+	-- Mark player as spectating with an attribute for zombie AI to ignore
+	if player.Character then
+		player.Character:SetAttribute("IsSpectating", true)
+	end
 
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
@@ -201,6 +206,11 @@ function SpectatorManager:exitSpectatorMode(player)
 	local data = self.spectators[player.UserId]
 	if data then
 		data.spectatorActive = false
+	end
+	
+	-- Remove spectating attribute
+	if player.Character then
+		player.Character:SetAttribute("IsSpectating", false)
 	end
 
 	self.remoteEvents.ExitSpectatorMode:FireClient(player, {})
