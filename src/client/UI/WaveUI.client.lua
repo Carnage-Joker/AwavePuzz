@@ -125,26 +125,26 @@ local function updateUIScaling()
 	local currentDeviceType = UIScaleManager.getDeviceType()
 	local deviceChanged = lastDeviceType ~= currentDeviceType
 	lastDeviceType = currentDeviceType
-	
+
 	-- Always update sizes and positions (these depend on viewport)
 	mainFrame.Size = UIScaleManager.scaleSize(250, 120, "hudElements", "waveInfo")
 	mainFrame.Position = UIScaleManager.getPositionWithSafeArea("topLeft", 10, 0)
-	
+
 	waveLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
 	waveLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 	waveLabel.TextSize = getScaledTextSize(24)
-	
+
 	timeLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
 	timeLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(45, "padding"))
 	timeLabel.TextSize = getScaledTextSize(18)
-	
+
 	zombieLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
 	zombieLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(75, "padding"))
 	zombieLabel.TextSize = getScaledTextSize(18)
-	
+
 	announcementFrame.Size = UIScaleManager.scaleSize(400, 80, "menuElements")
 	announcementLabel.TextSize = getScaledTextSize(36)
-	
+
 	-- Only update static properties when device type changes
 	if deviceChanged then
 		mainFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
