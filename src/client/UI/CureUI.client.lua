@@ -30,8 +30,8 @@ local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
 
--- Minimum touch target from config
-local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
+-- Minimum touch target from config with fallback
+local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -195,31 +195,31 @@ local function updateUIScaling()
 	progressFrame.Position = UIScaleManager.getPositionWithSafeArea("topRight", 10, 0)
 	progressFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0.3
 	progressCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
-	
+
 	progressTitle.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
 	progressTitle.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(5, "padding"))
 	progressTitle.TextSize = getScaledTextSize(18)
-	
+
 	progressBarBg.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(30, "padding"))
 	progressBarBg.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(35, "padding"))
 	progressBarCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 	progressFillCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 	progressText.TextSize = getScaledTextSize(16)
-	
+
 	componentsLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(25, "padding"))
 	componentsLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(70, "padding"))
 	componentsLabel.TextSize = getScaledTextSize(14)
-	
+
 	detailFrame.Size = UIScaleManager.scaleSize(350, 250, "menuElements", "menuDialog")
 	detailCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 	detailTitle.TextSize = getScaledTextSize(20)
-	
+
 	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(10, "padding"), 0, getScaledValue(10, "padding"))
 	closeButton.TextSize = getScaledTextSize(18)
 	closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
-	
+
 	componentsList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(60, "padding"))
 	componentsList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(50, "padding"))
 	componentsList.ScrollBarThickness = getScaledValue(6, "padding")
@@ -411,7 +411,7 @@ cureUpdateEvent.OnClientEvent:Connect(function(data)
 				cureProgress = math.clamp(data.progress, 0, 100)
 			end
 			updateComponentsList()
-			
+
 		elseif data.type == "component_collected" then
 			-- Update specific component count
 			if data.componentName and data.count then
@@ -431,7 +431,7 @@ playerCureProgressEvent.OnClientEvent:Connect(function(data)
 	if type(data) ~= "table" then
 		return
 	end
-	
+
 	-- Update progress and components
 	if data.progress then
 		cureProgress = data.progress
@@ -439,13 +439,13 @@ playerCureProgressEvent.OnClientEvent:Connect(function(data)
 	if data.components then
 		componentsCollected = data.components
 	end
-	
+
 	-- Track if resources are pooled with allies
 	isPooledWithAllies = data.isPooled or false
-	
+
 	-- Update the UI
 	updateProgress(cureProgress, componentsCollected)
-	
+
 	-- Update title to show pooled status
 	if isPooledWithAllies then
 		progressTitle.Text = "Cure Progress (Allied)"
@@ -454,7 +454,7 @@ playerCureProgressEvent.OnClientEvent:Connect(function(data)
 		progressTitle.Text = "Cure Progress"
 		progressTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 	end
-	
+
 	if detailFrame.Visible then
 		updateComponentsList()
 	end
