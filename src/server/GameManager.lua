@@ -10,11 +10,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local WaveConfig = require(ReplicatedStorage.Shared.WaveConfig)
+
 local BaseManager = require(script.Parent.BaseManager)
 local Spawner = require(script.Parent.Spawner)
 local PlayerManager = require(script.Parent.PlayerManager)
 local ResourceSpawner = require(script.Parent.ResourceSpawner)
+
 local WeaponService = require(script.Parent.WeaponService)
+local FPSWeaponService = require(script.Parent.FPSWeaponService)
+
 local ShopService = require(script.Parent.ShopService)
 local MapManager = require(script.Parent.MapManager)
 local LobbyManager = require(script.Parent.LobbyManager)
@@ -23,75 +27,77 @@ local SpectatorManager = require(script.Parent.SpectatorManager)
 local GameManager = {}
 GameManager.__index = GameManager
 
--- Game states - now includes LOBBY and SCOREBOARD for the new flow
 GameManager.States = {
 	WAITING = "Waiting",
-	LOBBY = "Lobby",         -- Map voting lobby
+	LOBBY = "Lobby",
 	COUNTDOWN = "Countdown",
 	WAVE_ACTIVE = "WaveActive",
 	INTERMISSION = "Intermission",
 	VICTORY = "Victory",
 	DEFEAT = "Defeat",
-	SCOREBOARD = "Scoreboard" -- End of round scoreboard display
+	SCOREBOARD = "Scoreboard"
 }
 
 function GameManager.new(allianceService)
 	local self = setmetatable({}, GameManager)
 
-	-- Store alliance service reference
 	self.allianceService = allianceService
-
-	-- Server enabled flag
 	self.serverEnabled = true
 
 	-- Managers
 	self.baseManager = BaseManager.getInstance()
-	self.playerManager = PlayerManager.new()
+
+	-- ✅ IMPORTANT: use singleton instance
+	self.playerManager = PlayerManager.getInstance()
+
+	-- ✅ Services (wire FPS ammo to WeaponService properly)
 	self.weaponService = WeaponService.new(self.playerManager, allianceService)
+	self.fpsWeaponService = FPSWeaponService.new(self.playerManager, self.weaponService)
+	self.weaponService:setFPSWeaponService(self.fpsWeaponService)
+
 	self.shopService = ShopService.new(self.playerManager, self.weaponService)
 	self.resourceSpawner = ResourceSpawner.new()
 
 	self.mapManager = MapManager.new()
 	self.spawner = Spawner.new(self.weaponService, self.baseManager, self.playerManager)
-	
-	-- New managers for lobby and spectator system
+
 	self.lobbyManager = LobbyManager.new()
 	self.lobbyManager:setMapManager(self.mapManager)
 	self.lobbyManager:setGameManager(self)
-	
+
 	self.spectatorManager = SpectatorManager.new()
 
-	-- Link WeaponService to PlayerManager for stats calculation
 	self.playerManager:setWeaponService(self.weaponService)
+
+	-- State
+	self.currentState = GameManager.States.WAITING
+	self.currentWave = 0
+	self.cureProgress = 0
+
+	self.playerStats = {}
+
+	self.stateTimer = 0
+	self.waveTimeLimit = 0
+	self.waveTimeRemaining = 0
+
+	self.remoteEvents = {}
+	self:setupRemoteEvents()
+
+	-- ✅ Debounce + broadcast control
+	self._deathDebounce = {}              -- userId -> true (for current round)
+	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
+	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
 		self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
 		self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
 	else
-		-- Load spawn points from workspace folders only
 		self.spawner:loadSpawnPoints()
-		-- Do not overwrite spawn points with potentially empty mapManager data
-		-- self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
-		-- self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
 	end
 
-	-- Game state
-	self.currentState = GameManager.States.WAITING
-	self.currentWave = 0
-	self.cureProgress = 0
-
-	-- Scoreboard stats per player (userId -> stats)
-	self.playerStats = {}
-
-	-- Timers
-	self.stateTimer = 0
-	self.waveTimeLimit = 0
-	self.waveTimeRemaining = 0
-
-	-- Remote events (will be created if they don't exist)
-	self.remoteEvents = {}
-	self:setupRemoteEvents()
+	-- ✅ Hook spectator cycle rate limit (only if the event exists)
+	self:_hookSpectatorRemotes()
 
 	return self
 end
@@ -104,7 +110,6 @@ function GameManager:setupRemoteEvents()
 		remoteEventsFolder.Parent = ReplicatedStorage
 	end
 
-	-- Create remote events if they don't exist
 	local eventNames = {
 		"WaveAnnounce",
 		"WaveUpdate",
@@ -113,8 +118,8 @@ function GameManager:setupRemoteEvents()
 		"BaseHealthUpdate",
 		"MapUpdate",
 		"ScoreboardUpdate",
-		"ShowScoreboard", -- Show scoreboard at end of round
-		"HideScoreboard"  -- Hide scoreboard when returning to lobby
+		"ShowScoreboard",
+		"HideScoreboard",
 	}
 
 	for _, eventName in ipairs(eventNames) do
@@ -128,15 +133,35 @@ function GameManager:setupRemoteEvents()
 	end
 end
 
--- Server enable/disable functionality
+function GameManager:_hookSpectatorRemotes()
+	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if not remoteEventsFolder then return end
+
+	local cycle = remoteEventsFolder:FindFirstChild("SpectatorCycleTarget")
+	if cycle and cycle:IsA("RemoteEvent") then
+		cycle.OnServerEvent:Connect(function(player, direction)
+			if direction ~= "next" and direction ~= "prev" then return end
+
+			local now = os.clock()
+			local last = self._spectatorCycleCooldown[player.UserId] or 0
+			if (now - last) < 0.15 then
+				return
+			end
+			self._spectatorCycleCooldown[player.UserId] = now
+
+			if self.spectatorManager and self.spectatorManager.cycleTarget then
+				self.spectatorManager:cycleTarget(player, direction)
+			end
+		end)
+	end
+end
+
 function GameManager:disableServer()
 	self.serverEnabled = false
 	print("Server disabled - game will not start new rounds")
-	
-	-- Clear any active zombies
+
 	self.spawner:clearAllZombies()
-	
-	-- Set state to waiting
+
 	if self.currentState ~= GameManager.States.VICTORY and self.currentState ~= GameManager.States.DEFEAT then
 		self:setState(GameManager.States.WAITING)
 	end
@@ -156,7 +181,6 @@ function GameManager:isServerEnabled()
 	return self.serverEnabled
 end
 
--- Scoreboard stat tracking
 function GameManager:initializePlayerStats(player)
 	if not self.playerStats[player.UserId] then
 		self.playerStats[player.UserId] = {
@@ -190,28 +214,26 @@ function GameManager:incrementPlayerComponentsCollected(player)
 end
 
 function GameManager:broadcastScoreboard()
-	if self.remoteEvents.ScoreboardUpdate then
-		-- Build scoreboard data
-		local scoreboardData = {}
-		for userId, stats in pairs(self.playerStats) do
-			table.insert(scoreboardData, {
-				userId = userId,
-				playerName = stats.playerName,
-				kills = stats.kills,
-				deaths = stats.deaths,
-				roundWins = stats.roundWins,
-				roundLosses = stats.roundLosses,
-				componentsCollected = stats.componentsCollected
-			})
-		end
-		
-		-- Sort by kills descending
-		table.sort(scoreboardData, function(a, b)
-			return a.kills > b.kills
-		end)
-		
-		self.remoteEvents.ScoreboardUpdate:FireAllClients(scoreboardData)
+	if not self.remoteEvents.ScoreboardUpdate then return end
+
+	local scoreboardData = {}
+	for userId, stats in pairs(self.playerStats) do
+		table.insert(scoreboardData, {
+			userId = userId,
+			playerName = stats.playerName,
+			kills = stats.kills,
+			deaths = stats.deaths,
+			roundWins = stats.roundWins,
+			roundLosses = stats.roundLosses,
+			componentsCollected = stats.componentsCollected
+		})
 	end
+
+	table.sort(scoreboardData, function(a, b)
+		return a.kills > b.kills
+	end)
+
+	self.remoteEvents.ScoreboardUpdate:FireAllClients(scoreboardData)
 end
 
 function GameManager:getPlayerStats(player)
@@ -221,9 +243,26 @@ end
 
 function GameManager:broadcastMap()
 	if self.remoteEvents.MapUpdate then
-		self.remoteEvents.MapUpdate:FireAllClients({
-			map = self.mapManager:getCurrentMapId()
-		})
+		self.remoteEvents.MapUpdate:FireAllClients({ map = self.mapManager:getCurrentMapId() })
+	end
+end
+
+-- ✅ Hook Humanoid.Died -> onPlayerDied (authoritative)
+function GameManager:_hookPlayerDeath(player)
+	local function hookCharacter(char)
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if not humanoid then return end
+
+		humanoid.Died:Connect(function()
+			if self._deathDebounce[player.UserId] then return end
+			self._deathDebounce[player.UserId] = true
+			self:onPlayerDied(player)
+		end)
+	end
+
+	player.CharacterAdded:Connect(hookCharacter)
+	if player.Character then
+		hookCharacter(player.Character)
 	end
 end
 
@@ -233,26 +272,40 @@ function GameManager:onPlayerAdded(player)
 		warn("Failed to add player:", message)
 		return
 	end
+
+	-- ✅ Init FPS ammo tracking first (safe even if WeaponService also triggers ammo setup)
+	if self.fpsWeaponService and self.fpsWeaponService.initializePlayer then
+		self.fpsWeaponService:initializePlayer(player)
+	end
+
 	self.weaponService:initializePlayer(player)
 	self.shopService:sendCatalog(player)
-	
-	-- Initialize scoreboard stats for the player
+
 	self:initializePlayerStats(player)
 	self:broadcastScoreboard()
+
+	self:_hookPlayerDeath(player)
 end
 
 function GameManager:onPlayerRemoving(player)
 	self.playerManager:removePlayer(player)
 	self.weaponService:removePlayer(player)
+
+	if self.fpsWeaponService and self.fpsWeaponService.removePlayer then
+		self.fpsWeaponService:removePlayer(player)
+	end
+
 	self.lobbyManager:onPlayerLeave(player)
 	self.spectatorManager:onPlayerLeave(player)
+
+	self._deathDebounce[player.UserId] = nil
+	self._spectatorCycleCooldown[player.UserId] = nil
 end
 
 function GameManager:setState(newState)
 	self.currentState = newState
 	self.stateTimer = 0
 
-	-- Broadcast state change
 	if self.remoteEvents.GameStateUpdate then
 		self.remoteEvents.GameStateUpdate:FireAllClients({
 			state = newState,
@@ -274,8 +327,7 @@ function GameManager:startGame()
 	if self.currentState ~= GameManager.States.WAITING and self.currentState ~= GameManager.States.LOBBY then
 		return false
 	end
-	
-	-- Check if server is enabled
+
 	if not self.serverEnabled then
 		print("Cannot start game - server is disabled")
 		return false
@@ -283,7 +335,7 @@ function GameManager:startGame()
 
 	print("Starting game...")
 	self:setState(GameManager.States.COUNTDOWN)
-	self.stateTimer = GameConfig.ROUND_COUNTDOWN_TIME or 5 -- Use configured countdown time
+	self.stateTimer = GameConfig.ROUND_COUNTDOWN_TIME or 5
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self:broadcastMap()
@@ -292,13 +344,11 @@ function GameManager:startGame()
 	return true
 end
 
--- Start the lobby/voting phase
 function GameManager:startLobby()
-	if self.currentState ~= GameManager.States.WAITING and 
-	   self.currentState ~= GameManager.States.SCOREBOARD then
+	if self.currentState ~= GameManager.States.WAITING and self.currentState ~= GameManager.States.SCOREBOARD then
 		return false
 	end
-	
+
 	if not self.serverEnabled then
 		print("Cannot start lobby - server is disabled")
 		return false
@@ -307,80 +357,67 @@ function GameManager:startLobby()
 	print("[GameManager] Entering lobby...")
 	self:setState(GameManager.States.LOBBY)
 	self.stateTimer = GameConfig.LOBBY_VOTING_TIME
-	
-	-- Reset for new round
+
 	self:resetForNewRound()
-	
-	-- Start map voting
 	self.lobbyManager:startVoting()
-	
+
 	return true
 end
 
--- Reset game state for a new round
 function GameManager:resetForNewRound()
-	-- Reset wave counter
 	self.currentWave = 0
 	self.cureProgress = 0
-	
-	-- Reset cure service if it exists
+
+	self._deathDebounce = {}
+
 	if self.cureService and self.cureService.reset then
 		self.cureService:reset()
 	end
-	
-	-- Reset base health
+
 	self.baseManager:reset()
 	
-	-- Clear any remaining zombies
-	self.spawner:clearAllZombies()
-	
-	-- Reset spectator manager
+	-- Generate intelligent spawn points for the new round
+	self.spawner:prepareForNewRound()
+
 	self.spectatorManager:reset()
-	
-	-- Reset lobby manager for new voting session
 	self.lobbyManager:reset()
-	
-	-- Respawn all players for new round
+
+	self._lastWaveBroadcastSec = nil
+
 	for _, player in ipairs(Players:GetPlayers()) do
-		-- Reset player health
 		local playerData = self.playerManager:getPlayerData(player)
 		if playerData then
 			playerData.health = GameConfig.STARTING_HEALTH
 			playerData.isAlive = true
 		end
-		
-		-- Reload character
+
 		if player.Character then
 			local humanoid = player.Character:FindFirstChild("Humanoid")
-			if humanoid and humanoid.Health then
+			if humanoid then
 				humanoid.Health = humanoid.MaxHealth
 			else
-				-- Character exists but Humanoid is invalid, reload character
-				player:LoadCharacter()
+				player:LoadCharacterAsync()
 			end
 		else
-			player:LoadCharacter()
+			player:LoadCharacterAsync()
 		end
 	end
 end
 
 function GameManager:startWave()
-	self.currentWave = self.currentWave + 1
+	self.currentWave += 1
 
 	local waveData = WaveConfig.getWave(self.currentWave)
 	if not waveData then
-		-- No more configured waves, generate endless mode
 		waveData = self:generateEndlessWave()
 	end
 
 	print("Starting Wave " .. self.currentWave)
 
-	-- Set wave state
 	self:setState(GameManager.States.WAVE_ACTIVE)
 	self.waveTimeLimit = waveData.TimeLimit
 	self.waveTimeRemaining = waveData.TimeLimit
 
-	-- Announce wave
 	if self.remoteEvents.WaveAnnounce then
 		self.remoteEvents.WaveAnnounce:FireAllClients({
 			waveNumber = self.currentWave,
@@ -389,15 +426,16 @@ function GameManager:startWave()
 		})
 	end
 
-	-- Spawn zombies
+	-- Ensure spawn points are available before spawning
+	if #self.spawner.allSpawnPoints == 0 then
+		print("[GameManager] No spawn points available, generating...")
+		self.spawner:generateSpawnPointsForRound()
+	end
+
 	self.spawner:spawnWave(waveData.Composition)
 end
 
 function GameManager:generateEndlessWave()
-	-- Generate procedural waves after configured waves end
-	-- Note: Currently uses linear zombie count scaling. Health scaling is already applied via
-	-- GameConfig.ZOMBIE_HEALTH_MULTIPLIER; additional scaling (e.g., speed, damage, or more aggressive health scaling)
-	-- could be added for increased challenge in endless mode.
 	local baseCount = 15 + (self.currentWave * 2)
 
 	return {
@@ -414,14 +452,11 @@ function GameManager:generateEndlessWave()
 end
 
 function GameManager:checkWaveComplete()
-	local zombiesAlive = self.spawner:getActiveZombieCount()
-
-	if zombiesAlive <= 0 then
+	if self.spawner:getActiveZombieCount() <= 0 then
 		print("Wave " .. self.currentWave .. " complete!")
 		self:onWaveComplete()
 		return true
 	end
-
 	return false
 end
 
@@ -429,7 +464,6 @@ function GameManager:onWaveComplete()
 	self:setState(GameManager.States.INTERMISSION)
 	self.stateTimer = GameConfig.WAVE_DELAY
 
-	-- Award bonus currency for wave completion
 	for _, player in ipairs(Players:GetPlayers()) do
 		self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
 	end
@@ -438,12 +472,10 @@ end
 function GameManager:updateCureProgress(progress)
 	self.cureProgress = math.min(100, progress)
 
-	-- Broadcast cure update
 	if self.remoteEvents.CureUpdate then
 		self.remoteEvents.CureUpdate:FireAllClients(self.cureProgress)
 	end
 
-	-- Check win condition
 	if self.cureProgress >= 100 then
 		self:onVictory()
 	end
@@ -453,24 +485,20 @@ function GameManager:onVictory()
 	print("VICTORY! Cure completed!")
 	self:setState(GameManager.States.VICTORY)
 
-	-- Stop spawning, clean up zombies
 	self.spawner:clearAllZombies()
-	
-	-- Exit all spectators
+	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
-	
-	-- Update scoreboard stats - only surviving (non-spectating) players get round win
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
 		if not self.spectatorManager:isPlayerDead(player) then
-			self.playerStats[player.UserId].roundWins = self.playerStats[player.UserId].roundWins + 1
+			self.playerStats[player.UserId].roundWins += 1
 		else
-			self.playerStats[player.UserId].roundLosses = self.playerStats[player.UserId].roundLosses + 1
+			self.playerStats[player.UserId].roundLosses += 1
 		end
 	end
 	self:broadcastScoreboard()
-	
-	-- Show scoreboard and start timer to return to lobby
+
 	self:showEndOfRoundScoreboard()
 	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME
 end
@@ -479,25 +507,20 @@ function GameManager:onDefeat(reason)
 	print("DEFEAT! " .. reason)
 	self:setState(GameManager.States.DEFEAT)
 
-	-- Stop spawning, clean up zombies
 	self.spawner:clearAllZombies()
-	
-	-- Exit all spectators
+	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
-	
-	-- Update scoreboard stats - all players get round loss
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
-		self.playerStats[player.UserId].roundLosses = self.playerStats[player.UserId].roundLosses + 1
+		self.playerStats[player.UserId].roundLosses += 1
 	end
 	self:broadcastScoreboard()
-	
-	-- Show scoreboard and start timer to return to lobby
+
 	self:showEndOfRoundScoreboard()
 	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME
 end
 
--- Show the scoreboard at end of round
 function GameManager:showEndOfRoundScoreboard()
 	if self.remoteEvents.ShowScoreboard then
 		self.remoteEvents.ShowScoreboard:FireAllClients({
@@ -507,7 +530,6 @@ function GameManager:showEndOfRoundScoreboard()
 	end
 end
 
--- Get formatted scoreboard data
 function GameManager:getScoreboardData()
 	local scoreboardData = {}
 	for userId, stats in pairs(self.playerStats) do
@@ -521,36 +543,27 @@ function GameManager:getScoreboardData()
 			componentsCollected = stats.componentsCollected
 		})
 	end
-	
-	-- Sort by kills descending
+
 	table.sort(scoreboardData, function(a, b)
 		return a.kills > b.kills
 	end)
-	
+
 	return scoreboardData
 end
 
 function GameManager:checkLoseConditions()
-	-- Check if base is destroyed
 	if self.baseManager:isBaseDestroyed() then
 		self:onDefeat("Base destroyed")
 		return true
 	end
 
-	-- Check if all players are dead (using spectator manager tracking)
-	local players = game.Players:GetPlayers()
+	local players = Players:GetPlayers()
 	local anyAlive = false
 
 	for _, player in ipairs(players) do
-		-- Skip players already marked as dead in spectator manager
 		if not self.spectatorManager:isPlayerDead(player) then
-			if player.Character then
-				local humanoid = player.Character:FindFirstChild("Humanoid")
-				if humanoid and humanoid.Health > 0 then
-					anyAlive = true
-					break
-				end
-			end
+			anyAlive = true
+			break
 		end
 	end
 
@@ -562,89 +575,112 @@ function GameManager:checkLoseConditions()
 	return false
 end
 
--- Handle player death - put them in spectator mode
 function GameManager:onPlayerDied(player)
 	if not player then return end
-	
-	-- Only handle during active gameplay
-	if self.currentState ~= GameManager.States.WAVE_ACTIVE and 
-	   self.currentState ~= GameManager.States.INTERMISSION then
+
+	if self.currentState ~= GameManager.States.WAVE_ACTIVE and self.currentState ~= GameManager.States.INTERMISSION then
 		return
 	end
-	
-	-- Track death in scoreboard
+
+	local pd = self.playerManager:getPlayerData(player)
+	if pd then
+		pd.isAlive = false
+	end
+
 	self:incrementPlayerDeaths(player)
-	
-	-- Put player in spectator mode
+
 	self.spectatorManager:onPlayerDied(player)
-	
-	-- Notify other spectators if they were watching this player
 	self.spectatorManager:onSpectatorTargetDied(player.UserId)
-	
-	-- Update spectator list for all spectators
 	self.spectatorManager:broadcastAliveList()
-	
-	-- Check if this causes a lose condition
+
 	self:checkLoseConditions()
 end
 
 function GameManager:updateCountdown(deltaTime)
-	self.stateTimer = self.stateTimer - deltaTime
-	-- self.resourceSpawner:update(deltaTime) -- Do not spawn resources during COUNTDOWN
-
+	self.stateTimer -= deltaTime
 	if self.stateTimer <= 0 then
-		-- Start first wave
 		self:startWave()
 	end
 end
 
 function GameManager:updateWave(deltaTime)
-	-- Update wave timer
-	self.waveTimeRemaining = self.waveTimeRemaining - deltaTime
+	self.waveTimeRemaining -= deltaTime
 
-	-- Update spawner
 	self.spawner:update(deltaTime)
-
-	-- Update resource spawner for pickups
 	self.resourceSpawner:update(deltaTime)
 
-	-- Broadcast wave update periodically
-	if math.floor(self.waveTimeRemaining) % 5 == 0 then
+	local sec = math.floor(self.waveTimeRemaining)
+	if sec >= 0 and (sec % 5 == 0) and (self._lastWaveBroadcastSec ~= sec) then
+		self._lastWaveBroadcastSec = sec
 		if self.remoteEvents.WaveUpdate then
 			self.remoteEvents.WaveUpdate:FireAllClients({
-				timeRemaining = math.floor(self.waveTimeRemaining),
+				timeRemaining = sec,
 				zombiesAlive = self.spawner:getActiveZombieCount()
 			})
 		end
 	end
 
-	-- Check if wave is complete
 	self:checkWaveComplete()
 
-	-- Check if time ran out
 	if self.waveTimeRemaining <= 0 then
 		print("Wave time limit reached!")
 		self:onWaveComplete()
 	end
 
-	-- Check lose conditions
 	self:checkLoseConditions()
 end
 
 function GameManager:updateIntermission(deltaTime)
-	self.stateTimer = self.stateTimer - deltaTime
-
-	-- Continue spawning resources during downtime
+	self.stateTimer -= deltaTime
 	self.resourceSpawner:update(deltaTime)
 
 	if self.stateTimer <= 0 then
-		-- Start next wave
 		self:startWave()
 	end
 end
 
+function GameManager:updateLobby(deltaTime)
+	self.lobbyManager:update(deltaTime)
+
+	local selectedMapId = self.lobbyManager:getSelectedMapId()
+	if not self.lobbyManager:isVotingActive() and selectedMapId then
+		if GameConfig.ENABLE_MULTI_MAP then
+			self.mapManager:load(selectedMapId)
+			self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
+			self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+		end
+
+		self:startGame()
+	end
+end
+
+function GameManager:updateEndOfRound(deltaTime)
+	self.stateTimer -= deltaTime
+
+	if self.stateTimer <= 0 then
+		self:setState(GameManager.States.SCOREBOARD)
+		self.stateTimer = 2
+
+		if self.remoteEvents.HideScoreboard then
+			self.remoteEvents.HideScoreboard:FireAllClients({})
+		end
+	end
+end
+
+function GameManager:updateScoreboard(deltaTime)
+	self.stateTimer -= deltaTime
+
+	if self.stateTimer <= 0 then
+		local playerCount = #Players:GetPlayers()
+		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+			self:startLobby()
+		else
+			self:setState(GameManager.States.WAITING)
+		end
+	end
+end
+
 function GameManager:update(deltaTime)
-	-- Update based on current state
 	if self.currentState == GameManager.States.LOBBY then
 		self:updateLobby(deltaTime)
 
@@ -658,74 +694,20 @@ function GameManager:update(deltaTime)
 		self:updateIntermission(deltaTime)
 
 	elseif self.currentState == GameManager.States.WAITING then
-		-- Check if enough players to start lobby
-		local playerCount = #game.Players:GetPlayers()
+		local playerCount = #Players:GetPlayers()
 		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
 			self:startLobby()
 		end
 		self.resourceSpawner:update(deltaTime)
 
-	elseif self.currentState == GameManager.States.VICTORY or 
-	       self.currentState == GameManager.States.DEFEAT then
-		-- Wait for scoreboard display time, then return to lobby
+	elseif self.currentState == GameManager.States.VICTORY or self.currentState == GameManager.States.DEFEAT then
 		self:updateEndOfRound(deltaTime)
 
 	elseif self.currentState == GameManager.States.SCOREBOARD then
 		self:updateScoreboard(deltaTime)
+
 	else
-		-- Even when game is over, allow resource spawner to clean up timers
 		self.resourceSpawner:update(deltaTime)
-	end
-end
-
--- Update during lobby/voting phase
-function GameManager:updateLobby(deltaTime)
-	-- Update lobby manager
-	self.lobbyManager:update(deltaTime)
-	
-	-- Check if voting has ended
-	if not self.lobbyManager:isVotingActive() then
-		-- Load the selected map
-		local selectedMapId = self.lobbyManager:getSelectedMapId()
-		if selectedMapId and GameConfig.ENABLE_MULTI_MAP then
-			self.mapManager:load(selectedMapId)
-			self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
-			self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
-		end
-		
-		-- Start the game
-		self:startGame()
-	end
-end
-
--- Update during end of round (victory/defeat)
-function GameManager:updateEndOfRound(deltaTime)
-	self.stateTimer = self.stateTimer - deltaTime
-	
-	if self.stateTimer <= 0 then
-		-- Transition to lobby for next round
-		self:setState(GameManager.States.SCOREBOARD)
-		self.stateTimer = 2 -- Brief pause before lobby
-		
-		-- Hide the scoreboard
-		if self.remoteEvents.HideScoreboard then
-			self.remoteEvents.HideScoreboard:FireAllClients({})
-		end
-	end
-end
-
--- Update during scoreboard state (brief transition to lobby)
-function GameManager:updateScoreboard(deltaTime)
-	self.stateTimer = self.stateTimer - deltaTime
-	
-	if self.stateTimer <= 0 then
-		-- Check if there are still players
-		local playerCount = #game.Players:GetPlayers()
-		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
-			self:startLobby()
-		else
-			self:setState(GameManager.States.WAITING)
-		end
 	end
 end
 
