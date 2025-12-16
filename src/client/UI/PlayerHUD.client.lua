@@ -1,6 +1,6 @@
 -- PlayerHUD.client.lua
 -- Shows player health bar and a compass that points toward nearest zombie and resource.
--- Updated with dynamic UI scaling for mobile devices.
+-- Updated with dynamic UI scaling for mobile devices and cleaner config integration.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -8,9 +8,11 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
--- Load UI scaling utilities
+-- Load shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -40,14 +42,18 @@ end
 
 -- ========== UI CREATION ==========
 
+-- Prevent duplicate HUDs on respawn
+local playerGui = player:WaitForChild("PlayerGui")
+local existing = playerGui:FindFirstChild("PlayerHUD")
+if existing then
+	existing:Destroy()
+end
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "PlayerHUD"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Get safe area insets
-local safeArea = UIScaleManager.getSafeAreaInsets()
+screenGui.Parent = playerGui
 
 -- Health bar container (bottom left with safe area)
 local healthFrame = Instance.new("Frame")
@@ -72,7 +78,6 @@ healthCorner.Parent = healthFrame
 local healthFill = Instance.new("Frame")
 healthFill.Name = "HealthFill"
 healthFill.Size = UDim2.new(1, -4, 1, -4)
-healthFill.Position = UDim2.new(0, 2, 0, 2)
 healthFill.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 healthFill.BorderSizePixel = 0
 healthFill.AnchorPoint = Vector2.new(0, 0.5)
@@ -226,7 +231,7 @@ local function updateUIScaling()
 	healthFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
 	healthLabel.TextSize = getScaledTextSize(16)
 	healthFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
-	
+
 	-- Update stamina frame
 	staminaFrame.Size = UIScaleManager.scaleSize(250, 16, "hudElements", "healthBar")
 	staminaFrame.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 10, 70)
@@ -234,19 +239,19 @@ local function updateUIScaling()
 	staminaFillCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
 	staminaLabel.TextSize = getScaledTextSize(12)
 	staminaFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.3 or 0
-	
+
 	-- Update sprint indicator
 	sprintIndicator.Size = UIScaleManager.scaleSize(80, 20, "hudElements", "healthBar")
 	sprintIndicator.Position = UIScaleManager.getPositionWithSafeArea("bottomLeft", 270, 40)
 	sprintIndicator.TextSize = getScaledTextSize(14)
 	sprintCorner.CornerRadius = UDim.new(0, getScaledValue(4, "padding"))
-	
+
 	-- Update compass
 	compassFrame.Size = UIScaleManager.scaleSize(300, 30, "hudElements", "compass")
 	compassFrame.Position = UIScaleManager.getPositionWithSafeArea("topCenter", 0, 5)
 	compassCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 	compassFrame.BackgroundTransparency = UIScaleManager.isMobile() and 0.4 or 0
-	
+
 	-- Update markers
 	zombieMarker.Size = UDim2.new(0, getScaledValue(6, "hudElements"), 0, getScaledValue(20, "hudElements"))
 	zombieMarkerCorner.CornerRadius = UDim.new(0, getScaledValue(3, "padding"))
@@ -254,13 +259,14 @@ local function updateUIScaling()
 	resourceMarkerCorner.CornerRadius = UDim.new(0, getScaledValue(3, "padding"))
 end
 
--- Register for scale changes
+-- Register for scale changes and immediately apply once
 UIScaleManager.onScaleChanged(updateUIScaling)
+updateUIScaling()
 
 -- ========== HEALTH HANDLING ==========
 
-local currentHealth = 100
-local maxHealth = 100
+local currentHealth = GameConfig.STARTING_HEALTH or 100
+local maxHealth = GameConfig.STARTING_HEALTH or 100
 
 local function updateHealthUI()
 	local ratio = 0
@@ -268,10 +274,13 @@ local function updateHealthUI()
 		ratio = math.clamp(currentHealth / maxHealth, 0, 1)
 	end
 
-	healthFill.Size = UDim2.new(ratio, -4, 1, -4)
+	-- Avoid weird negative width when ratio is 0 by scaling padding with ratio
+	local innerPadding = 4
+	healthFill.Size = UDim2.new(ratio, -innerPadding * ratio, 1, -innerPadding)
+
 	healthLabel.Text = string.format("HP: %d / %d", math.floor(currentHealth + 0.5), maxHealth)
 
-	-- nice visual feedback: more yellow when low HP
+	-- Visual feedback: green → yellow → red
 	if ratio > 0.6 then
 		healthFill.BackgroundColor3 = Color3.fromRGB(60, 200, 60)
 	elseif ratio > 0.3 then
@@ -295,8 +304,8 @@ updateHealthUI()
 
 -- ========== STAMINA HANDLING ==========
 
-local currentStamina = 100
-local maxStamina = 100
+local currentStamina = GameConfig.STAMINA_MAX or (FPSConfig.Movement and FPSConfig.Movement.StaminaMax) or 100
+local maxStamina = GameConfig.STAMINA_MAX or (FPSConfig.Movement and FPSConfig.Movement.StaminaMax) or 100
 
 local function updateStaminaUI()
 	local ratio = 0
@@ -304,7 +313,8 @@ local function updateStaminaUI()
 		ratio = math.clamp(currentStamina / maxStamina, 0, 1)
 	end
 
-	staminaFill.Size = UDim2.new(ratio, -4, 1, -4)
+	local innerPadding = 4
+	staminaFill.Size = UDim2.new(ratio, -innerPadding * ratio, 1, -innerPadding)
 
 	-- Color feedback based on stamina level
 	if ratio > 0.5 then
@@ -316,15 +326,24 @@ local function updateStaminaUI()
 	end
 end
 
--- Listen for stamina updates from SprintController via BindableEvent
+-- Ensure BindableEvents folder + StaminaUpdate exist and listen for updates
 local function setupStaminaListener()
-	local playerGui = player:WaitForChild("PlayerGui")
-	
-	-- Wait for BindableEvents folder and StaminaUpdate event created by SprintController
-	local bindableFolder = playerGui:WaitForChild("BindableEvents")
-	
-	local staminaEvent = bindableFolder:WaitForChild("StaminaUpdate")
-	
+	-- Ensure folder exists
+	local bindableFolder = playerGui:FindFirstChild("BindableEvents")
+	if not bindableFolder then
+		bindableFolder = Instance.new("Folder")
+		bindableFolder.Name = "BindableEvents"
+		bindableFolder.Parent = playerGui
+	end
+
+	-- Ensure event exists
+	local staminaEvent = bindableFolder:FindFirstChild("StaminaUpdate")
+	if not staminaEvent then
+		staminaEvent = Instance.new("BindableEvent")
+		staminaEvent.Name = "StaminaUpdate"
+		staminaEvent.Parent = bindableFolder
+	end
+
 	staminaEvent.Event:Connect(function(data)
 		if typeof(data) ~= "table" then
 			return
@@ -332,10 +351,10 @@ local function setupStaminaListener()
 
 		currentStamina = data.current or currentStamina
 		maxStamina = data.max or maxStamina
-		
+
 		-- Show/hide sprint indicator
 		sprintIndicator.Visible = data.isSprinting or false
-		
+
 		updateStaminaUI()
 	end)
 end
@@ -347,12 +366,25 @@ updateStaminaUI()
 
 -- ========== COMPASS / DIRECTION UTILS ==========
 
+local cachedCharacter = nil
+local cachedRoot = nil
+
 local function getCharacterRoot()
-	local char = player.Character or player.CharacterAdded:Wait()
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not root then
-		root = char:WaitForChild("HumanoidRootPart", 5)
+	local char = player.Character or cachedCharacter
+	if not char then
+		char = player.Character or player.CharacterAdded:Wait()
+		cachedCharacter = char
 	end
+
+	local root = cachedRoot
+	if not root or not root.Parent then
+		root = char:FindFirstChild("HumanoidRootPart")
+		if not root then
+			root = char:WaitForChild("HumanoidRootPart", 5)
+		end
+		cachedRoot = root
+	end
+
 	return root
 end
 
@@ -371,8 +403,13 @@ local function getNearestChildPosition(folder)
 
 	for _, child in ipairs(folder:GetChildren()) do
 		local pos
+
 		if child:IsA("Model") then
-			local primary = child.PrimaryPart or child:FindFirstChild("HumanoidRootPart") or child:FindFirstChildWhichIsA("BasePart")
+			-- Prefer PrimaryPart, then HumanoidRootPart, then any BasePart
+			local primary = child.PrimaryPart
+				or child:FindFirstChild("HumanoidRootPart")
+				or child:FindFirstChildWhichIsA("BasePart")
+
 			if primary then
 				pos = primary.Position
 			end
@@ -381,10 +418,12 @@ local function getNearestChildPosition(folder)
 		end
 
 		if pos then
-			local d = (pos - root.Position).Magnitude
-			local dsq = d * d
-			if dsq < nearestDistSq then
-				nearestDistSq = dsq
+			local offset = pos - root.Position
+			-- squared distance
+			local distSq = offset.X * offset.X + offset.Y * offset.Y + offset.Z * offset.Z
+
+			if distSq < nearestDistSq then
+				nearestDistSq = distSq
 				nearestPos = pos
 			end
 		end
@@ -423,6 +462,13 @@ end
 -- ========== UPDATE LOOP ==========
 
 RunService.RenderStepped:Connect(function()
+	local root = getCharacterRoot()
+	if not root then
+		zombieMarker.Visible = false
+		resourceMarker.Visible = false
+		return
+	end
+
 	local zombiesFolder = workspace:FindFirstChild("Zombies")
 	local resourcesFolder = workspace:FindFirstChild("CureResources")
 
@@ -430,15 +476,10 @@ RunService.RenderStepped:Connect(function()
 	if zombiesFolder and #zombiesFolder:GetChildren() > 0 then
 		local pos = getNearestChildPosition(zombiesFolder)
 		if pos then
-			local root = getCharacterRoot()
-			if root then
-				local dir = pos - root.Position
-				local x = worldDirToCompassX(dir)
-				zombieMarker.Visible = true
-				zombieMarker.Position = UDim2.new(x, 0, 1, 0)
-			else
-				zombieMarker.Visible = false
-			end
+			local dir = pos - root.Position
+			local x = worldDirToCompassX(dir)
+			zombieMarker.Visible = true
+			zombieMarker.Position = UDim2.new(x, 0, 1, 0)
 		else
 			zombieMarker.Visible = false
 		end
@@ -450,15 +491,10 @@ RunService.RenderStepped:Connect(function()
 	if resourcesFolder and #resourcesFolder:GetChildren() > 0 then
 		local pos = getNearestChildPosition(resourcesFolder)
 		if pos then
-			local root = getCharacterRoot()
-			if root then
-				local dir = pos - root.Position
-				local x = worldDirToCompassX(dir)
-				resourceMarker.Visible = true
-				resourceMarker.Position = UDim2.new(x, 0, 0, 0)
-			else
-				resourceMarker.Visible = false
-			end
+			local dir = pos - root.Position
+			local x = worldDirToCompassX(dir)
+			resourceMarker.Visible = true
+			resourceMarker.Position = UDim2.new(x, 0, 0, 0)
 		else
 			resourceMarker.Visible = false
 		end
