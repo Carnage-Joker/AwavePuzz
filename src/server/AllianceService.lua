@@ -2,12 +2,11 @@
 -- Server script that manages player alliances and betrayals
 -- Features:
 -- - Allied players pool their cure resources and see combined progress
--- - Breaking an alliance initiates a betrayal (resources NOT transferred immediately)
--- TODO implement betrayal logic, wherein players in alliance have 30 seconds to win the betrayal
--- betrayal is won  by surviving the attack or killing your former ally
--- the player(A) that initiates the betrayal has 30 seconds to kill their former ally(B). If B survives the 30s they are awarded 
--- 75% of alliance(AB) acumulated reasources and solved puzzles, 25% are left for A[outcome2] If B kills A within the 30 second betrayal window
--- B is awarded with 100% of the alliance resources and A is awarded 0%[outcome3] If A kills B within the 30 second window, A is awarded 65% of the resources[outcome1]
+-- - Breaking an alliance initiates a 30-second betrayal window
+-- Betrayal Outcomes:
+--   Outcome 1: Betrayer (A) kills victim (B) within 30s → A gets 65% of resources
+--   Outcome 2: Victim (B) survives 30s → B gets 75% of resources, A gets 25%
+--   Outcome 3: Victim (B) kills betrayer (A) within 30s → B gets 100% of resources
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -28,8 +27,11 @@ function AllianceService.new()
 	-- Track recent betrayals for survivor mechanics
 	self.recentBetrayals = {}     -- betrayer UserId -> victim UserId
 
-	-- Track pending betrayals (resources transfer only on successful elimination)
-	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp}
+	-- Track pending betrayals (resources transfer based on outcome)
+	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp, timerConnection}
+	
+	-- Track active betrayal windows
+	self.activeWindows = {}       -- betrayer UserId -> true (for cleanup)
 
 	-- References to other services
 	self.puzzleService = nil      -- Will be set later
@@ -135,10 +137,21 @@ function AllianceService:removePlayer(player)
 		end
 	end
 
+	-- Cancel any active betrayal timers
+	if self.pendingBetrayals[userId] then
+		local pendingBetrayal = self.pendingBetrayals[userId]
+		if pendingBetrayal.timerConnection then
+			task.cancel(pendingBetrayal.timerConnection)
+		end
+	end
+
 	-- Clean up
 	self.alliances[userId] = nil
 	self.pendingRequests[userId] = nil
 	self.betrayalCooldowns[userId] = nil
+	self.pendingBetrayals[userId] = nil
+	self.recentBetrayals[userId] = nil
+	self.activeWindows[userId] = nil
 end
 
 function AllianceService:handleAllianceRequest(requester, target)
@@ -246,24 +259,23 @@ function AllianceService:handleBreakAlliance(player, target)
 	-- Set betrayal cooldown
 	self.betrayalCooldowns[player.UserId] = os.time()
 
-	-- Track this betrayal for mechanics - betrayal is only successful on elimination
-	-- Store both the betrayer->victim relationship AND the pending transfer
+	-- Track this betrayal for mechanics
 	self.recentBetrayals[player.UserId] = target.UserId
 
-	-- Mark this as a pending betrayal (resources transfer only on successful elimination)
+	-- Mark this as a pending betrayal with timestamp
 	self.pendingBetrayals[player.UserId] = {
 		victimUserId = target.UserId,
-		timestamp = os.time()
+		timestamp = os.time(),
+		timerConnection = nil
 	}
-
-	-- NOTE: Resources are NOT transferred immediately anymore
-	-- They are only transferred when the betrayer successfully kills the victim
-	-- See onBetrayerKillsVictim() method
 
 	-- Notify CureService that alliance is broken (resources no longer pooled)
 	if self.cureService and self.cureService.onAllianceBroken then
 		self.cureService:onAllianceBroken(player, target)
 	end
+
+	-- Start 30-second betrayal window timer
+	self:startBetrayalWindow(player, target)
 
 	-- Notify both players
 	self.remoteEvents.AllianceUpdate:FireClient(player, {
@@ -271,7 +283,7 @@ function AllianceService:handleBreakAlliance(player, target)
 		with = target,
 		withName = target.Name,
 		betrayer = true,
-		message = "Betrayal initiated! Eliminate " .. target.Name .. " to claim their resources."
+		message = "Betrayal initiated! You have 30 seconds to eliminate " .. target.Name .. " to claim 65% of resources."
 	})
 
 	self.remoteEvents.AllianceUpdate:FireClient(target, {
@@ -279,10 +291,88 @@ function AllianceService:handleBreakAlliance(player, target)
 		with = player,
 		withName = player.Name,
 		betrayer = false,
-		message = "You have been betrayed by " .. player.Name .. "! Defeat them to claim their resources."
+		message = "You have been betrayed by " .. player.Name .. "! Survive 30 seconds or defeat them to claim their resources."
 	})
 
-	print(player.Name .. " initiated betrayal against " .. target.Name .. " - resources pending elimination")
+	print(player.Name .. " initiated betrayal against " .. target.Name .. " - 30 second window started")
+end
+
+-- Start 30-second betrayal window timer
+function AllianceService:startBetrayalWindow(betrayer, victim)
+	if not betrayer or not victim then
+		return
+	end
+	
+	local betrayerId = betrayer.UserId
+	local victimId = victim.UserId
+	
+	-- Mark window as active
+	self.activeWindows[betrayerId] = true
+	
+	-- Create timer connection using task.delay
+	local timerConnection = task.delay(GameConfig.BETRAYAL_WINDOW, function()
+		-- After 30 seconds, check if betrayal is still pending
+		if self.pendingBetrayals[betrayerId] then
+			local pendingBetrayal = self.pendingBetrayals[betrayerId]
+			if pendingBetrayal.victimUserId == victimId then
+				-- Outcome 2: Victim survived the 30-second window
+				self:onVictimSurvives(betrayer, victim)
+			end
+		end
+		
+		-- Cleanup
+		self.activeWindows[betrayerId] = nil
+	end)
+	
+	-- Store timer connection for potential cancellation
+	if self.pendingBetrayals[betrayerId] then
+		self.pendingBetrayals[betrayerId].timerConnection = timerConnection
+	end
+end
+
+-- Outcome 2: Victim survives the 30-second betrayal window
+function AllianceService:onVictimSurvives(betrayer, victim)
+	print("[AllianceService]", victim.Name, "survived betrayal by", betrayer.Name, "- victim gets 75%, betrayer gets 25%")
+	
+	-- Clear the pending betrayal
+	if self.pendingBetrayals[betrayer.UserId] then
+		self.pendingBetrayals[betrayer.UserId] = nil
+	end
+	
+	-- Clear the recent betrayal tracking
+	if self.recentBetrayals[betrayer.UserId] then
+		self.recentBetrayals[betrayer.UserId] = nil
+	end
+	
+	-- Transfer 75% of resources from betrayer to victim
+	self:transferBetrayalResources(victim, betrayer, 0.75)
+	
+	-- Transfer cure components 75% to victim, 25% stays with betrayer
+	if self.cureService then
+		self:transferCureComponents(victim, betrayer, 0.75)
+	end
+	
+	-- Transfer puzzles from betrayer to victim
+	if self.puzzleService and self.puzzleService.onSurvivorVictory then
+		self.puzzleService:onSurvivorVictory(victim, betrayer)
+	end
+	
+	-- Notify both players
+	if self.remoteEvents.AllianceUpdate then
+		self.remoteEvents.AllianceUpdate:FireClient(victim, {
+			type = "betrayal_survived",
+			betrayer = betrayer.Name,
+			message = "You survived the betrayal! You received 75% of " .. betrayer.Name .. "'s resources."
+		})
+		
+		self.remoteEvents.AllianceUpdate:FireClient(betrayer, {
+			type = "betrayal_failed",
+			victim = victim.Name,
+			message = "Betrayal failed! " .. victim.Name .. " survived and took 75% of your resources."
+		})
+	end
+	
+	print(victim.Name .. " survived betrayal and claimed 75% of " .. betrayer.Name .. "'s resources!")
 end
 
 -- Transfer resources from victim to betrayer
@@ -316,7 +406,7 @@ function AllianceService:transferBetrayalResources(betrayer, victim, transferRat
 	end
 end
 
--- Called when a betrayer is killed by their recent victim (survivor mechanics)
+-- Called when a betrayer is killed by their recent victim (Outcome 3: survivor mechanics)
 function AllianceService:onBetrayerKilled(betrayer, killer)
 	local victimUserId = self.recentBetrayals[betrayer.UserId]
 	if not victimUserId then
@@ -328,15 +418,26 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 		return
 	end
 
-	-- Clear the betrayal tracking
-	self.recentBetrayals[betrayer.UserId] = nil
+	print("[AllianceService]", killer.Name, "killed betrayer", betrayer.Name, "- victim gets 100% (Outcome 3)")
 
-	-- Clear any pending betrayal
-	if self.pendingBetrayals then
+	-- Cancel the 30-second timer since victim won
+	if self.pendingBetrayals[betrayer.UserId] then
+		local pendingBetrayal = self.pendingBetrayals[betrayer.UserId]
+		if pendingBetrayal.timerConnection then
+			task.cancel(pendingBetrayal.timerConnection)
+		end
 		self.pendingBetrayals[betrayer.UserId] = nil
 	end
 
-	-- Transfer ALL resources from betrayer to survivor
+	-- Clear the betrayal tracking
+	self.recentBetrayals[betrayer.UserId] = nil
+	
+	-- Clear active window
+	if self.activeWindows[betrayer.UserId] then
+		self.activeWindows[betrayer.UserId] = nil
+	end
+
+	-- Outcome 3: Transfer ALL (100%) resources from betrayer to survivor
 	self:transferBetrayalResources(killer, betrayer, 1.0)
 
 	-- Transfer all puzzles from betrayer to survivor
@@ -344,7 +445,7 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 		self.puzzleService:onSurvivorVictory(killer, betrayer)
 	end
 
-	-- Transfer ALL cure components from betrayer to survivor
+	-- Transfer ALL (100%) cure components from betrayer to survivor
 	if self.cureService then
 		self:transferCureComponents(killer, betrayer, 1.0)
 	end
@@ -354,11 +455,11 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 		self.remoteEvents.AllianceUpdate:FireClient(killer, {
 			type = "survivor_victory",
 			betrayer = betrayer.Name,
-			message = "You survived the betrayal! All resources, puzzles, and cure components transferred to you."
+			message = "You defeated your betrayer! All of " .. betrayer.Name .. "'s resources, puzzles, and cure components transferred to you (100%)."
 		})
 	end
 
-	print(killer.Name .. " survived betrayal by " .. betrayer.Name .. " and claimed all resources!")
+	print(killer.Name .. " defeated betrayer " .. betrayer.Name .. " and claimed all resources (100%)!")
 end
 
 -- Integration point: Call this from MainServer.lua or WeaponService.lua when a player is killed
@@ -395,32 +496,42 @@ function AllianceService:onPlayerKilled(deadPlayer, killerPlayer)
 	end
 end
 
--- Called when a betrayer successfully eliminates their victim
--- This completes the betrayal and transfers resources
+-- Called when a betrayer successfully eliminates their victim (Outcome 1)
+-- This completes the betrayal within 30 seconds and transfers 65% of resources
 function AllianceService:onBetrayerKillsVictim(betrayer, victim)
-	print("[AllianceService]", betrayer.Name, "successfully eliminated", victim.Name, "- completing betrayal")
+	print("[AllianceService]", betrayer.Name, "successfully eliminated", victim.Name, "within 30s - completing betrayal (Outcome 1: 65%)")
 
-	-- Clear the pending betrayal
-	if self.pendingBetrayals then
+	-- Clear the pending betrayal and cancel timer
+	if self.pendingBetrayals[betrayer.UserId] then
+		local pendingBetrayal = self.pendingBetrayals[betrayer.UserId]
+		-- Cancel the 30-second timer since betrayer succeeded
+		if pendingBetrayal.timerConnection then
+			task.cancel(pendingBetrayal.timerConnection)
+		end
 		self.pendingBetrayals[betrayer.UserId] = nil
 	end
 
 	-- Clear the recent betrayal tracking
-	if self.recentBetrayals then
+	if self.recentBetrayals[betrayer.UserId] then
 		self.recentBetrayals[betrayer.UserId] = nil
 	end
+	
+	-- Clear active window
+	if self.activeWindows[betrayer.UserId] then
+		self.activeWindows[betrayer.UserId] = nil
+	end
 
-	-- NOW transfer resources since betrayal was successful
-	self:transferBetrayalResources(betrayer, victim, 0.75)
+	-- Outcome 1: Transfer 65% of resources since betrayal was successful
+	self:transferBetrayalResources(betrayer, victim, 0.65)
 
 	-- Trigger puzzle stealing mechanics
 	if self.puzzleService then
 		self.puzzleService:onBetrayal(betrayer, victim)
 	end
 
-	-- Transfer cure components from victim to betrayer
+	-- Transfer 65% of cure components from victim to betrayer
 	if self.cureService then
-		self:transferCureComponents(betrayer, victim, 0.75)
+		self:transferCureComponents(betrayer, victim, 0.65)
 	end
 
 	-- Notify betrayer of successful betrayal
@@ -428,11 +539,11 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 		self.remoteEvents.AllianceUpdate:FireClient(betrayer, {
 			type = "betrayal_success",
 			victim = victim.Name,
-			message = "Betrayal successful! You have claimed " .. victim.Name .. "'s resources and cure components."
+			message = "Betrayal successful! You eliminated " .. victim.Name .. " and claimed 65% of their resources."
 		})
 	end
 
-	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed their resources!")
+	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed 65% of their resources!")
 end
 
 -- Transfer cure components from one player to another

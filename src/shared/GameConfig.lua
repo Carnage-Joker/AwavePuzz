@@ -63,6 +63,7 @@ GameConfig.Spawning = {
 -- Alliance Settings
 GameConfig.ALLIANCE_DAMAGE_MULTIPLIER = 0 -- Allies can't damage each other
 GameConfig.BETRAYAL_COOLDOWN = 60 -- Seconds before can betray again
+GameConfig.BETRAYAL_WINDOW = 30 -- Seconds for betrayal combat window
 
 -- Resource Settings
 GameConfig.RESOURCE_SPAWN_RATE = 20 -- Seconds between resource spawns
