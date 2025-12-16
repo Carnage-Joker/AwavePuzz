@@ -1,413 +1,239 @@
 -- SpectatorUI.client.lua
--- Client script for displaying spectator mode interface when player dies
--- Allows cycling through alive players to spectate
+-- Client-side spectator UI + camera control
+-- Works with keyboard, gamepad, and mobile buttons
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local camera = workspace.CurrentCamera
 
--- Constants
-local REMOTE_EVENT_WAIT_TIMEOUT = 10
+local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
+local EnterSpectatorMode = remoteEvents:WaitForChild("EnterSpectatorMode")
+local ExitSpectatorMode = remoteEvents:WaitForChild("ExitSpectatorMode")
+local SpectatorTargetUpdate = remoteEvents:WaitForChild("SpectatorTargetUpdate")
+local SpectatorCycleTarget = remoteEvents:WaitForChild("SpectatorCycleTarget")
+local SpectatorStateUpdate = remoteEvents:WaitForChild("SpectatorStateUpdate")
 
--- State
 local isSpectating = false
-local currentTargetUserId = nil
-local spectatorConnection = nil
+local targetUserId = nil
+local aliveList = {}
+local aliveCount = 0
 
--- Create ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SpectatorUI"
-screenGui.ResetOnSpawn = false
-screenGui.Enabled = false
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = playerGui
+-- UI
+local gui = Instance.new("ScreenGui")
+gui.Name = "SpectatorUI"
+gui.ResetOnSpawn = false
+gui.Enabled = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- Main spectator frame (top banner)
-local spectatorBanner = Instance.new("Frame")
-spectatorBanner.Name = "SpectatorBanner"
-spectatorBanner.Size = UDim2.new(0, 400, 0, 60)
-spectatorBanner.Position = UDim2.new(0.5, -200, 0, 80)
-spectatorBanner.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-spectatorBanner.BackgroundTransparency = 0.2
-spectatorBanner.BorderSizePixel = 0
-spectatorBanner.Parent = screenGui
+local root = Instance.new("Frame")
+root.Name = "Root"
+root.AnchorPoint = Vector2.new(0.5, 0)
+root.Position = UDim2.new(0.5, 0, 0, 18)
+root.Size = UDim2.new(0, 520, 0, 70)
+root.BackgroundTransparency = 0.25
+root.BorderSizePixel = 0
+root.Parent = gui
 
-local bannerCorner = Instance.new("UICorner")
-bannerCorner.CornerRadius = UDim.new(0, 12)
-bannerCorner.Parent = spectatorBanner
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = root
 
-local bannerStroke = Instance.new("UIStroke")
-bannerStroke.Thickness = 2
-bannerStroke.Color = Color3.fromRGB(255, 100, 100)
-bannerStroke.Parent = spectatorBanner
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 2
+stroke.Transparency = 0.35
+stroke.Parent = root
 
--- Spectator icon/text
-local spectatorIcon = Instance.new("TextLabel")
-spectatorIcon.Name = "Icon"
-spectatorIcon.Size = UDim2.new(0, 40, 0, 40)
-spectatorIcon.Position = UDim2.new(0, 10, 0.5, -20)
-spectatorIcon.BackgroundTransparency = 1
-spectatorIcon.Text = "👁"
-spectatorIcon.TextSize = 28
-spectatorIcon.Parent = spectatorBanner
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0, 14, 0, 8)
+title.Size = UDim2.new(1, -28, 0, 22)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Text = "SPECTATING"
+title.Parent = root
 
--- "SPECTATING" label
-local spectatingLabel = Instance.new("TextLabel")
-spectatingLabel.Name = "SpectatingLabel"
-spectatingLabel.Size = UDim2.new(0, 120, 0, 20)
-spectatingLabel.Position = UDim2.new(0, 55, 0, 8)
-spectatingLabel.BackgroundTransparency = 1
-spectatingLabel.Text = "SPECTATING"
-spectatingLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-spectatingLabel.TextSize = 14
-spectatingLabel.Font = Enum.Font.GothamBold
-spectatingLabel.TextXAlignment = Enum.TextXAlignment.Left
-spectatingLabel.Parent = spectatorBanner
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.BackgroundTransparency = 1
+subtitle.Position = UDim2.new(0, 14, 0, 30)
+subtitle.Size = UDim2.new(1, -28, 0, 18)
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextSize = 14
+subtitle.TextXAlignment = Enum.TextXAlignment.Left
+subtitle.TextTransparency = 0.1
+subtitle.Text = "Target: — | Alive: —"
+subtitle.Parent = root
 
--- Target player name
-local targetNameLabel = Instance.new("TextLabel")
-targetNameLabel.Name = "TargetName"
-targetNameLabel.Size = UDim2.new(0, 280, 0, 28)
-targetNameLabel.Position = UDim2.new(0, 55, 0, 28)
-targetNameLabel.BackgroundTransparency = 1
-targetNameLabel.Text = "Player Name"
-targetNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-targetNameLabel.TextSize = 20
-targetNameLabel.Font = Enum.Font.GothamBold
-targetNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-targetNameLabel.Parent = spectatorBanner
+local function makeButton(name, text, xScale)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.AnchorPoint = Vector2.new(1, 0.5)
+	btn.Position = UDim2.new(1, xScale, 0.5, 0)
+	btn.Size = UDim2.new(0, 92, 0, 40)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 16
+	btn.Text = text
+	btn.AutoButtonColor = true
+	btn.Parent = root
 
--- Navigation buttons container
-local navContainer = Instance.new("Frame")
-navContainer.Name = "NavContainer"
-navContainer.Size = UDim2.new(0, 80, 0, 40)
-navContainer.Position = UDim2.new(1, -90, 0.5, -20)
-navContainer.BackgroundTransparency = 1
-navContainer.Parent = spectatorBanner
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 10)
+	c.Parent = btn
 
--- Previous button
-local prevButton = Instance.new("TextButton")
-prevButton.Name = "PrevButton"
-prevButton.Size = UDim2.new(0, 35, 0, 35)
-prevButton.Position = UDim2.new(0, 0, 0, 0)
-prevButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-prevButton.Text = "◀"
-prevButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-prevButton.TextSize = 18
-prevButton.Font = Enum.Font.GothamBold
-prevButton.Parent = navContainer
-
-local prevCorner = Instance.new("UICorner")
-prevCorner.CornerRadius = UDim.new(0, 8)
-prevCorner.Parent = prevButton
-
--- Next button
-local nextButton = Instance.new("TextButton")
-nextButton.Name = "NextButton"
-nextButton.Size = UDim2.new(0, 35, 0, 35)
-nextButton.Position = UDim2.new(0, 40, 0, 0)
-nextButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-nextButton.Text = "▶"
-nextButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-nextButton.TextSize = 18
-nextButton.Font = Enum.Font.GothamBold
-nextButton.Parent = navContainer
-
-local nextCorner = Instance.new("UICorner")
-nextCorner.CornerRadius = UDim.new(0, 8)
-nextCorner.Parent = nextButton
-
--- Bottom info banner
-local infoBanner = Instance.new("Frame")
-infoBanner.Name = "InfoBanner"
-infoBanner.Size = UDim2.new(0, 350, 0, 50)
-infoBanner.Position = UDim2.new(0.5, -175, 1, -70)
-infoBanner.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-infoBanner.BackgroundTransparency = 0.3
-infoBanner.BorderSizePixel = 0
-infoBanner.Parent = screenGui
-
-local infoCorner = Instance.new("UICorner")
-infoCorner.CornerRadius = UDim.new(0, 10)
-infoCorner.Parent = infoBanner
-
--- "You died" label
-local diedLabel = Instance.new("TextLabel")
-diedLabel.Name = "DiedLabel"
-diedLabel.Size = UDim2.new(1, -20, 0, 25)
-diedLabel.Position = UDim2.new(0, 10, 0, 5)
-diedLabel.BackgroundTransparency = 1
-diedLabel.Text = "☠ YOU HAVE BEEN ELIMINATED"
-diedLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-diedLabel.TextSize = 16
-diedLabel.Font = Enum.Font.GothamBold
-diedLabel.Parent = infoBanner
-
--- Alive count label
-local aliveCountLabel = Instance.new("TextLabel")
-aliveCountLabel.Name = "AliveCount"
-aliveCountLabel.Size = UDim2.new(1, -20, 0, 20)
-aliveCountLabel.Position = UDim2.new(0, 10, 0, 28)
-aliveCountLabel.BackgroundTransparency = 1
-aliveCountLabel.Text = "Players alive: 0"
-aliveCountLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-aliveCountLabel.TextSize = 14
-aliveCountLabel.Font = Enum.Font.Gotham
-aliveCountLabel.Parent = infoBanner
-
--- Controls hint
-local controlsHint = Instance.new("TextLabel")
-controlsHint.Name = "ControlsHint"
-controlsHint.Size = UDim2.new(0, 300, 0, 30)
-controlsHint.Position = UDim2.new(0.5, -150, 0, 150)
-controlsHint.BackgroundTransparency = 1
-controlsHint.Text = "Press Q/E or click arrows to switch players"
-controlsHint.TextColor3 = Color3.fromRGB(150, 150, 150)
-controlsHint.TextSize = 14
-controlsHint.Font = Enum.Font.Gotham
-controlsHint.Parent = screenGui
-
--- Camera control variables
-
--- Function to set camera on target
-local function updateCamera()
-	if not isSpectating or not currentTargetUserId then
-		return
-	end
-	
-	local targetPlayer = Players:GetPlayerByUserId(currentTargetUserId)
-	if not targetPlayer then
-		return
-	end
-	
-	local character = targetPlayer.Character
-	if not character then
-		return
-	end
-	
-	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-	if not humanoidRootPart then
-		return
-	end
-	
-	-- Set camera to follow target
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
-		camera.CameraSubject = character:FindFirstChildOfClass("Humanoid")
-	end
+	return btn
 end
 
--- Function to cycle spectator target
-local function cycleTarget(direction)
-	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if remoteEvents then
-		local cycleEvent = remoteEvents:FindFirstChild("SpectatorCycleTarget")
-		if cycleEvent then
-			cycleEvent:FireServer(direction)
+local prevBtn = makeButton("Prev", "◀ Prev", -206)
+local nextBtn = makeButton("Next", "Next ▶", -106)
+
+local hint = Instance.new("TextLabel")
+hint.Name = "Hint"
+hint.BackgroundTransparency = 1
+hint.AnchorPoint = Vector2.new(1, 1)
+hint.Position = UDim2.new(1, -10, 1, -6)
+hint.Size = UDim2.new(0, 260, 0, 18)
+hint.Font = Enum.Font.Gotham
+hint.TextSize = 12
+hint.TextXAlignment = Enum.TextXAlignment.Right
+hint.TextTransparency = 0.3
+hint.Text = "Q/E or A/D • DPad ◀/▶ • Buttons"
+hint.Parent = root
+
+-- Camera helpers
+local function getPlayerByUserId(userId)
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p.UserId == userId then
+			return p
 		end
 	end
+	return nil
 end
 
--- Function to enter spectator mode
-local function enterSpectatorMode(data)
-	isSpectating = true
-	screenGui.Enabled = true
-	
-	-- Update target info
-	if data.targetPlayer then
-		targetNameLabel.Text = data.targetPlayer
-		currentTargetUserId = data.targetUserId
-	else
-		targetNameLabel.Text = "No players alive"
-		currentTargetUserId = nil
-	end
-	
-	-- Animate in
-	spectatorBanner.Position = UDim2.new(0.5, -200, -0.2, 0)
-	infoBanner.Position = UDim2.new(0.5, -175, 1.2, 0)
-	
-	TweenService:Create(spectatorBanner, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -200, 0, 80)
-	}):Play()
-	
-	TweenService:Create(infoBanner, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0.5, -175, 1, -70)
-	}):Play()
-	
-	-- Start camera update loop
-	if spectatorConnection then
-		spectatorConnection:Disconnect()
-	end
-	spectatorConnection = RunService.RenderStepped:Connect(updateCamera)
-	
-	-- Initial camera setup
-	task.delay(0.1, updateCamera)
+local function getFocusPartForPlayer(p)
+	if not p or not p.Character then return nil end
+	return p.Character:FindFirstChild("HumanoidRootPart") or p.Character:FindFirstChild("Head")
 end
 
--- Function to exit spectator mode
-local function exitSpectatorMode()
-	isSpectating = false
-	currentTargetUserId = nil
-	
-	-- Disconnect camera loop
-	if spectatorConnection then
-		spectatorConnection:Disconnect()
-		spectatorConnection = nil
-	end
-	
-	-- Reset camera
-	local camera = workspace.CurrentCamera
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
-		if player.Character then
-			camera.CameraSubject = player.Character:FindFirstChildOfClass("Humanoid")
-		else
-			-- Wait for character to load, then set camera subject
-			local conn
-			conn = player.CharacterAdded:Connect(function(char)
-				local humanoid = char:FindFirstChildOfClass("Humanoid")
-				if humanoid then
-					camera.CameraSubject = humanoid
-				end
-				if conn then
-					conn:Disconnect()
-				end
-			end)
-		end
-	end
-	
-	-- Animate out
-	TweenService:Create(spectatorBanner, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-		Position = UDim2.new(0.5, -200, -0.2, 0)
-	}):Play()
-	
-	TweenService:Create(infoBanner, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-		Position = UDim2.new(0.5, -175, 1.2, 0)
-	}):Play()
-	
-	task.delay(0.3, function()
-		screenGui.Enabled = false
-	end)
-end
+local function setCameraToTarget(userId)
+	targetUserId = userId
 
--- Function to update spectator target
-local function updateSpectatorTarget(data)
 	if not isSpectating then
 		return
 	end
-	
-	if data.targetPlayer then
-		targetNameLabel.Text = data.targetPlayer
-		currentTargetUserId = data.targetUserId
-	else
-		targetNameLabel.Text = "No players alive"
-		currentTargetUserId = nil
+
+	if not userId then
+		-- No target: leave camera in Scriptable but don't explode
+		camera.CameraType = Enum.CameraType.Scriptable
+		subtitle.Text = ("Target: — | Alive: %d"):format(aliveCount or 0)
+		return
 	end
-	
-	updateCamera()
+
+	local targetPlayer = getPlayerByUserId(userId)
+	local hum = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+
+	-- Best behaviour: Spectate by setting CameraSubject
+	camera.CameraType = Enum.CameraType.Custom
+	if hum then
+		camera.CameraSubject = hum
+	else
+		-- Fallback to scriptable follow
+		camera.CameraType = Enum.CameraType.Scriptable
+	end
+
+	local targetName = targetPlayer and targetPlayer.Name or "—"
+	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
 end
 
--- Function to update alive player list
-local function updateAliveList(data)
-	local aliveCount = data.aliveCount or 0
-	aliveCountLabel.Text = "Players alive: " .. tostring(aliveCount)
+-- Smooth fallback follow if CameraSubject isn't available yet
+RunService.RenderStepped:Connect(function()
+	if not isSpectating then return end
+	if not targetUserId then return end
+	if camera.CameraType ~= Enum.CameraType.Scriptable then return end
+
+	local t = getPlayerByUserId(targetUserId)
+	local part = getFocusPartForPlayer(t)
+	if not part then return end
+
+	local desiredPos = part.Position + Vector3.new(0, 6, 12)
+	local cf = CFrame.new(desiredPos, part.Position)
+	camera.CFrame = camera.CFrame:Lerp(cf, 0.15)
+end)
+
+-- Client -> server cycle
+local function requestCycle(dir)
+	if not isSpectating then return end
+	SpectatorCycleTarget:FireServer(dir)
 end
 
--- Button hover effects
-prevButton.MouseEnter:Connect(function()
-	TweenService:Create(prevButton, TweenInfo.new(0.15), {
-		BackgroundColor3 = Color3.fromRGB(80, 80, 110)
-	}):Play()
+prevBtn.MouseButton1Click:Connect(function()
+	requestCycle("prev")
 end)
 
-prevButton.MouseLeave:Connect(function()
-	TweenService:Create(prevButton, TweenInfo.new(0.15), {
-		BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-	}):Play()
+nextBtn.MouseButton1Click:Connect(function()
+	requestCycle("next")
 end)
 
-nextButton.MouseEnter:Connect(function()
-	TweenService:Create(nextButton, TweenInfo.new(0.15), {
-		BackgroundColor3 = Color3.fromRGB(80, 80, 110)
-	}):Play()
-end)
-
-nextButton.MouseLeave:Connect(function()
-	TweenService:Create(nextButton, TweenInfo.new(0.15), {
-		BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-	}):Play()
-end)
-
--- Button click handlers
-prevButton.MouseButton1Click:Connect(function()
-	cycleTarget("prev")
-end)
-
-nextButton.MouseButton1Click:Connect(function()
-	cycleTarget("next")
-end)
-
--- Keyboard controls
+-- Keyboard/gamepad
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if not isSpectating then return end
-	
-	if input.KeyCode == Enum.KeyCode.Q then
-		cycleTarget("prev")
-	elseif input.KeyCode == Enum.KeyCode.E then
-		cycleTarget("next")
+
+	if input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.A then
+		requestCycle("prev")
+	elseif input.KeyCode == Enum.KeyCode.E or input.KeyCode == Enum.KeyCode.D then
+		requestCycle("next")
+	elseif input.KeyCode == Enum.KeyCode.DPadLeft then
+		requestCycle("prev")
+	elseif input.KeyCode == Enum.KeyCode.DPadRight then
+		requestCycle("next")
 	end
 end)
 
--- Remote Event Handlers
-local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", REMOTE_EVENT_WAIT_TIMEOUT)
-if not remoteEvents then
-	warn("[SpectatorUI] RemoteEvents folder not found")
-	return
-end
+-- Server events
+EnterSpectatorMode.OnClientEvent:Connect(function(payload)
+	isSpectating = true
+	gui.Enabled = true
 
--- Enter spectator mode
-local enterEvent = remoteEvents:WaitForChild("EnterSpectatorMode", REMOTE_EVENT_WAIT_TIMEOUT)
-if enterEvent then
-	enterEvent.OnClientEvent:Connect(function(data)
-		if typeof(data) == "table" then
-			enterSpectatorMode(data)
-		end
-	end)
-end
+	aliveList = {}
+	aliveCount = 0
 
--- Exit spectator mode
-local exitEvent = remoteEvents:WaitForChild("ExitSpectatorMode", REMOTE_EVENT_WAIT_TIMEOUT)
-if exitEvent then
-	exitEvent.OnClientEvent:Connect(function()
-		exitSpectatorMode()
-	end)
-end
+	setCameraToTarget(payload and payload.targetUserId or nil)
+end)
 
--- Update spectator target
-local targetUpdateEvent = remoteEvents:WaitForChild("SpectatorTargetUpdate", REMOTE_EVENT_WAIT_TIMEOUT)
-if targetUpdateEvent then
-	targetUpdateEvent.OnClientEvent:Connect(function(data)
-		if typeof(data) == "table" then
-			updateSpectatorTarget(data)
-		end
-	end)
-end
+ExitSpectatorMode.OnClientEvent:Connect(function()
+	isSpectating = false
+	gui.Enabled = false
+	targetUserId = nil
 
--- Update alive list
-local stateUpdateEvent = remoteEvents:WaitForChild("SpectatorStateUpdate", REMOTE_EVENT_WAIT_TIMEOUT)
-if stateUpdateEvent then
-	stateUpdateEvent.OnClientEvent:Connect(function(data)
-		if typeof(data) == "table" then
-			updateAliveList(data)
-		end
-	end)
-end
+	-- Restore camera to local player
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	camera.CameraType = Enum.CameraType.Custom
+	if hum then
+		camera.CameraSubject = hum
+	end
+end)
 
-print("SpectatorUI initialized")
+SpectatorTargetUpdate.OnClientEvent:Connect(function(payload)
+	if not isSpectating then return end
+	setCameraToTarget(payload and payload.targetUserId or nil)
+end)
+
+SpectatorStateUpdate.OnClientEvent:Connect(function(payload)
+	if not payload then return end
+	aliveList = payload.alivePlayers or {}
+	aliveCount = payload.aliveCount or 0
+
+	-- Keep subtitle current
+	local targetName = "—"
+	if targetUserId then
+		local t = getPlayerByUserId(targetUserId)
+		targetName = t and t.Name or "—"
+	end
+	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
+end)
