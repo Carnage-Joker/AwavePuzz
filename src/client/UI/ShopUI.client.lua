@@ -29,8 +29,8 @@ local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
 
--- Minimum touch target from config
-local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
+-- Minimum touch target from config with fallback
+local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ShopUI"
@@ -122,27 +122,27 @@ statusLabel.Parent = frame
 local function updateUIScaling()
 	frame.Size = UIScaleManager.scaleSize(300, 320, "menuElements", "menuDialog")
 	frameCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
-	
+
 	title.Size = UDim2.new(1, -getScaledValue(10, "padding"), 0, getScaledValue(30, "padding"))
 	title.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	title.TextSize = getScaledTextSize(20)
-	
+
 	local newCloseSize = math.max(getScaledValue(30, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
 	closeButton.Position = UDim2.new(1, -newCloseSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 	closeButton.TextSize = getScaledTextSize(18)
 	closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
-	
+
 	list.Size = UDim2.new(1, -getScaledValue(10, "padding"), 1, -getScaledValue(70, "padding"))
 	list.Position = UDim2.new(0, getScaledValue(5, "padding"), 0, getScaledValue(40, "padding"))
 	list.ScrollBarThickness = getScaledValue(6, "padding")
-	
+
 	padding.PaddingTop = UDim.new(0, getScaledValue(4, "padding"))
 	padding.PaddingBottom = UDim.new(0, getScaledValue(4, "padding"))
 	padding.PaddingLeft = UDim.new(0, getScaledValue(4, "padding"))
 	padding.PaddingRight = UDim.new(0, getScaledValue(4, "padding"))
 	layout.Padding = UDim.new(0, getScaledValue(6, "padding"))
-	
+
 	statusLabel.Size = UDim2.new(1, -getScaledValue(10, "padding"), 0, getScaledValue(20, "padding"))
 	statusLabel.Position = UDim2.new(0, getScaledValue(5, "padding"), 1, -getScaledValue(25, "padding"))
 	statusLabel.TextSize = getScaledTextSize(14)
