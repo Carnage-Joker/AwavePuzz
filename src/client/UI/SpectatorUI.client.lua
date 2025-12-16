@@ -140,16 +140,10 @@ local function setCameraToTarget(userId)
 	end
 
 	local targetPlayer = getPlayerByUserId(userId)
-	local hum = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 
 	-- Use Scriptable camera for third-person spectating
 	-- This gives better control over camera positioning
 	camera.CameraType = Enum.CameraType.Scriptable
-	
-	-- If target has humanoid, set as subject for tracking but camera stays scriptable
-	if hum then
-		camera.CameraSubject = hum
-	end
 
 	local targetName = targetPlayer and targetPlayer.Name or "—"
 	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)

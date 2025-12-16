@@ -12,11 +12,17 @@ local PuzzleService = {}
 PuzzleService.__index = PuzzleService
 
 -- Helper function to normalize string answers for consistent validation
+-- Handles both string and numeric inputs
 local function normalizeAnswer(answer)
-	if type(answer) ~= "string" then
+	if answer == nil then
 		return nil
 	end
-	return answer:lower():gsub("%s+", "")
+	
+	-- Convert to string if not already
+	local str = type(answer) == "string" and answer or tostring(answer)
+	
+	-- Normalize: lowercase and remove whitespace
+	return str:lower():gsub("%s+", "")
 end
 
 function PuzzleService.new(cureService, playerManager)
@@ -429,8 +435,8 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
 		
-		-- Use helper function to normalize answer (handles string and number conversion)
-		local normalizedAnswer = normalizeAnswer(tostring(answer))
+		-- Normalize answer for consistent validation
+		local normalizedAnswer = normalizeAnswer(answer)
 		if not normalizedAnswer then
 			return false
 		end
@@ -456,8 +462,8 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
 		
-		-- Use helper function to normalize answer (handles string and number conversion)
-		local normalizedAnswer = normalizeAnswer(tostring(answer))
+		-- Normalize answer for consistent validation
+		local normalizedAnswer = normalizeAnswer(answer)
 		if not normalizedAnswer then
 			return false
 		end
