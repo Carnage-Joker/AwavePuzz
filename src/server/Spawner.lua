@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
-local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
+local ZombieBrain = require(script.Parent.AI.ZombieBrain)
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local IntelligentSpawnGenerator = require(script.Parent.IntelligentSpawnGenerator)
 
