@@ -167,7 +167,10 @@ print("Surge active:", info.currentSurge)
 
 #### Get AI Director State
 ```lua
-local spawner = game.ServerScriptService.MainServer.spawner
+-- Adjust these names if your MainServer/spawner are organized differently
+local serverScriptService = game:GetService("ServerScriptService")
+local mainServer = serverScriptService:WaitForChild("MainServer")
+local spawner = mainServer:WaitForChild("spawner")
 local info = spawner.aiDirector:getStateInfo()
 print("Base Pressure:", info.basePressurePercent)
 print("Surge Active:", info.currentSurge)
