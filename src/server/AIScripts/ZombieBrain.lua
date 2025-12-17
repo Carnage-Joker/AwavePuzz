@@ -319,7 +319,7 @@ function ZombieBrain:update(deltaTime)
 		self.bossAuraService:applyAuraBuffs(self.zombieModel, self)
 		
 		-- Adjust retarget interval based on aura
-		if self.zombieModel:GetAttribute("InBossAura") then
+		if self.zombieModel:GetAttribute("InBossAura") and self.bossAuraService.getRetargetInterval then
 			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 1.0
 			self.repathInterval = self.bossAuraService:getRetargetInterval(self.zombieModel, baseInterval)
 		end

@@ -80,12 +80,14 @@ function SpitterController:findCover()
 	end
 	
 	local myPos = self.rootPart.Position
-	local region = Region3.new(
-		myPos - Vector3.new(CONFIG.COVER_SEARCH_RADIUS, 10, CONFIG.COVER_SEARCH_RADIUS),
-		myPos + Vector3.new(CONFIG.COVER_SEARCH_RADIUS, 10, CONFIG.COVER_SEARCH_RADIUS)
-	)
+	local searchSize = Vector3.new(CONFIG.COVER_SEARCH_RADIUS, 10, CONFIG.COVER_SEARCH_RADIUS)
 	
-	local partsInRegion = workspace:FindPartsInRegion3(region, self.zombieModel, 50)
+	-- Use GetPartBoundsInBox instead of deprecated Region3
+	local overlapParams = OverlapParams.new()
+	overlapParams.FilterDescendantsInstances = {self.zombieModel}
+	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+	
+	local partsInRegion = workspace:GetPartBoundsInBox(CFrame.new(myPos), searchSize, overlapParams)
 	
 	local coverCandidates = {}
 	for _, part in ipairs(partsInRegion) do
@@ -266,9 +268,14 @@ function SpitterController:tryAttack(targetPos, targetType, targetPlayer)
 			self:telegraphAttack()
 			self.attackCooldown = CONFIG.ATTACK_COOLDOWN
 			
-			-- Fire after telegraph
+			-- Store reference for safe callback
+			local zombieModel = self.zombieModel
+			local rootPart = self.rootPart
+			
+			-- Fire after telegraph with validation
 			task.delay(CONFIG.TELEGRAPH_TIME, function()
-				if self.rootPart and self.zombieModel.Parent then
+				-- Validate objects still exist before firing
+				if zombieModel and zombieModel.Parent and rootPart and rootPart.Parent then
 					self:fireAcidSpit(targetPos)
 					self.isTelegraphing = false
 				end

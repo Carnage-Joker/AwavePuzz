@@ -204,10 +204,17 @@ end
 
 -- Clean up assignments for destroyed zombies
 function TargetingService:cleanupAssignments()
+	-- Collect zombies to remove first (safe iteration)
+	local toRemove = {}
 	for zombie, _ in pairs(self.targetAssignments) do
 		if not zombie or not zombie.Parent then
-			self.targetAssignments[zombie] = nil
+			table.insert(toRemove, zombie)
 		end
+	end
+	
+	-- Remove collected zombies
+	for _, zombie in ipairs(toRemove) do
+		self.targetAssignments[zombie] = nil
 	end
 end
 

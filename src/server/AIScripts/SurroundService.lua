@@ -246,23 +246,35 @@ end
 function SurroundService:cleanup()
 	local currentTime = tick()
 	
-	-- Clean slot reservations
+	-- Collect slots to remove (safe iteration)
+	local slotsToRemove = {}
 	for slotKey, reservation in pairs(self.slotReservations) do
 		if not reservation.zombie or not reservation.zombie.Parent then
-			self.slotReservations[slotKey] = nil
+			table.insert(slotsToRemove, slotKey)
 		else
 			local timeSince = currentTime - reservation.reservedTime
 			if timeSince > CONFIG.SLOT_RESERVATION_TIME * 2 then
-				self.slotReservations[slotKey] = nil
+				table.insert(slotsToRemove, slotKey)
 			end
 		end
 	end
 	
-	-- Clean zombie slots
+	-- Remove collected slots
+	for _, slotKey in ipairs(slotsToRemove) do
+		self.slotReservations[slotKey] = nil
+	end
+	
+	-- Collect zombie slots to remove (safe iteration)
+	local zombiesToRemove = {}
 	for zombie, _ in pairs(self.zombieSlots) do
 		if not zombie or not zombie.Parent then
-			self.zombieSlots[zombie] = nil
+			table.insert(zombiesToRemove, zombie)
 		end
+	end
+	
+	-- Remove collected zombie slots
+	for _, zombie in ipairs(zombiesToRemove) do
+		self.zombieSlots[zombie] = nil
 	end
 end
 

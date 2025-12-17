@@ -303,7 +303,7 @@ function Spawner:spawnWave(waveComposition)
 
 	-- Use AI Director composition if not explicitly provided
 	local composition = waveComposition
-	if not composition and self.aiDirector then
+	if not waveComposition and self.aiDirector then
 		local totalZombies = self:calculateTotalZombiesForWave(self.currentWave)
 		composition = self.aiDirector:getSpawnComposition(self.currentWave, totalZombies)
 		print("[Spawner] AI Director generated composition:", composition)

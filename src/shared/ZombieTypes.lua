@@ -41,7 +41,7 @@ local ZombieTypes = {
 		RetargetInterval = 1.2,
 		SlotPreference = "inner",
 		FlankChance = 0.0,
-		BasePreference = 0.7, -- Higher chance to target base
+		BasePreference = 0.7, -- Probability (0.0-1.0) to prefer base over players
 	},
 	Spitter = {
 		Model = "Spitter",
@@ -101,7 +101,7 @@ local ZombieTypes = {
 		RetargetInterval = 1.5,
 		SlotPreference = "inner",
 		FlankChance = 0.0,
-		BasePreference = 0.8, -- Strongly prefers base
+		BasePreference = 0.8, -- Probability (0.0-1.0) to prefer base over players
 		BaseDamageBonus = 1.5, -- 50% more damage to base
 	},
 	Screamer = {
@@ -132,7 +132,7 @@ local ZombieTypes = {
 		RetargetInterval = 1.0,
 		SlotPreference = "inner",
 		FlankChance = 0.0,
-		BasePreference = 0.9, -- Almost always targets base
+		BasePreference = 0.9, -- Probability (0.0-1.0) to prefer base over players
 		BaseDamageBonus = 2.0, -- Double damage to base
 		PlayerDamagePenalty = 0.5, -- Half damage to players
 	}

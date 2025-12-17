@@ -255,18 +255,30 @@ end
 
 -- Clean up invalid bosses
 function BossAuraService:cleanup()
-	-- Clean up destroyed bosses
+	-- Collect bosses to remove (safe iteration)
+	local bossesToRemove = {}
 	for bossModel, _ in pairs(self.activeBosses) do
 		if not bossModel or not bossModel.Parent then
-			self:unregisterBoss(bossModel)
+			table.insert(bossesToRemove, bossModel)
 		end
 	end
 	
-	-- Clean up affected zombies
+	-- Remove collected bosses
+	for _, bossModel in ipairs(bossesToRemove) do
+		self:unregisterBoss(bossModel)
+	end
+	
+	-- Collect affected zombies to remove (safe iteration)
+	local zombiesToRemove = {}
 	for zombieModel, _ in pairs(self.affectedZombies) do
 		if not zombieModel or not zombieModel.Parent then
-			self.affectedZombies[zombieModel] = nil
+			table.insert(zombiesToRemove, zombieModel)
 		end
+	end
+	
+	-- Remove collected zombies
+	for _, zombieModel in ipairs(zombiesToRemove) do
+		self.affectedZombies[zombieModel] = nil
 	end
 end
 
