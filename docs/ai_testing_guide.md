@@ -68,7 +68,10 @@ This will enable visual indicators for boss auras.
 **Validation**:
 ```lua
 -- In server console
-local spawner = -- get spawner reference
+-- Adjust these names if your MainServer/spawner are organized differently
+local serverScriptService = game:GetService("ServerScriptService")
+local mainServer = serverScriptService:WaitForChild("MainServer")
+local spawner = mainServer:WaitForChild("spawner")
 local stats = spawner.bossAuraService:getStats()
 print("Active bosses:", stats.activeBosses)
 print("Affected zombies:", stats.affectedZombies)
