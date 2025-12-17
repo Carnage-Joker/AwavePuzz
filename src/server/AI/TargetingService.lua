@@ -116,7 +116,7 @@ function TargetingService:calculateOvercrowdPenalty(targetPos, targetId)
 end
 
 -- Score a potential target
-function TargetingService:scoreTarget(zombiePos, targetPos, targetType, targetId, waveNumber, alivePlayers)
+function TargetingService:scoreTarget(zombiePos, targetPos, targetType, targetId, waveNumber, alivePlayers, zombieStats)
 	-- Base score from distance (closer = higher score)
 	local distance = (targetPos - zombiePos).Magnitude
 	local distanceScore = math.max(0, 200 - distance)
@@ -135,6 +135,12 @@ function TargetingService:scoreTarget(zombiePos, targetPos, targetType, targetId
 				baseBonus = CONFIG.BASE_SCORE_BOOST * (waveNumber or 1)
 			end
 		end
+		
+		-- Apply BasePreference bonus if zombie has base preference
+		if zombieStats and zombieStats.BasePreference then
+			-- Scale bonus based on preference (0.0-1.0 becomes 0-100 bonus points)
+			baseBonus = baseBonus + (zombieStats.BasePreference * 100)
+		end
 	end
 	
 	local finalScore = distanceScore - overcrowdPenalty + baseBonus
@@ -144,6 +150,14 @@ end
 -- Select best target for a zombie using tactical scoring
 function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 	local targets = {}
+	
+	-- Get zombie stats from the model's ZombieType attribute
+	local zombieStats = nil
+	local zombieType = zombieModel:GetAttribute("ZombieType")
+	if zombieType then
+		local ZombieTypes = require(game:GetService("ReplicatedStorage").Shared.ZombieTypes)
+		zombieStats = ZombieTypes[zombieType]
+	end
 	
 	-- Get player targets
 	local playerTargets = self:getPlayerTargets()
@@ -179,7 +193,8 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 			target.targetType,
 			target.targetId,
 			waveNumber,
-			#playerTargets
+			#playerTargets,
+			zombieStats
 		)
 		
 		if score > bestScore then

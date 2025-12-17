@@ -43,11 +43,24 @@ function Spawner.new(weaponService, baseManager, playerManager)
 	-- Optional integration
 	self.resourceSpawner = nil
 	
-	-- AI Services
-	self.targetingService = TargetingService.new(baseManager)
-	self.surroundService = SurroundService.new()
-	self.aiDirector = AIDirector.new(baseManager, playerManager)
-	self.bossAuraService = BossAuraService.new()
+	-- AI Services (validate GameConfig.AI exists before initialization)
+	if not GameConfig.AI then
+		warn("[Spawner] GameConfig.AI is not defined. AI services will not be initialized.")
+		self.targetingService = nil
+		self.surroundService = nil
+		self.aiDirector = nil
+		self.bossAuraService = nil
+	else
+		self.targetingService = TargetingService.new(baseManager)
+		self.surroundService = SurroundService.new()
+		self.aiDirector = AIDirector.new(baseManager, playerManager)
+		self.bossAuraService = BossAuraService.new()
+		
+		-- Enable debug mode if configured
+		if GameConfig.AI.DEBUG_MODE then
+			self.bossAuraService:setDebugMode(true)
+		end
+	end
 	
 	-- Current wave tracking
 	self.currentWave = 0
@@ -56,11 +69,6 @@ function Spawner.new(weaponService, baseManager, playerManager)
 		local zombiesFolder = Instance.new("Folder")
 		zombiesFolder.Name = "Zombies"
 		zombiesFolder.Parent = workspace
-	end
-	
-	-- Enable debug mode if configured
-	if GameConfig.AI.DEBUG_MODE then
-		self.bossAuraService:setDebugMode(true)
 	end
 
 	return self
