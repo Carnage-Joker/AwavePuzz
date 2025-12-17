@@ -6,6 +6,11 @@
 ]]
 local GameConfig = {}
 
+-- Debug & Testing
+-- Set to true to enable test and debug scripts
+-- WARNING: Should always be false in production
+GameConfig.DEBUG = false
+
 -- Player Settings
 GameConfig.MAX_PLAYERS = 8
 GameConfig.STARTING_HEALTH = 100

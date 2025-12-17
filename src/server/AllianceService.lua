@@ -64,6 +64,11 @@ end
 
 function AllianceService:setupRemoteEvents()
 	-- Use shared utility to create remote events
+	-- RemoteEvent Documentation:
+	-- - RequestAlliance: Client -> Server, request alliance with another player {targetPlayer = Player}
+	-- - RespondAlliance: Client -> Server, respond to alliance request {requesterPlayer = Player, accept = boolean}
+	-- - BreakAlliance: Client -> Server, break existing alliance {targetPlayer = Player}
+	-- - AllianceUpdate: Server -> Client, updates alliance status {allies = table, status = string}
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"RequestAlliance",
 		"RespondAlliance",
