@@ -1,7 +1,6 @@
 -- Spawner.lua
 -- Server script that spawns zombies based on wave configuration
--- Features staggered spawning timing and strategic spawn point distribution
--- Strategic zombie type spawning based on wave progression
+-- Features tactical AI, dynamic pressure, and intelligent composition
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -10,6 +9,12 @@ local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
 local ZombieBrain = require(script.Parent.AI.ZombieBrain)
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local IntelligentSpawnGenerator = require(script.Parent.IntelligentSpawnGenerator)
+
+-- AI Services
+local TargetingService = require(script.Parent.AI.TargetingService)
+local SurroundService = require(script.Parent.AI.SurroundService)
+local AIDirector = require(script.Parent.AI.AIDirector)
+local BossAuraService = require(script.Parent.AI.BossAuraService)
 
 local DEFAULT_SPAWN_INTERVAL = 0.5
 
@@ -37,6 +42,28 @@ function Spawner.new(weaponService, baseManager, playerManager)
 
 	-- Optional integration
 	self.resourceSpawner = nil
+	
+	-- AI Services (validate GameConfig.AI exists before initialization)
+	if not GameConfig.AI then
+		warn("[Spawner] GameConfig.AI is not defined. AI services will not be initialized.")
+		self.targetingService = nil
+		self.surroundService = nil
+		self.aiDirector = nil
+		self.bossAuraService = nil
+	else
+		self.targetingService = TargetingService.new(baseManager)
+		self.surroundService = SurroundService.new()
+		self.aiDirector = AIDirector.new(baseManager, playerManager)
+		self.bossAuraService = BossAuraService.new()
+		
+		-- Enable debug mode if configured
+		if GameConfig.AI.DEBUG_MODE then
+			self.bossAuraService:setDebugMode(true)
+		end
+	end
+	
+	-- Current wave tracking
+	self.currentWave = 0
 
 	if not workspace:FindFirstChild("Zombies") then
 		local zombiesFolder = Instance.new("Folder")
@@ -190,7 +217,18 @@ function Spawner:spawnZombie(zombieType)
 	zombieModel.Name = zombieType .. "_" .. self.zombieCount
 	zombieModel.Parent = workspace.Zombies
 
-	local brain = ZombieBrain.new(zombieModel, stats, self.baseManager, self.playerManager)
+	-- Create brain with AI services
+	local brain = ZombieBrain.new(
+		zombieModel,
+		stats,
+		self.baseManager,
+		self.playerManager,
+		self.targetingService,
+		self.surroundService,
+		self.bossAuraService,
+		self.currentWave
+	)
+	
 	if brain then
 		self.zombieBrains[zombieModel] = brain
 		table.insert(self.activeZombies, zombieModel)
@@ -271,7 +309,21 @@ end
 function Spawner:spawnWave(waveComposition)
 	self.spawnQueue = {}
 
-	local spawnOrder = {"Walker", "Runner", "Spitter", "Brute", "Boss"}
+	-- Use AI Director composition if not explicitly provided or if an empty composition is provided
+	local composition = waveComposition
+	local isEmptyWaveComposition = (type(waveComposition) == "table" and next(waveComposition) == nil)
+	if self.aiDirector and (composition == nil or isEmptyWaveComposition) then
+		local totalZombies = self:calculateTotalZombiesForWave(self.currentWave)
+		composition = self.aiDirector:getSpawnComposition(self.currentWave, totalZombies)
+		print("[Spawner] AI Director generated composition:", composition)
+	end
+
+	-- If we still don't have a valid, non-empty composition, bail out safely
+	if type(composition) ~= "table" or next(composition) == nil then
+		warn("[Spawner] No valid wave composition for wave " .. tostring(self.currentWave))
+		return 0
+	end
+	local spawnOrder = {"Walker", "Runner", "Spitter", "Brute", "Boss", "Flanker", "Bruiser", "Screamer", "Breacher"}
 
 	local prioritySet = {}
 	for _, zombieType in ipairs(spawnOrder) do
@@ -281,14 +333,14 @@ function Spawner:spawnWave(waveComposition)
 	local totalToSpawn = 0
 
 	for _, zombieType in ipairs(spawnOrder) do
-		local count = waveComposition[zombieType] or 0
+		local count = composition[zombieType] or 0
 		for _ = 1, count do
 			self:queueSpawn(zombieType)
 			totalToSpawn = totalToSpawn + 1
 		end
 	end
 
-	for zombieType, count in pairs(waveComposition) do
+	for zombieType, count in pairs(composition) do
 		if not prioritySet[zombieType] then
 			for _ = 1, count do
 				self:queueSpawn(zombieType)
@@ -299,6 +351,23 @@ function Spawner:spawnWave(waveComposition)
 
 	print("Queued " .. totalToSpawn .. " zombies for staggered spawning")
 	return totalToSpawn
+end
+
+-- Helper to calculate total zombies for wave (for AI Director)
+function Spawner:calculateTotalZombiesForWave(waveNumber)
+	local baseZombies = GameConfig.BASE_ZOMBIES_PER_WAVE or 5
+	local multiplier = GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER or 1.5
+	return math.floor(baseZombies * (multiplier ^ (waveNumber - 1)))
+end
+
+-- Set current wave number (for AI services)
+function Spawner:setCurrentWave(waveNumber)
+	self.currentWave = waveNumber
+	
+	-- Initialize surge timer on first wave
+	if waveNumber == 1 and self.aiDirector then
+		self.aiDirector:initializeSurgeTimer()
+	end
 end
 
 function Spawner:onZombieDied(zombie)
@@ -323,6 +392,24 @@ end
 
 function Spawner:update(deltaTime)
 	self:processSpawnQueue(deltaTime)
+
+	-- Update AI services
+	if self.targetingService then
+		self.targetingService:update(deltaTime)
+	end
+	
+	if self.surroundService then
+		self.surroundService:update(deltaTime)
+	end
+	
+	if self.aiDirector then
+		local totalZombies = #self.activeZombies + #self.spawnQueue
+		self.aiDirector:update(deltaTime, self.currentWave, totalZombies)
+	end
+	
+	if self.bossAuraService then
+		self.bossAuraService:update(deltaTime, self.activeZombies)
+	end
 
 	for zombie, brain in pairs(self.zombieBrains) do
 		if brain.isActive then

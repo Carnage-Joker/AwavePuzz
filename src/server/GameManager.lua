@@ -428,6 +428,9 @@ function GameManager:startWave()
 		self.spawner:generateSpawnPointsForRound()
 	end
 
+	-- Set current wave for AI Director and services
+	self.spawner:setCurrentWave(self.currentWave)
+	
 	self.spawner:spawnWave(waveData.Composition)
 end
 
