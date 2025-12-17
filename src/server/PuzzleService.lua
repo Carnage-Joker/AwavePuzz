@@ -52,6 +52,14 @@ end
 
 function PuzzleService:setupRemoteEvents()
 	-- Use shared utility to create remote events
+	-- RemoteEvent Documentation:
+	-- - RequestPuzzle: Client -> Server, player requests to start a puzzle {componentName = string}
+	-- - SubmitPuzzleAnswer: Client -> Server, player submits puzzle solution {componentName = string, answer = any}
+	-- - PuzzleUpdate: Server -> Client, sends puzzle state updates {componentName = string, state = table}
+	-- - PuzzleFailed: Server -> Client, notifies puzzle failure {componentName = string, reason = string}
+	-- - PuzzleCompleted: Server -> Client, notifies puzzle completion {componentName = string, reward = table}
+	-- - OpenPuzzleUI: Server -> Client, tells client to open puzzle UI {componentName = string, puzzleData = table}
+	-- - RequestPuzzleProgress: Client -> Server, requests puzzle progress data (no payload)
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"RequestPuzzle",      -- Client requests to start a puzzle
 		"SubmitPuzzleAnswer", -- Client submits puzzle solution
