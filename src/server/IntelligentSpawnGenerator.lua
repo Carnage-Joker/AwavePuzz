@@ -6,10 +6,10 @@ local Workspace = game:GetService("Workspace")
 local Terrain = workspace:FindFirstChildOfClass("Terrain")
 local CollectionService = game:GetService("CollectionService")
 
--- Try to require visualizer, but don't fail if it doesn't exist
+-- Try to require visualizer from Tests folder, but don't fail if it doesn't exist or DEBUG is off
 local SpawnPointVisualizer
 local success, err = pcall(function()
-	SpawnPointVisualizer = require(script.Parent.SpawnPointVisualizer)
+	SpawnPointVisualizer = require(script.Parent.Tests.SpawnPointVisualizer)
 end)
 if not success then
 	print("[SpawnGenerator] Visualizer not available:", err)

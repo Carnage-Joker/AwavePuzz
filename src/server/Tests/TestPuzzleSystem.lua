@@ -1,9 +1,19 @@
 -- TestPuzzleSystem.lua
 -- Simple test script to verify puzzle system structure
 -- This can be run in Roblox Studio Command Bar for quick testing
+--
+-- WHO RUNS: Server (test/debug only)
+-- PURPOSE: Validates puzzle system configuration and structure
+-- REQUIRES: GameConfig.DEBUG = true to execute
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+
+-- Early exit if DEBUG mode is not enabled
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+if not GameConfig.DEBUG then
+	return
+end
 
 print("=== Testing Puzzle System ===")
 

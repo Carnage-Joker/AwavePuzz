@@ -210,6 +210,9 @@ AwavePuzz/
 All game settings can be adjusted in `src/shared/GameConfig.lua`:
 
 ```lua
+-- Debug & Testing
+DEBUG = false  -- Set to true to enable test/debug scripts
+
 -- Player Settings
 MAX_PLAYERS = 8
 STARTING_HEALTH = 100
@@ -230,6 +233,8 @@ ZOMBIE_SPEED = 16
 RESOURCE_SPAWN_RATE = 45
 MAX_RESOURCES_ON_MAP = 10
 ```
+
+**Note:** Test and debug scripts in `src/server/Tests/` will only run when `GameConfig.DEBUG = true`.
 
 ## 🚀 Installation (Roblox Studio)
 
@@ -296,6 +301,23 @@ This game is built using:
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
 - **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements documentation
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - 🆕 Project structure and organization guide
+- **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - 🆕 RemoteEvent reference with payload documentation
+
+### Project Structure
+
+The repository is organized into clear, logical sections:
+
+- **`src/server/`** - Server-side game logic
+  - **`AI/`** - Artificial intelligence scripts (ZombieBrain)
+  - **`Tests/`** - Test and debug scripts (requires `GameConfig.DEBUG = true`)
+- **`src/client/`** - Client-side UI and controls
+  - **`UI/`** - User interface scripts
+  - **`FPS/`** - First-person system modules
+- **`src/shared/`** - Shared configurations and utilities
+- **`docs/`** - 🆕 Project documentation
+
+For detailed information about the project structure, naming conventions, and development guidelines, see [docs/STRUCTURE.md](docs/STRUCTURE.md).
 
 ## 📝 License
 

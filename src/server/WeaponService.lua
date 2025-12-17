@@ -76,6 +76,10 @@ end
 
 function WeaponService:setupRemoteEvents()
 	-- Use shared utility to create remote events
+	-- RemoteEvent Documentation:
+	-- - WeaponFire: Client -> Server, player fires weapon {origin = Vector3, direction = Vector3, weaponId = string}
+	-- - WeaponEquip: Client -> Server, player requests to equip weapon {weaponId = string}
+	-- - WeaponHitConfirm: Server -> Client, confirms hit on target {hitPosition = Vector3, damage = number}
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WeaponFire",
 		"WeaponEquip",

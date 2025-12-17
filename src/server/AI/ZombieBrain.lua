@@ -7,6 +7,15 @@
 -- - Type-specific behaviors (Spitter, Flanker, Screamer, etc.)
 -- - Boss aura integration
 -- - Performance-optimized with tick jitter and caching
+-- AI controller for zombies with attack system and intelligent targeting
+-- 
+-- Features:
+-- - Intelligent target selection: chooses nearest player or base
+-- - Proximity-based attack system with cooldowns
+-- - Attack animation support
+-- - Server-authoritative damage dealing
+-- - Base reference caching for performance
+-- - Difficulty scaling through stats inherited from spawner
 
 local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")

@@ -1,6 +1,22 @@
 -- SpawnPointVisualizer.lua
 -- Visualizes spawn points for debugging purposes
 -- Creates parts at spawn point locations to help verify placement
+--
+-- WHO RUNS: Server (test/debug only)
+-- PURPOSE: Debug tool to visualize zombie spawn points
+-- REQUIRES: GameConfig.DEBUG = true to execute
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Early exit if DEBUG mode is not enabled
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+if not GameConfig.DEBUG then
+	-- Return a dummy module that does nothing when DEBUG is false
+	return {
+		new = function() return {} end
+	}
+end
 
 local Workspace = game:GetService("Workspace")
 local Debris = game:GetService("Debris")

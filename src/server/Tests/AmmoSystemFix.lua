@@ -1,3 +1,19 @@
+-- AmmoSystemFix.lua
+-- Simple ammo system fix for testing
+--
+-- WHO RUNS: Server (test/debug only)
+-- PURPOSE: Temporary fix script for ammo system debugging
+-- REQUIRES: GameConfig.DEBUG = true to execute
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Early exit if DEBUG mode is not enabled
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+if not GameConfig.DEBUG then
+	return
+end
+
 task.wait(5) -- Wait for everything to initialize
 
 print("=== AMMO SYSTEM FIX ===")

@@ -106,6 +106,16 @@ end
 
 function GameManager:setupRemoteEvents()
 	-- Use shared utility to create remote events
+	-- RemoteEvent Documentation:
+	-- - WaveAnnounce: Server -> Client, announces new wave start {wave = number}
+	-- - WaveUpdate: Server -> Client, updates wave status {zombiesRemaining = number, timeRemaining = number}
+	-- - GameStateUpdate: Server -> Client, updates game state {state = string, data = table}
+	-- - CureUpdate: Server -> Client, updates cure progress {progress = number}
+	-- - BaseHealthUpdate: Server -> Client, updates base health {health = number, maxHealth = number}
+	-- - MapUpdate: Server -> Client, sends map information {mapId = string, mapName = string}
+	-- - ScoreboardUpdate: Server -> Client, updates scoreboard data {players = table}
+	-- - ShowScoreboard: Server -> Client, signals to display scoreboard
+	-- - HideScoreboard: Server -> Client, signals to hide scoreboard
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WaveAnnounce",
 		"WaveUpdate",
