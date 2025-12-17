@@ -301,14 +301,20 @@ end
 function Spawner:spawnWave(waveComposition)
 	self.spawnQueue = {}
 
-	-- Use AI Director composition if not explicitly provided
+	-- Use AI Director composition if not explicitly provided or if an empty composition is provided
 	local composition = waveComposition
-	if not waveComposition and self.aiDirector then
+	local isEmptyWaveComposition = (type(waveComposition) == "table" and next(waveComposition) == nil)
+	if self.aiDirector and (composition == nil or isEmptyWaveComposition) then
 		local totalZombies = self:calculateTotalZombiesForWave(self.currentWave)
 		composition = self.aiDirector:getSpawnComposition(self.currentWave, totalZombies)
 		print("[Spawner] AI Director generated composition:", composition)
 	end
 
+	-- If we still don't have a valid, non-empty composition, bail out safely
+	if type(composition) ~= "table" or next(composition) == nil then
+		warn("[Spawner] No valid wave composition for wave " .. tostring(self.currentWave))
+		return 0
+	end
 	local spawnOrder = {"Walker", "Runner", "Spitter", "Brute", "Boss", "Flanker", "Bruiser", "Screamer", "Breacher"}
 
 	local prioritySet = {}
