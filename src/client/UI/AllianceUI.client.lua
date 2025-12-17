@@ -2,6 +2,12 @@
 -- Client script for alliance management UI
 -- Place in StarterGui as a LocalScript
 -- Updated with dynamic UI scaling for mobile devices.
+-- Optimized for latest UIScaleManager upgrade:
+-- - All player list items now use scaled dimensions
+-- - Text sizes properly scaled for all device types
+-- - Action buttons meet minimum touch target requirements (44px)
+-- - Player list refreshes when screen size changes
+-- - Consistent with other UI files using UIScaleManager patterns
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -235,6 +241,11 @@ local function updateUIScaling()
 	notificationFrame.Position = UIScaleManager.getPositionWithSafeArea("topCenter", 0, 150)
 	notifCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 	notificationLabel.TextSize = getScaledTextSize(14)
+	
+	-- Update player list items if the UI is visible
+	if mainFrame.Visible then
+		updatePlayerList()
+	end
 end
 
 -- Register for scale changes
@@ -322,29 +333,41 @@ local function updatePlayerList()
 	-- Get all players
 	local allPlayers = Players:GetPlayers()
 
+	-- Scaled values for player list items
+	local itemHeight = getScaledValue(50, "menuElements")
+	local itemPadding = getScaledValue(10, "padding")
+	local cornerRadius = getScaledValue(5, "padding")
+	local nameTextSize = getScaledTextSize(14)
+	local statusTextSize = getScaledTextSize(12)
+	local buttonTextSize = getScaledTextSize(12)
+	
+	-- Action button with minimum touch target
+	local buttonWidth = getScaledValue(60, "menuElements")
+	local buttonHeight = math.max(getScaledValue(35, "menuElements"), MIN_TOUCH_TARGET)
+
 	for _, otherPlayer in ipairs(allPlayers) do
 		if otherPlayer ~= player then
 			local isAllied = myAlliances[otherPlayer.UserId] == true
 
 			local itemFrame = Instance.new("Frame")
 			itemFrame.Name = otherPlayer.Name
-			itemFrame.Size = UDim2.new(1, -10, 0, 50)
+			itemFrame.Size = UDim2.new(1, -itemPadding, 0, itemHeight)
 			itemFrame.BackgroundColor3 = isAllied and Color3.fromRGB(80, 120, 80) or Color3.fromRGB(50, 50, 50)
 			itemFrame.BorderSizePixel = 0
 			itemFrame.Parent = playerList
 
 			local itemCorner = Instance.new("UICorner")
-			itemCorner.CornerRadius = UDim.new(0, 5)
+			itemCorner.CornerRadius = UDim.new(0, cornerRadius)
 			itemCorner.Parent = itemFrame
 
 			-- Player name
 			local nameLabel = Instance.new("TextLabel")
 			nameLabel.Size = UDim2.new(0.5, 0, 1, 0)
-			nameLabel.Position = UDim2.new(0, 10, 0, 0)
+			nameLabel.Position = UDim2.new(0, itemPadding, 0, 0)
 			nameLabel.BackgroundTransparency = 1
 			nameLabel.Text = otherPlayer.Name
 			nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-			nameLabel.TextSize = 14
+			nameLabel.TextSize = nameTextSize
 			nameLabel.Font = Enum.Font.GothamBold
 			nameLabel.TextXAlignment = Enum.TextXAlignment.Left
 			nameLabel.Parent = itemFrame
@@ -356,23 +379,23 @@ local function updatePlayerList()
 			statusLabel.BackgroundTransparency = 1
 			statusLabel.Text = isAllied and "Allied" or ""
 			statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-			statusLabel.TextSize = 12
+			statusLabel.TextSize = statusTextSize
 			statusLabel.Font = Enum.Font.Gotham
 			statusLabel.Parent = itemFrame
 
 			-- Action button
 			local actionButton = Instance.new("TextButton")
-			actionButton.Size = UDim2.new(0, 60, 0, 35)
-			actionButton.Position = UDim2.new(1, -70, 0.5, -17.5)
+			actionButton.Size = UDim2.new(0, buttonWidth, 0, buttonHeight)
+			actionButton.Position = UDim2.new(1, -(buttonWidth + itemPadding), 0.5, -buttonHeight / 2)
 			actionButton.BackgroundColor3 = isAllied and Color3.fromRGB(200, 80, 80) or Color3.fromRGB(100, 150, 255)
 			actionButton.Text = isAllied and "Betray" or "Ally"
 			actionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-			actionButton.TextSize = 12
+			actionButton.TextSize = buttonTextSize
 			actionButton.Font = Enum.Font.GothamBold
 			actionButton.Parent = itemFrame
 
 			local btnCorner = Instance.new("UICorner")
-			btnCorner.CornerRadius = UDim.new(0, 5)
+			btnCorner.CornerRadius = UDim.new(0, cornerRadius)
 			btnCorner.Parent = actionButton
 
 			-- Button click handler
@@ -398,8 +421,8 @@ local function updatePlayerList()
 		end
 	end
 
-	-- Update canvas size
-	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+	-- Update canvas size with scaled padding
+	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + getScaledValue(10, "padding"))
 end
 
 -- Toggle UI with key (default: Tab key)
