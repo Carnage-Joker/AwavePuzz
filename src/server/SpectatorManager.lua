@@ -1,10 +1,11 @@
 -- SpectatorManager.lua
 -- Server-side spectator mode manager
--- Dead players can spectate living players until round ends
--- TODO: when in spectator mode it needs to be clearly labled, 
--- so a different gui, one where you can cycle between players still,
--- alive to watch. Fix the camera to a sort of third person view of,
--- any player that is still alive. The spectator player should be invisible to the zombies
+-- Features:
+-- - Dead players can spectate living players until round ends
+-- - Spectator UI with clear labeling (see SpectatorUI.client.lua)
+-- - Player cycling with Q/E or A/D keys and UI buttons
+-- - Third-person camera view for spectating
+-- - Spectators are invisible to zombies (via IsSpectating attribute)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -160,7 +161,23 @@ function SpectatorManager:onPlayerDied(player)
 	if not player or not player.UserId then return end
 
 	self.deadPlayers[player.UserId] = true
+	
+	-- Mark player as spectating with an attribute for zombie AI to ignore
+	-- Ensure that if the character respawns while the player is still dead,
+	-- the IsSpectating attribute is re-applied to the new character.
+	local function applySpectatorAttribute(character)
+		if self.deadPlayers[player.UserId] and character then
+			character:SetAttribute("IsSpectating", true)
+		end
+	end
 
+	if player.Character then
+		applySpectatorAttribute(player.Character)
+	end
+
+	player.CharacterAdded:Connect(function(newCharacter)
+		applySpectatorAttribute(newCharacter)
+	end)
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
 		targetUserId = target and target.UserId or nil,
@@ -181,6 +198,11 @@ function SpectatorManager:exitSpectatorMode(player)
 	local data = self.spectators[player.UserId]
 	if data then
 		data.spectatorActive = false
+	end
+	
+	-- Remove spectating attribute
+	if player.Character then
+		player.Character:SetAttribute("IsSpectating", false)
 	end
 
 	self.remoteEvents.ExitSpectatorMode:FireClient(player, {})

@@ -13,6 +13,20 @@ local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 local PuzzleService = {}
 PuzzleService.__index = PuzzleService
 
+-- Helper function to normalize string answers for consistent validation
+-- Handles both string and numeric inputs
+local function normalizeAnswer(answer)
+	if answer == nil then
+		return nil
+	end
+	
+	-- Convert to string if not already
+	local str = type(answer) == "string" and answer or tostring(answer)
+	
+	-- Normalize: lowercase and remove whitespace
+	return str:lower():gsub("%s+", "")
+end
+
 function PuzzleService.new(cureService, playerManager)
 	local self = setmetatable({}, PuzzleService)
 
@@ -397,7 +411,7 @@ function PuzzleService:validateAnswer(puzzle, answer)
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
 
 		-- Validate logic solution
-		-- TODO: Implement proper deduction grid validation
+		-- For MVP: Simplified validation using answer string matching
 		-- Full implementation would include:
 		--   1. Parse player's arrangement of elements/scientists/labs
 		--   2. Check each arrangement against generated clues
@@ -406,12 +420,25 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Example: If clue says "Dr. Smith studied Compound X in Lab A",
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
-
-		return answer == "correct" -- Simplified for MVP
+		
+		-- Normalize answer for consistent validation
+		local normalizedAnswer = normalizeAnswer(answer)
+		if not normalizedAnswer then
+			return false
+		end
+		
+		-- Accept "correct" as the MVP answer for logic puzzles
+		if normalizedAnswer == "correct" then
+			return true
+		end
+		-- Could also validate against specific arrangements like "smithx", "jonezy", "brownz"
+		-- Format: scientist initial + element initial (e.g., "sx" = Smith + Compound X)
+		
+		return false
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
 		-- Validate node connections
-		-- TODO: Implement proper graph/circuit validation
+		-- For MVP: Simplified validation using answer string matching
 		-- Full implementation would include:
 		--   1. Parse player's connection data (node pairs)
 		--   2. Build graph from connections
@@ -420,11 +447,24 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		--   5. Validate forms complete circuit (Hamiltonian path)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
-		return answer == "circuit" -- Simplified for MVP
+		
+		-- Normalize answer for consistent validation
+		local normalizedAnswer = normalizeAnswer(answer)
+		if not normalizedAnswer then
+			return false
+		end
+		
+		-- Accept "circuit" as the MVP answer for abstract puzzles
+		if normalizedAnswer == "circuit" then
+			return true
+		end
+		-- Could also validate connection patterns like "1-2,2-3,3-4,4-5,5-6,6-1"
+		
+		return false
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Validate multi-stage answer
-		-- TODO: Implement multi-stage validation for final synthesis
+		-- For MVP: Simplified validation - synthesis puzzle is auto-solved when all components solved
 		-- Full implementation would:
 		--   1. Track current stage completion (1-5)
 		--   2. Validate each stage answer separately:
@@ -436,7 +476,10 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		--   3. Progress to next stage only if current stage correct
 		--   4. Return true only when all 5 stages completed
 		-- Could use puzzle.data.currentStage to track progress
-		return true -- Simplified - full implementation would validate each stage
+		
+		-- For MVP, synthesis is considered solved automatically if player attempts it
+		-- (All component puzzles must be solved to even access synthesis puzzle)
+		return true
 	end
 
 	return false

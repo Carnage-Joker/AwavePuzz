@@ -471,11 +471,10 @@ local function createColorPuzzleUI(puzzleData)
 	return colorBlocks
 end
 
--- Logic puzzle UI (simplified)
+-- Logic puzzle UI (simplified MVP with enhanced instructions)
 local function createLogicPuzzleUI(puzzleData)
 	clearContent()
 
-	-- TODO: Implement full deduction grid UI with clues and interactive selection
 	-- Full implementation would include:
 	--   1. Grid layout (3x3 or 4x4) showing element/person/location combinations
 	--   2. Clue display panel showing logical constraints
@@ -484,23 +483,45 @@ local function createLogicPuzzleUI(puzzleData)
 	--   5. Visual feedback for conflicts
 	--   6. Submit button validates final arrangement against clues
 	-- Example grid: Scientists (rows) x Elements (cols) x Labs (depth)
-	-- For MVP, using simplified text input approach
+	-- For MVP, using simplified text input approach with enhanced UI
+	
 	local instructionLabel = Instance.new("TextLabel")
-	instructionLabel.Size = UDim2.new(1, -40, 0, 60)
+	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
 	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "Use logic to deduce the correct arrangement\n(Simplified MVP: Enter 'correct' to solve)"
+	instructionLabel.Text = "📋 LOGIC DEDUCTION PUZZLE\n\nUse logical reasoning to deduce the correct arrangement.\n(Simplified MVP: Enter 'correct' to solve)"
 	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	instructionLabel.TextSize = 16
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
+	
+	-- Visual grid placeholder for future implementation
+	local gridFrame = Instance.new("Frame")
+	gridFrame.Size = UDim2.new(0, 320, 0, 200)
+	gridFrame.Position = UDim2.new(0.5, -160, 0, 100)
+	gridFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	gridFrame.BorderSizePixel = 0
+	gridFrame.Parent = contentFrame
+	
+	local gridCorner = Instance.new("UICorner")
+	gridCorner.CornerRadius = UDim.new(0, 8)
+	gridCorner.Parent = gridFrame
+	
+	local gridLabel = Instance.new("TextLabel")
+	gridLabel.Size = UDim2.new(1, 0, 1, 0)
+	gridLabel.BackgroundTransparency = 1
+	gridLabel.Text = "🔲 Grid UI\n\n(To be implemented:\nInteractive 3x3 grid\nwith clue checking)"
+	gridLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+	gridLabel.TextSize = 14
+	gridLabel.Font = Enum.Font.Gotham
+	gridLabel.Parent = gridFrame
 
-	-- For now, simple answer input
+	-- Answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
 	answerBox.Size = UDim2.new(0, 300, 0, 50)
-	answerBox.Position = UDim2.new(0.5, -150, 0, 100)
+	answerBox.Position = UDim2.new(0.5, -150, 0, 320)
 	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	answerBox.Text = ""
 	answerBox.PlaceholderText = "Enter 'correct'..."
@@ -516,11 +537,10 @@ local function createLogicPuzzleUI(puzzleData)
 	return answerBox
 end
 
--- Abstract puzzle UI (simplified)
+-- Abstract puzzle UI (simplified MVP with enhanced instructions)
 local function createAbstractPuzzleUI(puzzleData)
 	clearContent()
 
-	-- TODO: Implement full node connection UI with drag-and-drop or click-to-connect
 	-- Full implementation would include:
 	--   1. Node visualization (circles/points positioned on canvas)
 	--   2. Drag-and-drop mechanics to create connections between nodes
@@ -531,23 +551,45 @@ local function createAbstractPuzzleUI(puzzleData)
 	--   7. Highlight completed circuits or valid paths
 	-- Example: Display 6-8 nodes, player drags from one to another to connect
 	-- Validate that all nodes connected and forms desired pattern (circuit, tree, etc.)
-	-- For MVP, using simplified text input approach
+	-- For MVP, using simplified text input approach with enhanced UI
+	
 	local instructionLabel = Instance.new("TextLabel")
-	instructionLabel.Size = UDim2.new(1, -40, 0, 60)
+	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
 	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
 	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "Connect all nodes to form a complete circuit\n(Simplified MVP: Enter 'circuit' to solve)"
+	instructionLabel.Text = "🔗 NODE CONNECTION PUZZLE\n\nConnect all nodes to form a complete circuit.\n(Simplified MVP: Enter 'circuit' to solve)"
 	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	instructionLabel.TextSize = 16
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
+	
+	-- Visual node canvas placeholder for future implementation
+	local canvasFrame = Instance.new("Frame")
+	canvasFrame.Size = UDim2.new(0, 320, 0, 200)
+	canvasFrame.Position = UDim2.new(0.5, -160, 0, 100)
+	canvasFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	canvasFrame.BorderSizePixel = 0
+	canvasFrame.Parent = contentFrame
+	
+	local canvasCorner = Instance.new("UICorner")
+	canvasCorner.CornerRadius = UDim.new(0, 8)
+	canvasCorner.Parent = canvasFrame
+	
+	local canvasLabel = Instance.new("TextLabel")
+	canvasLabel.Size = UDim2.new(1, 0, 1, 0)
+	canvasLabel.BackgroundTransparency = 1
+	canvasLabel.Text = "⭕ Node Canvas\n\n(To be implemented:\nDrag-and-drop nodes\nwith connection lines)"
+	canvasLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+	canvasLabel.TextSize = 14
+	canvasLabel.Font = Enum.Font.Gotham
+	canvasLabel.Parent = canvasFrame
 
-	-- Simple answer input
+	-- Answer input
 	local answerBox = Instance.new("TextBox")
 	answerBox.Name = "AnswerBox"
 	answerBox.Size = UDim2.new(0, 300, 0, 50)
-	answerBox.Position = UDim2.new(0.5, -150, 0, 100)
+	answerBox.Position = UDim2.new(0.5, -150, 0, 320)
 	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 	answerBox.Text = ""
 	answerBox.PlaceholderText = "Enter 'circuit'..."

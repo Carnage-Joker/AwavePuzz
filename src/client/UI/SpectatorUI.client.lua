@@ -10,6 +10,11 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
+-- Camera configuration
+local SPECTATOR_CAMERA_HEIGHT = 4 -- Studs above target
+local SPECTATOR_CAMERA_DISTANCE = 8 -- Studs behind target
+local CAMERA_LERP_ALPHA = 0.15 -- Camera smoothing factor
+
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 local EnterSpectatorMode = remoteEvents:WaitForChild("EnterSpectatorMode")
 local ExitSpectatorMode = remoteEvents:WaitForChild("ExitSpectatorMode")
@@ -135,22 +140,16 @@ local function setCameraToTarget(userId)
 	end
 
 	local targetPlayer = getPlayerByUserId(userId)
-	local hum = targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 
-	-- Best behaviour: Spectate by setting CameraSubject
-	camera.CameraType = Enum.CameraType.Custom
-	if hum then
-		camera.CameraSubject = hum
-	else
-		-- Fallback to scriptable follow
-		camera.CameraType = Enum.CameraType.Scriptable
-	end
+	-- Use Scriptable camera for third-person spectating
+	-- This gives better control over camera positioning
+	camera.CameraType = Enum.CameraType.Scriptable
 
 	local targetName = targetPlayer and targetPlayer.Name or "—"
 	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
 end
 
--- Smooth fallback follow if CameraSubject isn't available yet
+-- Third-person camera follow for spectating
 RunService.RenderStepped:Connect(function()
 	if not isSpectating then return end
 	if not targetUserId then return end
@@ -160,9 +159,20 @@ RunService.RenderStepped:Connect(function()
 	local part = getFocusPartForPlayer(t)
 	if not part then return end
 
-	local desiredPos = part.Position + Vector3.new(0, 6, 12)
-	local cf = CFrame.new(desiredPos, part.Position)
-	camera.CFrame = camera.CFrame:Lerp(cf, 0.15)
+	-- Third-person camera positioning (behind and above the target)
+	local targetPos = part.Position
+	local targetLook = part.CFrame.LookVector
+	
+	-- Calculate camera offset behind the target
+	local horizontalOffset = -targetLook * SPECTATOR_CAMERA_DISTANCE  -- Negative to position behind
+	local verticalOffset = Vector3.new(0, SPECTATOR_CAMERA_HEIGHT, 0)
+	
+	-- Position camera behind and above the target for third-person view
+	local desiredPos = targetPos + horizontalOffset + verticalOffset
+	
+	-- Look at target
+	local cf = CFrame.new(desiredPos, targetPos)
+	camera.CFrame = camera.CFrame:Lerp(cf, CAMERA_LERP_ALPHA)
 end)
 
 -- Client -> server cycle

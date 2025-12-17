@@ -136,14 +136,18 @@ local function getNearestPlayerPosition(rootPart)
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		if character then
-			local hrp = character:FindFirstChild("HumanoidRootPart")
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if hrp and humanoid and humanoid.Health > 0 then
-				local dist = (hrp.Position - rootPart.Position).Magnitude
-				if dist < closestDist then
-					closestDist = dist
-					closestPos = hrp.Position
-					closestPlayer = player
+			-- Ignore spectators (dead players marked with IsSpectating attribute)
+			local isSpectating = character:GetAttribute("IsSpectating")
+			if not isSpectating then
+				local hrp = character:FindFirstChild("HumanoidRootPart")
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if hrp and humanoid and humanoid.Health > 0 then
+					local dist = (hrp.Position - rootPart.Position).Magnitude
+					if dist < closestDist then
+						closestDist = dist
+						closestPos = hrp.Position
+						closestPlayer = player
+					end
 				end
 			end
 		end
