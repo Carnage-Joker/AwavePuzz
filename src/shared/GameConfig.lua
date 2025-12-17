@@ -79,4 +79,38 @@ GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after roun
 GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
 GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
 
+-- Tactical AI Settings
+GameConfig.AI = {
+	-- Targeting
+	OVERCROWD_RADIUS = 15, -- Radius to check for overcrowding
+	OVERCROWD_THRESHOLD = 3, -- Max zombies before penalty
+	OVERCROWD_PENALTY = 50, -- Score penalty per zombie beyond threshold
+	
+	-- Surround System
+	INNER_RING_RADIUS = 8,
+	MIDDLE_RING_RADIUS = 15,
+	OUTER_RING_RADIUS = 25,
+	SLOTS_PER_RING = 8,
+	SEPARATION_RADIUS = 3,
+	
+	-- AI Director
+	BASE_PRESSURE_MIN = 0.2,
+	BASE_PRESSURE_MAX = 0.6,
+	SURGE_INTERVAL_MIN = 30,
+	SURGE_INTERVAL_MAX = 60,
+	
+	-- Boss Aura
+	BOSS_AURA_RADIUS = 40,
+	AURA_MOVE_SPEED_BOOST = 1.1,
+	AURA_RETARGET_BOOST = 0.5,
+	
+	-- Performance
+	DEFAULT_UPDATE_JITTER = 0.3, -- Random offset for update intervals
+	MAX_UPDATE_JITTER = 1.2,
+	LOS_CACHE_TIME = 0.5, -- Cache line-of-sight checks
+	
+	-- Debug
+	DEBUG_MODE = false, -- Enable visual debug indicators
+}
+
 return GameConfig
