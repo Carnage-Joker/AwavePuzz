@@ -97,15 +97,15 @@ GameConfig.AI = {
 
 ## Files Added
 
-- `src/server/AIScripts/TargetingService.lua` (220 lines)
-- `src/server/AIScripts/SurroundService.lua` (280 lines)
-- `src/server/AIScripts/AIDirector.lua` (300 lines)
-- `src/server/AIScripts/BossAuraService.lua` (310 lines)
-- `src/server/AIScripts/SpitterController.lua` (360 lines)
+- `src/server/AI/TargetingService.lua` (220 lines)
+- `src/server/AI/SurroundService.lua` (280 lines)
+- `src/server/AI/AIDirector.lua` (300 lines)
+- `src/server/AI/BossAuraService.lua` (310 lines)
+- `src/server/AI/SpitterController.lua` (360 lines)
 
 ## Files Modified
 
-- `src/server/AIScripts/ZombieBrain.lua` - Integrated all services
+- `src/server/AI/ZombieBrain.lua` - Integrated all services
 - `src/server/Spawner.lua` - Initialize and update services
 - `src/server/GameManager.lua` - Pass wave number
 - `src/shared/ZombieTypes.lua` - Added AI parameters and archetypes

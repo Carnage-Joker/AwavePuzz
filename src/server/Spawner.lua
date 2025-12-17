@@ -6,15 +6,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Players = game:GetService("Players")
 local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
-local ZombieBrain = require(script.Parent.AIScripts.ZombieBrain)
+local ZombieBrain = require(script.Parent.AI.ZombieBrain)
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local IntelligentSpawnGenerator = require(script.Parent.IntelligentSpawnGenerator)
 
 -- AI Services
-local TargetingService = require(script.Parent.AIScripts.TargetingService)
-local SurroundService = require(script.Parent.AIScripts.SurroundService)
-local AIDirector = require(script.Parent.AIScripts.AIDirector)
-local BossAuraService = require(script.Parent.AIScripts.BossAuraService)
+local TargetingService = require(script.Parent.AI.TargetingService)
+local SurroundService = require(script.Parent.AI.SurroundService)
+local AIDirector = require(script.Parent.AI.AIDirector)
+local BossAuraService = require(script.Parent.AI.BossAuraService)
 
 local DEFAULT_SPAWN_INTERVAL = 0.5
 
