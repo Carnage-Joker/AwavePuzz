@@ -51,14 +51,14 @@ Added zombie attack configuration parameters:
 GameConfig.ZOMBIE_DAMAGE = 10                   -- Increased from 1
 GameConfig.ZOMBIE_ATTACK_RANGE = 6              -- NEW: Attack range in studs
 GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5         -- NEW: Seconds between attacks
-GameConfig.ZOMBIE_REPATH_INTERVAL = 1.0         -- NEW: Path recalculation frequency
+GameConfig.ZOMBIE_REPATH_INTERVAL = 0.4         -- Path recalculation frequency (reduced from 1.0 to prevent pausing)
 ```
 
 **Changes:**
 - Increased ZOMBIE_DAMAGE from 1 to 10 for meaningful attacks
 - Added ZOMBIE_ATTACK_RANGE configuration
 - Added ZOMBIE_ATTACK_INTERVAL for attack cooldown
-- Added ZOMBIE_REPATH_INTERVAL for movement updates
+- Added ZOMBIE_REPATH_INTERVAL for movement updates (now 0.4s for smoother movement)
 - Removed invalid `Config.Spawning` section
 
 #### 2. `src/server/AIScripts/ZombieBrain.lua`
@@ -196,7 +196,7 @@ self.spawner = Spawner.new(self.weaponService, self.baseManager, self.playerMana
 | `ZOMBIE_DAMAGE` | 10 | Damage dealt per attack |
 | `ZOMBIE_ATTACK_RANGE` | 6 | Distance in studs at which zombies can attack |
 | `ZOMBIE_ATTACK_INTERVAL` | 1.5 | Seconds between attacks (cooldown) |
-| `ZOMBIE_REPATH_INTERVAL` | 1.0 | How often zombies recalculate their path |
+| `ZOMBIE_REPATH_INTERVAL` | 0.4 | How often zombies recalculate their path (reduced from 1.0 to prevent pausing) |
 
 These can be adjusted in `src/shared/GameConfig.lua` for balancing.
 
@@ -336,7 +336,8 @@ ZombieModel (Model)
 - With 1000 base HP, takes 100 hits to destroy
 - Can scale per zombie type (Brute = 20, Walker = 10, etc.)
 
-### Repath Interval (1.0 seconds)
+### Repath Interval (0.4 seconds)
+- Reduced from 1.0 to prevent pausing between path updates
 - Reduces pathfinding overhead
 - Still feels responsive
 - Balance between performance and smoothness

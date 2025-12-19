@@ -73,7 +73,7 @@ ZOMBIE_SPEED = 16                     -- Movement speed (studs/sec)
 ZOMBIE_HEALTH_MULTIPLIER = 1.2        -- Health growth per wave
 ZOMBIE_ATTACK_RANGE = 6               -- Attack range in studs
 ZOMBIE_ATTACK_INTERVAL = 1.5          -- Seconds between attacks
-ZOMBIE_REPATH_INTERVAL = 1.0          -- Path recalculation frequency
+ZOMBIE_REPATH_INTERVAL = 0.4          -- Path recalculation frequency (reduced from 1.0 to prevent pausing)
 ```
 
 #### Cure Settings
@@ -1191,7 +1191,8 @@ Updates the zombie AI every frame.
 **Behavior:**
 - Updates attack cooldown
 - Attempts to attack if target in range
-- Recalculates path every ZOMBIE_REPATH_INTERVAL seconds
+- Recalculates path every ZOMBIE_REPATH_INTERVAL seconds (0.4s, reduced from 1.0s)
+- Maintains continuous movement toward target during cooldown to prevent pausing
 - Selects best target (nearest player or base)
 - Moves toward target using Humanoid:MoveTo
 
@@ -1227,7 +1228,8 @@ The zombie uses intelligent target selection:
 
 #### Movement
 - **Pathfinding**: Uses Humanoid:MoveTo for basic pathfinding
-- **Update Rate**: Recalculates path every ZOMBIE_REPATH_INTERVAL (1.0 seconds)
+- **Update Rate**: Recalculates path every ZOMBIE_REPATH_INTERVAL (0.4 seconds, reduced from 1.0 to prevent idle pauses)
+- **Movement Continuity**: Continues moving toward last known target during cooldown
 - **Speed**: Set from zombie stats or ZOMBIE_SPEED config
 - **Continuous**: Moves toward target between attacks
 
@@ -1238,7 +1240,7 @@ The ZombieBrain reads from GameConfig:
 ```lua
 GameConfig.ZOMBIE_ATTACK_RANGE = 6      -- Attack range in studs
 GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5 -- Seconds between attacks
-GameConfig.ZOMBIE_REPATH_INTERVAL = 1.0 -- Path recalculation frequency
+GameConfig.ZOMBIE_REPATH_INTERVAL = 0.4 -- Path recalculation frequency (reduced from 1.0 to prevent pausing)
 GameConfig.ZOMBIE_DAMAGE = 10           -- Damage per attack
 ```
 

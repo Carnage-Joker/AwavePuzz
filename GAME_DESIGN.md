@@ -101,7 +101,7 @@ Zombie Health = Base HP × (Health Multiplier ^ (Wave - 1))
 - Speed: 16 studs/second
 - Attack cooldown: 1.5 seconds
 - Attack range: 6 studs
-- Repath interval: 1.0 seconds
+- Repath interval: 0.4 seconds (reduced from 1.0 to prevent pausing)
 
 ### Base System
 

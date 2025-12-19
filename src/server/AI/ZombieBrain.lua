@@ -7,6 +7,16 @@
 -- - Type-specific behaviors (Spitter, Flanker, Screamer, etc.)
 -- - Boss aura integration
 -- - Performance-optimized with tick jitter and caching
+-- - Continuous movement system to prevent pausing/hesitation
+--
+-- RECENT FIXES (Zombie AI Hesitation):
+-- - Reduced repath interval from 1.0s to 0.4s (less waiting between updates)
+-- - Reduced jitter from up to 1.2s to 0.3s (prevents long random pauses)
+-- - Added movement continuity: zombies keep moving toward last target during cooldown
+-- - Added waypoint skipping: zombies don't stop at intermediate waypoints
+-- - Implemented fallback movement when no path available
+-- - Result: Zombies now continuously pressure players without idle pauses
+--
 -- AI controller for zombies with attack system and intelligent targeting
 -- 
 -- Features:
@@ -58,16 +68,20 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 
 	-- Movement and targeting
 	self.moveCooldown = 0
-	self.repathInterval = stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 1.0
+	-- FIX: Reduce base interval and improve jitter to prevent long pauses
+	-- Old: 1.0s + up to 1.2s jitter = 2.2s max wait (too long, causes pausing)
+	-- New: 0.4s + up to 0.3s jitter = 0.7s max wait (smoother, continuous pressure)
+	self.repathInterval = stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
 	
-	-- Add jitter for performance
-	local jitter = math.random() * (GameConfig.AI.MAX_UPDATE_JITTER - GameConfig.AI.DEFAULT_UPDATE_JITTER)
+	-- Add jitter for performance and desynchronization
+	local jitter = math.random() * 0.3 -- Reduced from up to 1.2s to 0.3s
 	self.repathInterval = self.repathInterval + jitter
 	
-	self.currentTarget = nil
-	self.currentTargetType = nil
-	self.currentTargetPlayer = nil
-	self.currentSlot = nil
+	self.currentTarget = nil -- Last known target position
+	self.currentTargetType = nil -- "player" or "base"
+	self.currentTargetPlayer = nil -- Player reference if targeting player
+	self.currentSlot = nil -- Current surround slot position
+	self.lastMoveTarget = nil -- FIX: Track last move command for continuity
 
 	-- Cache base reference for performance
 	self.cachedBase = nil
@@ -329,7 +343,7 @@ function ZombieBrain:update(deltaTime)
 		
 		-- Adjust retarget interval based on aura
 		if self.zombieModel:GetAttribute("InBossAura") and self.bossAuraService.getRetargetInterval then
-			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 1.0
+			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
 			self.repathInterval = self.bossAuraService:getRetargetInterval(self.zombieModel, baseInterval)
 		end
 	end
@@ -349,6 +363,7 @@ function ZombieBrain:update(deltaTime)
 			local desiredPos = self.spitterController:update(deltaTime, targetPos, targetType, targetPlayer)
 			if desiredPos then
 				self.humanoid:MoveTo(desiredPos)
+				self.lastMoveTarget = desiredPos
 			end
 		end
 		return -- Spitter uses its own movement logic
@@ -357,44 +372,70 @@ function ZombieBrain:update(deltaTime)
 	-- Try to attack if in range
 	local didAttack = self:tryAttack()
 
-	-- Update movement cooldown
-	self.moveCooldown -= deltaTime
-	if self.moveCooldown > 0 then
-		return
-	end
-
-	self.moveCooldown = self.repathInterval
-
-	-- Select best target using tactical targeting
-	if self.rootPart then
-		local targetPos, targetType, targetPlayer = self:selectBestTarget()
+	-- FIX: Decrement movement cooldown but don't block all movement
+	self.moveCooldown = self.moveCooldown - deltaTime
+	
+	-- FIX: Instead of blocking completely, provide movement continuity
+	-- Check if we need to recalculate path (cooldown expired)
+	local shouldRecalculatePath = self.moveCooldown <= 0
+	
+	if shouldRecalculatePath then
+		-- Reset cooldown with small random variance to prevent sync
+		self.moveCooldown = self.repathInterval + (math.random() * 0.1 - 0.05)
 		
-		if targetPos then
-			-- Store current target info
-			self.currentTarget = targetPos
-			self.currentTargetType = targetType
-			self.currentTargetPlayer = targetPlayer
+		-- Recalculate target and path
+		if self.rootPart then
+			local targetPos, targetType, targetPlayer = self:selectBestTarget()
 			
-			-- Get target ID for slot assignment
-			local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
-			
-			-- Get slot position with surround system
-			local slotPos = self:getSlotPosition(targetPos, targetId)
-			
-			-- Apply separation steering if service available
-			local finalTarget = slotPos
-			if self.surroundService then
-				local nearbyZombies = self:getNearbyZombies()
-				finalTarget = self.surroundService:getSteeringTarget(
-					self.zombieModel,
-					self.rootPart.Position,
-					slotPos,
-					nearbyZombies
-				)
+			if targetPos then
+				-- Store current target info
+				self.currentTarget = targetPos
+				self.currentTargetType = targetType
+				self.currentTargetPlayer = targetPlayer
+				
+				-- Get target ID for slot assignment
+				local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
+				
+				-- Get slot position with surround system
+				local slotPos = self:getSlotPosition(targetPos, targetId)
+				
+				-- Apply separation steering if service available
+				local finalTarget = slotPos
+				if self.surroundService then
+					local nearbyZombies = self:getNearbyZombies()
+					finalTarget = self.surroundService:getSteeringTarget(
+						self.zombieModel,
+						self.rootPart.Position,
+						slotPos,
+						nearbyZombies
+					)
+				end
+				
+				-- FIX: Issue new move command
+				self.humanoid:MoveTo(finalTarget)
+				self.lastMoveTarget = finalTarget
 			end
+		end
+	else
+		-- FIX: CRITICAL - Keep moving toward last known target during cooldown
+		-- This prevents zombies from standing idle while waiting for next path recalc
+		if self.lastMoveTarget and self.rootPart then
+			-- Check if we're close to the last target (within 3 studs)
+			local distanceToLastTarget = (self.lastMoveTarget - self.rootPart.Position).Magnitude
 			
-			-- Move toward target
-			self.humanoid:MoveTo(finalTarget)
+			-- If we've reached the last waypoint or are very close, move directly toward raw target
+			if distanceToLastTarget < 3 and self.currentTarget then
+				-- FIX: Don't stop at waypoints - push through toward actual target
+				self.humanoid:MoveTo(self.currentTarget)
+			elseif distanceToLastTarget > 0.5 then
+				-- FIX: Re-issue move command to ensure continuous movement
+				-- This prevents the zombie from stopping when it "thinks" it arrived
+				self.humanoid:MoveTo(self.lastMoveTarget)
+			end
+		elseif self.currentTarget then
+			-- FIX: Fallback - if no last move target, use current target
+			self.humanoid:MoveTo(self.currentTarget)
+			self.lastMoveTarget = self.currentTarget
 		end
 	end
 end
