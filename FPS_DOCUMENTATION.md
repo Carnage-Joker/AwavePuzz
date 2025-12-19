@@ -37,6 +37,7 @@ src/
 │   ├── FirstPersonCamera.client.lua     -- Camera controller
 │   ├── FPSMovementController.client.lua -- Movement with crouch/sprint
 │   ├── FPSWeaponController.client.lua   -- Weapon mechanics
+│   ├── FPSAnimationController.client.lua -- Weapon animations (NEW)
 │   ├── FPSMenuController.client.lua     -- Pause/settings menus
 │   ├── FPSAudioController.client.lua    -- Sound management
 │   └── UI/
@@ -516,10 +517,28 @@ For enhanced weapon feel, create animations:
 - Reload animation
 - Equip/unequip animation
 
-Hook animations in `FPSWeaponController.client.lua` using the existing bindable events:
+**NEW: Full Animation System Available**
+
+AwavePuzz now includes a complete weapon animation system. See **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** for:
+- Complete animation controller implementation
+- 6 animation types per weapon (idle, fire, reload, equip, sprint, ADS)
+- Procedural animations (sway, breathing, recoil recovery)
+- Viewmodel system for first-person arms
+- Step-by-step animation creation guide
+- Full integration with weapon controller
+
+The system works with or without animation assets:
+- **With assets:** Full animated weapon handling
+- **Without assets:** Procedural animations only (still looks good!)
+
+Hook animations via the following events automatically handled by `FPSAnimationController.client.lua`:
 - `WeaponFired` - Play fire animation
 - `ReloadStarted` - Play reload animation
-- `ReloadFinished` / `ReloadCanceled` - Stop reload animation
+- `WeaponEquipped` - Play equip animation
+- `ADSStateChanged` - Play/stop ADS animation
+- `SprintStateChanged` - Play/stop sprint animation
+
+For implementation details, see **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)**.
 
 ---
 

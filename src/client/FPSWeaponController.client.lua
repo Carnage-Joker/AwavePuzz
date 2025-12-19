@@ -52,7 +52,7 @@ local weaponReloadEvent = remoteEvents:WaitForChild("WeaponReload")
 local ammoUpdateEvent = remoteEvents:WaitForChild("AmmoUpdate")
 local hitConfirmEvent = remoteEvents:WaitForChild("WeaponHitConfirm")
 
--- Bindable events for UI communication
+-- Bindable events for UI and animation communication
 local bindableFolder = playerGui:WaitForChild("BindableEvents", 10)
 if not bindableFolder then
 	bindableFolder = Instance.new("Folder")
@@ -60,10 +60,28 @@ if not bindableFolder then
 	bindableFolder.Parent = playerGui
 end
 
-local ammoUpdateBindable = bindableFolder:WaitForChild("AmmoUpdate")
-local hitmarkerBindable = bindableFolder:WaitForChild("Hitmarker")
-local crosshairBindable = bindableFolder:WaitForChild("CrosshairUpdate")
-local weaponInfoBindable = bindableFolder:WaitForChild("WeaponInfoUpdate")
+-- Helper function to get or create bindable events
+local function getOrCreateBindable(name)
+	local bindable = bindableFolder:FindFirstChild(name)
+	if not bindable then
+		bindable = Instance.new("BindableEvent")
+		bindable.Name = name
+		bindable.Parent = bindableFolder
+	end
+	return bindable
+end
+
+local ammoUpdateBindable = getOrCreateBindable("AmmoUpdate")
+local hitmarkerBindable = getOrCreateBindable("Hitmarker")
+local crosshairBindable = getOrCreateBindable("CrosshairUpdate")
+local weaponInfoBindable = getOrCreateBindable("WeaponInfoUpdate")
+
+-- Animation events
+local weaponFiredBindable = getOrCreateBindable("WeaponFired")
+local reloadStartedBindable = getOrCreateBindable("ReloadStarted")
+local reloadCanceledBindable = getOrCreateBindable("ReloadCanceled")
+local weaponEquippedBindable = getOrCreateBindable("WeaponEquipped")
+local adsStateBindable = getOrCreateBindable("ADSStateChanged")
 
 --------------------------------------------------------------------------------
 -- WEAPON FUNCTIONS
@@ -148,6 +166,11 @@ local function fireWeapon()
 		direction = direction
 	})
 
+	-- Fire animation event
+	weaponFiredBindable:Fire({
+		weaponId = currentWeapon
+	})
+
 	-- Update state
 	lastFireTime = tick()
 	consecutiveShots = consecutiveShots + 1
@@ -171,6 +194,14 @@ local function startReload()
 	})
 
 	isReloading = true
+	
+	-- Fire reload animation event
+	local reloadTime = weaponStats and weaponStats.ReloadTime or 2.0
+	reloadStartedBindable:Fire({
+		weaponId = currentWeapon,
+		duration = reloadTime
+	})
+	
 	ammoUpdateBindable:Fire({
 		weaponId = currentWeapon,
 		isReloading = true
@@ -180,6 +211,10 @@ end
 local function cancelReload()
 	if not isReloading then return end
 	isReloading = false
+	
+	-- Fire reload canceled event
+	reloadCanceledBindable:Fire()
+	
 	ammoUpdateBindable:Fire({
 		weaponId = currentWeapon,
 		isReloading = false
@@ -200,6 +235,9 @@ local function equipWeapon(weaponId)
 
 	-- Request weapon equip on server
 	weaponEquipEvent:FireServer(weaponId)
+	
+	-- Fire weapon equipped event for animations
+	weaponEquippedBindable:Fire(weaponId)
 end
 
 --------------------------------------------------------------------------------
@@ -224,6 +262,7 @@ local function onInputBegan(input, gameProcessed)
 	-- ADS
 	elseif input.UserInputType == FPSConfig.Controls.ADSKey then
 		isAiming = true
+		adsStateBindable:Fire(true)
 		crosshairBindable:Fire({
 			spread = targetSpread,
 			isADS = true
@@ -258,6 +297,7 @@ local function onInputEnded(input, gameProcessed)
 	-- Stop ADS
 	elseif input.UserInputType == FPSConfig.Controls.ADSKey then
 		isAiming = false
+		adsStateBindable:Fire(false)
 		crosshairBindable:Fire({
 			spread = targetSpread,
 			isADS = false
