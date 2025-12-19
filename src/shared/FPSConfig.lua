@@ -358,6 +358,88 @@ FPSConfig.Settings = {
 }
 
 --------------------------------------------------------------------------------
+-- ANIMATION SETTINGS
+--------------------------------------------------------------------------------
+FPSConfig.Animations = {
+	-- Enable/disable animations
+	Enabled = true,
+	
+	-- Procedural animations
+	WeaponSwayEnabled = true,
+	SwayAmount = 0.02,           -- Amount of sway from mouse movement
+	SwaySpeed = 10,              -- Speed of sway interpolation
+	
+	BreathingEnabled = true,
+	BreathSpeed = 2,             -- Breathing cycle speed
+	BreathAmount = 0.01,         -- Amount of vertical breathing motion
+	
+	RecoilAnimationEnabled = true,
+	RecoilRecoverySpeed = 10,    -- Speed of recoil recovery
+	
+	-- Viewmodel settings
+	ViewmodelFOV = 70,           -- FOV for viewmodel (separate from camera)
+	ViewmodelOffset = Vector3.new(0, -0.5, -1), -- Base offset from camera
+	
+	-- Animation IDs (Replace with actual Roblox animation asset IDs)
+	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
+	WeaponAnimations = {
+		Pistol = {
+			idle = "rbxassetid://0",      -- Idle holding animation
+			fire = "rbxassetid://0",      -- Fire/shoot animation
+			reload = "rbxassetid://0",    -- Reload animation
+			equip = "rbxassetid://0",     -- Draw/equip animation
+			sprint = "rbxassetid://0",    -- Sprint (lowered weapon) animation
+			ads = "rbxassetid://0",       -- Aim down sights animation
+		},
+		SMG = {
+			idle = "rbxassetid://0",
+			fire = "rbxassetid://0",
+			reload = "rbxassetid://0",
+			equip = "rbxassetid://0",
+			sprint = "rbxassetid://0",
+			ads = "rbxassetid://0",
+		},
+		Shotgun = {
+			idle = "rbxassetid://0",
+			fire = "rbxassetid://0",
+			reload = "rbxassetid://0",    -- Shell-by-shell reload
+			equip = "rbxassetid://0",
+			sprint = "rbxassetid://0",
+			ads = "rbxassetid://0",
+		},
+		Rifle = {
+			idle = "rbxassetid://0",
+			fire = "rbxassetid://0",
+			reload = "rbxassetid://0",
+			equip = "rbxassetid://0",
+			sprint = "rbxassetid://0",
+			ads = "rbxassetid://0",
+		},
+	},
+	
+	-- Weapon-specific offsets for proper positioning in viewmodel
+	WeaponOffsets = {
+		Pistol = CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(90), 0),
+		SMG = CFrame.new(0, 0.1, 0) * CFrame.Angles(0, math.rad(90), 0),
+		Shotgun = CFrame.new(0, 0.05, 0.1) * CFrame.Angles(0, math.rad(90), 0),
+		Rifle = CFrame.new(0, 0, 0.1) * CFrame.Angles(0, math.rad(90), 0),
+	},
+	
+	-- Animation blending settings
+	BlendTime = 0.1,             -- Time to blend between animations
+	
+	-- Animation priorities (Roblox AnimationPriority enum values)
+	Priorities = {
+		Idle = Enum.AnimationPriority.Idle,
+		Movement = Enum.AnimationPriority.Movement,
+		Action = Enum.AnimationPriority.Action,
+		Action2 = Enum.AnimationPriority.Action2,
+		Action3 = Enum.AnimationPriority.Action3,
+		Action4 = Enum.AnimationPriority.Action4,
+	},
+}
+
+--------------------------------------------------------------------------------
 -- HELPER FUNCTIONS
 --------------------------------------------------------------------------------
 
