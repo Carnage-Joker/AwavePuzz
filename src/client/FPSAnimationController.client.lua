@@ -89,7 +89,7 @@ function FPSAnimationController:createViewmodel()
 	rightHand.Size = Vector3.new(0.2, 0.2, 0.2)
 	rightHand.Transparency = 1
 	rightHand.CanCollide = false
-	rightHand.Anchored = false
+	rightHand.Anchored = true  -- Anchored, will be positioned via CFrame
 	rightHand.Parent = arms
 	
 	local leftHand = Instance.new("Part")
@@ -97,24 +97,11 @@ function FPSAnimationController:createViewmodel()
 	leftHand.Size = Vector3.new(0.2, 0.2, 0.2)
 	leftHand.Transparency = 1
 	leftHand.CanCollide = false
-	leftHand.Anchored = false
+	leftHand.Anchored = true  -- Anchored, will be positioned via CFrame
 	leftHand.Parent = arms
 	
-	-- Create welds/Motor6Ds for animation
-	-- This is a simplified setup - actual implementation would use proper rig
-	local rightWeld = Instance.new("Weld")
-	rightWeld.Name = "RightWeld"
-	rightWeld.Part0 = camera
-	rightWeld.Part1 = rightHand
-	rightWeld.C0 = CFrame.new(0.5, -0.5, -1)
-	rightWeld.Parent = rightHand
-	
-	local leftWeld = Instance.new("Weld")
-	leftWeld.Name = "LeftWeld"
-	leftWeld.Part0 = camera
-	leftWeld.Part1 = leftHand
-	leftWeld.C0 = CFrame.new(-0.5, -0.5, -1.2)
-	leftWeld.Parent = leftHand
+	-- Note: Parts are positioned via CFrame manipulation in updateViewmodelPosition()
+	-- instead of welding to camera (which is invalid)
 	
 	print("[FPSAnimationController] Created viewmodel")
 end
@@ -501,22 +488,33 @@ function FPSAnimationController:updateViewmodelPosition(deltaTime)
 	-- Apply combined offset to viewmodel
 	local combinedOffset = sway * breath * recoil
 	
-	-- Apply to viewmodel arms
+	-- Apply to viewmodel arms using CFrame positioning
 	if self.viewmodelArms then
 		local rightHand = self.viewmodelArms:FindFirstChild("RightHand")
 		if rightHand then
-			local weld = rightHand:FindFirstChild("RightWeld")
-			if weld then
-				-- Apply offset to base position
-				local baseOffset = CFrame.new(0.5, -0.5, -1)
-				if self.isADS then
-					baseOffset = CFrame.new(0, -0.3, -0.8) -- Closer for ADS
-				elseif self.isSprinting then
-					baseOffset = CFrame.new(0.3, -0.8, -0.5) -- Lower for sprint
-				end
-				
-				weld.C0 = baseOffset * combinedOffset
+			-- Calculate base position relative to camera
+			local baseOffset = CFrame.new(0.5, -0.5, -1)
+			if self.isADS then
+				baseOffset = CFrame.new(0, -0.3, -0.8) -- Closer for ADS
+			elseif self.isSprinting then
+				baseOffset = CFrame.new(0.3, -0.8, -0.5) -- Lower for sprint
 			end
+			
+			-- Position part relative to camera with procedural offset
+			rightHand.CFrame = camera.CFrame * baseOffset * combinedOffset
+		end
+		
+		-- Also position left hand
+		local leftHand = self.viewmodelArms:FindFirstChild("LeftHand")
+		if leftHand then
+			local baseOffset = CFrame.new(-0.5, -0.5, -1.2)
+			if self.isADS then
+				baseOffset = CFrame.new(-0.2, -0.3, -0.8)
+			elseif self.isSprinting then
+				baseOffset = CFrame.new(-0.3, -0.8, -0.5)
+			end
+			
+			leftHand.CFrame = camera.CFrame * baseOffset * combinedOffset
 		end
 	end
 end

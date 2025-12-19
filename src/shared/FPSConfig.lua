@@ -381,7 +381,7 @@ FPSConfig.Animations = {
 	ViewmodelOffset = Vector3.new(0, -0.5, -1), -- Base offset from camera
 	
 	-- Animation IDs (Replace with actual Roblox animation asset IDs)
-	-- Format: "rbxassetid://XXXXXXXX"
+	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
 	WeaponAnimations = {
 		Pistol = {
 			idle = "rbxassetid://0",      -- Idle holding animation
