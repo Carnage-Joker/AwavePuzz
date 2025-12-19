@@ -395,9 +395,10 @@ function ZombieBrain:update(deltaTime)
 	
 	if shouldRecalculatePath then
 		-- Reset cooldown with small random variance to prevent sync
-		-- Use a small fraction of the configured jitter for micro-variance
+		-- Use a small fraction of the configured jitter for micro-variance (non-negative)
 		local microJitter = (GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1) * 0.5
-		self.moveCooldown = self.repathInterval + (math.random() * microJitter * 2 - microJitter)
+		local jitterOffset = math.random() * microJitter
+		self.moveCooldown = self.repathInterval + jitterOffset
 		
 		-- Recalculate target and path
 		if self.rootPart then
