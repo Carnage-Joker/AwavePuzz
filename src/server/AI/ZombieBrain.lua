@@ -77,6 +77,10 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	-- Use configured jitter values from GameConfig.AI
 	local minJitter = GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1
 	local maxJitter = GameConfig.AI and GameConfig.AI.MAX_UPDATE_JITTER or 0.3
+	-- Ensure maxJitter >= minJitter to avoid negative jitter
+	if maxJitter < minJitter then
+		maxJitter = minJitter
+	end
 	local jitter = math.random() * (maxJitter - minJitter) + minJitter
 	self.repathInterval = self.repathInterval + jitter
 	
@@ -388,7 +392,9 @@ function ZombieBrain:update(deltaTime)
 	
 	if shouldRecalculatePath then
 		-- Reset cooldown with small random variance to prevent sync
-		self.moveCooldown = self.repathInterval + (math.random() * 0.1 - 0.05)
+		-- Use a small fraction of the configured jitter for micro-variance
+		local microJitter = (GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1) * 0.5
+		self.moveCooldown = self.repathInterval + (math.random() * microJitter * 2 - microJitter)
 		
 		-- Recalculate target and path
 		if self.rootPart then
@@ -440,6 +446,7 @@ function ZombieBrain:update(deltaTime)
 				-- This prevents the zombie from stopping when it "thinks" it arrived
 				-- Use configurable movement reissue distance
 				self.humanoid:MoveTo(self.lastMoveTarget)
+			-- else: distance is between reissue and skip thresholds, already moving correctly
 			end
 		elseif self.currentTarget then
 			-- FIX: Fallback - if no last move target, use current target
