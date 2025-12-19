@@ -16,6 +16,7 @@ local camera = workspace.CurrentCamera
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 --------------------------------------------------------------------------------
 -- ANIMATION STATE
@@ -48,6 +49,9 @@ local FPSAnimationController = {
 	recoilOffset = CFrame.new(),
 	breathOffset = CFrame.new(),
 	breathTime = 0,
+	
+	-- Remote events for server replication
+	remoteEvents = nil,
 	
 	-- Settings
 	enabled = true,
@@ -273,6 +277,11 @@ function FPSAnimationController:playFire(weaponId)
 			end
 		end)
 	end
+	
+	-- Replicate to server for other players
+	if self.remoteEvents and self.remoteEvents.AnimationFire then
+		self.remoteEvents.AnimationFire:FireServer(weaponId)
+	end
 end
 
 -- Play reload animation
@@ -341,6 +350,11 @@ function FPSAnimationController:setSprinting(isSprinting)
 	else
 		self:stopAnimation("sprint")
 	end
+	
+	-- Replicate to server for other players
+	if self.remoteEvents and self.remoteEvents.AnimationSprint then
+		self.remoteEvents.AnimationSprint:FireServer(isSprinting)
+	end
 end
 
 -- Update ADS animation state
@@ -358,6 +372,11 @@ function FPSAnimationController:setADS(isADS)
 		end
 	else
 		self:stopAnimation("ads")
+	end
+	
+	-- Replicate to server for other players
+	if self.remoteEvents and self.remoteEvents.AnimationADS then
+		self.remoteEvents.AnimationADS:FireServer(isADS)
 	end
 end
 
@@ -613,6 +632,13 @@ end)
 --------------------------------------------------------------------------------
 
 function FPSAnimationController:initialize()
+	-- Initialize remote events for server replication
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"AnimationFire",
+		"AnimationSprint",
+		"AnimationADS",
+	})
+	
 	-- Create viewmodel
 	self:createViewmodel()
 	

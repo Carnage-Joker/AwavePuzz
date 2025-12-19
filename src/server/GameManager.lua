@@ -20,6 +20,7 @@ local ResourceSpawner = require(script.Parent.ResourceSpawner)
 
 local WeaponService = require(script.Parent.WeaponService)
 local FPSWeaponService = require(script.Parent.FPSWeaponService)
+local FPSAnimationService = require(script.Parent.FPSAnimationService)
 
 local ShopService = require(script.Parent.ShopService)
 local MapManager = require(script.Parent.MapManager)
@@ -56,6 +57,9 @@ function GameManager.new(allianceService)
 	self.weaponService = WeaponService.new(self.playerManager, allianceService)
 	self.fpsWeaponService = FPSWeaponService.new(self.playerManager, self.weaponService)
 	self.weaponService:setFPSWeaponService(self.fpsWeaponService)
+	
+	-- FPS Animation replication service
+	self.fpsAnimationService = FPSAnimationService.new()
 
 	self.shopService = ShopService.new(self.playerManager, self.weaponService)
 	self.resourceSpawner = ResourceSpawner.new()
@@ -273,6 +277,11 @@ function GameManager:onPlayerAdded(player)
 	if self.fpsWeaponService and self.fpsWeaponService.initializePlayer then
 		self.fpsWeaponService:initializePlayer(player)
 	end
+	
+	-- Initialize FPS animation replication
+	if self.fpsAnimationService and self.fpsAnimationService.initializePlayer then
+		self.fpsAnimationService:initializePlayer(player)
+	end
 
 	self.weaponService:initializePlayer(player)
 	self.shopService:sendCatalog(player)
@@ -289,6 +298,11 @@ function GameManager:onPlayerRemoving(player)
 
 	if self.fpsWeaponService and self.fpsWeaponService.removePlayer then
 		self.fpsWeaponService:removePlayer(player)
+	end
+	
+	-- Remove from FPS animation service
+	if self.fpsAnimationService and self.fpsAnimationService.removePlayer then
+		self.fpsAnimationService:removePlayer(player)
 	end
 
 	self.lobbyManager:onPlayerLeave(player)
