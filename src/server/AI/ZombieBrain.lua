@@ -77,9 +77,12 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	-- Use configured jitter values from GameConfig.AI
 	local minJitter = GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1
 	local maxJitter = GameConfig.AI and GameConfig.AI.MAX_UPDATE_JITTER or 0.3
-	-- Ensure maxJitter >= minJitter to avoid negative jitter
+	-- Ensure maxJitter >= minJitter to avoid negative jitter while preserving a non-zero range
 	if maxJitter < minJitter then
-		maxJitter = minJitter
+		-- Swap values instead of collapsing them to a single point
+		local temp = minJitter
+		minJitter = maxJitter
+		maxJitter = temp
 	end
 	local jitter = math.random() * (maxJitter - minJitter) + minJitter
 	self.repathInterval = self.repathInterval + jitter
