@@ -5,7 +5,7 @@
 -- Optimized for latest UIScaleManager upgrade:
 -- - All player list items now use scaled dimensions
 -- - Text sizes properly scaled for all device types
--- - Action buttons meet minimum touch target requirements for both width and height
+-- - Action buttons meet minimum touch target requirements (44px for both width and height)
 -- - Player list refreshes when screen size changes
 -- - Consistent with other UI files using UIScaleManager patterns
 
