@@ -127,12 +127,12 @@ function FPSAnimationController:loadWeaponModel(weaponId)
 		self.currentWeaponModel = nil
 	end
 	
-	-- Try to find weapon model in ServerStorage or ReplicatedStorage
+	-- Try to find weapon model in ReplicatedStorage
 	local weaponModel = nil
-	local serverStorage = game:GetService("ServerStorage")
-	local gunsFolder = serverStorage:FindFirstChild("Guns")
+	local gunsFolder = ReplicatedStorage:FindFirstChild("Guns")
 	
 	if gunsFolder then
+		local modelTemplate = gunsFolder:FindFirstChild(weaponId)
 		local modelTemplate = gunsFolder:FindFirstChild(weaponId)
 		if modelTemplate then
 			weaponModel = modelTemplate:Clone()
