@@ -5,7 +5,7 @@
 -- Optimized for latest UIScaleManager upgrade:
 -- - All player list items now use scaled dimensions
 -- - Text sizes properly scaled for all device types
--- - Action button height meets minimum touch target requirements (44px)
+-- - Action buttons meet minimum touch target requirements (44px width & height)
 -- - Player list refreshes when screen size changes
 -- - Consistent with other UI files using UIScaleManager patterns
 
@@ -341,8 +341,8 @@ local function updatePlayerList()
 	local statusTextSize = getScaledTextSize(12)
 	local buttonTextSize = getScaledTextSize(12)
 	
-	-- Action button with minimum touch target
-	local buttonWidth = getScaledValue(60, "menuElements")
+	-- Action button with minimum touch target (width & height)
+	local buttonWidth = math.max(getScaledValue(60, "menuElements"), MIN_TOUCH_TARGET)
 	local buttonHeight = math.max(getScaledValue(35, "menuElements"), MIN_TOUCH_TARGET)
 
 	for _, otherPlayer in ipairs(allPlayers) do
