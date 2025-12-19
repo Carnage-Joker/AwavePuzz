@@ -441,6 +441,7 @@ function ZombieBrain:update(deltaTime)
 			if distanceToLastTarget < self.waypointSkipDistance and self.currentTarget then
 				-- FIX: Don't stop at waypoints - push through toward actual target
 				self.humanoid:MoveTo(self.currentTarget)
+				self.lastMoveTarget = self.currentTarget
 			elseif distanceToLastTarget > self.movementReissueDistance then
 				-- FIX: Re-issue move command to ensure continuous movement
 				-- This prevents the zombie from stopping when it "thinks" it arrived
