@@ -37,12 +37,14 @@
 ```lua
 -- OLD (causing long pauses):
 self.repathInterval = GameConfig.ZOMBIE_REPATH_INTERVAL or 1.0  -- 1.0s base
-local jitter = math.random() * 1.2  -- up to 1.2s additional
+local minJitter, maxJitter = 0.0, 1.2
+local jitter = math.random() * (maxJitter - minJitter) + minJitter  -- up to 1.2s additional
 -- Total: 1.0-2.2s wait between updates
 
 -- NEW (smooth updates):
 self.repathInterval = GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4  -- 0.4s base
-local jitter = math.random() * 0.3  -- up to 0.3s additional
+local minJitter, maxJitter = 0.0, 0.3
+local jitter = math.random() * (maxJitter - minJitter) + minJitter  -- up to 0.3s additional
 -- Total: 0.4-0.7s wait between updates (60% reduction)
 ```
 
