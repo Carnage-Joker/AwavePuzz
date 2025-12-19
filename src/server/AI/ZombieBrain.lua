@@ -74,7 +74,10 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	self.repathInterval = stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
 	
 	-- Add jitter for performance and desynchronization
-	local jitter = math.random() * 0.3 -- Reduced from up to 1.2s to 0.3s
+	-- Use configured jitter values from GameConfig.AI
+	local minJitter = GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1
+	local maxJitter = GameConfig.AI and GameConfig.AI.MAX_UPDATE_JITTER or 0.3
+	local jitter = math.random() * (maxJitter - minJitter) + minJitter
 	self.repathInterval = self.repathInterval + jitter
 	
 	self.currentTarget = nil -- Last known target position
@@ -82,6 +85,10 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	self.currentTargetPlayer = nil -- Player reference if targeting player
 	self.currentSlot = nil -- Current surround slot position
 	self.lastMoveTarget = nil -- FIX: Track last move command for continuity
+	
+	-- Movement continuity thresholds from config
+	self.waypointSkipDistance = GameConfig.AI and GameConfig.AI.WAYPOINT_SKIP_DISTANCE or 3
+	self.movementReissueDistance = GameConfig.AI and GameConfig.AI.MOVEMENT_REISSUE_DISTANCE or 0.5
 
 	-- Cache base reference for performance
 	self.cachedBase = nil
@@ -420,16 +427,18 @@ function ZombieBrain:update(deltaTime)
 		-- FIX: CRITICAL - Keep moving toward last known target during cooldown
 		-- This prevents zombies from standing idle while waiting for next path recalc
 		if self.lastMoveTarget and self.rootPart then
-			-- Check if we're close to the last target (within 3 studs)
+			-- Check if we're close to the last target
 			local distanceToLastTarget = (self.lastMoveTarget - self.rootPart.Position).Magnitude
 			
 			-- If we've reached the last waypoint or are very close, move directly toward raw target
-			if distanceToLastTarget < 3 and self.currentTarget then
+			-- Use configurable waypoint skip distance
+			if distanceToLastTarget < self.waypointSkipDistance and self.currentTarget then
 				-- FIX: Don't stop at waypoints - push through toward actual target
 				self.humanoid:MoveTo(self.currentTarget)
-			elseif distanceToLastTarget > 0.5 then
+			elseif distanceToLastTarget > self.movementReissueDistance then
 				-- FIX: Re-issue move command to ensure continuous movement
 				-- This prevents the zombie from stopping when it "thinks" it arrived
+				-- Use configurable movement reissue distance
 				self.humanoid:MoveTo(self.lastMoveTarget)
 			end
 		elseif self.currentTarget then

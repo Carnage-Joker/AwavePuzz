@@ -110,9 +110,13 @@ GameConfig.AI = {
 	AURA_RETARGET_BOOST = 0.5,
 	
 	-- Performance
-	DEFAULT_UPDATE_JITTER = 0.3, -- Random offset for update intervals
-	MAX_UPDATE_JITTER = 1.2,
+	DEFAULT_UPDATE_JITTER = 0.1, -- Base random offset for update intervals (reduced from 0.3)
+	MAX_UPDATE_JITTER = 0.3, -- Max random offset for update intervals (reduced from 1.2)
 	LOS_CACHE_TIME = 0.5, -- Cache line-of-sight checks
+	
+	-- Movement Continuity (Hesitation Fix)
+	WAYPOINT_SKIP_DISTANCE = 3, -- Distance threshold to skip intermediate waypoints and push toward target
+	MOVEMENT_REISSUE_DISTANCE = 0.5, -- Distance threshold to re-issue move commands
 	
 	-- Debug
 	DEBUG_MODE = false, -- Enable visual debug indicators

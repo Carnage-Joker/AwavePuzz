@@ -197,20 +197,43 @@ The fix maintains all existing AI functionality:
 
 ## Configuration Tuning
 
-If zombies feel too aggressive or not aggressive enough:
+All behavior thresholds are now configurable in `GameConfig.lua`:
 
 ```lua
--- In GameConfig.lua:
+-- In GameConfig.AI:
 
--- Make zombies MORE responsive (faster updates):
-GameConfig.ZOMBIE_REPATH_INTERVAL = 0.3  -- (current: 0.4)
+-- Adjust path recalculation timing:
+DEFAULT_UPDATE_JITTER = 0.1  -- Base random offset (current: 0.1s)
+MAX_UPDATE_JITTER = 0.3      -- Max random offset (current: 0.3s)
 
--- Make zombies LESS twitchy (slower updates):
-GameConfig.ZOMBIE_REPATH_INTERVAL = 0.6  -- (current: 0.4)
+-- Adjust waypoint behavior:
+WAYPOINT_SKIP_DISTANCE = 3         -- Distance to skip waypoints (current: 3 studs)
+MOVEMENT_REISSUE_DISTANCE = 0.5    -- Distance to re-issue move commands (current: 0.5 studs)
 
--- Adjust waypoint skip distance:
--- In ZombieBrain.lua line 427:
-if distanceToLastTarget < 3 then  -- Increase to skip more aggressively
+-- Base repath interval:
+ZOMBIE_REPATH_INTERVAL = 0.4  -- Base time between path updates (current: 0.4s)
+```
+
+**To make zombies MORE responsive** (faster updates):
+```lua
+GameConfig.ZOMBIE_REPATH_INTERVAL = 0.3
+GameConfig.AI.MAX_UPDATE_JITTER = 0.2
+```
+
+**To make zombies LESS twitchy** (slower updates):
+```lua
+GameConfig.ZOMBIE_REPATH_INTERVAL = 0.6
+GameConfig.AI.MAX_UPDATE_JITTER = 0.4
+```
+
+**To skip waypoints more aggressively**:
+```lua
+GameConfig.AI.WAYPOINT_SKIP_DISTANCE = 5  -- Skip when within 5 studs
+```
+
+**To reduce micro-adjustments**:
+```lua
+GameConfig.AI.MOVEMENT_REISSUE_DISTANCE = 1.0  -- Only re-issue if >1 stud away
 ```
 
 ## Known Limitations
