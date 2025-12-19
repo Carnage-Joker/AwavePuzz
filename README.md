@@ -22,6 +22,24 @@ A multiplayer Roblox first-person shooter zombie survival game featuring wave-ba
 - **Reload system** - Manual reload with R, auto-reload when empty
 - **Magazine + reserve ammo** tracking
 
+### ✨ NEW: Complete Weapon Animation System
+- **Viewmodel arms** - Dedicated first-person arm and weapon rendering
+- **6 animation types** per weapon:
+  - Idle - Subtle breathing and weapon bob
+  - Fire - Recoil and muzzle movement
+  - Reload - Full magazine change sequence
+  - Equip - Weapon draw animation
+  - Sprint - Lowered weapon while running
+  - ADS - Sight alignment animation
+- **Procedural animations**:
+  - Dynamic weapon sway following mouse movement
+  - Breathing motion for realistic idle
+  - Smooth recoil recovery
+- **Event-driven integration** with weapon controller
+- **Works with or without animation assets** - Uses procedural fallbacks
+
+See [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) for complete animation system documentation and [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md) for step-by-step animation creation.
+
 ### Polished FPS HUD
 - **Dynamic crosshair** that expands with spread
 - **Ammo counter** with low-ammo warnings
@@ -355,7 +373,9 @@ The game currently includes:
 For detailed information, see:
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
-- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ NEW: FPS system documentation and tuning guide
+- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ FPS system documentation and tuning guide
+- **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - ✨ NEW: Weapon animation system guide
+- **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - ✨ NEW: Step-by-step animation creation tutorial
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
 - **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - Puzzle mechanics, types, and integration guide

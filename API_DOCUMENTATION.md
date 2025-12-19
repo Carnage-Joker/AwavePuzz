@@ -22,6 +22,7 @@ This document describes the API for each module in the AwavePuzz game system.
 - [LobbyManager](#lobbymanager)
 - [SpectatorManager](#spectatormanager)
 - [ClientController](#clientcontroller)
+- [FPSAnimationController](#fpsanimationcontroller)
 
 ---
 
@@ -1566,6 +1567,274 @@ Sends component collection to server.
 ClientController:getGameState() -> table
 ```
 Returns current client game state.
+
+---
+
+## FPSAnimationController
+
+**Location**: `src/client/FPSAnimationController.client.lua`  
+**Type**: Module  
+**Description**: Client-side animation controller for first-person weapon animations. Manages viewmodel, animation playback, and procedural animations.
+
+**See Also**: [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) for complete documentation.
+
+### Properties
+
+```lua
+FPSAnimationController.enabled: boolean          -- Master enable/disable
+FPSAnimationController.viewmodel: Model          -- Viewmodel containing arms and weapon
+FPSAnimationController.currentWeapon: string     -- Currently equipped weapon ID
+FPSAnimationController.isReloading: boolean      -- Whether reload is in progress
+FPSAnimationController.isSprinting: boolean      -- Whether sprint animation is active
+FPSAnimationController.isADS: boolean            -- Whether ADS animation is active
+```
+
+### Methods
+
+#### createViewmodel
+```lua
+FPSAnimationController:createViewmodel() -> void
+```
+Creates or retrieves the viewmodel (first-person arms). Automatically creates placeholder arms if custom arms not found.
+
+#### loadWeaponModel
+```lua
+FPSAnimationController:loadWeaponModel(weaponId: string) -> void
+```
+Loads a weapon model into the viewmodel. Looks for model in `ServerStorage.Guns.[weaponId]` or creates placeholder.
+
+**Parameters:**
+- `weaponId` - Weapon identifier (e.g., "Pistol", "SMG")
+
+#### equipWeapon
+```lua
+FPSAnimationController:equipWeapon(weaponId: string) -> void
+```
+Equips a weapon, loading its model and playing equip animation.
+
+**Parameters:**
+- `weaponId` - Weapon to equip
+
+**Side Effects:**
+- Stops all current animations
+- Loads weapon model
+- Plays equip animation
+- Starts idle animation after delay
+
+#### playIdle
+```lua
+FPSAnimationController:playIdle(weaponId: string) -> void
+```
+Plays looping idle animation for the weapon.
+
+#### playFire
+```lua
+FPSAnimationController:playFire(weaponId: string) -> void
+```
+Plays fire/shoot animation for the weapon. Non-looping, auto-cleans up.
+
+#### playReload
+```lua
+FPSAnimationController:playReload(weaponId: string, reloadTime: number) -> void
+```
+Plays reload animation, automatically adjusting speed to match reload time.
+
+**Parameters:**
+- `weaponId` - Weapon being reloaded
+- `reloadTime` - Duration of reload (from weapon stats)
+
+#### playEquip
+```lua
+FPSAnimationController:playEquip(weaponId: string) -> void
+```
+Plays weapon equip/draw animation. Non-looping.
+
+#### setSprinting
+```lua
+FPSAnimationController:setSprinting(isSprinting: boolean) -> void
+```
+Toggles sprint animation state.
+
+**Parameters:**
+- `isSprinting` - Whether player is sprinting
+
+#### setADS
+```lua
+FPSAnimationController:setADS(isADS: boolean) -> void
+```
+Toggles ADS (aim down sights) animation state.
+
+**Parameters:**
+- `isADS` - Whether player is aiming
+
+#### cancelReload
+```lua
+FPSAnimationController:cancelReload() -> void
+```
+Cancels reload animation if in progress.
+
+#### stopAnimation
+```lua
+FPSAnimationController:stopAnimation(animationType: string) -> void
+```
+Stops a specific animation type.
+
+**Parameters:**
+- `animationType` - One of: "idle", "fire", "reload", "equip", "sprint", "ads"
+
+#### stopAllAnimations
+```lua
+FPSAnimationController:stopAllAnimations() -> void
+```
+Stops all active animations.
+
+### Procedural Animation Methods
+
+#### updateWeaponSway
+```lua
+FPSAnimationController:updateWeaponSway(deltaTime: number) -> CFrame
+```
+Calculates weapon sway based on mouse movement. Called automatically in update loop.
+
+**Returns:**
+- CFrame offset for weapon sway
+
+#### updateBreathing
+```lua
+FPSAnimationController:updateBreathing(deltaTime: number) -> CFrame
+```
+Calculates breathing idle motion. Called automatically in update loop.
+
+**Returns:**
+- CFrame offset for breathing
+
+#### applyRecoilOffset
+```lua
+FPSAnimationController:applyRecoilOffset(vertical: number, horizontal: number) -> void
+```
+Applies recoil offset to viewmodel. Called by weapon controller when firing.
+
+**Parameters:**
+- `vertical` - Vertical recoil in degrees
+- `horizontal` - Horizontal recoil in degrees
+
+#### updateRecoilRecovery
+```lua
+FPSAnimationController:updateRecoilRecovery(deltaTime: number) -> CFrame
+```
+Smoothly recovers from recoil. Called automatically in update loop.
+
+**Returns:**
+- CFrame offset for recoil
+
+#### updateViewmodelPosition
+```lua
+FPSAnimationController:updateViewmodelPosition(deltaTime: number) -> void
+```
+Main update function combining all procedural animations. Called every frame via RenderStepped.
+
+**Parameters:**
+- `deltaTime` - Time since last frame
+
+### Events
+
+The controller listens for the following BindableEvents in `PlayerGui.BindableEvents`:
+
+- **WeaponFired** - Triggers `playFire()`
+- **ReloadStarted** - Triggers `playReload()`
+- **ReloadCanceled** - Triggers `cancelReload()`
+- **WeaponEquipped** - Triggers `equipWeapon()`
+- **ADSStateChanged** - Triggers `setADS()`
+- **SprintStateChanged** - Triggers `setSprinting()`
+
+### Configuration
+
+All animation settings are in `FPSConfig.Animations`:
+
+```lua
+-- Enable/disable
+FPSConfig.Animations.Enabled = true
+
+-- Procedural settings
+FPSConfig.Animations.WeaponSwayEnabled = true
+FPSConfig.Animations.SwayAmount = 0.02
+FPSConfig.Animations.SwaySpeed = 10
+
+FPSConfig.Animations.BreathingEnabled = true
+FPSConfig.Animations.BreathSpeed = 2
+FPSConfig.Animations.BreathAmount = 0.01
+
+FPSConfig.Animations.RecoilAnimationEnabled = true
+FPSConfig.Animations.RecoilRecoverySpeed = 10
+
+-- Animation asset IDs
+FPSConfig.Animations.WeaponAnimations = {
+    Pistol = {
+        idle = "rbxassetid://0",
+        fire = "rbxassetid://0",
+        reload = "rbxassetid://0",
+        equip = "rbxassetid://0",
+        sprint = "rbxassetid://0",
+        ads = "rbxassetid://0",
+    },
+    -- Repeat for each weapon
+}
+
+-- Weapon offsets
+FPSConfig.Animations.WeaponOffsets = {
+    Pistol = CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(90), 0),
+    -- Adjust per weapon
+}
+```
+
+### Usage Example
+
+```lua
+-- Controller auto-initializes on client
+-- No manual setup required
+
+-- Manually trigger animation (typically done via events)
+local FPSAnimationController = require(script.FPSAnimationController)
+
+-- Equip weapon
+FPSAnimationController:equipWeapon("Pistol")
+
+-- Play fire animation
+FPSAnimationController:playFire("Pistol")
+
+-- Start reload
+FPSAnimationController:playReload("Pistol", 1.5)
+
+-- Toggle ADS
+FPSAnimationController:setADS(true)
+```
+
+### Animation Asset Structure
+
+For each weapon, provide 6 animation assets:
+
+1. **Idle** - Looped, subtle weapon movement
+2. **Fire** - Brief recoil animation (0.1-0.3s)
+3. **Reload** - Full reload sequence (1.5-3s)
+4. **Equip** - Weapon draw (0.3-0.5s)
+5. **Sprint** - Looped, weapon lowered
+6. **ADS** - Looped, sights aligned
+
+See [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md) for creating these animations.
+
+### Integration with Weapon Controller
+
+The FPSWeaponController automatically fires animation events:
+
+```lua
+-- In FPSWeaponController.client.lua
+weaponFiredBindable:Fire({ weaponId = currentWeapon })     -- Fires on weapon shot
+reloadStartedBindable:Fire({ weaponId, duration })         -- Fires on reload start
+weaponEquippedBindable:Fire(weaponId)                      -- Fires on weapon equip
+adsStateBindable:Fire(isADS)                               -- Fires on ADS toggle
+```
+
+FPSAnimationController listens to these events and responds automatically.
 
 ---
 
