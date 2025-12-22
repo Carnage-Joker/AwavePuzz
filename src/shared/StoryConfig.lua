@@ -214,6 +214,187 @@ StoryConfig.DefeatMessages = {
 }
 
 -- ========================================
+-- CREDITS
+-- ========================================
+
+StoryConfig.Credits = {
+	Title = "AETHER WAVE: CONVERGENCE",
+	Subtitle = "The Cure Has Been Found",
+	
+	Sections = {
+		{
+			Header = "SURVIVORS",
+			Type = "players", -- Will be populated with actual player names and stats
+		},
+		{
+			Header = "GAME DESIGN",
+			Credits = {
+				"Carnage-Joker"
+			}
+		},
+		{
+			Header = "DEVELOPMENT",
+			Credits = {
+				"Carnage-Joker",
+				"GitHub Copilot"
+			}
+		},
+		{
+			Header = "SPECIAL THANKS",
+			Credits = {
+				"The Roblox Development Community",
+				"All Players Who Fought the Convergence",
+				"Those Who Chose to Trust"
+			}
+		},
+		{
+			Header = "IN MEMORY",
+			Credits = {
+				"The First Research Team",
+				"Who Had the Cure Within Reach",
+				"But Lost Themselves to Betrayal"
+			}
+		}
+	},
+	
+	ClosingMessage = "Thank you for playing.\nThe choice was always yours.",
+	CreditsDisplayTime = 20, -- Total seconds to display credits
+	ScrollSpeed = 30 -- Pixels per second
+}
+
+-- ========================================
+-- ACHIEVEMENT DEFINITIONS
+-- ========================================
+
+StoryConfig.Achievements = {
+	-- Combat Achievements
+	{
+		Id = "first_blood",
+		Name = "First Blood",
+		Description = "Eliminated your first infected",
+		Icon = "🎯",
+		Rarity = "Common"
+	},
+	{
+		Id = "headshot_specialist",
+		Name = "Headshot Specialist",
+		Description = "Landed 10 headshots in a single round",
+		Icon = "🎯",
+		Rarity = "Uncommon"
+	},
+	{
+		Id = "last_stand",
+		Name = "Last Stand",
+		Description = "Survived as the last player alive",
+		Icon = "⚔️",
+		Rarity = "Rare"
+	},
+	
+	-- Cooperation Achievements
+	{
+		Id = "trusted_ally",
+		Name = "Trusted Ally",
+		Description = "Completed a round without breaking alliances",
+		Icon = "🤝",
+		Rarity = "Uncommon"
+	},
+	{
+		Id = "team_player",
+		Name = "Team Player",
+		Description = "Formed alliances with all players",
+		Icon = "👥",
+		Rarity = "Rare"
+	},
+	
+	-- Betrayal Achievements
+	{
+		Id = "betrayer",
+		Name = "The Betrayer",
+		Description = "Broke an alliance and survived",
+		Icon = "🗡️",
+		Rarity = "Uncommon"
+	},
+	{
+		Id = "lone_wolf",
+		Name = "Lone Wolf",
+		Description = "Won without forming any alliances",
+		Icon = "🐺",
+		Rarity = "Epic"
+	},
+	
+	-- Cure Achievements
+	{
+		Id = "component_collector",
+		Name = "Component Collector",
+		Description = "Collected 10 cure components in one round",
+		Icon = "🧪",
+		Rarity = "Uncommon"
+	},
+	{
+		Id = "savior",
+		Name = "The Savior",
+		Description = "Completed the cure and saved humanity",
+		Icon = "⭐",
+		Rarity = "Rare"
+	},
+	
+	-- Challenge Achievements
+	{
+		Id = "perfect_run",
+		Name = "Perfect Run",
+		Description = "Completed the cure without anyone dying",
+		Icon = "💎",
+		Rarity = "Legendary"
+	},
+	{
+		Id = "clutch_save",
+		Name = "Clutch Save",
+		Description = "Completed the cure with base health below 10%",
+		Icon = "🔥",
+		Rarity = "Epic"
+	}
+}
+
+-- ========================================
+-- MUSIC CONFIGURATION
+-- ========================================
+
+StoryConfig.Music = {
+	-- Sound IDs would be set here if you have custom music
+	-- For now, we'll use placeholders that can be replaced
+	TitleTheme = {
+		SoundId = "", -- Set to "rbxassetid://XXXXXX" when you have music
+		Volume = 0.5,
+		Looped = true
+	},
+	GameplayAmbient = {
+		SoundId = "",
+		Volume = 0.3,
+		Looped = true
+	},
+	CombatIntense = {
+		SoundId = "",
+		Volume = 0.6,
+		Looped = true
+	},
+	Victory = {
+		SoundId = "",
+		Volume = 0.7,
+		Looped = false
+	},
+	Defeat = {
+		SoundId = "",
+		Volume = 0.5,
+		Looped = false
+	},
+	Credits = {
+		SoundId = "",
+		Volume = 0.4,
+		Looped = true
+	}
+}
+
+-- ========================================
 -- UI TEXT SNIPPETS
 -- ========================================
 

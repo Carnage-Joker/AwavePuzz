@@ -2,15 +2,15 @@
 
 *Survive. Cooperate. Betray.*
 
-A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, and alliance systems. Now with full FPS mechanics including recoil, ADS, dynamic crosshairs, and an immersive narrative experience!
+A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, alliance systems, dynamic music, achievements, and an immersive narrative experience with full FPS mechanics!
 
 ## 🎮 Game Overview
 
 **Aether Wave: Convergence** is a cooperative survival FPS where up to 8 players defend a base against increasingly difficult waves of zombies infected by the Aether Virus. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
 
-### 🎬 NEW: Immersive Narrative Experience
+### 🎬 Immersive Narrative Experience
 
-The game now features a compelling story-driven introduction:
+The game features a compelling story-driven introduction and conclusion:
 
 - **Title Screen**: "Aether Wave: Convergence" with atmospheric presentation
 - **Epic Epilogue**: A multi-page cinematic intro that explains:
@@ -18,10 +18,45 @@ The game now features a compelling story-driven introduction:
   - The **five cure components** needed to stop the convergence
   - The **tension between survival and betrayal**
   - Why **alliances are crucial** even with the risk of backstabbing
+- **Victory Credits**: 🆕 Scrolling credits showing survivors, their stats, and development team
 - **Skippable**: Press ESC to skip the intro and jump straight into action
 - **Emotional storytelling** that emphasizes the human cost and moral choices
 
-The narrative is designed to make players emotionally invested in forming alliances while understanding the temptation of betrayal.
+### 🏆 NEW: Achievement System
+
+Track your accomplishments with an achievement system featuring:
+
+- **Combat Achievements**: First Blood, Headshot Specialist, Last Stand
+- **Cooperation Achievements**: Trusted Ally, Team Player
+- **Betrayal Achievements**: The Betrayer, Lone Wolf  
+- **Cure Achievements**: Component Collector, The Savior
+- **Challenge Achievements**: Perfect Run, Clutch Save
+- **Rarity System**: Common, Uncommon, Rare, Epic, Legendary
+- **Visual Notifications**: Achievement pop-ups with icons and descriptions
+
+### 🎵 NEW: Dynamic Music System
+
+Atmospheric music that adapts to the game:
+
+- **Title Theme**: Plays during title screen and epilogue
+- **Gameplay Ambient**: Calm ambient music during low-intensity moments
+- **Combat Intense**: Dramatic music during high-wave combat
+- **Victory Theme**: Triumphant music when the cure is complete
+- **Defeat Theme**: Somber music when the base falls
+- **Credits Music**: Reflective music during victory credits
+- **Smooth Transitions**: Music fades between tracks for seamless experience
+
+### 🎖️ NEW: Victory Credits
+
+When you complete the cure:
+
+- **Survivor List**: Shows all players who survived with their stats
+- **Kill Counts**: Individual player kill statistics
+- **Component Collection**: Shows who contributed most to the cure
+- **Development Credits**: Game design and development team
+- **Special Thanks**: Community acknowledgments
+- **Closing Message**: "Thank you for playing. The choice was always yours."
+- **Auto-Scrolling**: Credits scroll cinematically from bottom to top
 
 ## 🔫 First-Person Shooter Features
 

@@ -76,6 +76,9 @@ function GameManager.new(allianceService)
 	self.spectatorManager = SpectatorManager.new()
 
 	self.playerManager:setWeaponService(self.weaponService)
+	
+	-- Achievement tracking (will be initialized later to avoid circular dependency)
+	self.achievementService = nil
 
 	-- State
 	-- Start with title screen if enabled, otherwise waiting
@@ -139,6 +142,9 @@ function GameManager:setupRemoteEvents()
 	-- - ShowEpilogue: Server -> Client, signals to show epilogue
 	-- - HideEpilogue: Server -> Client, signals to hide epilogue
 	-- - EpilogueComplete: Client -> Server, player finished epilogue
+	-- - ShowCredits: Server -> Client, signals to show victory credits {survivorData = table}
+	-- - HideCredits: Server -> Client, signals to hide credits
+	-- - AchievementUnlocked: Server -> Client, signals achievement unlock {achievementId = string}
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WaveAnnounce",
 		"WaveUpdate",
@@ -154,7 +160,10 @@ function GameManager:setupRemoteEvents()
 		"TitleScreenContinue",
 		"ShowEpilogue",
 		"HideEpilogue",
-		"EpilogueComplete"
+		"EpilogueComplete",
+		"ShowCredits",
+		"HideCredits",
+		"AchievementUnlocked"
 	})
 	
 	-- Hook title screen and epilogue events
@@ -483,6 +492,32 @@ function GameManager:setCureService(cureService)
 	end
 end
 
+function GameManager:setAchievementService(achievementService)
+	self.achievementService = achievementService
+	print("[GameManager] AchievementService linked")
+end
+
+function GameManager:showVictoryCredits(alivePlayers)
+	-- Build survivor data for credits
+	local survivorData = {}
+	for _, player in ipairs(alivePlayers) do
+		local stats = self:getPlayerStats(player)
+		table.insert(survivorData, {
+			name = player.Name,
+			stats = {
+				kills = stats.kills,
+				components = stats.componentsCollected
+			}
+		})
+	end
+	
+	-- Send credits to all clients
+	if self.remoteEvents.ShowCredits then
+		self.remoteEvents.ShowCredits:FireAllClients(survivorData)
+		print("[GameManager] Victory credits shown with", #survivorData, "survivors")
+	end
+end
+
 function GameManager:startGame()
 	if self.currentState ~= GameManager.States.WAITING and self.currentState ~= GameManager.States.LOBBY then
 		return false
@@ -651,19 +686,31 @@ function GameManager:onVictory()
 	self.spawner:clearAllZombies()
 	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
-
+	
+	-- Get alive players for credits
+	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
 		if not self.spectatorManager:isPlayerDead(player) then
 			self.playerStats[player.UserId].roundWins += 1
+			table.insert(alivePlayers, player)
 		else
 			self.playerStats[player.UserId].roundLosses += 1
 		end
 	end
 	self:broadcastScoreboard()
+	
+	-- Trigger achievements
+	if self.achievementService then
+		local baseHealthPercent = self.baseManager:getHealthPercentage()
+		self.achievementService:onRoundEnd(true, alivePlayers, baseHealthPercent)
+	end
 
+	-- Show victory credits with survivor data
+	self:showVictoryCredits(alivePlayers)
+	
 	self:showEndOfRoundScoreboard()
-	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME
+	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + 5 -- Extra time for credits
 end
 
 function GameManager:onDefeat(reason)
@@ -679,6 +726,12 @@ function GameManager:onDefeat(reason)
 		self.playerStats[player.UserId].roundLosses += 1
 	end
 	self:broadcastScoreboard()
+	
+	-- Trigger achievements for defeat
+	if self.achievementService then
+		local baseHealthPercent = self.baseManager:getHealthPercentage()
+		self.achievementService:onRoundEnd(false, {}, baseHealthPercent)
+	end
 
 	self:showEndOfRoundScoreboard()
 	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME
