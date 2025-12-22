@@ -31,6 +31,8 @@ local GameManager = {}
 GameManager.__index = GameManager
 
 GameManager.States = {
+	TITLE_SCREEN = "TitleScreen",
+	EPILOGUE = "Epilogue",
 	WAITING = "Waiting",
 	LOBBY = "Lobby",
 	COUNTDOWN = "Countdown",
@@ -76,7 +78,12 @@ function GameManager.new(allianceService)
 	self.playerManager:setWeaponService(self.weaponService)
 
 	-- State
-	self.currentState = GameManager.States.WAITING
+	-- Start with title screen if enabled, otherwise waiting
+	if GameConfig.SHOW_TITLE_SCREEN then
+		self.currentState = GameManager.States.TITLE_SCREEN
+	else
+		self.currentState = GameManager.States.WAITING
+	end
 	self.currentWave = 0
 	self.cureProgress = 0
 
@@ -85,6 +92,10 @@ function GameManager.new(allianceService)
 	self.stateTimer = 0
 	self.waveTimeLimit = 0
 	self.waveTimeRemaining = 0
+	
+	-- Title screen and epilogue tracking
+	self.playersReadyForEpilogue = {} -- Track which players have passed title screen
+	self.playersCompletedEpilogue = {} -- Track which players have finished epilogue
 
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
@@ -120,6 +131,12 @@ function GameManager:setupRemoteEvents()
 	-- - ScoreboardUpdate: Server -> Client, updates scoreboard data {players = table}
 	-- - ShowScoreboard: Server -> Client, signals to display scoreboard
 	-- - HideScoreboard: Server -> Client, signals to hide scoreboard
+	-- - ShowTitleScreen: Server -> Client, signals to show title screen
+	-- - HideTitleScreen: Server -> Client, signals to hide title screen
+	-- - TitleScreenContinue: Client -> Server, player wants to continue from title
+	-- - ShowEpilogue: Server -> Client, signals to show epilogue
+	-- - HideEpilogue: Server -> Client, signals to hide epilogue
+	-- - EpilogueComplete: Client -> Server, player finished epilogue
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WaveAnnounce",
 		"WaveUpdate",
@@ -129,8 +146,17 @@ function GameManager:setupRemoteEvents()
 		"MapUpdate",
 		"ScoreboardUpdate",
 		"ShowScoreboard",
-		"HideScoreboard"
+		"HideScoreboard",
+		"ShowTitleScreen",
+		"HideTitleScreen",
+		"TitleScreenContinue",
+		"ShowEpilogue",
+		"HideEpilogue",
+		"EpilogueComplete"
 	})
+	
+	-- Hook title screen and epilogue events
+	self:_hookIntroRemotes()
 end
 
 function GameManager:_hookSpectatorRemotes()
@@ -154,6 +180,81 @@ function GameManager:_hookSpectatorRemotes()
 			end
 		end)
 	end
+end
+
+function GameManager:_hookIntroRemotes()
+	-- Hook title screen continue event
+	if self.remoteEvents.TitleScreenContinue then
+		self.remoteEvents.TitleScreenContinue.OnServerEvent:Connect(function(player)
+			self:onPlayerPassedTitleScreen(player)
+		end)
+	end
+	
+	-- Hook epilogue complete event
+	if self.remoteEvents.EpilogueComplete then
+		self.remoteEvents.EpilogueComplete.OnServerEvent:Connect(function(player)
+			self:onPlayerCompletedEpilogue(player)
+		end)
+	end
+end
+
+function GameManager:onPlayerPassedTitleScreen(player)
+	if not player then return end
+	
+	self.playersReadyForEpilogue[player.UserId] = true
+	
+	-- If showing epilogue, send them to epilogue
+	if GameConfig.SHOW_EPILOGUE and self.currentState == GameManager.States.TITLE_SCREEN then
+		if self.remoteEvents.ShowEpilogue then
+			self.remoteEvents.ShowEpilogue:FireClient(player)
+		end
+	end
+	
+	-- Check if all players have passed title screen
+	self:checkAllPlayersReadyForEpilogue()
+end
+
+function GameManager:onPlayerCompletedEpilogue(player)
+	if not player then return end
+	
+	self.playersCompletedEpilogue[player.UserId] = true
+	
+	-- Check if all players have completed epilogue
+	self:checkAllPlayersCompletedEpilogue()
+end
+
+function GameManager:checkAllPlayersReadyForEpilogue()
+	-- Check if all current players have passed the title screen
+	local allPlayers = Players:GetPlayers()
+	if #allPlayers == 0 then return end
+	
+	for _, player in ipairs(allPlayers) do
+		if not self.playersReadyForEpilogue[player.UserId] then
+			return -- Not all players ready yet
+		end
+	end
+	
+	-- All players ready, transition to epilogue or waiting
+	if GameConfig.SHOW_EPILOGUE then
+		self:setState(GameManager.States.EPILOGUE)
+	else
+		self:setState(GameManager.States.WAITING)
+	end
+end
+
+function GameManager:checkAllPlayersCompletedEpilogue()
+	-- Check if all current players have completed the epilogue
+	local allPlayers = Players:GetPlayers()
+	if #allPlayers == 0 then return end
+	
+	for _, player in ipairs(allPlayers) do
+		if not self.playersCompletedEpilogue[player.UserId] then
+			return -- Not all players completed yet
+		end
+	end
+	
+	-- All players completed, transition to waiting
+	self:setState(GameManager.States.WAITING)
 end
 
 function GameManager:disableServer()
@@ -290,6 +391,24 @@ function GameManager:onPlayerAdded(player)
 	self:broadcastScoreboard()
 
 	self:_hookPlayerDeath(player)
+	
+	-- Handle title screen and epilogue for new players
+	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.SHOW_TITLE_SCREEN then
+		-- Show title screen to the new player
+		if self.remoteEvents.ShowTitleScreen then
+			self.remoteEvents.ShowTitleScreen:FireClient(player)
+		end
+	elseif self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
+		-- Mark as ready and show epilogue
+		self.playersReadyForEpilogue[player.UserId] = true
+		if self.remoteEvents.ShowEpilogue then
+			self.remoteEvents.ShowEpilogue:FireClient(player)
+		end
+	else
+		-- Game already started, skip intro for this player
+		self.playersReadyForEpilogue[player.UserId] = true
+		self.playersCompletedEpilogue[player.UserId] = true
+	end
 end
 
 function GameManager:onPlayerRemoving(player)
@@ -310,6 +429,8 @@ function GameManager:onPlayerRemoving(player)
 
 	self._deathDebounce[player.UserId] = nil
 	self._spectatorCycleCooldown[player.UserId] = nil
+	self.playersReadyForEpilogue[player.UserId] = nil
+	self.playersCompletedEpilogue[player.UserId] = nil
 end
 
 function GameManager:setState(newState)
@@ -323,6 +444,23 @@ function GameManager:setState(newState)
 			baseHealth = self.baseManager:getHealth(),
 			cureProgress = self.cureProgress
 		})
+	end
+	
+	-- Handle special state transitions
+	if newState == GameManager.States.TITLE_SCREEN then
+		-- Show title screen to all players
+		if self.remoteEvents.ShowTitleScreen then
+			self.remoteEvents.ShowTitleScreen:FireAllClients()
+		end
+	elseif newState == GameManager.States.EPILOGUE then
+		-- Show epilogue to all players who haven't seen it
+		if self.remoteEvents.ShowEpilogue then
+			for _, player in ipairs(Players:GetPlayers()) do
+				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
+					self.remoteEvents.ShowEpilogue:FireClient(player)
+				end
+			end
+		end
 	end
 end
 
@@ -680,6 +818,30 @@ function GameManager:updateEndOfRound(deltaTime)
 	end
 end
 
+function GameManager:updateTitleScreen(deltaTime)
+	-- Title screen state - players see the title screen
+	-- Wait for all players to continue or timeout
+	if GameConfig.TITLE_SCREEN_TIMEOUT then
+		self.stateTimer += deltaTime
+		
+		if self.stateTimer >= GameConfig.TITLE_SCREEN_TIMEOUT then
+			-- Timeout reached, force transition
+			if GameConfig.SHOW_EPILOGUE then
+				self:setState(GameManager.States.EPILOGUE)
+			else
+				self:setState(GameManager.States.WAITING)
+			end
+		end
+	end
+end
+
+function GameManager:updateEpilogue(deltaTime)
+	-- Epilogue state - players watch the intro cinematic
+	-- Waiting for all players to complete or skip
+	-- Individual players transition themselves by sending EpilogueComplete event
+	-- The checkAllPlayersCompletedEpilogue function handles the state transition
+end
+
 function GameManager:updateScoreboard(deltaTime)
 	self.stateTimer -= deltaTime
 
@@ -694,7 +856,13 @@ function GameManager:updateScoreboard(deltaTime)
 end
 
 function GameManager:update(deltaTime)
-	if self.currentState == GameManager.States.LOBBY then
+	if self.currentState == GameManager.States.TITLE_SCREEN then
+		self:updateTitleScreen(deltaTime)
+	
+	elseif self.currentState == GameManager.States.EPILOGUE then
+		self:updateEpilogue(deltaTime)
+	
+	elseif self.currentState == GameManager.States.LOBBY then
 		self:updateLobby(deltaTime)
 
 	elseif self.currentState == GameManager.States.COUNTDOWN then
