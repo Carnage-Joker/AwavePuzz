@@ -248,36 +248,38 @@ function EpilogueUI:displayPage(pageNumber)
 	-- Fade out current content
 	self:fadeOutContent()
 	
-	-- Wait for fade out
-	task.wait(0.3)
-	
-	-- Update content
-	self.titleLabel.Text = pageData.Title
-	self.storyText.Text = pageData.Text
-	self.progressLabel.Text = pageNumber .. " / " .. StoryConfig.TotalEpiloguePages
-	
-	-- Update continue button text
-	if pageNumber == StoryConfig.TotalEpiloguePages then
-		self.continueButton.Text = "Begin"
-	else
-		self.continueButton.Text = StoryConfig.ContinueButtonText
-	end
-	
-	-- Fade in new content
-	self:fadeInContent()
-	
-	-- Start auto-advance timer if configured
-	if pageData.DisplayTime and pageData.DisplayTime > 0 then
-		if self.autoAdvanceTimer then
-			task.cancel(self.autoAdvanceTimer)
+	-- Wait for fade out using spawn instead of blocking
+	task.spawn(function()
+		task.wait(0.3)
+		
+		-- Update content
+		self.titleLabel.Text = pageData.Title
+		self.storyText.Text = pageData.Text
+		self.progressLabel.Text = pageNumber .. " / " .. StoryConfig.TotalEpiloguePages
+		
+		-- Update continue button text
+		if pageNumber == StoryConfig.TotalEpiloguePages then
+			self.continueButton.Text = "Begin"
+		else
+			self.continueButton.Text = StoryConfig.ContinueButtonText
 		end
 		
-		self.autoAdvanceTimer = task.delay(pageData.DisplayTime, function()
-			if self.isActive and self.currentPage == pageNumber then
-				self:nextPage()
+		-- Fade in new content
+		self:fadeInContent()
+		
+		-- Start auto-advance timer if configured
+		if pageData.DisplayTime and pageData.DisplayTime > 0 then
+			if self.autoAdvanceTimer then
+				task.cancel(self.autoAdvanceTimer)
 			end
-		end)
-	end
+			
+			self.autoAdvanceTimer = task.delay(pageData.DisplayTime, function()
+				if self.isActive and self.currentPage == pageNumber then
+					self:nextPage()
+				end
+			end)
+		end
+	end)
 end
 
 function EpilogueUI:nextPage()

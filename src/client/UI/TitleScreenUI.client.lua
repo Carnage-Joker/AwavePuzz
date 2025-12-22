@@ -24,6 +24,7 @@ function TitleScreenUI.new()
 	self.screenGui = nil
 	self.frame = nil
 	self.hasInteracted = false
+	self.pulseTweens = {} -- Store pulse tweens for cleanup
 	
 	self:createUI()
 	self:setupRemoteEvents()
@@ -197,6 +198,14 @@ function TitleScreenUI:hide()
 		self.inputConnection = nil
 	end
 	
+	-- Cancel pulse tweens
+	for _, tween in ipairs(self.pulseTweens) do
+		if tween then
+			tween:Cancel()
+		end
+	end
+	self.pulseTweens = {}
+	
 	-- Fade out animation
 	self:fadeOut()
 end
@@ -296,13 +305,14 @@ function TitleScreenUI:startPromptPulse()
 	-- Continuous pulse animation for the prompt
 	local function pulse()
 		while self.isActive and self.promptLabel do
-			local tween = TweenService:Create(
+			local tween1 = TweenService:Create(
 				self.promptLabel,
 				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 				{ TextTransparency = 0.5 }
 			)
-			tween:Play()
-			tween.Completed:Wait()
+			table.insert(self.pulseTweens, tween1)
+			tween1:Play()
+			tween1.Completed:Wait()
 			
 			if not self.isActive then break end
 			
@@ -311,6 +321,7 @@ function TitleScreenUI:startPromptPulse()
 				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 				{ TextTransparency = 0 }
 			)
+			table.insert(self.pulseTweens, tween2)
 			tween2:Play()
 			tween2.Completed:Wait()
 		end
