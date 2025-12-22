@@ -41,15 +41,19 @@ function TitleScreenUI:setupRemoteEvents()
 	-- Listen for server commands
 	if self.remoteEvents.ShowTitleScreen then
 		self.remoteEvents.ShowTitleScreen.OnClientEvent:Connect(function()
+			print("[TitleScreenUI] Received ShowTitleScreen event")
 			self:show()
 		end)
 	end
 	
 	if self.remoteEvents.HideTitleScreen then
 		self.remoteEvents.HideTitleScreen.OnClientEvent:Connect(function()
+			print("[TitleScreenUI] Received HideTitleScreen event")
 			self:hide()
 		end)
 	end
+	
+	print("[TitleScreenUI] Initialized and ready")
 end
 
 function TitleScreenUI:createUI()
@@ -159,6 +163,7 @@ end
 function TitleScreenUI:show()
 	if self.isActive then return end
 	
+	print("[TitleScreenUI] Showing title screen")
 	self.isActive = true
 	self.hasInteracted = false
 	self.screenGui.Enabled = true
@@ -199,6 +204,8 @@ end
 function TitleScreenUI:onContinue()
 	if self.hasInteracted then return end
 	self.hasInteracted = true
+	
+	print("[TitleScreenUI] Player clicked continue, notifying server")
 	
 	-- Notify server that player wants to continue
 	if self.remoteEvents.TitleScreenContinue then

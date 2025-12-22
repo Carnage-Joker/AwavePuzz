@@ -81,8 +81,10 @@ function GameManager.new(allianceService)
 	-- Start with title screen if enabled, otherwise waiting
 	if GameConfig.SHOW_TITLE_SCREEN then
 		self.currentState = GameManager.States.TITLE_SCREEN
+		print("[GameManager] Starting in TITLE_SCREEN state")
 	else
 		self.currentState = GameManager.States.WAITING
+		print("[GameManager] Starting in WAITING state (title screen disabled)")
 	end
 	self.currentWave = 0
 	self.cureProgress = 0
@@ -201,10 +203,12 @@ end
 function GameManager:onPlayerPassedTitleScreen(player)
 	if not player then return end
 	
+	print(string.format("[GameManager] Player %s passed title screen", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
 	
 	-- If showing epilogue, send them to epilogue
 	if GameConfig.SHOW_EPILOGUE and self.currentState == GameManager.States.TITLE_SCREEN then
+		print(string.format("[GameManager] Showing epilogue to %s", player.Name))
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
@@ -217,6 +221,7 @@ end
 function GameManager:onPlayerCompletedEpilogue(player)
 	if not player then return end
 	
+	print(string.format("[GameManager] Player %s completed epilogue", player.Name))
 	self.playersCompletedEpilogue[player.UserId] = true
 	
 	-- Check if all players have completed epilogue
@@ -235,9 +240,12 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 	end
 	
 	-- All players ready, transition to epilogue or waiting
+	print("[GameManager] All players passed title screen")
 	if GameConfig.SHOW_EPILOGUE then
+		print("[GameManager] Transitioning to EPILOGUE state")
 		self:setState(GameManager.States.EPILOGUE)
 	else
+		print("[GameManager] Transitioning to WAITING state")
 		self:setState(GameManager.States.WAITING)
 	end
 end
@@ -254,6 +262,7 @@ function GameManager:checkAllPlayersCompletedEpilogue()
 	end
 	
 	-- All players completed, transition to waiting
+	print("[GameManager] All players completed epilogue, transitioning to WAITING")
 	self:setState(GameManager.States.WAITING)
 end
 

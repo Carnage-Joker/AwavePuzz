@@ -44,15 +44,19 @@ function EpilogueUI:setupRemoteEvents()
 	-- Listen for server commands
 	if self.remoteEvents.ShowEpilogue then
 		self.remoteEvents.ShowEpilogue.OnClientEvent:Connect(function()
+			print("[EpilogueUI] Received ShowEpilogue event")
 			self:show()
 		end)
 	end
 	
 	if self.remoteEvents.HideEpilogue then
 		self.remoteEvents.HideEpilogue.OnClientEvent:Connect(function()
+			print("[EpilogueUI] Received HideEpilogue event")
 			self:hide()
 		end)
 	end
+	
+	print("[EpilogueUI] Initialized and ready")
 end
 
 function EpilogueUI:createUI()
@@ -189,6 +193,7 @@ end
 function EpilogueUI:show()
 	if self.isActive then return end
 	
+	print("[EpilogueUI] Showing epilogue")
 	self.isActive = true
 	self.currentPage = 1
 	self.screenGui.Enabled = true
@@ -295,6 +300,7 @@ function EpilogueUI:skip()
 end
 
 function EpilogueUI:complete()
+	print("[EpilogueUI] Epilogue complete, notifying server")
 	-- Notify server that epilogue is complete
 	if self.remoteEvents.EpilogueComplete then
 		self.remoteEvents.EpilogueComplete:FireServer()
