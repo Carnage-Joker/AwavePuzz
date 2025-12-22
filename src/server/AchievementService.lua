@@ -154,54 +154,57 @@ function AchievementService:onPlayerBecameLastAlive(player)
 end
 
 function AchievementService:onRoundEnd(isVictory, alivePlayers, baseHealthPercent)
-	-- Check achievements for all players
+	-- Trigger achievements for all players
 	for _, player in ipairs(Players:GetPlayers()) do
-		if not self.playerStats[player.UserId] then continue end
-		
-		if isVictory then
-			self.playerStats[player.UserId].roundsWon = self.playerStats[player.UserId].roundsWon + 1
-			
-			-- Check if player helped complete the cure
-			local isAlive = false
-			for _, alivePlayer in ipairs(alivePlayers) do
-				if alivePlayer == player then
-					isAlive = true
-					break
-				end
-			end
-			
-			if isAlive then
-				self:unlockAchievement(player, "savior")
-				
-				-- Check for perfect run (no deaths)
-				if #alivePlayers == #Players:GetPlayers() then
-					self:unlockAchievement(player, "perfect_run")
-				end
-				
-				-- Check for clutch save (base health < 10%)
-				if baseHealthPercent and baseHealthPercent < 10 then
-					self:unlockAchievement(player, "clutch_save")
-				end
-			end
-			
-			-- Check for trusted ally (no betrayals)
-			if self.playerStats[player.UserId].alliancesBroken == 0 and 
-			   self.playerStats[player.UserId].alliancesFormed > 0 then
-				self:unlockAchievement(player, "trusted_ally")
-			end
-			
-			-- Check for lone wolf (no alliances)
-			if self.playerStats[player.UserId].alliancesFormed == 0 then
-				self:unlockAchievement(player, "lone_wolf")
-			end
-			
-			-- Check for team player (allied with everyone)
-			local totalPlayers = #Players:GetPlayers()
-			if self.playerStats[player.UserId].alliancesFormed >= (totalPlayers - 1) and totalPlayers > 1 then
-				self:unlockAchievement(player, "team_player")
-			end
+		if not self.playerStats[player.UserId] then
+			-- Skip players without stats initialized
 		else
-			self.playerStats[player.UserId].roundsLost = self.playerStats[player.UserId].roundsLost + 1
+			-- Check achievements based on round outcome
+			if isVictory then
+				self.playerStats[player.UserId].roundsWon = self.playerStats[player.UserId].roundsWon + 1
+				
+				-- Check if player helped complete the cure
+				local isAlive = false
+				for _, alivePlayer in ipairs(alivePlayers) do
+					if alivePlayer == player then
+						isAlive = true
+						break
+					end
+				end
+				
+				if isAlive then
+					self:unlockAchievement(player, "savior")
+					
+					-- Check for perfect run (no deaths)
+					if #alivePlayers == #Players:GetPlayers() then
+						self:unlockAchievement(player, "perfect_run")
+					end
+					
+					-- Check for clutch save (base health <= 10%)
+					if baseHealthPercent and baseHealthPercent <= 10 then
+						self:unlockAchievement(player, "clutch_save")
+					end
+				end
+				
+				-- Check for trusted ally (no betrayals)
+				if self.playerStats[player.UserId].alliancesBroken == 0 and 
+				   self.playerStats[player.UserId].alliancesFormed > 0 then
+					self:unlockAchievement(player, "trusted_ally")
+				end
+				
+				-- Check for lone wolf (no alliances)
+				if self.playerStats[player.UserId].alliancesFormed == 0 then
+					self:unlockAchievement(player, "lone_wolf")
+				end
+				
+				-- Check for team player (allied with everyone)
+				local totalPlayers = #Players:GetPlayers()
+				if self.playerStats[player.UserId].alliancesFormed >= (totalPlayers - 1) and totalPlayers > 1 then
+					self:unlockAchievement(player, "team_player")
+				end
+			else
+				self.playerStats[player.UserId].roundsLost = self.playerStats[player.UserId].roundsLost + 1
+			end
 		end
 	end
 end

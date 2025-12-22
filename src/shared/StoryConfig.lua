@@ -349,7 +349,7 @@ StoryConfig.Achievements = {
 	{
 		Id = "clutch_save",
 		Name = "Clutch Save",
-		Description = "Completed the cure with base health below 10%",
+		Description = "Completed the cure with base health at 10% or less",
 		Icon = "🔥",
 		Rarity = "Epic"
 	}

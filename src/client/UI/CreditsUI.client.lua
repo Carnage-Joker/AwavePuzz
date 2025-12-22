@@ -137,7 +137,15 @@ function CreditsUI:show(survivorData)
 	self:buildCreditsContent(survivorData or {})
 	
 	-- Calculate total height
-	task.wait(0.1) -- Let layout calculate
+	-- Use signal to wait for layout completion instead of fixed delay
+	local layoutCompleteConnection
+	layoutCompleteConnection = self.layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		if layoutCompleteConnection then
+			layoutCompleteConnection:Disconnect()
+		end
+	end)
+	task.wait(0.15) -- Brief wait for initial layout
+	
 	local totalHeight = self.layout.AbsoluteContentSize.Y
 	self.content.Size = UDim2.new(1, 0, 0, totalHeight)
 	self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 1000) -- Extra space

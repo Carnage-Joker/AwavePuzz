@@ -710,7 +710,10 @@ function GameManager:onVictory()
 	self:showVictoryCredits(alivePlayers)
 	
 	self:showEndOfRoundScoreboard()
-	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + 5 -- Extra time for credits
+	-- Use configured credits display time plus scoreboard time
+	local creditsTime = SharedFolder:FindFirstChild("StoryConfig") and 
+		require(SharedFolder.StoryConfig).Credits.CreditsDisplayTime or 20
+	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + creditsTime
 end
 
 function GameManager:onDefeat(reason)

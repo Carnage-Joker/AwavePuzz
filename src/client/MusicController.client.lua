@@ -36,6 +36,7 @@ function MusicController:createTracks()
 	soundFolder.Parent = SoundService
 	
 	-- Create tracks from config
+	local trackCount = 0
 	for trackName, trackConfig in pairs(StoryConfig.Music) do
 		local sound = Instance.new("Sound")
 		sound.Name = trackName
@@ -45,9 +46,10 @@ function MusicController:createTracks()
 		sound.Parent = soundFolder
 		
 		self.tracks[trackName] = sound
+		trackCount = trackCount + 1
 	end
 	
-	print("[MusicController] Created", #self.tracks, "music tracks")
+	print("[MusicController] Created", trackCount, "music tracks")
 end
 
 function MusicController:setupRemoteEvents()
