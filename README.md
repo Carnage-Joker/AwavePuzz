@@ -1,12 +1,29 @@
-# AwavePuzz - Zombie Wave Survival FPS
+# Aether Wave: Convergence
 
-A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, and alliance systems. Now with full FPS mechanics including recoil, ADS, dynamic crosshairs, and more!
+*Survive. Cooperate. Betray.*
+
+A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, and alliance systems. Now with full FPS mechanics including recoil, ADS, dynamic crosshairs, and an immersive narrative experience!
 
 ## 🎮 Game Overview
 
-**AwavePuzz** is a cooperative survival FPS where up to 8 players defend a base against increasingly difficult waves of zombies. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
+**Aether Wave: Convergence** is a cooperative survival FPS where up to 8 players defend a base against increasingly difficult waves of zombies infected by the Aether Virus. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
 
-## 🔫 NEW: First-Person Shooter Features
+### 🎬 NEW: Immersive Narrative Experience
+
+The game now features a compelling story-driven introduction:
+
+- **Title Screen**: "Aether Wave: Convergence" with atmospheric presentation
+- **Epic Epilogue**: A multi-page cinematic intro that explains:
+  - The **Aether Virus outbreak** and how it transforms humans
+  - The **five cure components** needed to stop the convergence
+  - The **tension between survival and betrayal**
+  - Why **alliances are crucial** even with the risk of backstabbing
+- **Skippable**: Press ESC to skip the intro and jump straight into action
+- **Emotional storytelling** that emphasizes the human cost and moral choices
+
+The narrative is designed to make players emotionally invested in forming alliances while understanding the temptation of betrayal.
+
+## 🔫 First-Person Shooter Features
 
 ### True First-Person Experience
 - **First-person camera** locked to the player's head
@@ -144,15 +161,47 @@ AwavePuzz/
 │   │   ├── FPSAudioController.client.lua     # Sound management
 │   │   └── UI/
 │   │       ├── FPSHUD.client.lua             # Crosshair, ammo, hitmarkers
+│   │       ├── TitleScreenUI.client.lua      # ✨ NEW: Title screen
+│   │       ├── EpilogueUI.client.lua         # ✨ NEW: Story epilogue
 │   │       └── ...                           # Other UI scripts
 │   └── shared/                    # Shared modules
 │       ├── GameConfig.lua         # Game configuration
 │       ├── FPSConfig.lua          # FPS-specific configuration
+│       ├── StoryConfig.lua        # ✨ NEW: Story and narrative configuration
 │       └── ...                    # Other configs
 ├── FPS_DOCUMENTATION.md           # FPS system documentation
 ├── README.md
 └── LICENSE
 ```
+
+## 📖 The Story: The Aether Wave
+
+Twenty-three days ago, the Aether Energy Facility detected an anomaly. What began as a groundbreaking quantum research project became humanity's greatest threat. The **Aether Virus** (A-Wave strain) escaped containment.
+
+### The Outbreak
+
+The infected don't die—they **change**. The A-Wave virus rewrites neural pathways, consuming rational thought. What remains is driven by a singular purpose: spread the convergence. They were your friends, your colleagues, your family. Now they're something else entirely.
+
+### The Cure
+
+Five components scattered across the facility hold the key to salvation:
+- **Chemical A** - Stabilizes neural pathways
+- **Chemical B** - Reverses cellular decay  
+- **Biological Sample** - Provides antibody template
+- **Research Notes** - Contains synthesis protocol
+- **Catalyst** - Triggers the reaction
+
+Together, they can save what's left of humanity. But time is running out.
+
+### The Choice
+
+You're not alone. Other survivors remain. In this nightmare, **alliance is survival**. Together, you can cover more ground, defend the base, and complete the cure.
+
+But resources are scarce, and the cure only needs one person to complete it. What happens when survival demands a choice? The facility's logs tell a dark story: the first research team had the cure within reach. They turned on each other. They all died.
+
+**You can be different. You can work together. You can trust.**
+
+Or you can repeat history. The choice is yours.
 
 ## 🎯 Game Mechanics
 
