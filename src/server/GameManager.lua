@@ -408,8 +408,11 @@ function GameManager:onPlayerAdded(player)
 			self.remoteEvents.ShowTitleScreen:FireClient(player)
 		end
 	elseif self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
-		-- Mark as ready and show epilogue
+		-- Late joiner during epilogue: show them the epilogue but don't block game progression
+		-- Mark as both ready and completed to prevent blocking other players
 		self.playersReadyForEpilogue[player.UserId] = true
+		self.playersCompletedEpilogue[player.UserId] = true
+		-- Still show them the epilogue, they can watch it independently
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end

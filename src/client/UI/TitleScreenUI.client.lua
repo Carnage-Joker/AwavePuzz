@@ -25,6 +25,7 @@ function TitleScreenUI.new()
 	self.frame = nil
 	self.hasInteracted = false
 	self.pulseTweens = {} -- Store pulse tweens for cleanup
+	self.pulseThread = nil -- Store pulse thread for cleanup
 	
 	self:createUI()
 	self:setupRemoteEvents()
@@ -198,6 +199,12 @@ function TitleScreenUI:hide()
 		self.inputConnection = nil
 	end
 	
+	-- Cancel pulse thread
+	if self.pulseThread then
+		task.cancel(self.pulseThread)
+		self.pulseThread = nil
+	end
+	
 	-- Cancel pulse tweens
 	for _, tween in ipairs(self.pulseTweens) do
 		if tween then
@@ -302,9 +309,10 @@ function TitleScreenUI:fadeOut()
 end
 
 function TitleScreenUI:startPromptPulse()
-	-- Continuous pulse animation for the prompt
-	local function pulse()
+	-- Continuous pulse animation for the prompt using repeating tweens
+	self.pulseThread = task.spawn(function()
 		while self.isActive and self.promptLabel do
+			-- Fade to semi-transparent
 			local tween1 = TweenService:Create(
 				self.promptLabel,
 				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
@@ -312,10 +320,15 @@ function TitleScreenUI:startPromptPulse()
 			)
 			table.insert(self.pulseTweens, tween1)
 			tween1:Play()
-			tween1.Completed:Wait()
 			
-			if not self.isActive then break end
+			-- Wait for completion or cancellation
+			local success = pcall(function()
+				tween1.Completed:Wait()
+			end)
 			
+			if not self.isActive or not success then break end
+			
+			-- Fade back to opaque
 			local tween2 = TweenService:Create(
 				self.promptLabel,
 				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
@@ -323,11 +336,15 @@ function TitleScreenUI:startPromptPulse()
 			)
 			table.insert(self.pulseTweens, tween2)
 			tween2:Play()
-			tween2.Completed:Wait()
+			
+			-- Wait for completion or cancellation
+			success = pcall(function()
+				tween2.Completed:Wait()
+			end)
+			
+			if not self.isActive or not success then break end
 		end
-	end
-	
-	task.spawn(pulse)
+	end)
 end
 
 -- Initialize

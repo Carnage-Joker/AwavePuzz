@@ -1,5 +1,5 @@
 -- StoryConfig.lua
--- Story, lore, and narrative configuration for AwavePuzz
+-- Story, lore, and narrative configuration for Aether Wave: Convergence
 -- Contains the backstory of the Aether Wave outbreak and narrative elements
 
 local StoryConfig = {}
