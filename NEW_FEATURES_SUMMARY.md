@@ -22,7 +22,7 @@ When players complete the cure and win, they now see a professional scrolling cr
 - **Closing Message**: "Thank you for playing. The choice was always yours."
 - **Cinematic Scrolling**: Credits scroll from bottom to top like a movie
 - **20-Second Display**: Auto-scrolls then transitions to scoreboard
-- **Skipable**: Players can skip if they want
+- **Skippable**: Players can skip if they want
 
 ### Visual Design:
 - Black background for cinematic feel
