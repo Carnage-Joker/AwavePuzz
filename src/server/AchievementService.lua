@@ -186,20 +186,21 @@ function AchievementService:onRoundEnd(isVictory, alivePlayers, baseHealthPercen
 					end
 				end
 				
-				-- Check for trusted ally (no betrayals)
-				if self.playerStats[player.UserId].alliancesBroken == 0 and 
-				   self.playerStats[player.UserId].alliancesFormed > 0 then
-					self:unlockAchievement(player, "trusted_ally")
-				end
+				-- Alliance-based achievements (mutually exclusive per victory)
+				local alliancesFormed = self.playerStats[player.UserId].alliancesFormed
+				local alliancesBroken = self.playerStats[player.UserId].alliancesBroken
 				
-				-- Check for lone wolf (no alliances)
-				if self.playerStats[player.UserId].alliancesFormed == 0 then
+				-- Check for lone wolf (no alliances formed this round)
+				if alliancesFormed == 0 then
 					self:unlockAchievement(player, "lone_wolf")
+				-- Check for trusted ally (alliances formed, none broken)
+				elseif alliancesBroken == 0 and alliancesFormed > 0 then
+					self:unlockAchievement(player, "trusted_ally")
 				end
 				
 				-- Check for team player (allied with everyone)
 				local totalPlayers = #Players:GetPlayers()
-				if self.playerStats[player.UserId].alliancesFormed >= (totalPlayers - 1) and totalPlayers > 1 then
+				if alliancesFormed >= (totalPlayers - 1) and totalPlayers > 1 then
 					self:unlockAchievement(player, "team_player")
 				end
 			else
