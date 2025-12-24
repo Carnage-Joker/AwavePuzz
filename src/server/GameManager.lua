@@ -710,9 +710,19 @@ function GameManager:onVictory()
 	self:showVictoryCredits(alivePlayers)
 	
 	self:showEndOfRoundScoreboard()
-	-- Use configured credits display time plus scoreboard time
-	local creditsTime = SharedFolder:FindFirstChild("StoryConfig") and 
-		require(SharedFolder.StoryConfig).Credits.CreditsDisplayTime or 20
+	-- Use configured credits display time plus scoreboard time, with safe fallbacks
+	local creditsTime = 20
+	local storyConfigModule = SharedFolder:FindFirstChild("StoryConfig")
+	if storyConfigModule then
+		local ok, storyConfig = pcall(require, storyConfigModule)
+		if ok and type(storyConfig) == "table" then
+			local creditsConfig = storyConfig.Credits
+			local configuredDisplayTime = creditsConfig and creditsConfig.CreditsDisplayTime
+			if typeof(configuredDisplayTime) == "number" and configuredDisplayTime > 0 then
+				creditsTime = configuredDisplayTime
+			end
+		end
+	end
 	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + creditsTime
 end
 
