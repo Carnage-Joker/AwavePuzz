@@ -167,71 +167,84 @@ function AchievementUI:showAchievement(achievementId)
 end
 
 function AchievementUI:processQueue()
-	if #self.notificationQueue == 0 then
-		self.isShowingNotification = false
+	-- Prevent multiple concurrent processors; only one queue loop should run at a time
+	if self.isProcessingQueue then
 		return
 	end
 	
-	self.isShowingNotification = true
-	local achievement = table.remove(self.notificationQueue, 1)
+	self.isProcessingQueue = true
 	
-	-- Update content
-	self.icon.Text = achievement.Icon or "🏆"
-	self.title.Text = achievement.Name
-	self.description.Text = achievement.Description
-	
-	-- Update border color based on rarity
-	local rarityColors = {
-		Common = Color3.fromRGB(150, 150, 150),
-		Uncommon = Color3.fromRGB(100, 200, 100),
-		Rare = Color3.fromRGB(100, 150, 255),
-		Epic = Color3.fromRGB(150, 100, 255),
-		Legendary = Color3.fromRGB(255, 200, 50)
-	}
-	self.notificationContainer.BorderColor3 = rarityColors[achievement.Rarity] or Color3.fromRGB(100, 200, 255)
-	
-	-- Slide in
-	local slideInTween = TweenService:Create(
-		self.notificationContainer,
-		TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Position = UDim2.new(0.98, 0, 0.1, 0) }
-	)
-	slideInTween:Play()
-	
-	-- Pulse effect
+	-- Run the queue processing in a separate thread so callers don't block on waits
 	task.spawn(function()
-		task.wait(0.5)
-		for i = 1, 2 do
-			TweenService:Create(
+		while true do
+			if #self.notificationQueue == 0 then
+				-- Nothing left to show; stop processing
+				self.isShowingNotification = false
+				self.isProcessingQueue = false
+				break
+			end
+			
+			self.isShowingNotification = true
+			local achievement = table.remove(self.notificationQueue, 1)
+			
+			-- Update content
+			self.icon.Text = achievement.Icon or "🏆"
+			self.title.Text = achievement.Name
+			self.description.Text = achievement.Description
+			
+			-- Update border color based on rarity
+			local rarityColors = {
+				Common = Color3.fromRGB(150, 150, 150),
+				Uncommon = Color3.fromRGB(100, 200, 100),
+				Rare = Color3.fromRGB(100, 150, 255),
+				Epic = Color3.fromRGB(150, 100, 255),
+				Legendary = Color3.fromRGB(255, 200, 50)
+			}
+			self.notificationContainer.BorderColor3 = rarityColors[achievement.Rarity] or Color3.fromRGB(100, 200, 255)
+			
+			-- Slide in
+			local slideInTween = TweenService:Create(
 				self.notificationContainer,
-				TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-				{ Size = UDim2.new(0.37, 0, 0.16, 0) }
-			):Play()
-			task.wait(0.3)
-			TweenService:Create(
+				TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Position = UDim2.new(0.98, 0, 0.1, 0) }
+			)
+			slideInTween:Play()
+			
+			-- Pulse effect (runs independently of the main queue timing)
+			task.spawn(function()
+				task.wait(0.5)
+				for i = 1, 2 do
+					TweenService:Create(
+						self.notificationContainer,
+						TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+						{ Size = UDim2.new(0.37, 0, 0.16, 0) }
+					):Play()
+					task.wait(0.3)
+					TweenService:Create(
+						self.notificationContainer,
+						TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+						{ Size = UDim2.new(0.35, 0, 0.15, 0) }
+					):Play()
+					task.wait(0.3)
+				end
+			end)
+			
+			-- Hold for 4 seconds (4.5 includes slide-in time)
+			task.wait(4.5)
+			
+			-- Slide out
+			local slideOutTween = TweenService:Create(
 				self.notificationContainer,
-				TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-				{ Size = UDim2.new(0.35, 0, 0.15, 0) }
-			):Play()
-			task.wait(0.3)
+				TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ Position = UDim2.new(1.1, 0, 0.1, 0) }
+			)
+			slideOutTween:Play()
+			slideOutTween.Completed:Wait()
+			
+			-- Small delay before showing the next notification
+			task.wait(0.5)
 		end
 	end)
-	
-	-- Hold for 4 seconds
-	task.wait(4.5)
-	
-	-- Slide out
-	local slideOutTween = TweenService:Create(
-		self.notificationContainer,
-		TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-		{ Position = UDim2.new(1.1, 0, 0.1, 0) }
-	)
-	slideOutTween:Play()
-	slideOutTween.Completed:Wait()
-	
-	-- Process next in queue
-	task.wait(0.5)
-	self:processQueue()
 end
 
 -- Initialize
