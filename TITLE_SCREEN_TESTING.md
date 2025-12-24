@@ -7,7 +7,7 @@ This guide explains how to test the new title screen and epilogue system in Robl
 The game now features:
 - **Title Screen**: "Aether Wave: Convergence" with atmospheric presentation
 - **Epilogue**: 7-page cinematic story introducing the outbreak and alliance mechanics
-- **Skipable**: Players can skip the epilogue by pressing ESC
+- **Skippable**: Players can skip the epilogue by pressing ESC
 
 ## How to Test
 
