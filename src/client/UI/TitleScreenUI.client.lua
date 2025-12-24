@@ -312,6 +312,9 @@ function TitleScreenUI:startPromptPulse()
 	-- Continuous pulse animation for the prompt using repeating tweens
 	self.pulseThread = task.spawn(function()
 		while self.isActive and self.promptLabel do
+			-- Clear old tweens to prevent memory accumulation
+			self.pulseTweens = {}
+			
 			-- Fade to semi-transparent
 			local tween1 = TweenService:Create(
 				self.promptLabel,
@@ -326,7 +329,10 @@ function TitleScreenUI:startPromptPulse()
 				tween1.Completed:Wait()
 			end)
 			
-			if not self.isActive or not success then break end
+			if not self.isActive or not success then 
+				self.pulseTweens = {}
+				break 
+			end
 			
 			-- Fade back to opaque
 			local tween2 = TweenService:Create(
@@ -342,8 +348,14 @@ function TitleScreenUI:startPromptPulse()
 				tween2.Completed:Wait()
 			end)
 			
-			if not self.isActive or not success then break end
+			if not self.isActive or not success then 
+				self.pulseTweens = {}
+				break 
+			end
 		end
+		
+		-- Final cleanup
+		self.pulseTweens = {}
 	end)
 end
 

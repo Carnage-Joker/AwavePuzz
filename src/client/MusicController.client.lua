@@ -136,7 +136,16 @@ function MusicController:fadeInTrack(track, fadeTime)
 	track:SetAttribute("OriginalVolume", targetVolume)
 	
 	track.Volume = 0
-	track:Play()
+	
+	-- Wrap Play() in pcall to handle potential errors with invalid sound IDs
+	local success, err = pcall(function()
+		track:Play()
+	end)
+	
+	if not success then
+		warn("[MusicController] Failed to play track:", track.Name, "Error:", err)
+		return
+	end
 	
 	TweenService:Create(
 		track,

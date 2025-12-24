@@ -137,14 +137,31 @@ function CreditsUI:show(survivorData)
 	self:buildCreditsContent(survivorData or {})
 	
 	-- Calculate total height
-	-- Use signal to wait for layout completion instead of fixed delay
-	local layoutCompleteConnection
-	layoutCompleteConnection = self.layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		if layoutCompleteConnection then
-			layoutCompleteConnection:Disconnect()
+	-- Wait for layout completion by listening for AbsoluteContentSize changes,
+	-- with a timeout safeguard to avoid hanging if no change occurs.
+	local initialHeight = self.layout.AbsoluteContentSize.Y
+	if initialHeight == 0 then
+		local layoutComplete = false
+		local layoutConnection
+		layoutConnection = self.layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			layoutComplete = true
+			if layoutConnection then
+				layoutConnection:Disconnect()
+				layoutConnection = nil
+			end
+		end)
+		
+		local startTime = os.clock()
+		local TIMEOUT_SECONDS = 2
+		while not layoutComplete and (os.clock() - startTime) < TIMEOUT_SECONDS do
+			task.wait()
 		end
-	end)
-	task.wait(0.15) -- Brief wait for initial layout
+		
+		if layoutConnection then
+			layoutConnection:Disconnect()
+			layoutConnection = nil
+		end
+	end
 	
 	local totalHeight = self.layout.AbsoluteContentSize.Y
 	self.content.Size = UDim2.new(1, 0, 0, totalHeight)

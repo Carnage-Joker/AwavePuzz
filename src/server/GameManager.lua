@@ -576,6 +576,11 @@ function GameManager:resetForNewRound()
 
 	self.spectatorManager:reset()
 	self.lobbyManager:reset()
+	
+	-- Reset per-round achievement stats
+	if self.achievementService and self.achievementService.resetRoundStats then
+		self.achievementService:resetRoundStats()
+	end
 
 	self._lastWaveBroadcastSec = nil
 
