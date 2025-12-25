@@ -14,9 +14,9 @@ local MapConfig = {}
 
 MapConfig.Maps = {
 	ResearchOutpost = {
-		Name = "Villiage",
-		Model = "Villiage",
-		Description = "Compact Villiage surrounded by wasteland.",
+		Name = "Village",
+		Model = "Village",
+		Description = "Compact Village surrounded by wasteland.",
 		Default = true
 	},
 	DesertRuins = {
