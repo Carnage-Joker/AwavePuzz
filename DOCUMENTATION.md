@@ -7,8 +7,15 @@ This document provides a comprehensive guide to all documentation available for 
 If you're new to the project, start here:
 
 1. **[README.md](README.md)** - Project overview, features, and quick start guide
-2. **[INSTALLATION.md](INSTALLATION.md)** - Step-by-step installation guide for Roblox Studio
-3. **[GAME_DESIGN.md](GAME_DESIGN.md)** - Understand the game mechanics and design philosophy
+2. **[QUICKSTART.md](QUICKSTART.md)** - ✨ Quick start guide for the restructured repository
+3. **[INSTALLATION.md](INSTALLATION.md)** - Step-by-step installation guide for Roblox Studio
+4. **[GAME_DESIGN.md](GAME_DESIGN.md)** - Understand the game mechanics and design philosophy
+
+### Repository Structure Notes
+
+The repository was recently restructured to match Roblox Studio's layout:
+- **[RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md)** - Details on the restructuring changes
+- **[ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md)** - Documentation for placeholder files
 
 ## 🔧 Development Documentation
 
@@ -193,10 +200,10 @@ Project structure and organization guide:
 
 ## 📊 Documentation Statistics
 
-- **Total Documentation Files**: 13 core documents + additional guides in docs/
-- **Total Documentation Size**: ~200KB
+- **Total Documentation Files**: 18 core documents + additional guides in docs/
+- **Total Documentation Size**: ~220KB
 - **Most Comprehensive**: API_DOCUMENTATION.md (45KB)
-- **Quick References**: ANIMATION_QUICK_REFERENCE.md (6.4KB)
+- **Quick References**: ANIMATION_QUICK_REFERENCE.md (6.4KB), QUICKSTART.md (7.2KB)
 
 ## 🔍 Quick Search Guide
 

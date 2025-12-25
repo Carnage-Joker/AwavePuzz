@@ -17,8 +17,8 @@ Remove redundant documentation and duplicate docs while maintaining:
 
 | Metric | Before | After | Change |
 |--------|--------|-------|--------|
-| **Total MD files** | 35 | 25 | -10 files (-28.6%) |
-| **Root MD files** | 24 | 14 | -10 files (-41.7%) |
+| **Total MD files** | 35 | 28 | -7 files (-20%) |
+| **Root MD files** | 24 | 18 | -6 files (-25%) |
 | **Duplicate content** | High | None | 100% eliminated |
 
 ### Files Removed (10)
@@ -118,11 +118,14 @@ Remove redundant documentation and duplicate docs while maintaining:
 
 ## Final Documentation Structure
 
-### Core Documentation (3 files)
+### Core Documentation (6 files)
 Essential docs for understanding the project:
 - README.md - Project overview
+- QUICKSTART.md - Quick start for restructured repo
 - GAME_DESIGN.md - Game mechanics
 - INSTALLATION.md - Setup guide
+- RESTRUCTURE_CHANGELOG.md - Restructuring changes
+- ASSET_PLACEHOLDERS.md - Placeholder documentation
 
 ### Technical References (4 files)
 Deep technical documentation:
