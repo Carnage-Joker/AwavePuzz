@@ -1,3 +1,9 @@
+-- DEV/TEST SCRIPT - Only runs in Studio
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then
+return
+end
+
 -- FixSystemAmmo.lua
 -- Simple ammo system fix for testing
 --
