@@ -1,266 +1,527 @@
 # AwavePuzz Project Structure
 
-This document describes the organization and conventions of the AwavePuzz repository.
+**Last Updated**: 2025-12-25  
+**Version**: 2.0 (Restructured)
+
+This document describes the organization and conventions of the AwavePuzz repository after the major restructure to match Roblox Studio's directory layout.
 
 **📖 For a complete documentation index, see [DOCUMENTATION.md](../DOCUMENTATION.md)**
 
 ## Overview
 
-AwavePuzz is a Roblox multiplayer zombie survival game with wave-based combat, cure-crafting puzzles, and alliance systems. The codebase is organized into distinct folders for server logic, client scripts, and shared configurations.
+AwavePuzz is a Roblox multiplayer zombie survival game with wave-based combat, cure-crafting puzzles, and alliance systems. The repository is now structured to **exactly mirror** the Roblox Studio game hierarchy for simplified development and installation.
 
 ## Directory Structure
 
 ```
 AwavePuzz/
-├── src/
-│   ├── server/          # Server-side game logic (ServerScriptService)
-│   ├── client/          # Client-side UI and controls (StarterPlayerScripts)
-│   └── shared/          # Shared modules (ReplicatedStorage)
-├── docs/                # Project documentation
-└── [root markdown files] # High-level documentation
+├── ServerScriptService/         # Server-side game logic
+│   ├── AI/                      # Zombie AI and controllers
+│   └── *.lua                    # Server managers and services
+├── ReplicatedStorage/           # Shared resources
+│   ├── Shared/                  # Shared modules (configs, utils)
+│   ├── RemoteEvents/            # RemoteEvent placeholders (.txt)
+│   └── Animations/              # Animation placeholders (.txt)
+│       └── Weapons/             # Weapon-specific animations
+├── StarterPlayer/               # Player initialization
+│   └── StarterPlayerScripts/    # Client-side controllers
+│       ├── Modules/             # Client modules
+│       │   └── UI/              # UI module scripts
+│       └── FPS/                 # FPS system modules
+├── StarterGui/                  # UI LocalScripts
+│   └── *.lua                    # UI controllers
+├── ServerStorage/               # Server-only assets
+│   ├── Maps/                    # Map models (placeholders)
+│   ├── Models/                  # Weapon/object models (placeholders)
+│   ├── ZombieModels/            # Zombie models (placeholders)
+│   └── DevOnly/                 # Developer tools
+├── Archive/                     # Archived legacy code
+│   └── Legacy/
+│       └── Code/                # 3 levels deep for safety
+│           ├── Server/          # Archived server code
+│           ├── Client/          # Archived client code
+│           ├── DevTools/        # Archived dev tools
+│           └── Original_src_Structure/  # Original src/ backup
+└── docs/                        # Project documentation
 ```
 
-## Detailed Folder Map
+## Roblox Studio Mapping
 
-### src/server/ - Server-Side Logic
+This structure **directly corresponds** to Roblox Studio's service hierarchy:
 
-Server scripts handle all game logic in a server-authoritative manner for security and multiplayer consistency.
+| Repository Directory | Roblox Studio Location |
+|---------------------|------------------------|
+| `ServerScriptService/` | `game.ServerScriptService` |
+| `ReplicatedStorage/Shared/` | `game.ReplicatedStorage.Shared` |
+| `ReplicatedStorage/RemoteEvents/` | `game.ReplicatedStorage.RemoteEvents` |
+| `ReplicatedStorage/Animations/` | `game.ReplicatedStorage.Animations` |
+| `StarterPlayer/StarterPlayerScripts/` | `game.StarterPlayer.StarterPlayerScripts` |
+| `StarterGui/` | `game.StarterGui` |
+| `ServerStorage/Maps/` | `game.ServerStorage.Maps` |
+| `ServerStorage/Models/` | `game.ServerStorage.Models` |
+| `ServerStorage/ZombieModels/` | `game.ServerStorage.ZombieModels` |
 
-#### Core Managers
-- `MainServer.lua` - Entry point that initializes all server systems
-- `GameManager.lua` - Orchestrates game states, waves, win/lose conditions
-- `WaveManager.lua` - Manages wave progression and zombie counts
-- `PlayerManager.lua` - Tracks player state, inventory, currency, health
-- `BaseManager.lua` - Manages base health and damage tracking
-- `MapManager.lua` - Handles map loading and spawn point management
-- `LobbyManager.lua` - Manages pre-round lobby and map voting
+---
 
-#### Combat & Weapons
-- `WeaponService.lua` - Server-authoritative weapon logic and raycast validation
-- `FPSWeaponService.lua` - Enhanced FPS weapon features (recoil, spread, ADS)
-- `Spawner.lua` - Zombie spawning logic with strategic distribution
-- `IntelligentSpawnGenerator.lua` - Generates valid spawn points on maps
+## ServerScriptService/
 
-#### Game Systems
-- `CureService.lua` - Manages cure progress and component collection
-- `PuzzleService.lua` - Handles puzzle generation and validation
-- `AllianceService.lua` - Manages player alliances and betrayals
-- `ShopService.lua` - Weapon and upgrade purchase system
-- `ResourceSpawner.lua` - Spawns cure components on the map
-- `SpectatorManager.lua` - Spectator mode for eliminated players
-- `SprintService.lua` - Sprint mechanics and stamina management
+**Purpose**: Server-side game logic running on the Roblox server  
+**Script Type**: Scripts (run automatically) and ModuleScripts (require()d)  
+**File Count**: 27 Lua files
 
-#### Support Scripts
-- `GameServer.lua` - Alternative server entry point
-- `CureCraftingManager.lua` - Legacy cure crafting logic
-- `CureStationSetup.lua` - Cure station initialization
+### Main Entry Point
 
-#### AI
-- `AI/` - Artificial intelligence scripts
-  - `ZombieBrain.lua` - Zombie AI controller with pathfinding and targeting
+- **`MainServer.lua`** (Script) - Main entry point that initializes all server systems
 
-#### Tests (Debug Only)
-- `Tests/` - Test and debug scripts (require `GameConfig.DEBUG = true`)
-  - `TestPuzzleSystem.lua` - Puzzle system validation
-  - `AmmoSystemFix.lua` - Ammo system debugging
-  - `FixSystemAmmo.lua` - Ammo fix utilities
-  - `SpawnPointVisualizer.lua` - Visual debug tool for spawn points
+### Core Managers
 
-### src/client/ - Client-Side Scripts
+- **`GameManager.lua`** - Orchestrates game states, waves, win/lose conditions
+- **`WaveManager.lua`** - Manages wave progression and zombie counts
+- **`PlayerManager.lua`** - Tracks player state, inventory, currency, health
+- **`BaseManager.lua`** - Manages base health and damage tracking
+- **`MapManager.lua`** - Handles map loading and spawn point management
+- **`LobbyManager.lua`** - Manages pre-round lobby and map voting
 
-Client scripts handle UI, input, and visual feedback. They communicate with the server via RemoteEvents.
+### Combat & Weapons
 
-#### Entry Points & Controllers
-- `FPSWeaponController.client.lua` - Primary FPS weapon input controller
-- `FPSMovementController.client.lua` - FPS movement with sprinting
-- `FPSMenuController.client.lua` - FPS menu system
-- `FPSAudioController.client.lua` - Sound effects for weapons and movement
-- `FirstPersonCamera.client.lua` - Standalone first-person camera
-- `WeaponController.client.lua` - Basic weapon input (fallback/simple version)
-- `SprintController.client.lua` - Sprint input handling
+- **`WeaponService.lua`** - Server-authoritative weapon logic and raycast validation
+- **`FPSWeaponService.lua`** - Enhanced FPS weapon features (ammo, reload, ADS)
+- **`FPSAnimationService.lua`** - Animation replication for FPS system
+- **`Spawner.lua`** - Zombie spawning logic with strategic distribution
+- **`IntelligentSpawnGenerator.lua`** - Generates valid spawn points on maps
 
-#### Modules (Not Scripts)
-These are ModuleScripts that are required by other scripts, not standalone:
-- `ClientController.lua` - Client game state controller module
-- `FPS/FirstPersonCamera.lua` - Modular camera implementation
-- `FPS/FirstPersonController.client.lua` - Bootstrap for modular camera
+### Game Systems
 
-#### UI Scripts
-All UI scripts are LocalScripts (`.client.lua`) that run when placed in StarterGui:
-- `UI/FPSHUD.client.lua` - FPS HUD with crosshair and ammo
-- `UI/PlayerHUD.client.lua` - Player health and status display
-- `UI/WaveUI.client.lua` - Wave information display
-- `UI/BaseHealthUI.client.lua` - Base health bar
-- `UI/CureUI.client.lua` - Cure progress display
-- `UI/PuzzleUI.client.lua` - Puzzle interaction interface
-- `UI/PuzzleMenuUI.client.lua` - Puzzle menu system
-- `UI/InventoryUI.client.lua` - Component and currency display
-- `UI/ShopUI.client.lua` - Shop interface
-- `UI/AllianceUI.client.lua` - Alliance management UI
-- `UI/MapVotingUI.client.lua` - Map voting interface
-- `UI/ScoreboardUI.client.lua` - Player scoreboard
-- `UI/SpectatorUI.client.lua` - Spectator mode interface
+- **`CureService.lua`** - Manages cure progress and component collection
+- **`CureStationSetup.lua`** - Cure station initialization (moved to Shared)
+- **`PuzzleService.lua`** - Handles puzzle generation and validation
+- **`AllianceService.lua`** - Manages player alliances and betrayals
+- **`ShopService.lua`** - Weapon and upgrade purchase system
+- **`ResourceSpawner.lua`** - Spawns cure components on the map
+- **`SpectatorManager.lua`** - Spectator mode for eliminated players
+- **`SprintService.lua`** - Sprint mechanics and stamina management
+- **`AchievementService.lua`** - Achievement tracking and unlocking
 
-### src/shared/ - Shared Configuration
+### AI Subfolder (`AI/`)
 
-Shared ModuleScripts accessible by both server and client for configuration and utilities.
+**Purpose**: Artificial intelligence for zombies and NPCs  
+**File Count**: 6 Lua files
 
-#### Configuration
-- `GameConfig.lua` - Core game tuning parameters (health, waves, economy)
-- `WaveConfig.lua` - Wave progression settings
-- `WeaponConfig.lua` - Weapon stats and properties
-- `FPSConfig.lua` - FPS system configuration
-- `ZombieTypes.lua` - Zombie type definitions
-- `MapConfig.lua` - Map definitions and properties
-- `PuzzleConfig.lua` - Puzzle types and generation logic
-- `UIScaleConfig.lua` - UI scaling settings for mobile
+- **`ZombieBrain.lua`** - Main zombie AI controller with pathfinding and targeting
+- **`AIDirector.lua`** - Manages overall AI behavior and difficulty
+- **`TargetingService.lua`** - Target selection logic for zombies
+- **`SurroundService.lua`** - Zombie surround behavior
+- **`SpitterController.lua`** - Special behavior for Spitter zombie type
+- **`BossAuraService.lua`** - Boss zombie aura effects
 
-#### Utilities
-- `RemoteEventUtil.lua` - Utility for creating/managing RemoteEvents
-- `GameState.lua` - Shared game state enum/constants
-- `MathUtil.lua` - Math helper functions
-- `UIScaleManager.lua` - Dynamic UI scaling manager
+---
+
+## ReplicatedStorage/
+
+**Purpose**: Resources shared between server and client  
+**Script Type**: ModuleScripts, RemoteEvents, Animations
+
+### Shared/ Subfolder
+
+**Purpose**: Configuration and utility modules accessible by both server and client  
+**File Count**: 13 Lua files
+
+#### Configuration Modules
+
+- **`GameConfig.lua`** - Core game tuning parameters (health, waves, economy)
+- **`WaveConfig.lua`** - Wave progression settings
+- **`WeaponConfig.lua`** - Weapon stats and properties
+- **`FPSConfig.lua`** - FPS system configuration
+- **`ZombieTypes.lua`** - Zombie type definitions
+- **`MapConfig.lua`** - Map definitions and properties
+- **`PuzzleConfig.lua`** - Puzzle types and generation logic
+- **`UIScaleConfig.lua`** - UI scaling settings for mobile
+- **`StoryConfig.lua`** - Story and narrative configuration
+
+#### Utility Modules
+
+- **`RemoteEventUtil.lua`** - Utility for creating/managing RemoteEvents
+- **`GameState.lua`** - Shared game state enum/constants
+- **`MathUtil.lua`** - Math helper functions
+- **`UIScaleManager.lua`** - Dynamic UI scaling manager
+
+### RemoteEvents/ Subfolder
+
+**Purpose**: Client-server communication events  
+**File Count**: 58 placeholder .txt files
+
+Placeholder `.txt` files representing RemoteEvents that will be created at runtime. In Roblox Studio, replace with actual `RemoteEvent` instances.
+
+**Categories**:
+- Game State Events (5)
+- Player Events (4)
+- Weapon Events (5)
+- Animation Events (6)
+- Movement Events (2)
+- Shop Events (2)
+- Alliance Events (4)
+- Puzzle/Cure Events (8)
+- Lobby/Map Events (6)
+- Spectator Events (5)
+- UI Events (9)
+- Achievement Events (1)
+
+See [ASSET_PLACEHOLDERS.md](../ASSET_PLACEHOLDERS.md) for complete list and details.
+
+### Animations/ Subfolder
+
+**Purpose**: Animation assets for weapons and characters  
+**File Count**: 36 placeholder .txt files
+
+Structure:
+```
+Animations/
+└── Weapons/
+    ├── Pistol/
+    ├── SMG/
+    ├── Shotgun/
+    ├── Rifle/
+    └── AssaultRifle/
+        ├── Idle.txt
+        ├── Fire.txt
+        ├── Reload.txt
+        ├── Equip.txt
+        ├── Sprint.txt
+        └── ADS.txt
+```
+
+Each weapon requires 6 animations. See [ASSET_PLACEHOLDERS.md](../ASSET_PLACEHOLDERS.md) for specifications.
+
+---
+
+## StarterPlayer/StarterPlayerScripts/
+
+**Purpose**: Client-side scripts that run when player joins  
+**Script Type**: LocalScripts (run automatically) and ModuleScripts (require()d)  
+**File Count**: 27 Lua files
+
+### Root Controllers
+
+- **`ClientController.client.lua`** (LocalScript) - Main client controller
+- **`ClientController.lua`** (ModuleScript) - Client game state module
+
+### FPS Subfolder (`FPS/`)
+
+**Purpose**: First-person camera and control system
+
+- **`FirstPersonCamera.lua`** (ModuleScript) - Modular camera implementation
+- Plus archived implementations in `FPS/Archived/`
+
+### Modules Subfolder (`Modules/`)
+
+**Purpose**: Client-side modules for various systems
+
+#### Core Modules
+
+- **`FPSAnimationController.lua`** - Animation playback and replication
+- **`FPSAudioController.lua`** - Sound effects for weapons and movement
+- **`FPSMenuController.lua`** - Pause menu and settings
+- **`FPSMovement.lua`** - Movement mechanics (sprint, crouch)
+- **`FPSWeaponController.lua`** - Weapon input and firing
+- **`FirstPersonCamera.lua`** - Camera controller module
+- **`MusicController.lua`** - Dynamic music system
+
+#### UI Subfolder (`Modules/UI/`)
+
+**File Count**: 17 UI module files
+
+These are **ModuleScripts** used by LocalScripts in StarterGui:
+
+- **`AchievementUI.lua`** - Achievement notification system
+- **`AllianceUI.lua`** - Alliance management interface
+- **`BaseHealthUI.lua`** - Base health bar display
+- **`CreditsUI.lua`** - Victory credits screen
+- **`CureUI.lua`** - Cure progress display
+- **`EpilogueUI.lua`** - Story epilogue interface
+- **`FPSHUD.lua`** - Crosshair, ammo, hitmarkers
+- **`InventoryUI.lua`** - Player inventory display
+- **`MapVotingUI.lua`** - Map voting interface
+- **`PlayerHUD.lua`** - Player health and status
+- **`PuzzleMenuUI.lua`** - Puzzle selection menu
+- **`PuzzleUI.lua`** - Puzzle minigame interface
+- **`ScoreboardUI.lua`** - Player scoreboard
+- **`ShopUI.lua`** - In-game shop interface
+- **`SpectatorUI.lua`** - Spectator mode controls
+- **`TitleScreenUI.lua`** - Title screen interface
+- **`WaveUI.lua`** - Wave information display
+
+---
+
+## StarterGui/
+
+**Purpose**: UI LocalScripts that create and manage user interfaces  
+**Script Type**: LocalScripts (converted from ModuleScripts)  
+**File Count**: 17 Lua files
+
+All files are copies of `StarterPlayerScripts/Modules/UI/` for direct use as LocalScripts in StarterGui:
+
+- `AchievementUI.lua`
+- `AllianceUI.lua`
+- `BaseHealthUI.lua`
+- `CreditsUI.lua`
+- `CureUI.lua`
+- `EpilogueUI.lua`
+- `FPSHUD.lua`
+- `InventoryUI.lua`
+- `MapVotingUI.lua`
+- `PlayerHUD.lua`
+- `PuzzleMenuUI.lua`
+- `PuzzleUI.lua`
+- `ScoreboardUI.lua`
+- `ShopUI.lua`
+- `SpectatorUI.lua`
+- `TitleScreenUI.lua`
+- `WaveUI.lua`
+
+**Note**: In Roblox Studio, these should be LocalScript instances, not ModuleScripts.
+
+---
+
+## ServerStorage/
+
+**Purpose**: Server-only assets not replicated to clients  
+**File Count**: 15 placeholder files (+ 4 in DevOnly)
+
+### Maps/ Subfolder
+
+**Purpose**: Map models with spawn points  
+**Placeholders**: 3 maps
+
+- `ResearchFacility_PLACEHOLDER.txt`
+- `DesertOutpost_PLACEHOLDER.txt`
+- `UrbanRuins_PLACEHOLDER.txt`
+
+Each map should be a Model containing:
+- `ZombieSpawnPoints` folder
+- `ResourceSpawnPoints` folder
+- Terrain and structures
+
+### Models/ Subfolder
+
+**Purpose**: Weapon, object, and environment models  
+**Placeholders**: 7 models
+
+Weapon Models (5):
+- `Pistol_PLACEHOLDER.txt`
+- `SMG_PLACEHOLDER.txt`
+- `Shotgun_PLACEHOLDER.txt`
+- `Rifle_PLACEHOLDER.txt`
+- `AssaultRifle_PLACEHOLDER.txt`
+
+Other Models (2):
+- `CureStation_PLACEHOLDER.txt`
+- `ResourcePickup_PLACEHOLDER.txt`
+
+### ZombieModels/ Subfolder
+
+**Purpose**: Zombie character models  
+**Placeholders**: 5 zombie types
+
+- `Walker_PLACEHOLDER.txt` - Basic zombie
+- `Runner_PLACEHOLDER.txt` - Fast zombie
+- `Brute_PLACEHOLDER.txt` - Tank zombie
+- `Spitter_PLACEHOLDER.txt` - Ranged zombie
+- `Boss_PLACEHOLDER.txt` - Boss zombie
+
+Each should be R15/R6 rig with Humanoid and HumanoidRootPart.
+
+### DevOnly/ Subfolder
+
+**Purpose**: Development and debug tools  
+**File Count**: 4 Lua files (retained for development)
+
+- `SpawnPointVisualizer.lua` - Visual debug for spawn points
+- `TestPuzzleSystem.lua` - Puzzle system testing
+- `FixSystemAmmo.lua` - Ammo system debugging
+- `AmmoSystemFix.lua` - Ammo fix utilities
+
+**Note**: These tools only run when `GameConfig.DEBUG = true`.
+
+---
+
+## Archive/
+
+**Purpose**: Legacy and archived code isolated from production  
+**Structure**: 3 levels deep for safety (`Archive/Legacy/Code/`)
+
+### Archive/Legacy/Code/
+
+#### Server/
+Archived server-side code:
+- `CureCraftingManager.lua` - Legacy cure crafting
+- `GameServer.lua` - Old game server implementation
+
+#### Client/
+Archived client-side code:
+- 11 disabled `.client.lua.disabled` files
+- Old controller implementations
+- Deprecated UI scripts
+
+#### DevTools/
+Archived development tools moved from `ServerStorage/DevOnly/`:
+- Spawn point visualizers
+- Puzzle tests
+- System fixes
+
+#### Original_src_Structure/
+Complete backup of original `src/` directory structure before restructure.
+
+**Safety**: Placing archived code 3 levels deep prevents accidental use in production.
+
+---
 
 ## Naming Conventions
 
 ### File Naming
-1. **LocalScripts (Client)**: Use `.client.lua` suffix
-   - Example: `WeaponController.client.lua`, `FPSHUD.client.lua`
-   - These execute automatically when placed in StarterGui or StarterPlayerScripts
+
+1. **LocalScripts (Client)**: Use `.client.lua` suffix (deprecated in new structure)
+   - Example: `WeaponController.client.lua`
+   - In StarterGui, these are just `.lua` as LocalScript instances
 
 2. **ModuleScripts**: Use `.lua` suffix only
-   - Example: `GameConfig.lua`, `ZombieBrain.lua`, `ClientController.lua`
-   - These are required by other scripts using `require()`
+   - Example: `GameConfig.lua`, `ZombieBrain.lua`
+   - Required by other scripts using `require()`
 
 3. **Server Scripts**: Use `.lua` suffix
    - Example: `GameManager.lua`, `Spawner.lua`
-   - These execute automatically when placed in ServerScriptService
+   - Only `MainServer.lua` is a Script, others are ModuleScripts
 
-### Folder Naming
-- Use **PascalCase** for folders: `AI`, `Tests`, `UI`
-- Use descriptive names that indicate purpose
-- Group related functionality together
+### Directory Naming
+
+- Use **PascalCase** for folders: `AI`, `Modules`, `UI`
+- Match Roblox service names exactly: `ServerScriptService`, `ReplicatedStorage`
+- Use descriptive names: `StarterPlayerScripts`, `ZombieModels`
 
 ### RemoteEvent Naming
-- Use **PascalCase** with descriptive, action-oriented names
-- Include direction in documentation (Client → Server / Server → Client)
-- Examples:
-  - `WeaponFire` (Client → Server)
-  - `WaveAnnounce` (Server → Client)
-  - `RequestPuzzle` (Client → Server)
-  - `PuzzleCompleted` (Server → Client)
 
-See [REMOTE_EVENTS.md](./REMOTE_EVENTS.md) for complete list.
+- Use **PascalCase**: `WeaponFire`, `AllianceUpdate`
+- Descriptive action-oriented names
+- Direction suffix (optional):
+  - `Request` - Client → Server
+  - `Update` - Server → Client
 
-## What Belongs Where
+See [REMOTE_EVENTS.md](../REMOTE_EVENTS.md) for complete list.
 
-### Production Code (src/server, src/client, src/shared)
-- All code that runs in the actual game
-- Configuration files
-- Game systems and managers
-- UI scripts and controllers
-- AI logic
-
-### Test/Debug Code (src/server/Tests)
-- Test scripts and utilities
-- Debug visualization tools
-- Temporary fix scripts
-- Experimental code
-
-**IMPORTANT**: All test scripts must check `GameConfig.DEBUG` and early-exit if false.
-
-### Documentation (docs/, root .md files)
-- Architecture documentation
-- API references
-- Setup guides
-- Design documents
+---
 
 ## Development Guidelines
 
 ### Server Authority
-- **All game logic MUST be server-authoritative**
-- Never trust client for:
-  - Damage calculations
-  - Currency/inventory changes
-  - Cure progress
-  - Alliance state
-  - Spawn locations
-- Validate all client inputs on server
 
-### ModuleScript vs LocalScript
-- **ModuleScript**: Code that is `require()`d by other scripts
-  - Returns a table/module
-  - Does not execute on its own
-  - Use `.lua` suffix only
+**All game logic MUST be server-authoritative**
 
-- **LocalScript**: Code that executes on client
-  - Runs automatically when placed in StarterGui/StarterPlayerScripts
-  - Use `.client.lua` suffix
+Never trust client for:
+- ❌ Damage calculations
+- ❌ Currency/inventory changes
+- ❌ Cure progress
+- ❌ Alliance state
+- ❌ Spawn locations
 
-### Debug Mode
-Test and debug scripts are gated behind `GameConfig.DEBUG`:
+Always validate client inputs on server.
 
-```lua
-local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
-if not GameConfig.DEBUG then
-    return -- Early exit if DEBUG is false
-end
-```
+### Script Types in Roblox
 
-This prevents test code from running in production.
+**Script** (Server):
+- Runs automatically in ServerScriptService
+- Server-side execution only
+- Example: `MainServer.lua`
 
-## RemoteEvent Communication
+**LocalScript** (Client):
+- Runs automatically in StarterGui/StarterPlayerScripts
+- Client-side execution only
+- Example: UI scripts in StarterGui
 
-All client-server communication uses RemoteEvents from `ReplicatedStorage/RemoteEvents/`.
+**ModuleScript** (Both):
+- Does not run automatically
+- Must be `require()`d by other scripts
+- Can run on server or client depending on where it's required
+- Example: Config files, utility modules
 
-### Creating RemoteEvents
-Use `RemoteEventUtil` for consistency:
+### Require Paths
 
 ```lua
-local RemoteEventUtil = require(ReplicatedStorage.Shared.RemoteEventUtil)
-local events = RemoteEventUtil.getOrCreateEvents({
-    "EventName1",
-    "EventName2"
-})
+-- Server requiring shared config
+local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
+
+-- Server requiring sibling module
+local PlayerManager = require(script.Parent.PlayerManager)
+
+-- Client requiring shared config
+local FPSConfig = require(game.ReplicatedStorage.Shared.FPSConfig)
+
+-- Client requiring module
+local FPSHUD = require(script.Parent.Modules.UI.FPSHUD)
 ```
 
-### Documentation Requirements
-Every RemoteEvent setup should include:
-- Direction (Client → Server / Server → Client)
-- Expected payload structure
-- Purpose
+---
 
-Example:
-```lua
--- RemoteEvent Documentation:
--- - WeaponFire: Client -> Server, player fires weapon {origin = Vector3, direction = Vector3, weaponId = string}
-```
+## Integration with Roblox Studio
 
-## Integration with Roblox
+This repository structure allows **direct copying** to Roblox Studio:
 
-This repository is designed to sync with Roblox Studio:
+1. Copy entire `ServerScriptService/` → ServerScriptService in Studio
+2. Copy entire `ReplicatedStorage/` → ReplicatedStorage in Studio
+3. Copy `StarterPlayer/StarterPlayerScripts/` → StarterPlayer.StarterPlayerScripts in Studio
+4. Copy `StarterGui/` scripts → StarterGui in Studio (as LocalScript instances)
+5. Copy `ServerStorage/` → ServerStorage in Studio
 
-- `src/server/` → `ServerScriptService/`
-- `src/client/` → `StarterPlayer/StarterPlayerScripts/` or `StarterGui/`
-- `src/shared/` → `ReplicatedStorage/Shared/`
+See [INSTALLATION.md](../INSTALLATION.md) for detailed setup instructions.
 
-See [INSTALLATION.md](../INSTALLATION.md) for setup instructions.
+---
 
-## Future Structure Improvements
+## File Count Summary
 
-Potential organizational enhancements for future development:
+| Location | Active Lua Files | Placeholder Files |
+|----------|------------------|-------------------|
+| ServerScriptService | 27 | - |
+| ReplicatedStorage/Shared | 13 | - |
+| StarterPlayer/StarterPlayerScripts | 27 | - |
+| StarterGui | 17 | - |
+| ServerStorage/DevOnly | 4 | - |
+| ReplicatedStorage/RemoteEvents | - | 58 |
+| ReplicatedStorage/Animations | - | 36 |
+| ServerStorage (Models/Maps) | - | 15 |
+| **Total** | **88** | **109** |
 
-1. **Services Folder**: Group service modules separately from managers
-2. **Systems Folder**: Dedicated folder for major game systems (Cure, Alliance, etc.)
-3. **Client Controllers**: Separate folder for client-side controllers
-4. **Configs Subfolder**: Move all config files into `shared/Config/`
-
-These changes should be considered when the codebase grows significantly.
+---
 
 ## Related Documentation
 
+- [RESTRUCTURE_CHANGELOG.md](../RESTRUCTURE_CHANGELOG.md) - Complete restructure documentation
+- [ASSET_PLACEHOLDERS.md](../ASSET_PLACEHOLDERS.md) - Asset requirements and specifications
+- [INSTALLATION.md](../INSTALLATION.md) - Complete setup guide
+- [REMOTE_EVENTS.md](../REMOTE_EVENTS.md) - RemoteEvent reference
 - [API_DOCUMENTATION.md](../API_DOCUMENTATION.md) - API reference
 - [CODE_ARCHITECTURE.md](../CODE_ARCHITECTURE.md) - Architecture overview
-- [REMOTE_EVENTS.md](./REMOTE_EVENTS.md) - RemoteEvent reference
-- [INSTALLATION.md](../INSTALLATION.md) - Setup guide
-- [GAME_DESIGN.md](../GAME_DESIGN.md) - Game design document
+
+---
+
+## Migration from Old Structure
+
+If migrating from the old `src/` structure:
+
+| Old Path | New Path |
+|----------|----------|
+| `src/server/*.lua` | `ServerScriptService/*.lua` |
+| `src/server/AI/*.lua` | `ServerScriptService/AI/*.lua` |
+| `src/shared/*.lua` | `ReplicatedStorage/Shared/*.lua` |
+| `src/client/*.lua` | `StarterPlayer/StarterPlayerScripts/*.lua` |
+| `src/client/Modules/*.lua` | `StarterPlayer/StarterPlayerScripts/Modules/*.lua` |
+| `src/client/Modules/UI/*.lua` | `StarterGui/*.lua` |
+| `src/*/Archived/*` | `Archive/Legacy/Code/*/` |
+
+**No code changes required** - internal require paths remain unchanged.
+
+---
+
+## Questions?
+
+For questions about the structure or migration:
+1. Check [RESTRUCTURE_CHANGELOG.md](../RESTRUCTURE_CHANGELOG.md)
+2. Review placeholder README files in each directory
+3. Open an issue on GitHub with the "structure" label
