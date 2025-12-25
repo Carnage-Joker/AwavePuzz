@@ -651,13 +651,20 @@ function FPSAnimationController:initialize()
 end
 
 -- Module export with proper initialization
+function FPSAnimationController.update(deltaTime)
+	-- Main update function for procedural animations
+	if FPSAnimationController.enabled then
+		FPSAnimationController:updateViewmodelPosition(deltaTime)
+	end
+end
+
 function FPSAnimationController.initialize()
 	FPSAnimationController:setupRemoteEvents()
 	FPSAnimationController:createViewmodel()
 	
 	-- Connect update loop
 	RunService.Heartbeat:Connect(function(deltaTime)
-		FPSAnimationController:update(deltaTime)
+		FPSAnimationController.update(deltaTime)
 	end)
 	
 	print("[FPSAnimationController] Initialized from module")
