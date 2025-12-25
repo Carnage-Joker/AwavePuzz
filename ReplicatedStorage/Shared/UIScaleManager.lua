@@ -396,4 +396,65 @@ function UIScaleManager.createScaledTextLabel(name, options)
     return label
 end
 
+-- Utility: Safely enable TextScaled with proper constraints
+-- Ensures MinTextSize <= MaxTextSize to prevent Roblox warnings
+function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
+    if not textLabel or not textLabel:IsA("TextLabel") and not textLabel:IsA("TextButton") and not textLabel:IsA("TextBox") then
+        warn("[UIScaleManager] enableTextScaled called on invalid object")
+        return
+    end
+    
+    -- Calculate safe min/max values
+    local safeMin = math.max(1, minSize or 1)
+    local safeMax = math.max(safeMin + 1, maxSize or textLabel.TextSize or 14)
+    
+    -- Ensure min <= max
+    if safeMin > safeMax then
+        local temp = safeMin
+        safeMin = safeMax
+        safeMax = temp
+    end
+    
+    -- Enable TextScaled
+    textLabel.TextScaled = true
+    
+    -- Wait a frame for Roblox to create the UITextSizeConstraint automatically
+    task.defer(function()
+        -- Find or create the constraint
+        local constraint = textLabel:FindFirstChildOfClass("UITextSizeConstraint")
+        if not constraint then
+            constraint = Instance.new("UITextSizeConstraint")
+            constraint.Parent = textLabel
+        end
+        
+        -- Set safe values
+        constraint.MinTextSize = safeMin
+        constraint.MaxTextSize = safeMax
+    end)
+end
+
+-- Utility: Fix existing TextScaled elements that may have invalid constraints
+function UIScaleManager.fixTextSizeConstraints(guiObject)
+    if not guiObject then return end
+    
+    for _, descendant in ipairs(guiObject:GetDescendants()) do
+        if (descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox")) and descendant.TextScaled then
+            local constraint = descendant:FindFirstChildOfClass("UITextSizeConstraint")
+            if constraint then
+                local minSize = constraint.MinTextSize
+                local maxSize = constraint.MaxTextSize
+                
+                -- Fix if inverted
+                if minSize > maxSize and maxSize > 0 then
+                    constraint.MinTextSize = math.min(minSize, maxSize)
+                    constraint.MaxTextSize = math.max(minSize, maxSize)
+                elseif maxSize <= 0 then
+                    -- Max is invalid, set to TextSize or reasonable default
+                    constraint.MaxTextSize = math.max(descendant.TextSize, minSize + 1, 14)
+                end
+            end
+        end
+    end
+end
+
 return UIScaleManager

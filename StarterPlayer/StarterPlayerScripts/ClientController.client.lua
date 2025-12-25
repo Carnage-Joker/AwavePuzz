@@ -28,12 +28,16 @@ print("[ClientController] Configuration loaded")
 -- MODULE REFERENCES
 --------------------------------------------------------------------------------
 
-local clientModules = script.Parent:WaitForChild("Modules", 5)
+-- Wait longer for Modules folder and ensure it's properly located
+local clientModules = script.Parent:WaitForChild("Modules", 10)
 if not clientModules then
-	warn("[ClientController] Modules folder not found, creating it")
-	clientModules = Instance.new("Folder")
-	clientModules.Name = "Modules"
-	clientModules.Parent = script.Parent
+	-- Try alternate location (might be sibling in StarterPlayerScripts)
+	local starterPlayerScripts = script.Parent
+	clientModules = starterPlayerScripts:FindFirstChild("Modules")
+	
+	if not clientModules then
+		error("[ClientController] CRITICAL: Modules folder not found in " .. script.Parent:GetFullName())
+	end
 end
 
 -- Core systems (will be loaded from Modules folder)
@@ -284,6 +288,12 @@ end
 function ClientController.onCharacterAdded(character)
 	print("[ClientController] Character added:", character.Name)
 	
+	-- Clear any stale GUI selections on respawn
+	local GuiService = game:GetService("GuiService")
+	pcall(function()
+		GuiService.SelectedObject = nil
+	end)
+	
 	-- Notify all systems of character spawn
 	if Camera and Camera.onCharacterAdded then
 		Camera.onCharacterAdded(character)
@@ -304,6 +314,12 @@ end
 
 function ClientController.onCharacterRemoving()
 	print("[ClientController] Character removing")
+	
+	-- Clear GUI selections before character removal
+	local GuiService = game:GetService("GuiService")
+	pcall(function()
+		GuiService.SelectedObject = nil
+	end)
 	
 	-- Notify all systems of character removal
 	if Camera and Camera.onCharacterRemoving then

@@ -198,6 +198,8 @@ end
 
 function SprintService:startUpdateLoop()
 	local lastUpdateTime: { [number]: number } = {}
+	local lastSentStamina: { [number]: number } = {}
+	local lastSentSprinting: { [number]: boolean } = {}
 
 	RunService.Heartbeat:Connect(function(deltaTime)
 		for userId, state in pairs(self.sprintState) do
@@ -207,9 +209,16 @@ function SprintService:startUpdateLoop()
 
 				-- Throttle network updates (~10x per second)
 				lastUpdateTime[userId] = (lastUpdateTime[userId] or 0) + deltaTime
-				if lastUpdateTime[userId] >= 0.1 then
+				
+				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
+				local staminaChanged = math.abs((lastSentStamina[userId] or 0) - state.stamina) > 0.5
+				local sprintChanged = (lastSentSprinting[userId] ~= state.isSprinting)
+				
+				if lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then
 					self:sendStaminaUpdate(player)
 					lastUpdateTime[userId] = 0
+					lastSentStamina[userId] = state.stamina
+					lastSentSprinting[userId] = state.isSprinting
 				end
 			end
 		end

@@ -10,6 +10,7 @@ local GameConfig = {}
 -- Set to true to enable test and debug scripts
 -- WARNING: Should always be false in production
 GameConfig.DEBUG = false
+GameConfig.DEBUG_SPAWNS = false -- Enable spawn point visualization (Studio only)
 
 -- Player Settings
 GameConfig.MAX_PLAYERS = 8
