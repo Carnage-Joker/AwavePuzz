@@ -397,14 +397,25 @@ This game is built using:
 
 ### Documentation
 
+#### Core Documentation
+- **[README.md](README.md)** - This file - game overview and quick start
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
-- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
-- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ NEW: FPS system documentation and tuning guide
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
-- **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements documentation
-- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - 🆕 Project structure and organization guide
-- **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - 🆕 RemoteEvent reference with payload documentation
+
+#### Technical References
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference for all modules
+- **[CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md)** - Code organization and architectural decisions
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - Project structure and organization guide
+- **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - RemoteEvent reference with payload documentation
+
+#### System-Specific Documentation
+- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - FPS system documentation and tuning guide
+- **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - Weapon animation system guide
+- **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - Step-by-step animation creation tutorial
+- **[ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md)** - Quick reference for animation configuration
+- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - Puzzle mechanics, types, and integration guide
+- **[ZOMBIE_AI.md](ZOMBIE_AI.md)** - Zombie AI behavior and improvements documentation
 
 ### Project Structure
 
@@ -454,15 +465,7 @@ The game currently includes:
 
 ## 📚 Documentation
 
-For detailed information, see:
-- **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
-- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
-- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ FPS system documentation and tuning guide
-- **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - ✨ NEW: Weapon animation system guide
-- **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - ✨ NEW: Step-by-step animation creation tutorial
-- **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
-- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - Puzzle mechanics, types, and integration guide
+For detailed information, see the [Documentation](#documentation) section above for a complete list of guides and references.
 
 ## 🤔 Contributing
 
