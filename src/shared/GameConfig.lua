@@ -84,6 +84,12 @@ GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after roun
 GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
 GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
 
+-- Title Screen & Epilogue Settings
+GameConfig.SHOW_TITLE_SCREEN = true -- Show title screen on game start
+GameConfig.SHOW_EPILOGUE = true -- Show epilogue/intro cinematic
+GameConfig.EPILOGUE_SKIPPABLE = true -- Allow players to skip the epilogue
+GameConfig.TITLE_SCREEN_TIMEOUT = 30 -- Auto-continue after this many seconds if no input
+
 -- Tactical AI Settings
 GameConfig.AI = {
 	-- Targeting

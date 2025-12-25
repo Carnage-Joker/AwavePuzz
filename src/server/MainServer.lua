@@ -12,8 +12,9 @@ local AllianceService = require(script.Parent.AllianceService)
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
 local SprintService = require(script.Parent.SprintService)
+local AchievementService = require(script.Parent.AchievementService)
 
-print("=== AwavePuzz Server Starting ===")
+print("=== Aether Wave: Convergence Server Starting ===")
 
 ----------------------------------------------------------------
 -- Service initialisation
@@ -79,6 +80,11 @@ allianceService:setPlayerManager(playerManager)
 gameManager:setCureService(cureService)
 print("Services linked")
 
+-- Achievement service (needs PlayerManager and GameManager)
+local achievementService = AchievementService.new(playerManager, gameManager)
+gameManager:setAchievementService(achievementService)
+print("AchievementService initialized and linked")
+
 -- Setup cure stations
 local cureStationSetup = require(game.ReplicatedStorage.Shared.CureStationSetup)
 if not cureStationSetup then
@@ -100,6 +106,7 @@ Players.PlayerAdded:Connect(function(player)
 	puzzleService:initializePlayer(player)
 	sprintService:initializePlayer(player)
 	fpsWeaponService:initializePlayer(player)
+	achievementService:initializePlayer(player)
 
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
@@ -129,6 +136,7 @@ Players.PlayerRemoving:Connect(function(player)
 	allianceService:removePlayer(player)
 	sprintService:removePlayer(player)
 	fpsWeaponService:removePlayer(player)
+	achievementService:removePlayer(player)
 end)
 
 ----------------------------------------------------------------
