@@ -10,7 +10,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Load config to check debug flags
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 5)
-local GameConfig = SharedFolder and require(SharedFolder:FindFirstChild("GameConfig"))
+local GameConfig = nil
+if SharedFolder then
+	local configModule = SharedFolder:FindFirstChild("GameConfig")
+	if configModule then
+		local success, result = pcall(require, configModule)
+		if success then
+			GameConfig = result
+		end
+	end
+end
 
 -- Try to require visualizer from Tests folder only if in Studio and debug is enabled
 local SpawnPointVisualizer

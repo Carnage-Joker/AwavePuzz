@@ -214,7 +214,14 @@ function SprintService:startUpdateLoop()
 				lastUpdateTime[userId] = (lastUpdateTime[userId] or 0) + deltaTime
 				
 				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
-				local staminaChanged = math.abs((lastSentStamina[userId] or 0) - state.stamina) > self.STAMINA_UPDATE_THRESHOLD
+				local lastStamina = lastSentStamina[userId]
+				local staminaChanged = false
+				if lastStamina == nil then
+					-- First update for this player, always send
+					staminaChanged = true
+				else
+					staminaChanged = math.abs(lastStamina - state.stamina) > self.STAMINA_UPDATE_THRESHOLD
+				end
 				local sprintChanged = (lastSentSprinting[userId] ~= state.isSprinting)
 				
 				if lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then

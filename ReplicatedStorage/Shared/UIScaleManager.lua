@@ -417,11 +417,9 @@ function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
     local safeMin = math.max(1, minSize or 1)
     local safeMax = math.max(safeMin + 1, maxSize or textLabel.TextSize or DEFAULT_TEXT_SIZE)
     
-    -- Ensure min <= max
+    -- Ensure min <= max with Lua's multiple assignment
     if safeMin > safeMax then
-        local temp = safeMin
-        safeMin = safeMax
-        safeMax = temp
+        safeMin, safeMax = safeMax, safeMin
     end
     
     -- Enable TextScaled
@@ -429,6 +427,11 @@ function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
     
     -- Wait a frame for Roblox to create the UITextSizeConstraint automatically
     task.defer(function()
+        -- Validate textLabel still exists and has a parent
+        if not textLabel or not textLabel.Parent then
+            return
+        end
+        
         -- Find or create the constraint
         local constraint = textLabel:FindFirstChildOfClass("UITextSizeConstraint")
         if not constraint then
