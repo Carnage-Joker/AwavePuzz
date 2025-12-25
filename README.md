@@ -177,37 +177,56 @@ See [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) for complete FPS system documen
 
 ## 📁 Project Structure
 
+**✨ NEW: Repository restructured to match Roblox Studio layout!**
+
 ```
 AwavePuzz/
-├── src/
-│   ├── server/                    # Server-side game logic
-│   │   ├── GameManager.lua        # Main game controller
-│   │   ├── PlayerManager.lua      # Player data and health management
-│   │   ├── WaveManager.lua        # Wave spawning and progression
-│   │   ├── BaseManager.lua        # Base health and defense
-│   │   ├── WeaponService.lua      # Weapon system
-│   │   ├── FPSWeaponService.lua   # FPS ammo/reload validation
-│   │   └── ...                    # Other services
-│   ├── client/                    # Client-side UI and controls
-│   │   ├── FirstPersonCamera.client.lua      # FPS camera controller
-│   │   ├── FPSMovementController.client.lua  # Movement with crouch/sprint
-│   │   ├── FPSWeaponController.client.lua    # Weapon mechanics
-│   │   ├── FPSMenuController.client.lua      # Pause/settings menus
-│   │   ├── FPSAudioController.client.lua     # Sound management
-│   │   └── UI/
-│   │       ├── FPSHUD.client.lua             # Crosshair, ammo, hitmarkers
-│   │       ├── TitleScreenUI.client.lua      # ✨ NEW: Title screen
-│   │       ├── EpilogueUI.client.lua         # ✨ NEW: Story epilogue
-│   │       └── ...                           # Other UI scripts
-│   └── shared/                    # Shared modules
-│       ├── GameConfig.lua         # Game configuration
-│       ├── FPSConfig.lua          # FPS-specific configuration
-│       ├── StoryConfig.lua        # ✨ NEW: Story and narrative configuration
-│       └── ...                    # Other configs
-├── FPS_DOCUMENTATION.md           # FPS system documentation
+├── ServerScriptService/           # Server-side game logic
+│   ├── AI/                        # Zombie AI and controllers
+│   │   ├── ZombieBrain.lua        # Main zombie AI
+│   │   ├── AIDirector.lua         # AI behavior manager
+│   │   └── ...                    # Other AI systems
+│   ├── GameManager.lua            # Main game controller
+│   ├── PlayerManager.lua          # Player data and health management
+│   ├── WaveManager.lua            # Wave spawning and progression
+│   ├── WeaponService.lua          # Weapon system
+│   ├── FPSWeaponService.lua       # FPS ammo/reload validation
+│   └── ...                        # Other server services
+├── ReplicatedStorage/             # Shared resources
+│   ├── Shared/                    # Shared modules (configs, utils)
+│   │   ├── GameConfig.lua         # Game configuration
+│   │   ├── FPSConfig.lua          # FPS-specific configuration
+│   │   ├── WeaponConfig.lua       # Weapon definitions
+│   │   └── ...                    # Other shared configs
+│   ├── RemoteEvents/              # 🆕 RemoteEvent placeholders (58 files)
+│   └── Animations/                # 🆕 Animation placeholders (36 files)
+│       └── Weapons/               # Weapon-specific animations
+├── StarterPlayer/                 # Player initialization
+│   └── StarterPlayerScripts/      # Client-side controllers
+│       ├── Modules/               # Client modules
+│       │   ├── FPSWeaponController.lua    # Weapon mechanics
+│       │   ├── FPSMovement.lua            # Movement system
+│       │   └── UI/                        # UI modules
+│       └── FPS/                   # FPS camera system
+├── StarterGui/                    # 🆕 UI LocalScripts
+│   ├── FPSHUD.lua                 # Crosshair, ammo, hitmarkers
+│   ├── TitleScreenUI.lua          # Title screen
+│   ├── EpilogueUI.lua             # Story epilogue
+│   └── ...                        # Other UI scripts
+├── ServerStorage/                 # Server-only assets
+│   ├── Maps/                      # 🆕 Map models (placeholders)
+│   ├── Models/                    # 🆕 Weapon/object models (placeholders)
+│   └── ZombieModels/              # 🆕 Zombie models (placeholders)
+├── Archive/Legacy/Code/           # 🆕 Archived legacy code (3 levels deep)
+├── docs/                          # Documentation
+│   └── STRUCTURE.md               # ✨ UPDATED: Complete structure guide
+├── RESTRUCTURE_CHANGELOG.md       # 🆕 Restructure documentation
+├── ASSET_PLACEHOLDERS.md          # 🆕 Asset requirements guide
 ├── README.md
 └── LICENSE
 ```
+
+> **Note**: The repository now uses Roblox service names (ServerScriptService, ReplicatedStorage, etc.) to match the game structure exactly. See [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) for migration details.
 
 ## 📖 The Story: The Aether Wave
 
@@ -309,7 +328,7 @@ Or you can repeat history. The choice is yours.
 
 ## 🔧 Configuration
 
-All game settings can be adjusted in `src/shared/GameConfig.lua`:
+All game settings can be adjusted in `ReplicatedStorage/Shared/GameConfig.lua`:
 
 ```lua
 -- Debug & Testing
@@ -336,9 +355,11 @@ RESOURCE_SPAWN_RATE = 45
 MAX_RESOURCES_ON_MAP = 10
 ```
 
-**Note:** Test and debug scripts in `src/server/Tests/` will only run when `GameConfig.DEBUG = true`.
+**Note:** Test and debug scripts in `ServerStorage/DevOnly/` will only run when `GameConfig.DEBUG = true`.
 
 ## 🚀 Installation (Roblox Studio)
+
+**✨ NEW: Simplified installation with restructured repository!**
 
 For detailed setup instructions, see [INSTALLATION.md](INSTALLATION.md)
 
@@ -346,15 +367,25 @@ For detailed setup instructions, see [INSTALLATION.md](INSTALLATION.md)
 1. Clone this repository
 2. Open Roblox Studio
 3. Create a new place or open an existing one
-4. Copy scripts from `src/` folders to appropriate Roblox locations:
-   - `src/server/` → ServerScriptService
-   - `src/client/` → StarterPlayer.StarterPlayerScripts and StarterGui
-   - `src/shared/` → ReplicatedStorage/Shared
+4. Copy directories directly to Roblox Studio:
+   - `ServerScriptService/` → game.ServerScriptService
+   - `ReplicatedStorage/Shared/` → game.ReplicatedStorage.Shared
+   - `StarterPlayer/StarterPlayerScripts/` → game.StarterPlayer.StarterPlayerScripts
+   - `StarterGui/` scripts → game.StarterGui (as LocalScript instances)
 5. Set up the game environment (spawn points, base, etc.)
-6. Configure workspace folders (ZombieSpawnPoints, CureStations, etc.)
+6. Replace placeholder .txt files with actual assets (see [ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md))
 7. Test in multiplayer mode
 
-For complete step-by-step instructions, troubleshooting, and configuration options, refer to [INSTALLATION.md](INSTALLATION.md).
+**Repository Structure Changes:**
+- ✅ Directory names now match Roblox services exactly
+- ✅ No file reorganization needed during setup
+- ✅ Placeholder files for all required assets
+- ✅ Old `src/` structure archived in `Archive/Legacy/Code/`
+
+For complete step-by-step instructions, asset creation guides, and migration information, refer to:
+- [INSTALLATION.md](INSTALLATION.md) - Complete setup guide
+- [ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md) - Asset requirements
+- [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) - Migration guide
 
 ## 🎮 How to Play
 
@@ -398,28 +429,43 @@ This game is built using:
 ### Documentation
 
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
+- **[RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md)** - 🆕 Repository restructure documentation
+- **[ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md)** - 🆕 Asset requirements and creation guide
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - ✨ UPDATED: Project structure and organization guide
+- **[REMOTE_EVENTS.md](REMOTE_EVENTS.md)** - RemoteEvent reference with payload documentation
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - API reference and system interactions
-- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - ✨ NEW: FPS system documentation and tuning guide
+- **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - FPS system documentation and tuning guide
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
-- **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements documentation
-- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - 🆕 Project structure and organization guide
-- **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - 🆕 RemoteEvent reference with payload documentation
+- **[ZOMBIE_AI_IMPROVEMENTS.md](ZOMBIE_AI_IMPROVEMENTS.md)** - Zombie AI and animation improvements
 
 ### Project Structure
 
-The repository is organized into clear, logical sections:
+**✨ RESTRUCTURED:** Repository now matches Roblox Studio layout!
 
-- **`src/server/`** - Server-side game logic
-  - **`AI/`** - Artificial intelligence scripts (ZombieBrain)
-  - **`Tests/`** - Test and debug scripts (requires `GameConfig.DEBUG = true`)
-- **`src/client/`** - Client-side UI and controls
-  - **`UI/`** - User interface scripts
+The repository is organized to match Roblox Studio services exactly:
+
+- **`ServerScriptService/`** - Server-side game logic (was `src/server/`)
+  - **`AI/`** - Artificial intelligence scripts (ZombieBrain, AIDirector, etc.)
+- **`ReplicatedStorage/`** - Shared resources
+  - **`Shared/`** - Configuration and utility modules (was `src/shared/`)
+  - **`RemoteEvents/`** - 🆕 RemoteEvent placeholders (58 files)
+  - **`Animations/`** - 🆕 Animation placeholders (36 files)
+- **`StarterPlayer/StarterPlayerScripts/`** - Client-side controllers (was `src/client/`)
+  - **`Modules/`** - Client modules and UI
   - **`FPS/`** - First-person system modules
-- **`src/shared/`** - Shared configurations and utilities
-- **`docs/`** - 🆕 Project documentation
+- **`StarterGui/`** - 🆕 UI LocalScripts (was `src/client/UI/`)
+- **`ServerStorage/`** - Server-only assets
+  - **`Maps/`** - 🆕 Map models (placeholders)
+  - **`Models/`** - 🆕 Weapon/object models (placeholders)
+  - **`ZombieModels/`** - 🆕 Zombie models (placeholders)
+  - **`DevOnly/`** - Dev tools (requires `GameConfig.DEBUG = true`)
+- **`Archive/Legacy/Code/`** - 🆕 Archived legacy code (3 levels deep for safety)
+- **`docs/`** - Project documentation
 
-For detailed information about the project structure, naming conventions, and development guidelines, see [docs/STRUCTURE.md](docs/STRUCTURE.md).
+For detailed information about the restructure, naming conventions, and migration guide, see:
+- [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) - Complete restructure details
+- [docs/STRUCTURE.md](docs/STRUCTURE.md) - Structure reference
 
 ## 📝 License
 
@@ -446,8 +492,8 @@ The game currently includes:
 
 ## 🎮 FPS Controls & Configuration
 
-- The new first-person camera runs client-side (see `src/client/FPS/FirstPersonController.client.lua`).
-- Tune FOV, mouse sensitivity, smoothing, and head offsets in `src/shared/FPSConfig.lua`.
+- The first-person camera system is in `StarterPlayer/StarterPlayerScripts/FPS/FirstPersonCamera.lua`.
+- Tune FOV, mouse sensitivity, smoothing, and head offsets in `ReplicatedStorage/Shared/FPSConfig.lua`.
 - Mouse cursor is hidden and locked to center during play; Roblox shift-lock is suppressed.
 - Characters are locally hidden in first-person to reduce clipping—disable by setting `HideCharacterInFirstPerson` to `false` in the config.
 - To adjust how quickly the camera responds, tweak `MouseSensitivity` (base multiplier) and `MouseSmoothing` (higher values = more smoothing, slower response) in `FPSConfig`.
