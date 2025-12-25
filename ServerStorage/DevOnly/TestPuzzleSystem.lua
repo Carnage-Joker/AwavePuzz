@@ -1,3 +1,9 @@
+-- DEV/TEST SCRIPT - Only runs in Studio
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then
+return
+end
+
 -- TestPuzzleSystem.lua
 -- Simple test script to verify puzzle system structure
 -- This can be run in Roblox Studio Command Bar for quick testing

@@ -1,3 +1,9 @@
+-- DEV/TEST SCRIPT - Only runs in Studio
+local RunService = game:GetService("RunService")
+if not RunService:IsStudio() then
+return
+end
+
 -- SpawnPointVisualizer.lua
 -- Visualizes spawn points for debugging purposes
 -- Creates parts at spawn point locations to help verify placement
