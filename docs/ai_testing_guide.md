@@ -1,5 +1,13 @@
 # Zombie AI Testing Guide
 
+**Related Documentation:**
+- [ZOMBIE_AI.md](../ZOMBIE_AI.md) - Core zombie AI behavior
+- [ai_changes.md](ai_changes.md) - Advanced tactical AI details
+
+**For complete documentation index, see [DOCUMENTATION.md](../DOCUMENTATION.md)**
+
+---
+
 This guide provides step-by-step instructions for testing the new tactical AI system in Roblox Studio.
 
 ## Quick Start

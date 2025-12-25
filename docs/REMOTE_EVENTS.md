@@ -2,6 +2,8 @@
 
 This document lists all RemoteEvents used in AwavePuzz for client-server communication.
 
+**📖 For a complete documentation index, see [DOCUMENTATION.md](../DOCUMENTATION.md)**
+
 ## Overview
 
 All RemoteEvents are stored in `ReplicatedStorage/RemoteEvents/` and created using the `RemoteEventUtil` shared module.

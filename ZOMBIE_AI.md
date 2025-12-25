@@ -1,5 +1,14 @@
 # Zombie AI and Animation Improvements
 
+**Documentation Overview:**
+- This file: Core zombie AI behavior and basic improvements
+- [docs/ai_changes.md](docs/ai_changes.md): Advanced tactical AI system details
+- [docs/ai_testing_guide.md](docs/ai_testing_guide.md): Testing procedures for AI features
+
+**For complete documentation index, see [DOCUMENTATION.md](DOCUMENTATION.md)**
+
+---
+
 **Date**: 2025-11-23  
 **Version**: 1.1  
 **Status**: Implemented

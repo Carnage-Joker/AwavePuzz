@@ -5,6 +5,8 @@
 
 This document describes the organization and conventions of the AwavePuzz repository after the major restructure to match Roblox Studio's directory layout.
 
+**📖 For a complete documentation index, see [DOCUMENTATION.md](../DOCUMENTATION.md)**
+
 ## Overview
 
 AwavePuzz is a Roblox multiplayer zombie survival game with wave-based combat, cure-crafting puzzles, and alliance systems. The repository is now structured to **exactly mirror** the Roblox Studio game hierarchy for simplified development and installation.

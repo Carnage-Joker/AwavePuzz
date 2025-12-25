@@ -669,12 +669,13 @@ When ready to publish:
 ## Support
 
 For issues or questions:
-- Check the [API Documentation](API_DOCUMENTATION.md)
+- Check the complete documentation index: [DOCUMENTATION.md](DOCUMENTATION.md)
+- Review the [API Documentation](API_DOCUMENTATION.md)
 - Review the [Game Design Document](GAME_DESIGN.md)
 - Visit the GitHub repository issues page
 
 ---
 
 **Installation Guide Version**: 2.0  
-**Last Updated**: 2025-12-04  
+**Last Updated**: 2025-12-25  
 **Compatible with**: Roblox Studio (Latest)
