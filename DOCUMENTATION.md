@@ -115,6 +115,11 @@ Zombie AI behavior and improvements documentation:
 - Animation integration
 - Configuration options
 - Performance considerations
+- Tactical AI system overview
+
+For advanced AI features, see:
+- [docs/ai_changes.md](docs/ai_changes.md) - Detailed tactical AI implementation
+- [docs/ai_testing_guide.md](docs/ai_testing_guide.md) - Testing procedures for AI systems
 
 ### Communication and Data Flow
 

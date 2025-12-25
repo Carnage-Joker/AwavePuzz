@@ -1,5 +1,13 @@
 # Zombie AI Tactical Upgrades - Implementation Summary
 
+**Related Documentation:**
+- [ZOMBIE_AI.md](../ZOMBIE_AI.md) - Core zombie AI behavior
+- [ai_testing_guide.md](ai_testing_guide.md) - Testing procedures
+
+**For complete documentation index, see [DOCUMENTATION.md](../DOCUMENTATION.md)**
+
+---
+
 **Date**: 2025-12-17  
 **Version**: 2.0  
 **Status**: Implemented
