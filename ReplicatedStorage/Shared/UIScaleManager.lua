@@ -10,6 +10,14 @@
 
 local UIScaleManager = {}
 
+-- Constants
+local DEFAULT_TEXT_SIZE = 14 -- Default text size for UI elements
+local VALID_TEXT_ELEMENT_TYPES = {
+	TextLabel = true,
+	TextButton = true,
+	TextBox = true
+}
+
 -- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -399,14 +407,15 @@ end
 -- Utility: Safely enable TextScaled with proper constraints
 -- Ensures MinTextSize <= MaxTextSize to prevent Roblox warnings
 function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
-    if not textLabel or not textLabel:IsA("TextLabel") and not textLabel:IsA("TextButton") and not textLabel:IsA("TextBox") then
-        warn("[UIScaleManager] enableTextScaled called on invalid object")
+    -- Validate input is a text element
+    if not textLabel or not VALID_TEXT_ELEMENT_TYPES[textLabel.ClassName] then
+        warn("[UIScaleManager] enableTextScaled called on invalid object:", textLabel and textLabel.ClassName or "nil")
         return
     end
     
     -- Calculate safe min/max values
     local safeMin = math.max(1, minSize or 1)
-    local safeMax = math.max(safeMin + 1, maxSize or textLabel.TextSize or 14)
+    local safeMax = math.max(safeMin + 1, maxSize or textLabel.TextSize or DEFAULT_TEXT_SIZE)
     
     -- Ensure min <= max
     if safeMin > safeMax then
@@ -438,7 +447,7 @@ function UIScaleManager.fixTextSizeConstraints(guiObject)
     if not guiObject then return end
     
     for _, descendant in ipairs(guiObject:GetDescendants()) do
-        if (descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox")) and descendant.TextScaled then
+        if VALID_TEXT_ELEMENT_TYPES[descendant.ClassName] and descendant.TextScaled then
             local constraint = descendant:FindFirstChildOfClass("UITextSizeConstraint")
             if constraint then
                 local minSize = constraint.MinTextSize
@@ -450,7 +459,7 @@ function UIScaleManager.fixTextSizeConstraints(guiObject)
                     constraint.MaxTextSize = math.max(minSize, maxSize)
                 elseif maxSize <= 0 then
                     -- Max is invalid, set to TextSize or reasonable default
-                    constraint.MaxTextSize = math.max(descendant.TextSize, minSize + 1, 14)
+                    constraint.MaxTextSize = math.max(descendant.TextSize, minSize + 1, DEFAULT_TEXT_SIZE)
                 end
             end
         end

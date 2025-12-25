@@ -38,6 +38,9 @@ function SprintService.new(playerManager)
 		or 15
 
 	self.STAMINA_REGEN_DELAY = GameConfig.STAMINA_REGEN_DELAY or 1.0
+	
+	-- Threshold for sending stamina updates (prevent network spam)
+	self.STAMINA_UPDATE_THRESHOLD = GameConfig.STAMINA_UPDATE_THRESHOLD or 0.5
 
 	self:setupRemoteEvents()
 	self:startUpdateLoop()
@@ -211,7 +214,7 @@ function SprintService:startUpdateLoop()
 				lastUpdateTime[userId] = (lastUpdateTime[userId] or 0) + deltaTime
 				
 				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
-				local staminaChanged = math.abs((lastSentStamina[userId] or 0) - state.stamina) > 0.5
+				local staminaChanged = math.abs((lastSentStamina[userId] or 0) - state.stamina) > self.STAMINA_UPDATE_THRESHOLD
 				local sprintChanged = (lastSentSprinting[userId] ~= state.isSprinting)
 				
 				if lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then

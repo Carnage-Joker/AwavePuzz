@@ -27,6 +27,7 @@ GameConfig.STAMINA_DEPLETION_RATE = 20 -- Stamina lost per second while sprintin
 GameConfig.STAMINA_REGEN_RATE = 15 -- Stamina gained per second while not sprinting
 GameConfig.STAMINA_REGEN_DELAY = 1.0 -- Seconds to wait after stopping sprint before regen starts
 GameConfig.SPRINT_HOTKEY = "LeftShift" -- Key to hold for sprinting
+GameConfig.STAMINA_UPDATE_THRESHOLD = 0.5 -- Minimum stamina change to trigger network update
 
 -- Base Settings
 GameConfig.BASE_HEALTH = 1000
