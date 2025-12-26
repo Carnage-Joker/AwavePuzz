@@ -415,11 +415,16 @@ function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
     
     -- Calculate safe min/max values
     local safeMin = math.max(1, minSize or 1)
-    local safeMax = math.max(safeMin + 1, maxSize or textLabel.TextSize or DEFAULT_TEXT_SIZE)
+    local safeMax = maxSize or textLabel.TextSize or DEFAULT_TEXT_SIZE
     
     -- Ensure min <= max with Lua's multiple assignment
     if safeMin > safeMax then
         safeMin, safeMax = safeMax, safeMin
+    end
+    
+    -- Ensure max is at least slightly larger than min to avoid tight constraints
+    if safeMax <= safeMin then
+        safeMax = safeMin + 1
     end
     
     -- Enable TextScaled
