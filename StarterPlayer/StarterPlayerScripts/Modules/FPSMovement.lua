@@ -298,12 +298,13 @@ if staminaUpdateEvent then
 			currentStamina = data.current or currentStamina
 			maxStamina = data.max or maxStamina
 
-			-- Tell the HUD via bindable
+			-- Tell the HUD via bindable (forward all data including isSprinting)
 			local staminaBindable = FPSMovementController._staminaBindable
 			if staminaBindable then
 				staminaBindable:Fire({
 					current = currentStamina,
 					max = maxStamina,
+					isSprinting = data.isSprinting,
 				})
 			end
 		end

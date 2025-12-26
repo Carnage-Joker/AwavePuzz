@@ -38,6 +38,9 @@ function SprintService.new(playerManager)
 		or 15
 
 	self.STAMINA_REGEN_DELAY = GameConfig.STAMINA_REGEN_DELAY or 1.0
+	
+	-- Threshold for sending stamina updates (prevent network spam)
+	self.STAMINA_UPDATE_THRESHOLD = GameConfig.STAMINA_UPDATE_THRESHOLD or 0.5
 
 	self:setupRemoteEvents()
 	self:startUpdateLoop()
@@ -81,7 +84,19 @@ function SprintService:initializePlayer(player)
 end
 
 function SprintService:removePlayer(player)
-	self.sprintState[player.UserId] = nil
+	local userId = player.UserId
+	self.sprintState[userId] = nil
+	
+	-- Clean up tracking tables to prevent memory leak
+	if self.lastUpdateTime then
+		self.lastUpdateTime[userId] = nil
+	end
+	if self.lastSentStamina then
+		self.lastSentStamina[userId] = nil
+	end
+	if self.lastSentSprinting then
+		self.lastSentSprinting[userId] = nil
+	end
 end
 
 function SprintService:onCharacterAdded(player, _character)
@@ -197,7 +212,10 @@ function SprintService:sendStaminaUpdate(player)
 end
 
 function SprintService:startUpdateLoop()
-	local lastUpdateTime: { [number]: number } = {}
+	-- Store tracking tables on self for cleanup in removePlayer
+	self.lastUpdateTime = {}
+	self.lastSentStamina = {}
+	self.lastSentSprinting = {}
 
 	RunService.Heartbeat:Connect(function(deltaTime)
 		for userId, state in pairs(self.sprintState) do
@@ -206,10 +224,28 @@ function SprintService:startUpdateLoop()
 				self:updatePlayerSprint(player, state, deltaTime)
 
 				-- Throttle network updates (~10x per second)
-				lastUpdateTime[userId] = (lastUpdateTime[userId] or 0) + deltaTime
-				if lastUpdateTime[userId] >= 0.1 then
+				self.lastUpdateTime[userId] = (self.lastUpdateTime[userId] or 0) + deltaTime
+				
+				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
+				local lastStamina = self.lastSentStamina[userId]
+				local lastSprint = self.lastSentSprinting[userId]
+				local staminaChanged = false
+				local sprintChanged = false
+				
+				-- First update for this player: treat both stamina and sprint as changed
+				if lastStamina == nil or lastSprint == nil then
+					staminaChanged = true
+					sprintChanged = true
+				else
+					staminaChanged = math.abs(lastStamina - state.stamina) > self.STAMINA_UPDATE_THRESHOLD
+					sprintChanged = (lastSprint ~= state.isSprinting)
+				end
+				
+				if self.lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then
 					self:sendStaminaUpdate(player)
-					lastUpdateTime[userId] = 0
+					self.lastUpdateTime[userId] = 0
+					self.lastSentStamina[userId] = state.stamina
+					self.lastSentSprinting[userId] = state.isSprinting
 				end
 			end
 		end

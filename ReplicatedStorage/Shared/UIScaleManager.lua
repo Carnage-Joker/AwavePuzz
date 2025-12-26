@@ -10,6 +10,14 @@
 
 local UIScaleManager = {}
 
+-- Constants
+local DEFAULT_TEXT_SIZE = 14 -- Default text size for UI elements
+local VALID_TEXT_ELEMENT_TYPES = {
+	TextLabel = true,
+	TextButton = true,
+	TextBox = true
+}
+
 -- Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -394,6 +402,76 @@ function UIScaleManager.createScaledTextLabel(name, options)
     end
     
     return label
+end
+
+-- Utility: Safely enable TextScaled with proper constraints
+-- Ensures MinTextSize <= MaxTextSize to prevent Roblox warnings
+function UIScaleManager.enableTextScaled(textLabel, minSize, maxSize)
+    -- Validate input is a text element
+    if not textLabel or not VALID_TEXT_ELEMENT_TYPES[textLabel.ClassName] then
+        warn("[UIScaleManager] enableTextScaled called on invalid object:", textLabel and textLabel.ClassName or "nil")
+        return
+    end
+    
+    -- Calculate safe min/max values
+    local safeMin = math.max(1, minSize or 1)
+    local safeMax = maxSize or textLabel.TextSize or DEFAULT_TEXT_SIZE
+    
+    -- Ensure min <= max with Lua's multiple assignment
+    if safeMin > safeMax then
+        safeMin, safeMax = safeMax, safeMin
+    end
+    
+    -- Ensure max is at least slightly larger than min to avoid tight constraints
+    if safeMax <= safeMin then
+        safeMax = safeMin + 1
+    end
+    
+    -- Enable TextScaled
+    textLabel.TextScaled = true
+    
+    -- Wait a frame for Roblox to create the UITextSizeConstraint automatically
+    task.defer(function()
+        -- Validate textLabel still exists and has a parent
+        if not textLabel or not textLabel.Parent then
+            return
+        end
+        
+        -- Find or create the constraint
+        local constraint = textLabel:FindFirstChildOfClass("UITextSizeConstraint")
+        if not constraint then
+            constraint = Instance.new("UITextSizeConstraint")
+            constraint.Parent = textLabel
+        end
+        
+        -- Set safe values
+        constraint.MinTextSize = safeMin
+        constraint.MaxTextSize = safeMax
+    end)
+end
+
+-- Utility: Fix existing TextScaled elements that may have invalid constraints
+function UIScaleManager.fixTextSizeConstraints(guiObject)
+    if not guiObject then return end
+    
+    for _, descendant in ipairs(guiObject:GetDescendants()) do
+        if VALID_TEXT_ELEMENT_TYPES[descendant.ClassName] and descendant.TextScaled then
+            local constraint = descendant:FindFirstChildOfClass("UITextSizeConstraint")
+            if constraint then
+                local minSize = constraint.MinTextSize
+                local maxSize = constraint.MaxTextSize
+                
+                -- Fix if inverted
+                if minSize > maxSize and maxSize > 0 then
+                    constraint.MinTextSize = math.min(minSize, maxSize)
+                    constraint.MaxTextSize = math.max(minSize, maxSize)
+                elseif maxSize <= 0 then
+                    -- Max is invalid, set to TextSize or reasonable default
+                    constraint.MaxTextSize = math.max(descendant.TextSize, minSize + 1, DEFAULT_TEXT_SIZE)
+                end
+            end
+        end
+    end
 end
 
 return UIScaleManager

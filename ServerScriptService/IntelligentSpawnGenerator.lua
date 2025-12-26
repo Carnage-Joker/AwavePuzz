@@ -5,14 +5,44 @@
 local Workspace = game:GetService("Workspace")
 local Terrain = workspace:FindFirstChildOfClass("Terrain")
 local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Try to require visualizer from Tests folder, but don't fail if it doesn't exist or DEBUG is off
+-- Load config to check debug flags
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 5)
+local GameConfig = nil
+if SharedFolder then
+	local configModule = SharedFolder:FindFirstChild("GameConfig")
+	if configModule then
+		local success, result = pcall(require, configModule)
+		if success then
+			GameConfig = result
+		end
+	end
+end
+
+-- Try to require visualizer from Tests folder only if in Studio and debug is enabled
 local SpawnPointVisualizer
-local success, err = pcall(function()
-	SpawnPointVisualizer = require(script.Parent.Tests.SpawnPointVisualizer)
-end)
-if not success then
-	print("[SpawnGenerator] Visualizer not available:", err)
+local debugEnabled = GameConfig and (GameConfig.DEBUG or GameConfig.DEBUG_SPAWNS)
+local isStudio = RunService:IsStudio()
+
+if isStudio and debugEnabled then
+	local success, result = pcall(function()
+		local testsFolder = script.Parent:FindFirstChild("Tests")
+		if testsFolder then
+			local visualizerModule = testsFolder:FindFirstChild("SpawnPointVisualizer")
+			if visualizerModule then
+				return require(visualizerModule)
+			end
+		end
+		return nil
+	end)
+	
+	if success and result then
+		SpawnPointVisualizer = result
+		print("[SpawnGenerator] Debug visualizer loaded")
+	end
+	-- No error message if visualizer not found - it's purely optional
 end
 
 local IntelligentSpawnGenerator = {}

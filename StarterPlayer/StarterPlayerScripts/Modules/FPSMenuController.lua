@@ -7,6 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -554,6 +555,11 @@ function FPSMenuController.closeMenu()
 	isMenuOpen = false
 	isPaused = false
 	currentMenuType = nil
+	
+	-- Clear GuiService selection to prevent warnings
+	pcall(function()
+		GuiService.SelectedObject = nil
+	end)
 	
 	-- Lock mouse again
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
