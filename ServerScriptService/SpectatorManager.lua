@@ -46,10 +46,13 @@ local function makeCharacterInvisible(character)
 		end
 	end
 	
-	-- Remove any accessories/effects that might still be visible
+	-- Make accessories invisible but don't destroy them
 	for _, child in ipairs(character:GetChildren()) do
 		if child:IsA("Accessory") then
-			child:Destroy()
+			local handle = child:FindFirstChild("Handle")
+			if handle and handle:IsA("BasePart") then
+				handle.Transparency = 1
+			end
 		end
 	end
 end
@@ -69,9 +72,22 @@ local function makeCharacterVisible(character)
 			else
 				descendant.Transparency = 0
 			end
-			descendant.CanCollide = true
+			-- Only restore collision for main body parts, not accessories
+			if descendant.Parent == character then
+				descendant.CanCollide = true
+			end
 		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
 			descendant.Transparency = 0
+		end
+	end
+	
+	-- Restore accessory visibility
+	for _, child in ipairs(character:GetChildren()) do
+		if child:IsA("Accessory") then
+			local handle = child:FindFirstChild("Handle")
+			if handle and handle:IsA("BasePart") then
+				handle.Transparency = 0
+			end
 		end
 	end
 end
