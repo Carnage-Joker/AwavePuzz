@@ -153,6 +153,38 @@ UIScaleManager.onScaleChanged(updateUIScaling)
 
 local catalogCache = {}
 local debounce = false
+local selectedItemIndex = 1
+local shopItems = {} -- Track shop item buttons for keyboard navigation
+
+local function updateItemSelection()
+	-- Update visual indication of selected item
+	for i, button in ipairs(shopItems) do
+		if i == selectedItemIndex then
+			button.BackgroundColor3 = Color3.fromRGB(80, 120, 200) -- Highlight selected
+			button.BorderSizePixel = 2
+			button.BorderColor3 = Color3.fromRGB(150, 200, 255)
+		else
+			button.BackgroundColor3 = Color3.fromRGB(45, 45, 45) -- Normal
+			button.BorderSizePixel = 0
+		end
+	end
+	
+	-- Scroll to selected item if needed
+	if #shopItems > 0 and shopItems[selectedItemIndex] then
+		local selectedButton = shopItems[selectedItemIndex]
+		local buttonPos = selectedButton.AbsolutePosition.Y - list.AbsolutePosition.Y
+		local listHeight = list.AbsoluteSize.Y
+		local canvasPos = list.CanvasPosition.Y
+		
+		-- Scroll down if item is below visible area
+		if buttonPos + selectedButton.AbsoluteSize.Y > canvasPos + listHeight then
+			list.CanvasPosition = Vector2.new(0, buttonPos + selectedButton.AbsoluteSize.Y - listHeight)
+		-- Scroll up if item is above visible area
+		elseif buttonPos < canvasPos then
+			list.CanvasPosition = Vector2.new(0, buttonPos)
+		end
+	end
+end
 
 local function updateCanvasSize()
 	list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
@@ -167,6 +199,10 @@ local function rebuildList(items)
 			child:Destroy()
 		end
 	end
+	
+	-- Clear shop items array
+	shopItems = {}
+	selectedItemIndex = 1
 
 	for _, item in ipairs(items) do
 		local button = Instance.new("TextButton")
@@ -184,6 +220,9 @@ local function rebuildList(items)
 		button.Text = string.format("%s\n$%d - %s", idText, price, desc)
 		button.AutoButtonColor = true
 		button.Parent = list
+		
+		-- Store button and item data
+		table.insert(shopItems, button)
 
 		button.MouseButton1Click:Connect(function()
 			if debounce then return end
@@ -200,6 +239,11 @@ local function rebuildList(items)
 	end
 
 	updateCanvasSize()
+	
+	-- Update selection visuals
+	if #shopItems > 0 then
+		updateItemSelection()
+	end
 end
 
 shopUpdate.OnClientEvent:Connect(function(payload)
@@ -211,7 +255,7 @@ shopUpdate.OnClientEvent:Connect(function(payload)
 		catalogCache = payload.items or {}
 		rebuildList(catalogCache)
 		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-		statusLabel.Text = "Select an item to purchase"
+		statusLabel.Text = "↑/↓ or W/S: Navigate • Enter: Purchase • Esc: Close"
 	elseif payload.type == "result" then
 		local success = payload.success == true
 		statusLabel.TextColor3 = success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
@@ -240,5 +284,25 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 		screenGui.Enabled = false
 		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 		statusLabel.Text = "Press B to toggle shop"
+	elseif screenGui.Enabled and #shopItems > 0 then
+		-- Keyboard navigation when shop is open
+		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
+			selectedItemIndex = selectedItemIndex - 1
+			if selectedItemIndex < 1 then
+				selectedItemIndex = #shopItems
+			end
+			updateItemSelection()
+		elseif input.KeyCode == Enum.KeyCode.Down or input.KeyCode == Enum.KeyCode.S then
+			selectedItemIndex = selectedItemIndex + 1
+			if selectedItemIndex > #shopItems then
+				selectedItemIndex = 1
+			end
+			updateItemSelection()
+		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
+			-- Trigger purchase of selected item
+			if shopItems[selectedItemIndex] then
+				shopItems[selectedItemIndex].MouseButton1Click:Fire()
+			end
+		end
 	end
 end)
