@@ -83,6 +83,7 @@ function SpectatorManager.new()
 	self.deadPlayers = {}   -- userId -> true
 	self._cycleCooldown = {}-- userId -> lastCycleTime
 	self._roundActive = false
+	self._characterConnections = {} -- userId -> RBXScriptConnection (for CharacterAdded)
 
 	self.remoteEvents = {}
 	self:_setupRemoteEvents()
@@ -135,6 +136,7 @@ function SpectatorManager:startRound()
 	self.deadPlayers = {}
 	self.spectators = {}
 	self._cycleCooldown = {}
+	self._characterConnections = {}
 end
 
 -- Call at round end
@@ -150,10 +152,18 @@ function SpectatorManager:endRound()
 			end
 		end
 	end
+	
+	-- Disconnect all character connections
+	for userId, connection in pairs(self._characterConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
 
 	self.spectators = {}
 	self.deadPlayers = {}
 	self._cycleCooldown = {}
+	self._characterConnections = {}
 end
 
 -- Optional helper: call when you spawn/respawn players during a round
@@ -221,7 +231,12 @@ function SpectatorManager:onPlayerDied(player)
 		applySpectatorState(player.Character)
 	end
 
-	player.CharacterAdded:Connect(function(newCharacter)
+	-- Store the connection so we can disconnect it later
+	if self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+	end
+	
+	self._characterConnections[player.UserId] = player.CharacterAdded:Connect(function(newCharacter)
 		applySpectatorState(newCharacter)
 	end)
 	
@@ -373,6 +388,12 @@ function SpectatorManager:onPlayerLeave(player)
 
 	-- If leaver was alive, spectators may be targeting them
 	self:onSpectatorTargetDied(player.UserId)
+	
+	-- Disconnect character connection if exists
+	if self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+		self._characterConnections[player.UserId] = nil
+	end
 
 	self.spectators[player.UserId] = nil
 	self.deadPlayers[player.UserId] = nil
@@ -403,18 +424,26 @@ end
 
 -- Reset method for GameManager to call when starting a new round
 function SpectatorManager:reset()
-	-- Clear all spectator and dead player data
-	self.spectators = {}
-	self.deadPlayers = {}
-	self._cycleCooldown = {}
-	self._roundActive = false
-	
-	-- Exit any remaining spectators (in case any are stuck)
+	-- Exit any remaining spectators BEFORE clearing the data
 	for _, player in ipairs(Players:GetPlayers()) do
 		if self:isSpectating(player) then
 			self:exitSpectatorMode(player)
 		end
 	end
+	
+	-- Disconnect all character connections
+	for userId, connection in pairs(self._characterConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	
+	-- Clear all spectator and dead player data
+	self.spectators = {}
+	self.deadPlayers = {}
+	self._cycleCooldown = {}
+	self._characterConnections = {}
+	self._roundActive = false
 	
 	print("[SpectatorManager] Reset for new round")
 end
