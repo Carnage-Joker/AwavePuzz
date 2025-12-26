@@ -229,6 +229,15 @@ end
 
 closeButton.MouseButton1Click:Connect(closePuzzle)
 
+-- Add Escape key handler to close puzzle
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.Escape and puzzleFrame.Visible then
+		closePuzzle()
+	end
+end)
+
 -- Update timer
 local function updateTimer()
 	if not currentPuzzle or not currentPuzzle.timeLimit then

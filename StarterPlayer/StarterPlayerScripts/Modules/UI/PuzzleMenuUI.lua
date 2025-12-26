@@ -100,6 +100,15 @@ closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
 end)
 
+-- Add Escape key handler to close menu
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.Escape and menuFrame.Visible then
+		menuFrame.Visible = false
+	end
+end)
+
 -- Instructions
 local instructionLabel = Instance.new("TextLabel")
 instructionLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))

@@ -235,5 +235,10 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 			statusLabel.Text = "Press B to toggle shop"
 		end
+	elseif input.KeyCode == Enum.KeyCode.Escape and screenGui.Enabled then
+		-- Allow Escape key to close the shop
+		screenGui.Enabled = false
+		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+		statusLabel.Text = "Press B to toggle shop"
 	end
 end)
