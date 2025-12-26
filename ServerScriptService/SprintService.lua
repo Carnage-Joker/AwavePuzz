@@ -84,7 +84,19 @@ function SprintService:initializePlayer(player)
 end
 
 function SprintService:removePlayer(player)
-	self.sprintState[player.UserId] = nil
+	local userId = player.UserId
+	self.sprintState[userId] = nil
+	
+	-- Clean up tracking tables to prevent memory leak
+	if self.lastUpdateTime then
+		self.lastUpdateTime[userId] = nil
+	end
+	if self.lastSentStamina then
+		self.lastSentStamina[userId] = nil
+	end
+	if self.lastSentSprinting then
+		self.lastSentSprinting[userId] = nil
+	end
 end
 
 function SprintService:onCharacterAdded(player, _character)
@@ -200,9 +212,10 @@ function SprintService:sendStaminaUpdate(player)
 end
 
 function SprintService:startUpdateLoop()
-	local lastUpdateTime: { [number]: number } = {}
-	local lastSentStamina: { [number]: number } = {}
-	local lastSentSprinting: { [number]: boolean } = {}
+	-- Store tracking tables on self for cleanup in removePlayer
+	self.lastUpdateTime = {}
+	self.lastSentStamina = {}
+	self.lastSentSprinting = {}
 
 	RunService.Heartbeat:Connect(function(deltaTime)
 		for userId, state in pairs(self.sprintState) do
@@ -211,11 +224,11 @@ function SprintService:startUpdateLoop()
 				self:updatePlayerSprint(player, state, deltaTime)
 
 				-- Throttle network updates (~10x per second)
-				lastUpdateTime[userId] = (lastUpdateTime[userId] or 0) + deltaTime
+				self.lastUpdateTime[userId] = (self.lastUpdateTime[userId] or 0) + deltaTime
 				
 				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
-				local lastStamina = lastSentStamina[userId]
-				local lastSprint = lastSentSprinting[userId]
+				local lastStamina = self.lastSentStamina[userId]
+				local lastSprint = self.lastSentSprinting[userId]
 				local staminaChanged = false
 				local sprintChanged = false
 				
@@ -228,11 +241,11 @@ function SprintService:startUpdateLoop()
 					sprintChanged = (lastSprint ~= state.isSprinting)
 				end
 				
-				if lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then
+				if self.lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then
 					self:sendStaminaUpdate(player)
-					lastUpdateTime[userId] = 0
-					lastSentStamina[userId] = state.stamina
-					lastSentSprinting[userId] = state.isSprinting
+					self.lastUpdateTime[userId] = 0
+					self.lastSentStamina[userId] = state.stamina
+					self.lastSentSprinting[userId] = state.isSprinting
 				end
 			end
 		end
