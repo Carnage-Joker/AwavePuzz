@@ -613,6 +613,12 @@ function GameManager:startWave()
 	end
 
 	print("Starting Wave " .. self.currentWave)
+	
+	-- Start spectator tracking for this round (first wave only)
+	if self.currentWave == 1 then
+		self.spectatorManager:startRound()
+		print("[GameManager] Spectator mode enabled for this round")
+	end
 
 	self:setState(GameManager.States.WAVE_ACTIVE)
 	self.waveTimeLimit = waveData.TimeLimit

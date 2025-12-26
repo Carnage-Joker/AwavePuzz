@@ -6,6 +6,7 @@
 -- - Player cycling with Q/E or A/D keys and UI buttons
 -- - Third-person camera view for spectating
 -- - Spectators are invisible to zombies (via IsSpectating attribute)
+-- - Dead players are made invisible to all other players
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,6 +30,50 @@ end
 local function isPlayerAlive(player)
 	local hum = getHumanoid(player)
 	return hum and hum.Health > 0
+end
+
+-- Helper function to make a character invisible for spectating
+local function makeCharacterInvisible(character)
+	if not character then return end
+	
+	-- Make all parts transparent
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.Transparency = 1
+			descendant.CanCollide = false
+		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+			descendant.Transparency = 1
+		end
+	end
+	
+	-- Remove any accessories/effects that might still be visible
+	for _, child in ipairs(character:GetChildren()) do
+		if child:IsA("Accessory") then
+			child:Destroy()
+		end
+	end
+end
+
+-- Helper function to restore character visibility
+local function makeCharacterVisible(character)
+	if not character then return end
+	
+	-- Restore visibility for all parts
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			-- Restore default transparency (Head is 0, other parts vary)
+			if descendant.Name == "Head" then
+				descendant.Transparency = 0
+			elseif descendant.Name == "HumanoidRootPart" then
+				descendant.Transparency = 1 -- Keep HRP transparent by default
+			else
+				descendant.Transparency = 0
+			end
+			descendant.CanCollide = true
+		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+			descendant.Transparency = 0
+		end
+	end
 end
 
 function SpectatorManager.new()
@@ -165,19 +210,21 @@ function SpectatorManager:onPlayerDied(player)
 	-- Mark player as spectating with an attribute for zombie AI to ignore
 	-- Ensure that if the character respawns while the player is still dead,
 	-- the IsSpectating attribute is re-applied to the new character.
-	local function applySpectatorAttribute(character)
+	local function applySpectatorState(character)
 		if self.deadPlayers[player.UserId] and character then
 			character:SetAttribute("IsSpectating", true)
+			makeCharacterInvisible(character)
 		end
 	end
 
 	if player.Character then
-		applySpectatorAttribute(player.Character)
+		applySpectatorState(player.Character)
 	end
 
 	player.CharacterAdded:Connect(function(newCharacter)
-		applySpectatorAttribute(newCharacter)
+		applySpectatorState(newCharacter)
 	end)
+	
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
 		targetUserId = target and target.UserId or nil,
@@ -200,9 +247,10 @@ function SpectatorManager:exitSpectatorMode(player)
 		data.spectatorActive = false
 	end
 	
-	-- Remove spectating attribute
+	-- Remove spectating attribute and restore visibility
 	if player.Character then
 		player.Character:SetAttribute("IsSpectating", false)
+		makeCharacterVisible(player.Character)
 	end
 
 	self.remoteEvents.ExitSpectatorMode:FireClient(player, {})
