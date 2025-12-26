@@ -269,6 +269,12 @@ function SpectatorManager:exitSpectatorMode(player)
 	if data then
 		data.spectatorActive = false
 	end
+
+	-- Disconnect any CharacterAdded connection used for applying spectator state
+	if self._characterConnections and self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+		self._characterConnections[player.UserId] = nil
+	end
 	
 	-- Remove spectating attribute and restore visibility
 	if player.Character then
