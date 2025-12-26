@@ -6,6 +6,7 @@
 -- - Player cycling with Q/E or A/D keys and UI buttons
 -- - Third-person camera view for spectating
 -- - Spectators are invisible to zombies (via IsSpectating attribute)
+-- - Dead players are made invisible to all other players
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,6 +32,74 @@ local function isPlayerAlive(player)
 	return hum and hum.Health > 0
 end
 
+-- Helper function to make a character invisible for spectating
+-- Returns a table of original properties for restoration
+local function makeCharacterInvisible(character)
+	if not character then return nil end
+	
+	local originalProperties = {}
+	
+	-- Make all parts and accessories transparent and disable collision
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			-- Store original transparency and collision state
+			originalProperties[descendant] = {
+				Transparency = descendant.Transparency,
+				CanCollide = descendant.CanCollide
+			}
+			descendant.Transparency = 1
+			descendant.CanCollide = false
+		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+			-- Store original transparency
+			originalProperties[descendant] = {
+				Transparency = descendant.Transparency
+			}
+			descendant.Transparency = 1
+		end
+	end
+	
+	return originalProperties
+end
+
+-- Helper function to restore character visibility
+-- Uses stored properties if available, otherwise falls back to defaults
+local function makeCharacterVisible(character, originalProperties)
+	if not character then return end
+	
+	if originalProperties then
+		-- Restore from stored properties
+		for descendant, props in pairs(originalProperties) do
+			if descendant and descendant.Parent then
+				for propName, propValue in pairs(props) do
+					if pcall(function() return descendant[propName] end) then
+						pcall(function() descendant[propName] = propValue end)
+					end
+				end
+			end
+		end
+	else
+		-- Fallback: Use default restoration logic
+		for _, descendant in ipairs(character:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				-- Restore default transparency
+				if descendant.Name == "Head" then
+					descendant.Transparency = 0
+				elseif descendant.Name == "HumanoidRootPart" then
+					descendant.Transparency = 1
+				else
+					descendant.Transparency = 0
+				end
+				-- Restore collision for body parts only
+				if descendant.Parent == character then
+					descendant.CanCollide = true
+				end
+			elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
+				descendant.Transparency = 0
+			end
+		end
+	end
+end
+
 function SpectatorManager.new()
 	local self = setmetatable({}, SpectatorManager)
 
@@ -38,6 +107,8 @@ function SpectatorManager.new()
 	self.deadPlayers = {}   -- userId -> true
 	self._cycleCooldown = {}-- userId -> lastCycleTime
 	self._roundActive = false
+	self._characterConnections = {} -- userId -> RBXScriptConnection (for CharacterAdded)
+	self._originalProperties = {} -- userId -> originalProperties table for restoration
 
 	self.remoteEvents = {}
 	self:_setupRemoteEvents()
@@ -90,6 +161,8 @@ function SpectatorManager:startRound()
 	self.deadPlayers = {}
 	self.spectators = {}
 	self._cycleCooldown = {}
+	self._characterConnections = {}
+	self._originalProperties = {}
 end
 
 -- Call at round end
@@ -105,10 +178,19 @@ function SpectatorManager:endRound()
 			end
 		end
 	end
+	
+	-- Disconnect all character connections
+	for userId, connection in pairs(self._characterConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
 
 	self.spectators = {}
 	self.deadPlayers = {}
 	self._cycleCooldown = {}
+	self._characterConnections = {}
+	self._originalProperties = {}
 end
 
 -- Optional helper: call when you spawn/respawn players during a round
@@ -165,19 +247,30 @@ function SpectatorManager:onPlayerDied(player)
 	-- Mark player as spectating with an attribute for zombie AI to ignore
 	-- Ensure that if the character respawns while the player is still dead,
 	-- the IsSpectating attribute is re-applied to the new character.
-	local function applySpectatorAttribute(character)
+	local function applySpectatorState(character)
 		if self.deadPlayers[player.UserId] and character then
 			character:SetAttribute("IsSpectating", true)
+			-- Store original properties and make invisible
+			local originalProps = makeCharacterInvisible(character)
+			if originalProps then
+				self._originalProperties[player.UserId] = originalProps
+			end
 		end
 	end
 
 	if player.Character then
-		applySpectatorAttribute(player.Character)
+		applySpectatorState(player.Character)
 	end
 
-	player.CharacterAdded:Connect(function(newCharacter)
-		applySpectatorAttribute(newCharacter)
+	-- Store the connection so we can disconnect it later
+	if self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+	end
+	
+	self._characterConnections[player.UserId] = player.CharacterAdded:Connect(function(newCharacter)
+		applySpectatorState(newCharacter)
 	end)
+	
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
 		targetUserId = target and target.UserId or nil,
@@ -199,10 +292,21 @@ function SpectatorManager:exitSpectatorMode(player)
 	if data then
 		data.spectatorActive = false
 	end
+
+	-- Disconnect any CharacterAdded connection used for applying spectator state
+	if self._characterConnections and self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+		self._characterConnections[player.UserId] = nil
+	end
 	
-	-- Remove spectating attribute
+	-- Remove spectating attribute and restore visibility
 	if player.Character then
 		player.Character:SetAttribute("IsSpectating", false)
+		-- Restore with original properties if available
+		local originalProps = self._originalProperties[player.UserId]
+		makeCharacterVisible(player.Character, originalProps)
+		-- Clear stored properties
+		self._originalProperties[player.UserId] = nil
 	end
 
 	self.remoteEvents.ExitSpectatorMode:FireClient(player, {})
@@ -325,10 +429,17 @@ function SpectatorManager:onPlayerLeave(player)
 
 	-- If leaver was alive, spectators may be targeting them
 	self:onSpectatorTargetDied(player.UserId)
+	
+	-- Disconnect character connection if exists
+	if self._characterConnections[player.UserId] then
+		self._characterConnections[player.UserId]:Disconnect()
+		self._characterConnections[player.UserId] = nil
+	end
 
 	self.spectators[player.UserId] = nil
 	self.deadPlayers[player.UserId] = nil
 	self._cycleCooldown[player.UserId] = nil
+	self._originalProperties[player.UserId] = nil
 
 	self:broadcastAliveList()
 end
@@ -355,18 +466,27 @@ end
 
 -- Reset method for GameManager to call when starting a new round
 function SpectatorManager:reset()
-	-- Clear all spectator and dead player data
-	self.spectators = {}
-	self.deadPlayers = {}
-	self._cycleCooldown = {}
-	self._roundActive = false
-	
-	-- Exit any remaining spectators (in case any are stuck)
+	-- Exit any remaining spectators BEFORE clearing the data
 	for _, player in ipairs(Players:GetPlayers()) do
 		if self:isSpectating(player) then
 			self:exitSpectatorMode(player)
 		end
 	end
+	
+	-- Disconnect all character connections
+	for userId, connection in pairs(self._characterConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	
+	-- Clear all spectator and dead player data
+	self.spectators = {}
+	self.deadPlayers = {}
+	self._cycleCooldown = {}
+	self._characterConnections = {}
+	self._originalProperties = {}
+	self._roundActive = false
 	
 	print("[SpectatorManager] Reset for new round")
 end
