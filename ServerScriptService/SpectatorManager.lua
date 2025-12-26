@@ -36,23 +36,13 @@ end
 local function makeCharacterInvisible(character)
 	if not character then return end
 	
-	-- Make all parts transparent
+	-- Make all parts and accessories transparent and disable collision
 	for _, descendant in ipairs(character:GetDescendants()) do
 		if descendant:IsA("BasePart") then
 			descendant.Transparency = 1
 			descendant.CanCollide = false
 		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
 			descendant.Transparency = 1
-		end
-	end
-	
-	-- Make accessories invisible but don't destroy them
-	for _, child in ipairs(character:GetChildren()) do
-		if child:IsA("Accessory") then
-			local handle = child:FindFirstChild("Handle")
-			if handle and handle:IsA("BasePart") then
-				handle.Transparency = 1
-			end
 		end
 	end
 end
@@ -64,7 +54,7 @@ local function makeCharacterVisible(character)
 	-- Restore visibility for all parts
 	for _, descendant in ipairs(character:GetDescendants()) do
 		if descendant:IsA("BasePart") then
-			-- Restore default transparency (Head is 0, other parts vary)
+			-- Restore default transparency
 			if descendant.Name == "Head" then
 				descendant.Transparency = 0
 			elseif descendant.Name == "HumanoidRootPart" then
@@ -72,22 +62,12 @@ local function makeCharacterVisible(character)
 			else
 				descendant.Transparency = 0
 			end
-			-- Only restore collision for main body parts, not accessories
+			-- Only restore collision for main body parts (direct children of character)
 			if descendant.Parent == character then
 				descendant.CanCollide = true
 			end
 		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
 			descendant.Transparency = 0
-		end
-	end
-	
-	-- Restore accessory visibility
-	for _, child in ipairs(character:GetChildren()) do
-		if child:IsA("Accessory") then
-			local handle = child:FindFirstChild("Handle")
-			if handle and handle:IsA("BasePart") then
-				handle.Transparency = 0
-			end
 		end
 	end
 end
