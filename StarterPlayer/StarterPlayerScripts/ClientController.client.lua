@@ -31,13 +31,7 @@ print("[ClientController] Configuration loaded")
 -- Wait longer for Modules folder and ensure it's properly located
 local clientModules = script.Parent:WaitForChild("Modules", 10)
 if not clientModules then
-	-- Try alternate location (might be sibling in StarterPlayerScripts)
-	local starterPlayerScripts = script.Parent
-	clientModules = starterPlayerScripts:FindFirstChild("Modules")
-	
-	if not clientModules then
-		error("[ClientController] CRITICAL: Modules folder not found in " .. script.Parent:GetFullName())
-	end
+	error("[ClientController] CRITICAL: Modules folder not found in " .. script.Parent:GetFullName())
 end
 
 -- Core systems (will be loaded from Modules folder)
