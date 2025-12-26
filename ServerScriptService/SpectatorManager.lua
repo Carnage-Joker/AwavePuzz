@@ -51,6 +51,15 @@ end
 local function makeCharacterVisible(character)
 	if not character then return end
 	
+	-- List of body parts that should have collision enabled
+	local bodyPartsWithCollision = {
+		"Head", "UpperTorso", "LowerTorso", "Torso",
+		"LeftUpperArm", "LeftLowerArm", "LeftHand", "Left Arm",
+		"RightUpperArm", "RightLowerArm", "RightHand", "Right Arm",
+		"LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "Left Leg",
+		"RightUpperLeg", "RightLowerLeg", "RightFoot", "Right Leg"
+	}
+	
 	-- Restore visibility for all parts
 	for _, descendant in ipairs(character:GetDescendants()) do
 		if descendant:IsA("BasePart") then
@@ -62,9 +71,12 @@ local function makeCharacterVisible(character)
 			else
 				descendant.Transparency = 0
 			end
-			-- Only restore collision for main body parts (direct children of character)
-			if descendant.Parent == character then
-				descendant.CanCollide = true
+			-- Only restore collision for known body parts
+			for _, partName in ipairs(bodyPartsWithCollision) do
+				if descendant.Name == partName and descendant.Parent == character then
+					descendant.CanCollide = true
+					break
+				end
 			end
 		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
 			descendant.Transparency = 0
