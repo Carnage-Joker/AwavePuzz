@@ -29,6 +29,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
+local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 
 --------------------------------------------------------------------------------
 -- STATE MANAGEMENT
@@ -248,68 +249,75 @@ local fireConnection = nil
 local reloadConnection = nil
 local weaponSwitchConnections = {}
 
+-- Setup InputManager callbacks
+local function setupInputCallbacks()
+	-- Initialize InputManager
+	InputManager.initialize()
+	
+	-- Fire action (can be held for automatic weapons)
+	local isFiring = false
+	InputManager.bindAction(InputManager.Action.FIRE, function(active)
+		if active then
+			if not isFiring then
+				isFiring = true
+				if weaponStats and weaponStats.Automatic then
+					fireConnection = RunService.Heartbeat:Connect(fireWeapon)
+				else
+					fireWeapon()
+				end
+			end
+		else
+			isFiring = false
+			if fireConnection then
+				fireConnection:Disconnect()
+				fireConnection = nil
+			end
+		end
+	end)
+	
+	-- ADS action
+	InputManager.bindAction(InputManager.Action.AIM, function(active)
+		isAiming = active
+		adsStateBindable:Fire(active)
+		crosshairBindable:Fire({
+			spread = targetSpread,
+			isADS = active
+		})
+	end)
+	
+	-- Reload action
+	InputManager.bindAction(InputManager.Action.RELOAD, function(active)
+		if active then
+			startReload()
+		end
+	end)
+	
+	-- Weapon switching (not all devices support these)
+	-- Weapons can also be switched via UI on touch devices
+	
+	-- Note: For VR, weapon switching would typically be done via radial menu or gestures
+	-- For touch, weapon switching is done via on-screen UI buttons
+end
+
+-- Legacy input handler (kept for compatibility)
 local function onInputBegan(input, gameProcessed)
 	if gameProcessed then return end
 
-	-- Fire
-	if input.UserInputType == FPSConfig.Controls.FireKey then
-		if weaponStats and weaponStats.Automatic then
-			fireConnection = RunService.Heartbeat:Connect(fireWeapon)
-		else
-			fireWeapon()
-		end
-
-	-- ADS
-	elseif input.UserInputType == FPSConfig.Controls.ADSKey then
-		isAiming = true
-		adsStateBindable:Fire(true)
-		crosshairBindable:Fire({
-			spread = targetSpread,
-			isADS = true
-		})
-
-	-- Reload
-	elseif input.KeyCode == FPSConfig.Controls.ReloadKey then
-		startReload()
-
-	-- Weapon switching
-	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot1 then
+	-- Weapon switching with number keys (keyboard only)
+	if input.KeyCode == FPSConfig.Controls.WeaponSlot1 or input.KeyCode == Enum.KeyCode.One then
 		equipWeapon("Pistol")
-	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot2 then
+	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot2 or input.KeyCode == Enum.KeyCode.Two then
 		equipWeapon("SMG")
-	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot3 then
+	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot3 or input.KeyCode == Enum.KeyCode.Three then
 		equipWeapon("Shotgun")
-	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot4 then
+	elseif input.KeyCode == FPSConfig.Controls.WeaponSlot4 or input.KeyCode == Enum.KeyCode.Four then
 		equipWeapon("Rifle")
 	end
 end
 
 local function onInputEnded(input, gameProcessed)
-	if gameProcessed then return end
-
-	-- Stop firing (for automatic weapons)
-	if input.UserInputType == FPSConfig.Controls.FireKey then
-		if fireConnection then
-			fireConnection:Disconnect()
-			fireConnection = nil
-		end
-
-	-- Stop ADS
-	elseif input.UserInputType == FPSConfig.Controls.ADSKey then
-		isAiming = false
-		adsStateBindable:Fire(false)
-		crosshairBindable:Fire({
-			spread = targetSpread,
-			isADS = false
-		})
-
-	-- Cancel reload on movement
-	elseif input.KeyCode == FPSConfig.Controls.MoveForward or
-		   input.KeyCode == FPSConfig.Controls.MoveBackward or
-		   input.KeyCode == FPSConfig.Controls.MoveLeft or
-		   input.KeyCode == FPSConfig.Controls.MoveRight then
-		cancelReload()
-	end
+	-- Legacy handler - most input is now handled by InputManager
+	-- Cancel reload on movement (handled by checking movement state)
 end
 
 --------------------------------------------------------------------------------
@@ -377,14 +385,17 @@ end)
 --------------------------------------------------------------------------------
 
 local function initialize()
-	-- Connect input events
+	-- Setup InputManager callbacks
+	setupInputCallbacks()
+	
+	-- Connect legacy input events (for weapon switching on keyboard)
 	UserInputService.InputBegan:Connect(onInputBegan)
 	UserInputService.InputEnded:Connect(onInputEnded)
 
 	-- Equip default weapon
 	equipWeapon(WeaponConfig.DefaultWeapon)
 
-	print("[FPSWeaponController] Initialized")
+	print("[FPSWeaponController] Initialized - Device:", InputManager.getActiveDevice())
 end
 
 --------------------------------------------------------------------------------
