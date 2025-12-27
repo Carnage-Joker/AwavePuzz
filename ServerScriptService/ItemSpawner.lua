@@ -26,6 +26,7 @@ function ItemSpawner.new()
 	self.playerManager = nil
 	self.fpsWeaponService = nil
 	self.activeItems = {}
+	self.activeItemCount = 0 -- Track count for O(1) access
 	self.spawnTimer = 0
 	self.itemCounter = 0 -- For unique ID generation
 
@@ -253,6 +254,7 @@ function ItemSpawner:spawnItem(itemType)
 		touchConnection = touchConnection,
 		rotationConnection = rotationConnection
 	}
+	self.activeItemCount = self.activeItemCount + 1
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
 
@@ -260,11 +262,6 @@ function ItemSpawner:spawnItem(itemType)
 end
 
 function ItemSpawner:onItemCollected(player, itemId, itemType, part)
-	local item = self.activeItems[itemId]
-	if not item then
-		return
-	end
-
 	-- Early return if player is nil to avoid nil access errors
 	if not player then
 		warn("ItemSpawner:onItemCollected called with nil player")
@@ -343,6 +340,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		end
 
 		self.activeItems[itemId] = nil
+		self.activeItemCount = self.activeItemCount - 1
 	end
 end
 
@@ -394,13 +392,7 @@ function ItemSpawner:update(deltaTime)
 end
 
 function ItemSpawner:getActiveItemCount()
-	local count = 0
-	if self.activeItems then
-		for _ in pairs(self.activeItems) do
-			count += 1
-		end
-	end
-	return count
+	return self.activeItemCount
 end
 
 function ItemSpawner:clearAllItems()
@@ -416,6 +408,7 @@ function ItemSpawner:clearAllItems()
 		end
 	end
 	self.activeItems = {}
+	self.activeItemCount = 0
 end
 
 return ItemSpawner
