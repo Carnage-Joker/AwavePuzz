@@ -17,6 +17,7 @@ ItemSpawner.__index = ItemSpawner
 local CONFIG = {
 	SPAWN_HEIGHT_OFFSET = 2,
 	GROUND_CHECK_DISTANCE = 50,
+	ROTATION_SPEED = 2,
 }
 
 function ItemSpawner.new()
@@ -26,6 +27,7 @@ function ItemSpawner.new()
 	self.fpsWeaponService = nil
 	self.activeItems = {}
 	self.spawnTimer = 0
+	self.itemCounter = 0 -- For unique ID generation
 
 	-- Create item folder in workspace
 	self.itemFolder = workspace:FindFirstChild("ItemPickups")
@@ -131,7 +133,10 @@ function ItemSpawner:spawnItem(itemType)
 	end
 
 	local spawnPoint = self:getRandomSpawnPositionNearBase()
-	local itemId = "item_" .. os.time() .. "_" .. math.random(1000, 9999)
+	
+	-- Generate unique ID using counter and tick for collision prevention
+	self.itemCounter = self.itemCounter + 1
+	local itemId = string.format("item_%d_%.0f", self.itemCounter, tick() * 1000)
 
 	local part = Instance.new("Part")
 	part.Name = itemType .. "_Pickup"
@@ -155,7 +160,6 @@ function ItemSpawner:spawnItem(itemType)
 
 	-- Add spinning animation
 	local RunService = game:GetService("RunService")
-	local rotationSpeed = 2
 	local rotationConnection
 	rotationConnection = RunService.Heartbeat:Connect(function(dt)
 		if not part or not part.Parent then
@@ -164,7 +168,7 @@ function ItemSpawner:spawnItem(itemType)
 			end
 			return
 		end
-		part.CFrame = part.CFrame * CFrame.Angles(0, rotationSpeed * dt, 0)
+		part.CFrame = part.CFrame * CFrame.Angles(0, CONFIG.ROTATION_SPEED * dt, 0)
 	end)
 
 	part.Destroying:Connect(function()
@@ -250,19 +254,20 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		if self.playerManager then
 			-- Add health to player
 			local playerData = self.playerManager:getPlayerData(player)
-			if playerData then
-				local newHealth = math.min(GameConfig.STARTING_HEALTH, playerData.health + GameConfig.HEALTH_PACK_AMOUNT)
-				playerData.health = newHealth
-				
-				-- Update character health
-				if player.Character then
-					local humanoid = player.Character:FindFirstChild("Humanoid")
-					if humanoid then
-						humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + GameConfig.HEALTH_PACK_AMOUNT)
-					end
+			if playerData and player.Character then
+				local humanoid = player.Character:FindFirstChild("Humanoid")
+				if humanoid then
+					-- Calculate new health respecting max health
+					local currentHealth = humanoid.Health
+					local maxHealth = humanoid.MaxHealth
+					local healAmount = math.min(GameConfig.HEALTH_PACK_AMOUNT, maxHealth - currentHealth)
+					
+					-- Apply healing
+					humanoid.Health = currentHealth + healAmount
+					playerData.health = humanoid.Health
+					
+					print(player.Name .. " healed for " .. healAmount .. " HP")
 				end
-				
-				print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
 			end
 		end
 	end
@@ -285,11 +290,12 @@ function ItemSpawner:update(deltaTime)
 	if self.spawnTimer >= GameConfig.ITEM_SPAWN_INTERVAL then
 		self.spawnTimer = 0
 		
-		-- Spawn both ammo and health packs
-		-- Alternate between them or spawn both based on needs
+		-- Spawn both ammo and health packs, respecting max items limit
 		local itemsToSpawn = {"Ammo", "Health"}
 		for _, itemType in ipairs(itemsToSpawn) do
-			if self:getActiveItemCount() < GameConfig.MAX_ITEMS_ON_MAP then
+			-- Check limit before spawning each item
+			local currentCount = self:getActiveItemCount()
+			if currentCount < GameConfig.MAX_ITEMS_ON_MAP then
 				self:spawnItem(itemType)
 			end
 		end
