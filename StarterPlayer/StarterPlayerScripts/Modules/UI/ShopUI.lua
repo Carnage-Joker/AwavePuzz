@@ -255,7 +255,7 @@ shopUpdate.OnClientEvent:Connect(function(payload)
 		catalogCache = payload.items or {}
 		rebuildList(catalogCache)
 		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-		statusLabel.Text = "↑/↓ or W/S: Navigate • Enter: Purchase • Esc: Close"
+		statusLabel.Text = "↑/↓ or W/S: Navigate • Enter: Purchase • Backspace: Close"
 	elseif payload.type == "result" then
 		local success = payload.success == true
 		statusLabel.TextColor3 = success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
@@ -279,8 +279,8 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 			statusLabel.Text = "Press B to toggle shop"
 		end
-	elseif input.KeyCode == Enum.KeyCode.Escape and screenGui.Enabled then
-		-- Allow Escape key to close the shop
+	elseif input.KeyCode == Enum.KeyCode.Backspace and screenGui.Enabled then
+		-- Allow Backspace key to close the shop
 		screenGui.Enabled = false
 		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 		statusLabel.Text = "Press B to toggle shop"

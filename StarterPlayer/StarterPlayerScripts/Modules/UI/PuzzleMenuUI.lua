@@ -100,11 +100,11 @@ closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
 end)
 
--- Add Escape key handler to close menu
+-- Add Backspace key handler to close menu
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	
-	if input.KeyCode == Enum.KeyCode.Escape and menuFrame.Visible then
+	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
 		menuFrame.Visible = false
 	end
 end)
@@ -114,7 +114,7 @@ local instructionLabel = Instance.new("TextLabel")
 instructionLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))
 instructionLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
 instructionLabel.BackgroundTransparency = 1
-instructionLabel.Text = "↑/↓ or W/S: Navigate • Enter: Select • Esc: Close\nYou need 5 components to unlock each puzzle."
+instructionLabel.Text = "↑/↓ or W/S: Navigate • Enter: Select • Backspace: Close\nYou need 5 components to unlock each puzzle."
 instructionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 instructionLabel.TextSize = getScaledTextSize(14)
 instructionLabel.Font = Enum.Font.Gotham
@@ -407,7 +407,7 @@ end)
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	
-	if input.KeyCode == Enum.KeyCode.Escape and menuFrame.Visible then
+	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
 		menuFrame.Visible = false
 	elseif menuFrame.Visible and #puzzleButtons > 0 then
 		-- Navigation when menu is open

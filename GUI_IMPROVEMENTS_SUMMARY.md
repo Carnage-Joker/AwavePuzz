@@ -32,21 +32,21 @@ This document summarizes the improvements made to the AwavePuzz GUI system to en
 - StarterGui/TitleScreenUI.lua
 - StarterGui/WaveUI.lua
 
-### 2. Added Escape Key Handling ✅
+### 2. Added Backspace Key Handling ✅
 **Problem**: Interactive menus lacked a quick way to exit without using the mouse.
 
-**Solution**: Added `Escape` key handling to all interactive menu UIs:
+**Solution**: Added `Backspace` key handling to all interactive menu UIs:
 
 #### ShopUI
-- Press `Escape` to close the shop instantly
+- Press `Backspace` to close the shop instantly
 - Works when shop is open (screenGui.Enabled = true)
 
 #### PuzzleMenuUI
-- Press `Escape` to close the puzzle selection menu
+- Press `Backspace` to close the puzzle selection menu
 - Works when menu is visible (menuFrame.Visible = true)
 
 #### PuzzleUI
-- Press `Escape` to exit active puzzle
+- Press `Backspace` to exit active puzzle
 - Calls `closePuzzle()` function to properly clean up puzzle state
 
 ### 3. Added Keyboard Navigation to ShopUI ✅
@@ -58,7 +58,7 @@ This document summarizes the improvements made to the AwavePuzz GUI system to en
 - **Enter / Space**: Purchase selected item
 - **Visual Feedback**: Selected item highlighted with blue border and different background color
 - **Auto-scrolling**: List automatically scrolls to keep selected item visible
-- **Navigation hints**: Status label shows controls: "↑/↓ or W/S: Navigate • Enter: Purchase • Esc: Close"
+- **Navigation hints**: Status label shows controls: "↑/↓ or W/S: Navigate • Enter: Purchase • Backspace: Close"
 
 **Implementation Details**:
 - Added `shopItems[]` array to track all shop item buttons
@@ -76,7 +76,7 @@ This document summarizes the improvements made to the AwavePuzz GUI system to en
 - **Enter / Space**: Start selected puzzle (if available)
 - **Visual Feedback**: Selected puzzle gets blue stroke border (UIStroke with 3px thickness)
 - **Auto-scrolling**: List automatically scrolls to keep selected puzzle visible
-- **Navigation hints**: Instructions updated to show: "↑/↓ or W/S: Navigate • Enter: Select • Esc: Close"
+- **Navigation hints**: Instructions updated to show: "↑/↓ or W/S: Navigate • Enter: Select • Backspace: Close"
 
 **Implementation Details**:
 - Added `puzzleButtons[]` array to track all puzzle buttons (components + final synthesis)
@@ -119,13 +119,13 @@ This document summarizes the improvements made to the AwavePuzz GUI system to en
 
 ### Accessibility ✅
 - **No Mouse Required**: All interactive menus can now be navigated with keyboard only
-- **Quick Exit**: Escape key provides consistent way to close any menu
+- **Quick Exit**: Backspace key provides consistent way to close any menu
 - **Visual Feedback**: Clear indication of selected items/options
 
 ### User Experience ✅
 - **Faster Navigation**: Keyboard shortcuts are faster than mouse for many actions
 - **Controller-Friendly**: Arrow keys work well for controller players
-- **Consistent Controls**: Navigation pattern (↑/↓/Enter/Esc) is consistent across all menus
+- **Consistent Controls**: Navigation pattern (↑/↓/Enter/Backspace) is consistent across all menus
 - **Clear Instructions**: Status labels and hints show available controls
 
 ### Code Quality ✅
@@ -146,16 +146,16 @@ When testing in Roblox Studio, verify:
    - Press `B` to open shop
    - Use `Up/Down` or `W/S` to navigate items
    - Press `Enter` to purchase
-   - Press `Escape` to close
+   - Press `Backspace` to close
 
 2. **Puzzle Menu Navigation**:
    - Interact with cure station to open puzzle menu
    - Use `Up/Down` or `W/S` to navigate puzzles
    - Press `Enter` to start a puzzle (if 5 components collected)
-   - Press `Escape` to close
+   - Press `Backspace` to close
 
 3. **Puzzle Exit**:
-   - While in an active puzzle, press `Escape` to exit quickly
+   - While in an active puzzle, press `Backspace` to exit quickly
 
 4. **View Obstruction**:
    - Verify crosshair is visible but not intrusive
@@ -171,16 +171,16 @@ When testing in Roblox Studio, verify:
 
 1. `StarterPlayer/StarterPlayerScripts/Modules/UI/ShopUI.lua`
    - Added keyboard navigation system
-   - Added Escape key handling
+   - Added Backspace key handling
    - Added navigation hints
 
 2. `StarterPlayer/StarterPlayerScripts/Modules/UI/PuzzleMenuUI.lua`
    - Added keyboard navigation system
-   - Added Escape key handling
+   - Added Backspace key handling
    - Updated instructions to show keyboard controls
 
 3. `StarterPlayer/StarterPlayerScripts/Modules/UI/PuzzleUI.lua`
-   - Added Escape key handling for quick exit
+   - Added Backspace key handling for quick exit
 
 4. `StarterGui/*` (17 files)
    - Removed all duplicate UI files
@@ -231,7 +231,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
             -- Select/activate
             items[selectedIndex].MouseButton1Click:Fire()
-        elseif input.KeyCode == Enum.KeyCode.Escape then
+        elseif input.KeyCode == Enum.KeyCode.Backspace then
             -- Close menu
             menuVisible = false
         end
@@ -243,7 +243,7 @@ end)
 
 All GUI improvements have been successfully implemented:
 - ✅ Duplicate files removed
-- ✅ Escape key handling added to all interactive menus
+- ✅ Backspace key handling added to all interactive menus
 - ✅ Full keyboard navigation added to Shop and Puzzle Menu
 - ✅ ZIndex ordering verified to prevent view obstruction
 - ✅ All UI is relevant, working correctly, and no duplicates remain
