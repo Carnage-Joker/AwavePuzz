@@ -100,12 +100,21 @@ closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
 end)
 
+-- Add Backspace key handler to close menu
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
+		menuFrame.Visible = false
+	end
+end)
+
 -- Instructions
 local instructionLabel = Instance.new("TextLabel")
 instructionLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))
 instructionLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
 instructionLabel.BackgroundTransparency = 1
-instructionLabel.Text = "Select a puzzle to attempt. You need 5 components to unlock each puzzle."
+instructionLabel.Text = "↑/↓ or W/S: Navigate • Enter: Select • Backspace: Close\nYou need 5 components to unlock each puzzle."
 instructionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 instructionLabel.TextSize = getScaledTextSize(14)
 instructionLabel.Font = Enum.Font.Gotham
@@ -162,6 +171,51 @@ end
 
 -- Register for scale changes
 UIScaleManager.onScaleChanged(updateUIScaling)
+
+-- Keyboard navigation state
+local puzzleButtons = {}
+local selectedPuzzleIndex = 1
+
+local function updatePuzzleSelection()
+	-- Update visual indication of selected puzzle
+	for i, button in ipairs(puzzleButtons) do
+		local buttonCorner = button:FindFirstChildOfClass("UICorner")
+		
+		if i == selectedPuzzleIndex then
+			-- Add selection border
+			local stroke = button:FindFirstChild("SelectionStroke")
+			if not stroke then
+				stroke = Instance.new("UIStroke")
+				stroke.Name = "SelectionStroke"
+				stroke.Parent = button
+			end
+			stroke.Thickness = 3
+			stroke.Color = Color3.fromRGB(100, 200, 255)
+		else
+			-- Remove selection border
+			local stroke = button:FindFirstChild("SelectionStroke")
+			if stroke then
+				stroke:Destroy()
+			end
+		end
+	end
+	
+	-- Scroll to selected button if needed
+	if #puzzleButtons > 0 and puzzleButtons[selectedPuzzleIndex] then
+		local selectedButton = puzzleButtons[selectedPuzzleIndex]
+		local buttonPos = selectedButton.AbsolutePosition.Y - puzzleList.AbsolutePosition.Y
+		local listHeight = puzzleList.AbsoluteSize.Y
+		local canvasPos = puzzleList.CanvasPosition.Y
+		
+		-- Scroll down if button is below visible area
+		if buttonPos + selectedButton.AbsoluteSize.Y > canvasPos + listHeight then
+			puzzleList.CanvasPosition = Vector2.new(0, buttonPos + selectedButton.AbsoluteSize.Y - listHeight)
+		-- Scroll up if button is above visible area
+		elseif buttonPos < canvasPos then
+			puzzleList.CanvasPosition = Vector2.new(0, buttonPos)
+		end
+	end
+end
 
 -- Function to create puzzle button
 local function createPuzzleButton(componentName, puzzleConfig, available, componentCount)
@@ -240,6 +294,10 @@ local function updatePuzzleMenu(progressData)
 			child:Destroy()
 		end
 	end
+	
+	-- Clear button array
+	puzzleButtons = {}
+	selectedPuzzleIndex = 1
 
 	progressData = progressData or {}
 	local componentPuzzles = progressData.componentPuzzles or {}
@@ -253,7 +311,8 @@ local function updatePuzzleMenu(progressData)
 			local componentCount = componentCounts[componentName] or 0
 			local available = componentCount >= GameConfig.CURE_COMPONENTS_REQUIRED and not puzzleProgress.solved
 
-			createPuzzleButton(componentName, puzzleConfig, available, componentCount)
+			local button = createPuzzleButton(componentName, puzzleConfig, available, componentCount)
+			table.insert(puzzleButtons, button)
 		end
 	end
 
@@ -305,6 +364,14 @@ local function updatePuzzleMenu(progressData)
 			end
 		end)
 	end
+	
+	-- Add final button to tracked buttons
+	table.insert(puzzleButtons, finalButton)
+	
+	-- Update selection visuals
+	if #puzzleButtons > 0 then
+		updatePuzzleSelection()
+	end
 end
 
 -- Show puzzle menu
@@ -333,6 +400,35 @@ local puzzleUpdateEvent = remoteEvents:WaitForChild("PuzzleUpdate")
 puzzleUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "progress" then
 		updatePuzzleMenu(data.progress)
+	end
+end)
+
+-- Keyboard navigation handler
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
+		menuFrame.Visible = false
+	elseif menuFrame.Visible and #puzzleButtons > 0 then
+		-- Navigation when menu is open
+		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
+			selectedPuzzleIndex = selectedPuzzleIndex - 1
+			if selectedPuzzleIndex < 1 then
+				selectedPuzzleIndex = #puzzleButtons
+			end
+			updatePuzzleSelection()
+		elseif input.KeyCode == Enum.KeyCode.Down or input.KeyCode == Enum.KeyCode.S then
+			selectedPuzzleIndex = selectedPuzzleIndex + 1
+			if selectedPuzzleIndex > #puzzleButtons then
+				selectedPuzzleIndex = 1
+			end
+			updatePuzzleSelection()
+		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
+			-- Trigger selected puzzle
+			if puzzleButtons[selectedPuzzleIndex] and puzzleButtons[selectedPuzzleIndex].BackgroundColor3 ~= Color3.fromRGB(60, 60, 60) then
+				puzzleButtons[selectedPuzzleIndex].MouseButton1Click:Fire()
+			end
+		end
 	end
 end)
 
