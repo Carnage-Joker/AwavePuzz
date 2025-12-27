@@ -251,14 +251,20 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 
 	print(player.Name .. " collected " .. itemType .. " pack")
 
+	-- Track if reward was successfully granted
+	local rewardGranted = false
+
 	-- Grant rewards based on item type
 	if itemType == "Ammo" then
 		if self.fpsWeaponService and self.playerManager then
 			-- Add ammo to current weapon's reserve
 			local equippedWeapon = self.playerManager:getEquippedWeapon(player)
 			if equippedWeapon then
-				self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
-				print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+				local success = self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
+				if success then
+					print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+					rewardGranted = true
+				end
 			else
 				-- Provide feedback when player tries to use an ammo pack without an equipped weapon
 				if player and player.SetAttribute then
@@ -270,36 +276,29 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		end
 	elseif itemType == "Health" then
 		if self.playerManager then
-			-- Add health to player
-			local playerData = self.playerManager:getPlayerData(player)
-			if playerData and player.Character then
-				local humanoid = player.Character:FindFirstChild("Humanoid")
-				if humanoid then
-					-- Calculate new health respecting max health
-					local currentHealth = humanoid.Health
-					local maxHealth = humanoid.MaxHealth
-					local healAmount = math.min(GameConfig.HEALTH_PACK_AMOUNT, maxHealth - currentHealth)
-					
-					-- Apply healing
-					humanoid.Health = currentHealth + healAmount
-					playerData.health = humanoid.Health
-					
-					print(player.Name .. " healed for " .. healAmount .. " HP")
-				end
+			-- Use PlayerManager:healPlayer for consistent health management
+			local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
+			if success then
+				print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
+				rewardGranted = true
+			else
+				print(player.Name .. " tried to use a health pack but healing failed")
 			end
 		end
 	end
 
-	-- Clean up the item
-	if item.connection then
-		item.connection:Disconnect()
-	end
+	-- Only clean up the item if the reward was successfully granted
+	if rewardGranted then
+		if item.connection then
+			item.connection:Disconnect()
+		end
 
-	if part and part.Parent then
-		part:Destroy()
-	end
+		if part and part.Parent then
+			part:Destroy()
+		end
 
-	self.activeItems[itemId] = nil
+		self.activeItems[itemId] = nil
+	end
 end
 
 function ItemSpawner:update(deltaTime)
