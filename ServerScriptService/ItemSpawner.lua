@@ -221,13 +221,28 @@ function ItemSpawner:spawnItem(itemType)
 
 		-- Ensure debouncing is released if the item is still present after handling,
 		-- so failed/early-return collection attempts don't permanently lock the item.
-		local ok = pcall(function()
+		local ok, err = pcall(function()
 			self:onItemCollected(player, itemId, itemType, part)
 		end)
 
-		-- If the part still exists (was not destroyed by onItemCollected), allow
-		-- future touch events to process by clearing the debounce flag.
-		if part.Parent ~= nil then
+		if not ok then
+			warn(
+				"[ItemSpawner] onItemCollected failed for itemId="
+					.. tostring(itemId)
+					.. ", itemType="
+					.. tostring(itemType)
+					.. ", player="
+					.. (player and player.Name or "nil")
+					.. " :: "
+					.. tostring(err)
+			)
+		end
+		-- Only clear the debounce if the item is still marked as active.
+		-- This ties the debounce lifecycle to the authoritative item state
+		-- (self.activeItems) instead of the physical part hierarchy, and
+		-- avoids double-collection if onItemCollected logically consumed
+		-- the item without immediately destroying/reparenting the part.
+		if self.activeItems and self.activeItems[itemId] ~= nil then
 			debouncing = false
 		end
 	end)
@@ -235,7 +250,8 @@ function ItemSpawner:spawnItem(itemType)
 	self.activeItems[itemId] = {
 		itemType = itemType,
 		instance = part,
-		connection = touchConnection
+		touchConnection = touchConnection,
+		rotationConnection = rotationConnection
 	}
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
@@ -249,7 +265,14 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		return
 	end
 
-	print(player.Name .. " collected " .. itemType .. " pack")
+	-- Early return if player is nil to avoid nil access errors
+	if not player then
+		warn("ItemSpawner:onItemCollected called with nil player")
+		return
+	end
+
+	local playerName = (player and player.Name) or "UnknownPlayer"
+	print(playerName .. " collected " .. itemType .. " pack")
 
 	-- Track if reward was successfully granted
 	local rewardGranted = false
@@ -262,7 +285,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 			if equippedWeapon then
 				local success = self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
 				if success then
-					print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+					print(playerName .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
 					rewardGranted = true
 				end
 			else
@@ -271,26 +294,48 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 					player:SetAttribute("LastPickupFailed", "NoEquippedWeaponForAmmo")
 					player:SetAttribute("LastPickupFailedMessage", "You need to equip a weapon before using an ammo pack.")
 				end
-				print(player.Name .. " tried to use an ammo pack without an equipped weapon")
+				print(playerName .. " tried to use an ammo pack without an equipped weapon")
 			end
 		end
 	elseif itemType == "Health" then
 		if self.playerManager then
-			-- Use PlayerManager:healPlayer for consistent health management
-			local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
-			if success then
-				print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
-				rewardGranted = true
+			-- Prevent consuming health packs when already at full health
+			local canHeal = true
+
+			if player and player.Character then
+				local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.MaxHealth > 0 and humanoid.Health >= humanoid.MaxHealth then
+					canHeal = false
+				end
+			end
+
+			if canHeal then
+				-- Use PlayerManager:healPlayer for consistent health management
+				local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
+				if success then
+					print(playerName .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
+					rewardGranted = true
+				else
+					print(playerName .. " tried to use a health pack but healing failed")
+				end
 			else
-				print(player.Name .. " tried to use a health pack but healing failed")
+				-- Provide feedback when player tries to pick up a health pack at full health
+				if player and player.SetAttribute then
+					player:SetAttribute("LastPickupFailed", "HealthFull")
+					player:SetAttribute("LastPickupFailedMessage", "You are already at full health.")
+				end
+				print(playerName .. " tried to use a health pack but is already at full health")
 			end
 		end
 	end
 
 	-- Only clean up the item if the reward was successfully granted
 	if rewardGranted then
-		if item.connection then
-			item.connection:Disconnect()
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
+		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
 		end
 
 		if part and part.Parent then
@@ -306,14 +351,43 @@ function ItemSpawner:update(deltaTime)
 
 	if self.spawnTimer >= GameConfig.ITEM_SPAWN_INTERVAL then
 		self.spawnTimer = 0
-		
-		-- Spawn both ammo and health packs, respecting max items limit
-		local itemsToSpawn = {"Ammo", "Health"}
-		for _, itemType in ipairs(itemsToSpawn) do
-			-- Check limit before spawning each item
-			local currentCount = self:getActiveItemCount()
-			if currentCount < GameConfig.MAX_ITEMS_ON_MAP then
-				self:spawnItem(itemType)
+
+		-- Determine how many items we can spawn this tick
+		local currentCount = self:getActiveItemCount()
+		local maxItems = GameConfig.MAX_ITEMS_ON_MAP
+		local remainingSlots = maxItems - currentCount
+
+		if remainingSlots <= 0 then
+			return
+		end
+
+		-- Lazily initialize nextSpawnItemType for balanced spawning when only one slot is free
+		if not self.nextSpawnItemType then
+			self.nextSpawnItemType = "Ammo"
+		end
+
+		if remainingSlots == 1 then
+			-- Only one slot left: alternate between Ammo and Health based on successful spawns
+			local beforeCount = self:getActiveItemCount()
+			self:spawnItem(self.nextSpawnItemType)
+			local afterCount = self:getActiveItemCount()
+
+			-- Only toggle the next type if we actually spawned an item
+			if afterCount > beforeCount then
+				if self.nextSpawnItemType == "Ammo" then
+					self.nextSpawnItemType = "Health"
+				else
+					self.nextSpawnItemType = "Ammo"
+				end
+			end
+		else
+			-- Two or more slots: attempt to spawn both ammo and health, as before
+			local itemsToSpawn = {"Ammo", "Health"}
+			for _, itemType in ipairs(itemsToSpawn) do
+				local updatedCount = self:getActiveItemCount()
+				if updatedCount < maxItems then
+					self:spawnItem(itemType)
+				end
 			end
 		end
 	end
@@ -321,16 +395,21 @@ end
 
 function ItemSpawner:getActiveItemCount()
 	local count = 0
-	for _ in pairs(self.activeItems) do
-		count = count + 1
+	if self.activeItems then
+		for _ in pairs(self.activeItems) do
+			count += 1
+		end
 	end
 	return count
 end
 
 function ItemSpawner:clearAllItems()
 	for itemId, item in pairs(self.activeItems) do
-		if item.connection then
-			item.connection:Disconnect()
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
+		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
 		end
 		if item.instance and item.instance.Parent then
 			item.instance:Destroy()
