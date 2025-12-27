@@ -221,10 +221,22 @@ function ItemSpawner:spawnItem(itemType)
 
 		-- Ensure debouncing is released if the item is still present after handling,
 		-- so failed/early-return collection attempts don't permanently lock the item.
-		local ok = pcall(function()
+		local ok, err = pcall(function()
 			self:onItemCollected(player, itemId, itemType, part)
 		end)
 
+		if not ok then
+			warn(
+				"[ItemSpawner] onItemCollected failed for itemId="
+					.. tostring(itemId)
+					.. ", itemType="
+					.. tostring(itemType)
+					.. ", player="
+					.. (player and player.Name or "nil")
+					.. " :: "
+					.. tostring(err)
+			)
+		end
 		-- If the part still exists (was not destroyed by onItemCollected), allow
 		-- future touch events to process by clearing the debounce flag.
 		if part.Parent ~= nil then
