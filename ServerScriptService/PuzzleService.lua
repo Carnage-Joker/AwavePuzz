@@ -502,6 +502,11 @@ function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
 	puzzleState.lastAttemptTime = tick()
 
 	print("[PuzzleService]", player.Name, "solved", componentName, "puzzle in", math.floor(elapsedTime), "seconds")
+	
+	-- Increment puzzle solve stat in GameManager (via CureService)
+	if self.cureService and self.cureService.gameManager and self.cureService.gameManager.incrementPlayerPuzzleSolves then
+		self.cureService.gameManager:incrementPlayerPuzzleSolves(player)
+	end
 
 	-- Award currency
 	local reward = PuzzleConfig.Rewards.componentPuzzleSolved
