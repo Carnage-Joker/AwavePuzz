@@ -58,10 +58,11 @@ function WeaponService:cloneGunModel(gunId)
 	return clone
 end
 
-function WeaponService.new(playerManager, allianceService)
+function WeaponService.new(playerManager, allianceService, gameManager)
 	local self = setmetatable({}, WeaponService)
 	self.playerManager = playerManager
 	self.allianceService = allianceService
+	self.gameManager = gameManager  -- NEW: for kill stat tracking
 	self.fpsWeaponService = nil  -- Set via setFPSWeaponService
 	self.playerWeaponState = {} -- userId -> state
 	self.remoteEvents = {}
@@ -344,11 +345,17 @@ function WeaponService:onZombieKilled(zombieModel)
 		return
 	end
 
+	-- Award currency
 	local weaponId = zombieModel:GetAttribute("LastHitWeapon")
 	local weaponStats = weaponId and WeaponConfig.getWeapon(weaponId) or nil
 	local bonus = weaponStats and weaponStats.RewardBonus or 0
 
 	self.playerManager:addCurrency(player, reward + bonus)
+	
+	-- Increment kill stat in GameManager
+	if self.gameManager and self.gameManager.incrementPlayerKills then
+		self.gameManager:incrementPlayerKills(player, 1)
+	end
 end
 
 function WeaponService:applyUpgrade(player, upgradeId)

@@ -106,7 +106,9 @@ FPSConfig.WeaponStats = {
 		
 		-- Magazine
 		MagSize = 12,
+		MaxMagazineAmmo = 12,  -- Maximum ammo per magazine
 		ReserveAmmo = 48,
+		MaxReserveAmmo = 96,   -- Maximum reserve ammo
 		ReloadTime = 1.5,
 		
 		-- Recoil (camera kick)
@@ -137,7 +139,9 @@ FPSConfig.WeaponStats = {
 		Automatic = true,
 		
 		MagSize = 30,
+		MaxMagazineAmmo = 30,
 		ReserveAmmo = 120,
+		MaxReserveAmmo = 180,
 		ReloadTime = 2.0,
 		
 		RecoilVertical = 0.8,
@@ -166,7 +170,9 @@ FPSConfig.WeaponStats = {
 		PelletCount = 6,
 		
 		MagSize = 6,
+		MaxMagazineAmmo = 6,
 		ReserveAmmo = 24,
+		MaxReserveAmmo = 48,
 		ReloadTime = 2.5,
 		ReloadType = "single",     -- "single" = one shell at a time
 		
@@ -195,7 +201,9 @@ FPSConfig.WeaponStats = {
 		Automatic = false,
 		
 		MagSize = 10,
+		MaxMagazineAmmo = 10,
 		ReserveAmmo = 40,
+		MaxReserveAmmo = 60,
 		ReloadTime = 2.2,
 		
 		RecoilVertical = 2.5,

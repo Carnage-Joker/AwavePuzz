@@ -110,6 +110,11 @@ function CureService:handleDepositComponent(player, componentName)
 
 	local componentCount = self.playerComponents[userId][componentName]
 	print("[CureService]", player.Name, "now has", componentCount, "of", componentName)
+	
+	-- Increment component stat in GameManager
+	if self.gameManager and self.gameManager.incrementPlayerComponentsCollected then
+		self.gameManager:incrementPlayerComponentsCollected(player)
+	end
 
 	-- Get the effective component count (pooled if in alliance)
 	local effectiveCount = self:getEffectiveComponentCount(player, componentName)
