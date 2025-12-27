@@ -259,6 +259,13 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 			if equippedWeapon then
 				self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
 				print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+			else
+				-- Provide feedback when player tries to use an ammo pack without an equipped weapon
+				if player and player.SetAttribute then
+					player:SetAttribute("LastPickupFailed", "NoEquippedWeaponForAmmo")
+					player:SetAttribute("LastPickupFailedMessage", "You need to equip a weapon before using an ammo pack.")
+				end
+				print(player.Name .. " tried to use an ammo pack without an equipped weapon")
 			end
 		end
 	elseif itemType == "Health" then
