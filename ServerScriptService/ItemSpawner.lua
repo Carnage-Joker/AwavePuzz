@@ -306,14 +306,37 @@ function ItemSpawner:update(deltaTime)
 
 	if self.spawnTimer >= GameConfig.ITEM_SPAWN_INTERVAL then
 		self.spawnTimer = 0
-		
-		-- Spawn both ammo and health packs, respecting max items limit
-		local itemsToSpawn = {"Ammo", "Health"}
-		for _, itemType in ipairs(itemsToSpawn) do
-			-- Check limit before spawning each item
-			local currentCount = self:getActiveItemCount()
-			if currentCount < GameConfig.MAX_ITEMS_ON_MAP then
-				self:spawnItem(itemType)
+
+		-- Determine how many items we can spawn this tick
+		local currentCount = self:getActiveItemCount()
+		local maxItems = GameConfig.MAX_ITEMS_ON_MAP
+		local remainingSlots = maxItems - currentCount
+
+		if remainingSlots <= 0 then
+			return
+		end
+
+		-- Lazily initialize nextSpawnItemType for balanced spawning when only one slot is free
+		if not self.nextSpawnItemType then
+			self.nextSpawnItemType = "Ammo"
+		end
+
+		if remainingSlots == 1 then
+			-- Only one slot left: alternate between Ammo and Health to avoid starving one type
+			self:spawnItem(self.nextSpawnItemType)
+			if self.nextSpawnItemType == "Ammo" then
+				self.nextSpawnItemType = "Health"
+			else
+				self.nextSpawnItemType = "Ammo"
+			end
+		else
+			-- Two or more slots: attempt to spawn both ammo and health, as before
+			local itemsToSpawn = {"Ammo", "Health"}
+			for _, itemType in ipairs(itemsToSpawn) do
+				local updatedCount = self:getActiveItemCount()
+				if updatedCount < maxItems then
+					self:spawnItem(itemType)
+				end
 			end
 		end
 	end
