@@ -465,19 +465,19 @@ FPSConfig.Animations = {
 	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
 	WeaponAnimations = {
 		Pistol = {
-			idle = "rbxassetid://0",      -- Idle holding animation
-			fire = "rbxassetid://0",      -- Fire/shoot animation
-			reload = "rbxassetid://0",    -- Reload animation
-			equip = "rbxassetid://0",     -- Draw/equip animation
-			sprint = "rbxassetid://0",    -- Sprint (lowered weapon) animation
+			idle = "rbxassetid://91849136252846",      -- Idle holding animation
+			fire = "rbxassetid://121818582669361",      -- Fire/shoot animation
+			reload = "rbxassetid://136927034232244",    -- Reload animation
+			equip = "rbxassetid://106310870423679",     -- Draw/equip animation
+			sprint = "rbxassetid://74003080620998",    -- Sprint (lowered weapon) animation
 			ads = "rbxassetid://0",       -- Aim down sights animation
 		},
 		SMG = {
-			idle = "rbxassetid://0",
-			fire = "rbxassetid://0",
-			reload = "rbxassetid://0",
-			equip = "rbxassetid://0",
-			sprint = "rbxassetid://0",
+			idle = "rbxassetid://91849136252846",      -- Idle holding animation
+			fire = "rbxassetid://121818582669361",      -- Fire/shoot animation
+			reload = "rbxassetid://136927034232244",    -- Reload animation
+			equip = "rbxassetid://106310870423679",     -- Draw/equip animation
+			sprint = "rbxassetid://74003080620998",
 			ads = "rbxassetid://0",
 		},
 		Shotgun = {
@@ -500,10 +500,10 @@ FPSConfig.Animations = {
 	
 	-- Weapon-specific offsets for proper positioning in viewmodel
 	WeaponOffsets = {
-		Pistol = CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(90), 0),
-		SMG = CFrame.new(0, 0.1, 0) * CFrame.Angles(0, math.rad(90), 0),
-		Shotgun = CFrame.new(0, 0.05, 0.1) * CFrame.Angles(0, math.rad(90), 0),
-		Rifle = CFrame.new(0, 0, 0.1) * CFrame.Angles(0, math.rad(90), 0),
+		Pistol = CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(0), 0),
+		SMG = CFrame.new(0, 0.1, 0) * CFrame.Angles(0, math.rad(0), 0),
+		Shotgun = CFrame.new(0, 0.05, 0.1) * CFrame.Angles(0, math.rad(0), 0),
+		Rifle = CFrame.new(0, 0, 0.1) * CFrame.Angles(0, math.rad(0), 0),
 	},
 	
 	-- Animation blending settings
