@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
+local VRService = game:GetService("VRService")
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -22,6 +23,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
+local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 
 --------------------------------------------------------------------------------
 -- STATE
@@ -49,6 +51,11 @@ local isGrounded = true
 -- Input state
 local mouseLocked = true
 local isMenuOpen = false
+
+-- Device state
+local deviceType = "KeyboardMouse"
+local isVRMode = false
+local gamepadLookVector = Vector2.new(0, 0)
 
 -- Character parts to hide
 local hiddenParts = {}
@@ -193,19 +200,50 @@ local function processLookInput(deltaTime)
 		return Vector2.new(0, 0)
 	end
 	
-	local delta = UserInputService:GetMouseDelta()
+	local delta = Vector2.new(0, 0)
 	
-	-- Apply sensitivity
-	local sens = userSettings.sensitivity * 0.5
-	delta = delta * sens
+	-- VR mode: Use head tracking
+	if isVRMode and UserInputService.VREnabled then
+		local headCFrame = VRService:GetUserCFrame(Enum.UserCFrame.Head)
+		local headRotation = headCFrame.Rotation
+		
+		-- Extract yaw and pitch from VR headset rotation
+		local _, yaw, _ = headRotation:ToEulerAnglesYXZ()
+		local pitch, _, _ = headRotation:ToEulerAnglesXYZ()
+		
+		-- Update look angles directly from VR headset
+		lookAngles = Vector2.new(math.deg(yaw), math.deg(pitch))
+		
+		-- Don't apply sensitivity or smoothing in VR - use direct head tracking
+		return Vector2.new(0, 0)
+	end
+	
+	-- Gamepad mode: Use right stick
+	if deviceType == "Gamepad" or deviceType == "VR" then
+		-- Gamepad look is updated via InputManager callback
+		local gamepadSens = FPSConfig.getSensitivityForDevice("Gamepad")
+		delta = gamepadLookVector * gamepadSens * 50 * deltaTime
+		
+		-- Apply deadzone
+		if delta.Magnitude < 0.1 then
+			delta = Vector2.new(0, 0)
+		end
+	else
+		-- Keyboard/Mouse mode: Use mouse delta
+		delta = UserInputService:GetMouseDelta()
+		
+		-- Apply sensitivity
+		local sens = userSettings.sensitivity * 0.5
+		delta = delta * sens
+	end
 	
 	-- Apply invert Y
 	if userSettings.invertY then
 		delta = Vector2.new(delta.X, -delta.Y)
 	end
 	
-	-- Apply mouse smoothing if enabled
-	if userSettings.mouseSmoothing then
+	-- Apply mouse smoothing if enabled (not for gamepad/VR)
+	if userSettings.mouseSmoothing and deviceType == "KeyboardMouse" then
 		local smoothFactor = FPSConfig.Camera.SmoothingFactor
 		smoothedLookDelta = smoothedLookDelta:Lerp(delta, 1 - smoothFactor)
 		delta = smoothedLookDelta
@@ -399,6 +437,37 @@ function FirstPersonCamera.initialize()
 		return
 	end
 	
+	-- Initialize InputManager
+	InputManager.initialize()
+	
+	-- Detect device type
+	deviceType = InputManager.getActiveDevice()
+	isVRMode = InputManager.isVR()
+	
+	-- Set appropriate sensitivity for device
+	local deviceSens = FPSConfig.getSensitivityForDevice(deviceType)
+	userSettings.sensitivity = deviceSens
+	
+	-- Setup InputManager callbacks for gamepad/VR look
+	InputManager.bindAxis("Look", function(lookVector)
+		gamepadLookVector = lookVector
+	end)
+	
+	-- VR-specific setup
+	if isVRMode then
+		print("[FirstPersonCamera] VR mode enabled")
+		local vrSettings = FPSConfig.Device.VR
+		
+		-- Apply VR-specific camera settings
+		if vrSettings.VRCameraSmoothing then
+			userSettings.mouseSmoothing = true
+			FPSConfig.Camera.SmoothingFactor = vrSettings.VRCameraSmoothing
+		end
+		
+		-- Set VR UI distance if needed
+		-- (VR UI positioning would be handled by UI scripts)
+	end
+	
 	-- Setup camera when character exists
 	if player.Character then
 		FirstPersonCamera.onCharacterAdded(player.Character)
@@ -409,19 +478,21 @@ function FirstPersonCamera.initialize()
 		updateCamera(deltaTime)
 	end)
 	
-	-- Handle window focus
-	UserInputService.WindowFocused:Connect(function()
-		if not isMenuOpen then
-			lockMouse()
-		end
-	end)
-	
-	UserInputService.WindowFocusReleased:Connect(function()
-		-- Don't unlock on focus loss to prevent camera issues
-	end)
+	-- Handle window focus (only for desktop)
+	if deviceType == "KeyboardMouse" then
+		UserInputService.WindowFocused:Connect(function()
+			if not isMenuOpen then
+				lockMouse()
+			end
+		end)
+		
+		UserInputService.WindowFocusReleased:Connect(function()
+			-- Don't unlock on focus loss to prevent camera issues
+		end)
+	end
 	
 	initialized = true
-	print("[FirstPersonCamera] Initialized")
+	print("[FirstPersonCamera] Initialized - Device:", deviceType)
 end
 
 -- Cleanup function

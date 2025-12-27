@@ -1,6 +1,7 @@
 -- FPSMovementController.client.lua
 -- First-person movement controller with crouch, sprint, and air control
 -- Integrates with FirstPersonCamera for smooth movement-camera transitions
+-- Updated with cross-platform InputManager support
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -15,6 +16,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
+local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 
 -- Wait for camera module (will be available after initialization)
 local FirstPersonCamera = nil
@@ -74,6 +76,9 @@ local keysHeld = {
 	left = false,
 	right = false,
 }
+
+-- Gamepad/Touch movement vector (for analog input)
+local movementVector = Vector2.new(0, 0)
 
 -- Crouch animation state
 local currentCrouchHeight = FPSConfig.Movement.StandHeight
@@ -144,12 +149,15 @@ local function updateSprint(deltaTime)
 	if not humanoid then return end
 
 	-- Check if we can sprint
+	-- For gamepad/touch: Check movement vector magnitude
+	local isMovingForward = keysHeld.forward or (movementVector.Y > 0.2)
+	
 	local canSprint = wantsToSprint
 		and isGrounded
 		and isMoving
 		and not isCrouching
 		and currentStamina > 0
-		and keysHeld.forward -- Only sprint when moving forward
+		and isMovingForward -- Only sprint when moving forward
 
 	local wasSprinting = isSprinting
 	isSprinting = canSprint
@@ -241,28 +249,62 @@ end
 -- INPUT HANDLING
 --------------------------------------------------------------------------------
 
+-- Setup InputManager callbacks
+local function setupInputCallbacks()
+	-- Initialize InputManager
+	InputManager.initialize()
+	
+	-- Sprint action
+	InputManager.bindAction(InputManager.Action.SPRINT, function(active)
+		wantsToSprint = active
+	end)
+	
+	-- Crouch action (toggle)
+	InputManager.bindAction(InputManager.Action.CROUCH, function(active)
+		if active then
+			wantsToCrouch = not wantsToCrouch
+		end
+	end)
+	
+	-- Jump action
+	InputManager.bindAction(InputManager.Action.JUMP, function(active)
+		if active then
+			local character = player.Character
+			if character then
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if humanoid and isGrounded then
+					humanoid.Jump = true
+				end
+			end
+		end
+	end)
+	
+	-- Movement axis (for gamepad/touch)
+	InputManager.bindAxis("Movement", function(vector)
+		movementVector = vector
+		
+		-- Update key states based on analog input
+		-- This allows the rest of the code to work with both digital and analog input
+		keysHeld.forward = vector.Y > 0.2
+		keysHeld.backward = vector.Y < -0.2
+		keysHeld.left = vector.X < -0.2
+		keysHeld.right = vector.X > 0.2
+	end)
+end
+
+-- Legacy keyboard input handler (kept for compatibility)
 local function onInputBegan(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-	-- Sprint key
-	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.SprintKey] then
-		wantsToSprint = true
-	end
-
-	-- Crouch key (toggle)
-	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.CrouchKey] then
-		wantsToCrouch = not wantsToCrouch
-	end
-
-	-- Movement keys
-	if input.KeyCode == FPSConfig.Controls.MoveForward then
+	-- Movement keys (only for keyboard, gamepad uses axis)
+	if input.KeyCode == FPSConfig.Controls.MoveForward or input.KeyCode == Enum.KeyCode.W then
 		keysHeld.forward = true
-	elseif input.KeyCode == FPSConfig.Controls.MoveBackward then
+	elseif input.KeyCode == FPSConfig.Controls.MoveBackward or input.KeyCode == Enum.KeyCode.S then
 		keysHeld.backward = true
-	elseif input.KeyCode == FPSConfig.Controls.MoveLeft then
+	elseif input.KeyCode == FPSConfig.Controls.MoveLeft or input.KeyCode == Enum.KeyCode.A then
 		keysHeld.left = true
-	elseif input.KeyCode == FPSConfig.Controls.MoveRight then
+	elseif input.KeyCode == FPSConfig.Controls.MoveRight or input.KeyCode == Enum.KeyCode.D then
 		keysHeld.right = true
 	end
 end
@@ -270,19 +312,14 @@ end
 local function onInputEnded(input, gameProcessedEvent)
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
-	-- Sprint key
-	if input.KeyCode == Enum.KeyCode[FPSConfig.Movement.SprintKey] then
-		wantsToSprint = false
-	end
-
 	-- Movement keys
-	if input.KeyCode == FPSConfig.Controls.MoveForward then
+	if input.KeyCode == FPSConfig.Controls.MoveForward or input.KeyCode == Enum.KeyCode.W then
 		keysHeld.forward = false
-	elseif input.KeyCode == FPSConfig.Controls.MoveBackward then
+	elseif input.KeyCode == FPSConfig.Controls.MoveBackward or input.KeyCode == Enum.KeyCode.S then
 		keysHeld.backward = false
-	elseif input.KeyCode == FPSConfig.Controls.MoveLeft then
+	elseif input.KeyCode == FPSConfig.Controls.MoveLeft or input.KeyCode == Enum.KeyCode.A then
 		keysHeld.left = false
-	elseif input.KeyCode == FPSConfig.Controls.MoveRight then
+	elseif input.KeyCode == FPSConfig.Controls.MoveRight or input.KeyCode == Enum.KeyCode.D then
 		keysHeld.right = false
 	end
 end
@@ -372,7 +409,10 @@ end
 --------------------------------------------------------------------------------
 
 local function initialize()
-	-- Connect input events
+	-- Setup InputManager callbacks
+	setupInputCallbacks()
+	
+	-- Connect legacy input events (for keyboard fallback)
 	UserInputService.InputBegan:Connect(onInputBegan)
 	UserInputService.InputEnded:Connect(onInputEnded)
 

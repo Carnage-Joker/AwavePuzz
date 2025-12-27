@@ -358,6 +358,87 @@ FPSConfig.Settings = {
 }
 
 --------------------------------------------------------------------------------
+-- DEVICE-SPECIFIC SETTINGS
+--------------------------------------------------------------------------------
+FPSConfig.Device = {
+	-- Mobile/Touch settings
+	Touch = {
+		-- Sensitivity adjustments for touch controls
+		LookSensitivity = 0.3,        -- Lower sensitivity for touch
+		MovementDeadzone = 0.15,      -- Joystick deadzone
+		FireButtonSize = 80,          -- Touch button sizes
+		JoystickSize = 150,
+		AutoFire = false,             -- Enable auto-fire when holding fire button
+		GyroAiming = false,           -- Use device gyroscope for aiming (if available)
+		
+		-- UI adjustments
+		HUDScale = 0.7,               -- Scale down HUD elements
+		CrosshairScale = 0.8,
+		ButtonOpacity = 0.7,
+		
+		-- Performance
+		ReducedEffects = true,        -- Lower visual effects for better performance
+		LowerParticles = true,
+	},
+	
+	-- Gamepad/Console settings
+	Gamepad = {
+		-- Sensitivity
+		LookSensitivity = 0.6,
+		MovementDeadzone = 0.15,
+		LookDeadzone = 0.15,
+		
+		-- Response curves
+		LookAcceleration = 1.2,       -- Multiplier for faster look speeds
+		AimAssist = true,             -- Enable aim assist for controllers
+		AimAssistStrength = 0.3,      -- How much to pull toward targets (0-1)
+		AimAssistRange = 100,         -- Range in studs for aim assist
+		
+		-- Vibration
+		VibrationEnabled = true,
+		VibrationIntensity = 0.7,
+		
+		-- Button mapping (see InputManager for full mapping)
+		InvertY = false,
+	},
+	
+	-- VR settings
+	VR = {
+		-- Camera
+		VRCameraSmoothing = 0.2,
+		VRHeadTracking = true,
+		ComfortVignette = true,       -- Reduce motion sickness
+		ComfortVignetteStrength = 0.5,
+		
+		-- Locomotion
+		VRLocomotionType = "Smooth",  -- "Smooth" or "Teleport"
+		VRTurnType = "Smooth",        -- "Smooth" or "Snap"
+		VRSnapTurnAngle = 45,         -- Degrees per snap turn
+		VRSmoothTurnSpeed = 90,       -- Degrees per second
+		
+		-- Controllers
+		VRHandTracking = true,
+		VRWeaponPositioning = true,   -- Position weapons based on controller position
+		VRTwoHandedGrip = true,       -- Allow two-handed weapon grip for stability
+		
+		-- Comfort
+		VRReduceHeadBob = true,
+		VRStationaryReload = false,   -- Require standing still to reload
+		
+		-- UI
+		VRUIDistance = 2,             -- Distance of UI panels in VR (meters)
+		VRUIScale = 1.2,              -- Scale up UI for readability
+	},
+	
+	-- Desktop/PC settings (reference)
+	Desktop = {
+		LookSensitivity = 0.5,
+		HighQualityEffects = true,
+		UnlimitedFramerate = true,
+	},
+}
+
+--------------------------------------------------------------------------------
 -- ANIMATION SETTINGS
 --------------------------------------------------------------------------------
 FPSConfig.Animations = {
@@ -500,6 +581,17 @@ function FPSConfig.calculateRecoil(weaponId, isADS)
 	horizontal = horizontal * (math.random() * 2 - 1)
 	
 	return vertical, horizontal
+end
+
+-- Get device-specific settings
+function FPSConfig.getDeviceSettings(deviceType)
+	return FPSConfig.Device[deviceType] or FPSConfig.Device.Desktop
+end
+
+-- Get appropriate sensitivity for current device
+function FPSConfig.getSensitivityForDevice(deviceType)
+	local deviceSettings = FPSConfig.getDeviceSettings(deviceType)
+	return deviceSettings.LookSensitivity or FPSConfig.Camera.DefaultSensitivity
 end
 
 return FPSConfig
