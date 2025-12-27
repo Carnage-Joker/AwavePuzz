@@ -17,6 +17,7 @@ local BaseManager = require(script.Parent.BaseManager)
 local Spawner = require(script.Parent.Spawner)
 local PlayerManager = require(script.Parent.PlayerManager)
 local ResourceSpawner = require(script.Parent.ResourceSpawner)
+local ItemSpawner = require(script.Parent.ItemSpawner)
 
 local WeaponService = require(script.Parent.WeaponService)
 local FPSWeaponService = require(script.Parent.FPSWeaponService)
@@ -65,6 +66,9 @@ function GameManager.new(allianceService)
 
 	self.shopService = ShopService.new(self.playerManager, self.weaponService)
 	self.resourceSpawner = ResourceSpawner.new()
+	self.itemSpawner = ItemSpawner.new()
+	self.itemSpawner:setPlayerManager(self.playerManager)
+	self.itemSpawner:setFPSWeaponService(self.fpsWeaponService)
 
 	self.mapManager = MapManager.new()
 	self.spawner = Spawner.new(self.weaponService, self.baseManager, self.playerManager)
@@ -848,6 +852,7 @@ function GameManager:updateWave(deltaTime)
 
 	self.spawner:update(deltaTime)
 	self.resourceSpawner:update(deltaTime)
+	self.itemSpawner:update(deltaTime)
 
 	local sec = math.floor(self.waveTimeRemaining)
 	if sec >= 0 and (sec % 5 == 0) and (self._lastWaveBroadcastSec ~= sec) then
@@ -873,6 +878,7 @@ end
 function GameManager:updateIntermission(deltaTime)
 	self.stateTimer -= deltaTime
 	self.resourceSpawner:update(deltaTime)
+	self.itemSpawner:update(deltaTime)
 
 	if self.stateTimer <= 0 then
 		self:startWave()
@@ -969,6 +975,7 @@ function GameManager:update(deltaTime)
 			self:startLobby()
 		end
 		self.resourceSpawner:update(deltaTime)
+		self.itemSpawner:update(deltaTime)
 
 	elseif self.currentState == GameManager.States.VICTORY or self.currentState == GameManager.States.DEFEAT then
 		self:updateEndOfRound(deltaTime)
@@ -978,6 +985,7 @@ function GameManager:update(deltaTime)
 
 	else
 		self.resourceSpawner:update(deltaTime)
+		self.itemSpawner:update(deltaTime)
 	end
 end
 
