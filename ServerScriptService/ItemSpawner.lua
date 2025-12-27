@@ -265,7 +265,14 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		return
 	end
 
-	print(player.Name .. " collected " .. itemType .. " pack")
+	-- Early return if player is nil to avoid nil access errors
+	if not player then
+		warn("ItemSpawner:onItemCollected called with nil player")
+		return
+	end
+
+	local playerName = (player and player.Name) or "UnknownPlayer"
+	print(playerName .. " collected " .. itemType .. " pack")
 
 	-- Track if reward was successfully granted
 	local rewardGranted = false
@@ -278,7 +285,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 			if equippedWeapon then
 				local success = self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
 				if success then
-					print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+					print(playerName .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
 					rewardGranted = true
 				end
 			else
@@ -287,7 +294,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 					player:SetAttribute("LastPickupFailed", "NoEquippedWeaponForAmmo")
 					player:SetAttribute("LastPickupFailedMessage", "You need to equip a weapon before using an ammo pack.")
 				end
-				print(player.Name .. " tried to use an ammo pack without an equipped weapon")
+				print(playerName .. " tried to use an ammo pack without an equipped weapon")
 			end
 		end
 	elseif itemType == "Health" then
@@ -306,10 +313,10 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 				-- Use PlayerManager:healPlayer for consistent health management
 				local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
 				if success then
-					print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
+					print(playerName .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
 					rewardGranted = true
 				else
-					print(player.Name .. " tried to use a health pack but healing failed")
+					print(playerName .. " tried to use a health pack but healing failed")
 				end
 			else
 				-- Provide feedback when player tries to pick up a health pack at full health
@@ -317,7 +324,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 					player:SetAttribute("LastPickupFailed", "HealthFull")
 					player:SetAttribute("LastPickupFailedMessage", "You are already at full health.")
 				end
-				print(player.Name .. " tried to use a health pack but is already at full health")
+				print(playerName .. " tried to use a health pack but is already at full health")
 			end
 		end
 	end
