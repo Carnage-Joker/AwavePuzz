@@ -288,13 +288,32 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		end
 	elseif itemType == "Health" then
 		if self.playerManager then
-			-- Use PlayerManager:healPlayer for consistent health management
-			local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
-			if success then
-				print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
-				rewardGranted = true
+			-- Prevent consuming health packs when already at full health
+			local canHeal = true
+
+			if player and player.Character then
+				local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.MaxHealth > 0 and humanoid.Health >= humanoid.MaxHealth then
+					canHeal = false
+				end
+			end
+
+			if canHeal then
+				-- Use PlayerManager:healPlayer for consistent health management
+				local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
+				if success then
+					print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
+					rewardGranted = true
+				else
+					print(player.Name .. " tried to use a health pack but healing failed")
+				end
 			else
-				print(player.Name .. " tried to use a health pack but healing failed")
+				-- Provide feedback when player tries to pick up a health pack at full health
+				if player and player.SetAttribute then
+					player:SetAttribute("LastPickupFailed", "HealthFull")
+					player:SetAttribute("LastPickupFailedMessage", "You are already at full health.")
+				end
+				print(player.Name .. " tried to use a health pack but is already at full health")
 			end
 		end
 	end
