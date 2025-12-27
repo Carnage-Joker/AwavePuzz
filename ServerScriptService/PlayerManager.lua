@@ -249,46 +249,12 @@ function PlayerManager:healPlayer(player, amount)
 		return false
 	end
 
-	-- Get GameConfig for debug logging
-	local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-	
-	-- Debug: log pre-heal state
-	if GameConfig.DEBUG then
-		print(string.format("[PlayerManager] Healing %s: amount=%d", player.Name, amount))
-		print(string.format("  Before: playerData.health=%d, isAlive=%s", 
-			playerData.health, tostring(playerData.isAlive)))
-	end
-
-	-- Revive if dead
 	if playerData.health <= 0 and amount > 0 then
 		playerData.isAlive = true
 	end
 
-	-- Update internal health (clamped to STARTING_HEALTH)
-	local oldHealth = playerData.health
 	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
-	
-	-- Sync with Humanoid health
-	if player.Character then
-		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-		if humanoid and humanoid.MaxHealth > 0 then
-			-- Clamp to Humanoid.MaxHealth
-			local newHumanoidHealth = math.min(humanoid.MaxHealth, humanoid.Health + amount)
-			humanoid.Health = newHumanoidHealth
-			
-			if GameConfig.DEBUG then
-				print(string.format("  Humanoid health: %d -> %d (max: %d)", 
-					humanoid.Health - amount, newHumanoidHealth, humanoid.MaxHealth))
-			end
-		end
-	end
-	
 	self:sendHealthUpdate(player)
-	
-	if GameConfig.DEBUG then
-		print(string.format("  After: playerData.health=%d (healed %d HP)", 
-			playerData.health, playerData.health - oldHealth))
-	end
 
 	return true
 end

@@ -328,14 +328,11 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 
 	-- Only clean up the item if the reward was successfully granted
 	if rewardGranted then
-		local item = self.activeItems[itemId]
-		if item then
-			if item.touchConnection then
-				item.touchConnection:Disconnect()
-			end
-			if item.rotationConnection then
-				item.rotationConnection:Disconnect()
-			end
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
+		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
 		end
 
 		if part and part.Parent then

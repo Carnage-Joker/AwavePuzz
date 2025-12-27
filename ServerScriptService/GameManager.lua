@@ -56,8 +56,8 @@ function GameManager.new(allianceService)
 	-- ✅ IMPORTANT: use singleton instance
 	self.playerManager = PlayerManager.getInstance()
 
-	-- ✅ Services (wire FPS ammo to WeaponService properly, pass self for kill tracking)
-	self.weaponService = WeaponService.new(self.playerManager, allianceService, self)
+	-- ✅ Services (wire FPS ammo to WeaponService properly)
+	self.weaponService = WeaponService.new(self.playerManager, allianceService)
 	self.fpsWeaponService = FPSWeaponService.new(self.playerManager, self.weaponService)
 	self.weaponService:setFPSWeaponService(self.fpsWeaponService)
 	
@@ -313,8 +313,7 @@ function GameManager:initializePlayerStats(player)
 			roundWins = 0,
 			roundLosses = 0,
 			damageDealt = 0,
-			componentsCollected = 0,
-			puzzleSolves = 0,
+			componentsCollected = 0
 		}
 	end
 end
@@ -337,12 +336,6 @@ function GameManager:incrementPlayerComponentsCollected(player)
 	self:broadcastScoreboard()
 end
 
-function GameManager:incrementPlayerPuzzleSolves(player)
-	self:initializePlayerStats(player)
-	self.playerStats[player.UserId].puzzleSolves = self.playerStats[player.UserId].puzzleSolves + 1
-	self:broadcastScoreboard()
-end
-
 function GameManager:broadcastScoreboard()
 	if not self.remoteEvents.ScoreboardUpdate then return end
 
@@ -355,8 +348,7 @@ function GameManager:broadcastScoreboard()
 			deaths = stats.deaths,
 			roundWins = stats.roundWins,
 			roundLosses = stats.roundLosses,
-			componentsCollected = stats.componentsCollected,
-			puzzleSolves = stats.puzzleSolves,
+			componentsCollected = stats.componentsCollected
 		})
 	end
 
@@ -792,8 +784,7 @@ function GameManager:getScoreboardData()
 			deaths = stats.deaths,
 			roundWins = stats.roundWins,
 			roundLosses = stats.roundLosses,
-			componentsCollected = stats.componentsCollected,
-			puzzleSolves = stats.puzzleSolves,
+			componentsCollected = stats.componentsCollected
 		})
 	end
 
@@ -954,8 +945,6 @@ function GameManager:updateScoreboard(deltaTime)
 		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
 			self:startLobby()
 		else
-			-- Transitioning to WAITING without lobby - ensure spectators are reset
-			self.spectatorManager:reset()
 			self:setState(GameManager.States.WAITING)
 		end
 	end

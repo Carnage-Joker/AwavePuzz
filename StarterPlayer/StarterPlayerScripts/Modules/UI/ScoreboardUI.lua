@@ -84,8 +84,8 @@ headerCorner.CornerRadius = UDim.new(0, getScaledValue(6, "padding"))
 headerCorner.Parent = headerFrame
 
 -- Header columns
-local columnWidths = {0.30, 0.13, 0.13, 0.13, 0.16, 0.15} -- Player, Kills, Deaths, Wins, Parts, Puzzles
-local columnHeaders = {"Player", "Kills", "Deaths", "Wins", "Parts", "Puzzles"}
+local columnWidths = {0.35, 0.15, 0.15, 0.15, 0.20} -- Player, Kills, Deaths, Wins, Components
+local columnHeaders = {"Player", "Kills", "Deaths", "Wins", "Parts"}
 
 for i, header in ipairs(columnHeaders) do
 	local startX = 0
@@ -145,7 +145,7 @@ local function updateUIScaling()
 	headerCorner.CornerRadius = UDim.new(0, getScaledValue(6, "padding"))
 
 	-- Update header column text sizes
-	for i = 1, 6 do
+	for i = 1, 5 do
 		local col = headerFrame:FindFirstChild("Header" .. i)
 		if col then
 			col.TextSize = getScaledTextSize(14)
@@ -187,8 +187,7 @@ local function createPlayerRow(playerStats, layoutOrder)
 		tostring(playerStats.kills or 0),
 		tostring(playerStats.deaths or 0),
 		tostring(playerStats.roundWins or 0),
-		tostring(playerStats.componentsCollected or 0),
-		tostring(playerStats.puzzleSolves or 0)
+		tostring(playerStats.componentsCollected or 0)
 	}
 
 	for i, value in ipairs(values) do
