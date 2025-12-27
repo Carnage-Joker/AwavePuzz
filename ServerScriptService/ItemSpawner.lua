@@ -343,11 +343,7 @@ function ItemSpawner:update(deltaTime)
 end
 
 function ItemSpawner:getActiveItemCount()
-	local count = 0
-	for _ in pairs(self.activeItems) do
-		count = count + 1
-	end
-	return count
+	return #self.activeItems
 end
 
 function ItemSpawner:clearAllItems()
