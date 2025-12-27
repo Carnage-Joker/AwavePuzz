@@ -76,6 +76,13 @@ GameConfig.BETRAYAL_WINDOW = 30 -- Seconds for betrayal combat window
 GameConfig.RESOURCE_SPAWN_RATE = 20 -- Seconds between resource spawns
 GameConfig.MAX_RESOURCES_ON_MAP = 10
 
+-- Item Spawn Settings (Ammo & Health Packs)
+GameConfig.ITEM_SPAWN_INTERVAL = 60 -- Seconds between item spawns
+GameConfig.ITEM_SPAWN_RADIUS = 15 -- Radius around base to spawn items
+GameConfig.AMMO_PACK_AMOUNT = 30 -- Amount of ammo given per pack
+GameConfig.HEALTH_PACK_AMOUNT = 50 -- Amount of health given per pack
+GameConfig.MAX_ITEMS_ON_MAP = 5 -- Maximum number of item packs on map at once
+
 -- Map Settings
 GameConfig.ENABLE_MULTI_MAP = true
 
