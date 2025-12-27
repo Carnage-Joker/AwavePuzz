@@ -268,11 +268,6 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		return
 	end
 
-	local item = self.activeItems[itemId]
-	if not item then
-		return
-	end
-
 	local playerName = player.Name
 	print(playerName .. " collected " .. itemType .. " pack")
 
