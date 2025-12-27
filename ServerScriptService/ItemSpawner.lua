@@ -237,9 +237,12 @@ function ItemSpawner:spawnItem(itemType)
 					.. tostring(err)
 			)
 		end
-		-- If the part still exists (was not destroyed by onItemCollected), allow
-		-- future touch events to process by clearing the debounce flag.
-		if part.Parent ~= nil then
+		-- Only clear the debounce if the item is still marked as active.
+		-- This ties the debounce lifecycle to the authoritative item state
+		-- (self.activeItems) instead of the physical part hierarchy, and
+		-- avoids double-collection if onItemCollected logically consumed
+		-- the item without immediately destroying/reparenting the part.
+		if self.activeItems and self.activeItems[itemId] ~= nil then
 			debouncing = false
 		end
 	end)
