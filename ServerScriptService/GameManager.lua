@@ -985,7 +985,6 @@ function GameManager:update(deltaTime)
 
 	else
 		self.resourceSpawner:update(deltaTime)
-		self.itemSpawner:update(deltaTime)
 	end
 end
 
