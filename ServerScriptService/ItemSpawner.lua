@@ -250,7 +250,8 @@ function ItemSpawner:spawnItem(itemType)
 	self.activeItems[itemId] = {
 		itemType = itemType,
 		instance = part,
-		connection = touchConnection
+		touchConnection = touchConnection,
+		rotationConnection = rotationConnection
 	}
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
@@ -323,8 +324,11 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 
 	-- Only clean up the item if the reward was successfully granted
 	if rewardGranted then
-		if item.connection then
-			item.connection:Disconnect()
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
+		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
 		end
 
 		if part and part.Parent then
@@ -382,8 +386,11 @@ end
 
 function ItemSpawner:clearAllItems()
 	for itemId, item in pairs(self.activeItems) do
-		if item.connection then
-			item.connection:Disconnect()
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
+		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
 		end
 		if item.instance and item.instance.Parent then
 			item.instance:Destroy()
