@@ -367,12 +367,18 @@ function ItemSpawner:update(deltaTime)
 		end
 
 		if remainingSlots == 1 then
-			-- Only one slot left: alternate between Ammo and Health to avoid starving one type
+			-- Only one slot left: alternate between Ammo and Health based on successful spawns
+			local beforeCount = self:getActiveItemCount()
 			self:spawnItem(self.nextSpawnItemType)
-			if self.nextSpawnItemType == "Ammo" then
-				self.nextSpawnItemType = "Health"
-			else
-				self.nextSpawnItemType = "Ammo"
+			local afterCount = self:getActiveItemCount()
+
+			-- Only toggle the next type if we actually spawned an item
+			if afterCount > beforeCount then
+				if self.nextSpawnItemType == "Ammo" then
+					self.nextSpawnItemType = "Health"
+				else
+					self.nextSpawnItemType = "Ammo"
+				end
 			end
 		else
 			-- Two or more slots: attempt to spawn both ammo and health, as before
