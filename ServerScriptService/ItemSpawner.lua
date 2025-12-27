@@ -271,7 +271,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		return
 	end
 
-	local playerName = (player and player.Name) or "UnknownPlayer"
+	local playerName = player.Name
 	print(playerName .. " collected " .. itemType .. " pack")
 
 	-- Track if reward was successfully granted
