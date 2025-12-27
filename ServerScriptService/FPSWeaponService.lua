@@ -64,16 +64,13 @@ function FPSWeaponService:initializeWeaponAmmo(player, weaponId)
 		self.playerAmmo[userId][weaponId] = {
 			current = stats.MagSize,
 			reserve = stats.ReserveAmmo,
-			max = stats.MaxMagazineAmmo or stats.MagSize,
-			maxReserve = stats.MaxReserveAmmo or (stats.ReserveAmmo * 2),
+			max = stats.MagSize,
 		}
 	else
-		-- Sane defaults if weapon config is missing
 		self.playerAmmo[userId][weaponId] = {
 			current = 30,
 			reserve = 120,
 			max = 30,
-			maxReserve = 180,
 		}
 	end
 
@@ -106,25 +103,10 @@ function FPSWeaponService:addAmmo(player, weaponId, amount, isReserve)
 	local ammo = self:getAmmo(player, weaponId)
 	if not ammo then return false end
 
-	-- Debug logging
-	local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-	if GameConfig.DEBUG then
-		print(string.format("[FPSWeaponService] Adding %d ammo to %s for %s (isReserve: %s)", 
-			amount, weaponId, player.Name, tostring(isReserve)))
-		print(string.format("  Before: current=%d, reserve=%d, max=%d, maxReserve=%d", 
-			ammo.current, ammo.reserve, ammo.max, ammo.maxReserve or 0))
-	end
-
 	if isReserve then
-		-- Enforce max reserve ammo cap
-		local maxReserve = ammo.maxReserve or (ammo.max * 6) -- Default to 6x magazine if not set
-		ammo.reserve = math.min(ammo.reserve + amount, maxReserve)
+		ammo.reserve += amount
 	else
 		ammo.current = math.min(ammo.current + amount, ammo.max)
-	end
-
-	if GameConfig.DEBUG then
-		print(string.format("  After: current=%d, reserve=%d", ammo.current, ammo.reserve))
 	end
 
 	self:sendAmmoUpdate(player, weaponId)
@@ -195,11 +177,10 @@ function FPSWeaponService:handleReload(player, payload)
 			return
 		end
 
-		-- Ensure reload does not exceed magazine max
 		local ammoNeeded = currentAmmo.max - currentAmmo.current
 		local ammoToAdd = math.min(ammoNeeded, currentAmmo.reserve)
 
-		currentAmmo.current = math.min(currentAmmo.current + ammoToAdd, currentAmmo.max)
+		currentAmmo.current += ammoToAdd
 		currentAmmo.reserve -= ammoToAdd
 
 		self.playerReloadState[userId] = nil
@@ -216,7 +197,6 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		current = ammo.current,
 		reserve = ammo.reserve,
 		max = ammo.max,
-		maxReserve = ammo.maxReserve,
 	})
 end
 
@@ -305,17 +285,7 @@ function FPSWeaponService:awardAmmoPickup(player, weaponId, amount)
 	end
 
 	if ammo then
-		-- Enforce max reserve ammo cap on pickups
-		local maxReserve = ammo.maxReserve or (ammo.max * 6)
-		local beforeReserve = ammo.reserve
-		ammo.reserve = math.min(ammo.reserve + amount, maxReserve)
-		
-		local GameConfig = require(game.ReplicatedStorage.Shared.GameConfig)
-		if GameConfig.DEBUG then
-			print(string.format("[FPSWeaponService] Ammo pickup for %s: %s (%d -> %d, max: %d)", 
-				player.Name, weaponId, beforeReserve, ammo.reserve, maxReserve))
-		end
-		
+		ammo.reserve += amount
 		self:sendAmmoUpdate(player, weaponId)
 		return true
 	end
