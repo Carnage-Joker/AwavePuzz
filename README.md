@@ -115,7 +115,12 @@ See [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) for complete FPS system documen
 ### 2. **Wave-Based Zombie Combat**
 - Progressive difficulty scaling
 - Zombies get stronger and more numerous each wave
-- Strategic base defense mechanics
+- Strategic base defense mechanics with **Defensive Base Camp**:
+  - **Automatically created** at map center
+  - **30x30 stud platform** with defensive walls (12 studs high)
+  - **4 gates** at cardinal directions (semi-transparent, passable)
+  - **8 cover positions** arranged in a circle for tactical defense
+  - Configurable via `GameConfig.AUTO_CREATE_BASE_CAMP`
 - **Improved AI**: Zombies intelligently target nearest player or base
 - **Attack System**: Zombies attack when in range with cooldown
 - **Animation Support**: Attack animations for visual feedback
@@ -441,6 +446,7 @@ This game is built using:
 - **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - RemoteEvent reference with payload documentation
 
 #### System-Specific Documentation
+- **[BASE_CAMP_SYSTEM.md](BASE_CAMP_SYSTEM.md)** - 🆕 Base camp auto-generation and configuration guide
 - **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - FPS system documentation and tuning guide
 - **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - Weapon animation system guide
 - **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - Step-by-step animation creation tutorial
