@@ -34,6 +34,34 @@ GameConfig.BASE_HEALTH = 1000
 GameConfig.BASE_REGEN_RATE = 0 -- No regeneration by default
 GameConfig.AUTO_CREATE_BASE_CAMP = true -- Automatically create base camp in map center
 
+-- Base Camp Configuration
+-- These values can be overridden per-map in MapConfig
+GameConfig.BASE_CAMP = {
+	-- Base structure
+	BASE_SIZE = 30, -- Size of the central base structure (studs)
+	WALL_HEIGHT = 12, -- Height of defensive walls
+	WALL_THICKNESS = 2, -- Thickness of walls
+	DEFAULT_HEIGHT = 5, -- Default Y position if ground detection fails
+	
+	-- Defensive features
+	GATE_WIDTH = 8, -- Width of gates in walls
+	GATE_TRANSPARENCY = 0.3, -- Transparency of gates (0=opaque, 1=invisible)
+	NUM_GATES = 4, -- Number of gates (one per cardinal direction)
+	COVER_COUNT = 8, -- Number of cover positions
+	COVER_SIZE = Vector3.new(4, 3, 1), -- Size of cover objects
+	
+	-- Colors and materials
+	WALL_COLOR = Color3.fromRGB(80, 80, 80), -- Gray walls
+	BASE_COLOR = Color3.fromRGB(100, 100, 100), -- Base platform color
+	GATE_COLOR = Color3.fromRGB(120, 80, 40), -- Brownish gates
+	COVER_COLOR = Color3.fromRGB(70, 70, 70), -- Dark gray cover
+	
+	WALL_MATERIAL = Enum.Material.Concrete,
+	BASE_MATERIAL = Enum.Material.Concrete,
+	GATE_MATERIAL = Enum.Material.Wood,
+	COVER_MATERIAL = Enum.Material.Metal,
+}
+
 -- Wave Settings
 GameConfig.STARTING_WAVE = 1
 GameConfig.WAVE_DELAY = 30 -- Seconds between waves

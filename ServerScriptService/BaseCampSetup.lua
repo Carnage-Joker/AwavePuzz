@@ -12,36 +12,31 @@ local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local BaseCampSetup = {}
 BaseCampSetup.__index = BaseCampSetup
 
--- Configuration for base camp appearance and layout
-local CAMP_CONFIG = {
-	-- Base structure
-	BASE_SIZE = 30, -- Size of the central base structure (studs)
-	WALL_HEIGHT = 12, -- Height of defensive walls
-	WALL_THICKNESS = 2, -- Thickness of walls
-	DEFAULT_HEIGHT = 5, -- Default Y position if ground detection fails
+-- Get base camp configuration with optional map-specific overrides
+-- mapConfig: optional table from MapConfig containing BaseCampConfig overrides
+local function getCampConfig(mapConfig)
+	local config = {}
 	
-	-- Defensive features
-	GATE_WIDTH = 8, -- Width of gates in walls
-	GATE_TRANSPARENCY = 0.3, -- Transparency of gates (0=opaque, 1=invisible)
-	NUM_GATES = 4, -- Number of gates (one per cardinal direction)
-	COVER_COUNT = 8, -- Number of cover positions
-	COVER_SIZE = Vector3.new(4, 3, 1), -- Size of cover objects
+	-- Start with defaults from GameConfig
+	for key, value in pairs(GameConfig.BASE_CAMP) do
+		config[key] = value
+	end
 	
-	-- Colors and materials
-	WALL_COLOR = Color3.fromRGB(80, 80, 80), -- Gray walls
-	BASE_COLOR = Color3.fromRGB(100, 100, 100), -- Base platform color
-	GATE_COLOR = Color3.fromRGB(120, 80, 40), -- Brownish gates
-	COVER_COLOR = Color3.fromRGB(70, 70, 70), -- Dark gray cover
+	-- Apply map-specific overrides if provided
+	if mapConfig and mapConfig.BaseCampConfig then
+		for key, value in pairs(mapConfig.BaseCampConfig) do
+			config[key] = value
+		end
+	end
 	
-	WALL_MATERIAL = Enum.Material.Concrete,
-	BASE_MATERIAL = Enum.Material.Concrete,
-	GATE_MATERIAL = Enum.Material.Wood,
-	COVER_MATERIAL = Enum.Material.Metal,
-}
+	return config
+end
 
-function BaseCampSetup.new()
+function BaseCampSetup.new(mapConfig)
 	local self = setmetatable({}, BaseCampSetup)
 	self.baseCampModel = nil
+	self.baseCaptureZoneModel = nil -- Track our own BaseCaptureZone
+	self.campConfig = getCampConfig(mapConfig) -- Store resolved configuration
 	return self
 end
 
@@ -49,7 +44,7 @@ end
 function BaseCampSetup:calculateMapCenter(zombieSpawnPoints)
 	if not zombieSpawnPoints or #zombieSpawnPoints == 0 then
 		-- Default to workspace center if no spawn points
-		return Vector3.new(0, CAMP_CONFIG.DEFAULT_HEIGHT, 0)
+		return Vector3.new(0, self.campConfig.DEFAULT_HEIGHT, 0)
 	end
 	
 	local totalX, totalY, totalZ = 0, 0, 0
@@ -86,7 +81,7 @@ function BaseCampSetup:calculateMapCenter(zombieSpawnPoints)
 	if raycastResult then
 		centerY = raycastResult.Position.Y + 0.5
 	else
-		centerY = CAMP_CONFIG.DEFAULT_HEIGHT -- Default height if no ground found
+		centerY = self.campConfig.DEFAULT_HEIGHT -- Default height if no ground found
 	end
 	
 	return Vector3.new(centerX, centerY, centerZ)
@@ -96,11 +91,11 @@ end
 function BaseCampSetup:createBasePlatform(centerPos)
 	local platform = Instance.new("Part")
 	platform.Name = "BasePlatform"
-	platform.Size = Vector3.new(CAMP_CONFIG.BASE_SIZE, 1, CAMP_CONFIG.BASE_SIZE)
+	platform.Size = Vector3.new(self.campConfig.BASE_SIZE, 1, self.campConfig.BASE_SIZE)
 	platform.Position = centerPos
 	platform.Anchored = true
-	platform.Color = CAMP_CONFIG.BASE_COLOR
-	platform.Material = CAMP_CONFIG.BASE_MATERIAL
+	platform.Color = self.campConfig.BASE_COLOR
+	platform.Material = self.campConfig.BASE_MATERIAL
 	platform.TopSurface = Enum.SurfaceType.Smooth
 	platform.BottomSurface = Enum.SurfaceType.Smooth
 	
@@ -110,19 +105,19 @@ end
 -- Create defensive walls around the base
 function BaseCampSetup:createWalls(centerPos)
 	local walls = {}
-	local halfSize = CAMP_CONFIG.BASE_SIZE / 2
-	local wallHeight = CAMP_CONFIG.WALL_HEIGHT
-	local thickness = CAMP_CONFIG.WALL_THICKNESS
+	local halfSize = self.campConfig.BASE_SIZE / 2
+	local wallHeight = self.campConfig.WALL_HEIGHT
+	local thickness = self.campConfig.WALL_THICKNESS
 	
 	-- Create four walls (North, South, East, West)
 	local wallConfigs = {
-		{name = "NorthWall", size = Vector3.new(CAMP_CONFIG.BASE_SIZE, wallHeight, thickness), 
+		{name = "NorthWall", size = Vector3.new(self.campConfig.BASE_SIZE, wallHeight, thickness), 
 		 offset = Vector3.new(0, wallHeight/2, halfSize)},
-		{name = "SouthWall", size = Vector3.new(CAMP_CONFIG.BASE_SIZE, wallHeight, thickness), 
+		{name = "SouthWall", size = Vector3.new(self.campConfig.BASE_SIZE, wallHeight, thickness), 
 		 offset = Vector3.new(0, wallHeight/2, -halfSize)},
-		{name = "EastWall", size = Vector3.new(thickness, wallHeight, CAMP_CONFIG.BASE_SIZE), 
+		{name = "EastWall", size = Vector3.new(thickness, wallHeight, self.campConfig.BASE_SIZE), 
 		 offset = Vector3.new(halfSize, wallHeight/2, 0)},
-		{name = "WestWall", size = Vector3.new(thickness, wallHeight, CAMP_CONFIG.BASE_SIZE), 
+		{name = "WestWall", size = Vector3.new(thickness, wallHeight, self.campConfig.BASE_SIZE), 
 		 offset = Vector3.new(-halfSize, wallHeight/2, 0)},
 	}
 	
@@ -132,8 +127,8 @@ function BaseCampSetup:createWalls(centerPos)
 		wall.Size = config.size
 		wall.Position = centerPos + config.offset
 		wall.Anchored = true
-		wall.Color = CAMP_CONFIG.WALL_COLOR
-		wall.Material = CAMP_CONFIG.WALL_MATERIAL
+		wall.Color = self.campConfig.WALL_COLOR
+		wall.Material = self.campConfig.WALL_MATERIAL
 		wall.TopSurface = Enum.SurfaceType.Smooth
 		wall.BottomSurface = Enum.SurfaceType.Smooth
 		
@@ -146,10 +141,10 @@ end
 -- Create gates in the walls
 function BaseCampSetup:createGates(centerPos)
 	local gates = {}
-	local halfSize = CAMP_CONFIG.BASE_SIZE / 2
-	local gateWidth = CAMP_CONFIG.GATE_WIDTH
-	local gateHeight = CAMP_CONFIG.WALL_HEIGHT * 0.7 -- Gates slightly shorter than walls
-	local thickness = CAMP_CONFIG.WALL_THICKNESS
+	local halfSize = self.campConfig.BASE_SIZE / 2
+	local gateWidth = self.campConfig.GATE_WIDTH
+	local gateHeight = self.campConfig.WALL_HEIGHT * 0.7 -- Gates slightly shorter than walls
+	local thickness = self.campConfig.WALL_THICKNESS
 	
 	-- Gates at cardinal directions
 	local gateConfigs = {
@@ -169,9 +164,9 @@ function BaseCampSetup:createGates(centerPos)
 		gate.Size = config.size
 		gate.Position = centerPos + config.offset
 		gate.Anchored = true
-		gate.Color = CAMP_CONFIG.GATE_COLOR
-		gate.Material = CAMP_CONFIG.GATE_MATERIAL
-		gate.Transparency = CAMP_CONFIG.GATE_TRANSPARENCY -- Semi-transparent to show as gates
+		gate.Color = self.campConfig.GATE_COLOR
+		gate.Material = self.campConfig.GATE_MATERIAL
+		gate.Transparency = self.campConfig.GATE_TRANSPARENCY -- Semi-transparent to show as gates
 		gate.CanCollide = false -- Players can pass through
 		gate.TopSurface = Enum.SurfaceType.Smooth
 		gate.BottomSurface = Enum.SurfaceType.Smooth
@@ -188,21 +183,21 @@ end
 -- Create cover positions around the base
 function BaseCampSetup:createCover(centerPos)
 	local coverObjects = {}
-	local coverRadius = CAMP_CONFIG.BASE_SIZE / 2 - 5 -- Place cover inside the walls
-	local angleStep = (2 * math.pi) / CAMP_CONFIG.COVER_COUNT
+	local coverRadius = self.campConfig.BASE_SIZE / 2 - 5 -- Place cover inside the walls
+	local angleStep = (2 * math.pi) / self.campConfig.COVER_COUNT
 	
-	for i = 1, CAMP_CONFIG.COVER_COUNT do
+	for i = 1, self.campConfig.COVER_COUNT do
 		local angle = angleStep * (i - 1)
 		local offsetX = math.cos(angle) * coverRadius
 		local offsetZ = math.sin(angle) * coverRadius
 		
 		local cover = Instance.new("Part")
 		cover.Name = "Cover_" .. i
-		cover.Size = CAMP_CONFIG.COVER_SIZE
-		cover.Position = centerPos + Vector3.new(offsetX, CAMP_CONFIG.COVER_SIZE.Y/2, offsetZ)
+		cover.Size = self.campConfig.COVER_SIZE
+		cover.Position = centerPos + Vector3.new(offsetX, self.campConfig.COVER_SIZE.Y/2, offsetZ)
 		cover.Anchored = true
-		cover.Color = CAMP_CONFIG.COVER_COLOR
-		cover.Material = CAMP_CONFIG.COVER_MATERIAL
+		cover.Color = self.campConfig.COVER_COLOR
+		cover.Material = self.campConfig.COVER_MATERIAL
 		cover.TopSurface = Enum.SurfaceType.Smooth
 		cover.BottomSurface = Enum.SurfaceType.Smooth
 		
@@ -223,8 +218,8 @@ function BaseCampSetup:createBaseCaptureZone(centerPos)
 	-- Create the main hitbox that zombies will target
 	local hitBox = Instance.new("Part")
 	hitBox.Name = "HitBox"
-	hitBox.Size = Vector3.new(CAMP_CONFIG.BASE_SIZE - 4, CAMP_CONFIG.WALL_HEIGHT - 2, CAMP_CONFIG.BASE_SIZE - 4)
-	hitBox.Position = centerPos + Vector3.new(0, CAMP_CONFIG.WALL_HEIGHT/2, 0)
+	hitBox.Size = Vector3.new(self.campConfig.BASE_SIZE - 4, self.campConfig.WALL_HEIGHT - 2, self.campConfig.BASE_SIZE - 4)
+	hitBox.Position = centerPos + Vector3.new(0, self.campConfig.WALL_HEIGHT/2, 0)
 	hitBox.Anchored = true
 	hitBox.Transparency = 1 -- Invisible
 	hitBox.CanCollide = false
@@ -284,6 +279,7 @@ function BaseCampSetup:buildBaseCamp(centerPos, parentModel)
 	baseCaptureZone.Parent = workspace
 	
 	self.baseCampModel = baseCamp
+	self.baseCaptureZoneModel = baseCaptureZone -- Track our own BaseCaptureZone
 	
 	print("[BaseCampSetup] Base camp created at position:", centerPos)
 	
@@ -310,24 +306,20 @@ function BaseCampSetup:setupForMap(mapManager)
 end
 
 -- Cleanup existing base camp
+-- Only destroys the instances created by this BaseCampSetup object
+-- to avoid interfering with manually placed or alternative camps
 function BaseCampSetup:cleanup()
+	-- Only destroy the base camp model we created
 	if self.baseCampModel and self.baseCampModel.Parent then
 		self.baseCampModel:Destroy()
 	end
-	
-	-- Also clean up BaseCaptureZone
-	local existingZone = workspace:FindFirstChild("BaseCaptureZone")
-	if existingZone then
-		existingZone:Destroy()
-	end
-	
-	-- Clean up any existing BaseCamp in workspace
-	local existingCamp = workspace:FindFirstChild("BaseCamp")
-	if existingCamp then
-		existingCamp:Destroy()
-	end
-	
 	self.baseCampModel = nil
+	
+	-- Only destroy the BaseCaptureZone we created
+	if self.baseCaptureZoneModel and self.baseCaptureZoneModel.Parent then
+		self.baseCaptureZoneModel:Destroy()
+	end
+	self.baseCaptureZoneModel = nil
 end
 
 return BaseCampSetup

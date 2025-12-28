@@ -91,6 +91,8 @@ function MapManager:load(mapId)
 	elseif #self.zombieSpawnPoints == 0 then
 		warn("[MapManager] No zombie spawn points found, skipping base camp setup")
 	else
+		-- Recreate BaseCampSetup with map-specific config
+		self.baseCampSetup = BaseCampSetup.new(data)
 		self.baseCampSetup:setupForMap(self)
 	end
 end
