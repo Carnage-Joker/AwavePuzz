@@ -32,6 +32,7 @@ GameConfig.STAMINA_UPDATE_THRESHOLD = 0.5 -- Minimum stamina change to trigger n
 -- Base Settings
 GameConfig.BASE_HEALTH = 1000
 GameConfig.BASE_REGEN_RATE = 0 -- No regeneration by default
+GameConfig.AUTO_CREATE_BASE_CAMP = true -- Automatically create base camp in map center
 
 -- Wave Settings
 GameConfig.STARTING_WAVE = 1

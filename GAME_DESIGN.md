@@ -106,15 +106,25 @@ Zombie Health = Base HP × (Health Multiplier ^ (Wave - 1))
 ### Base System
 
 **Structure**
-- Central defensive point
+- Central defensive point in map center
 - Health pool: 1000 HP
 - No regeneration
 - Destructible by zombies
+
+**Base Camp Features**
+- Automatically created at the center of the map
+- Defensive walls (12 studs high) surrounding the base
+- Four gates at cardinal directions (North, South, East, West)
+- Eight cover positions arranged in a circle inside walls
+- Semi-transparent gates allow player passage but provide visual defense
+- Base platform (30x30 studs) as the central structure
 
 **Importance**
 - Primary objective to defend
 - Loss condition if destroyed
 - Strategic positioning point
+- Provides defensive cover for players
+- Central rally point for team coordination
 
 ### Cure Crafting System
 
@@ -204,16 +214,20 @@ When a player dies during a round:
 
 ### Essential Elements
 
-**1. Central Base**
-- Defensible position
-- Visual prominence
-- Multiple approach angles
-- Health indicator
+**1. Central Base Camp (Auto-Generated)**
+- Automatically created at map center based on zombie spawn points
+- 30x30 stud defensive platform
+- 12-stud high concrete walls with 4 gates
+- 8 cover positions for tactical defense
+- BaseCaptureZone hitbox for zombie targeting
+- Can be disabled via GameConfig.AUTO_CREATE_BASE_CAMP = false
+- Manual base creation supported if auto-generation disabled
 
 **2. Zombie Spawn Points**
-- Multiple locations around perimeter
-- Distance from base
+- Multiple locations around perimeter (minimum 4 recommended)
+- Distance from base (recommended: 50-100 studs)
 - Line of sight considerations
+- Used to calculate map center for base camp placement
 
 **3. Resource Spawn Points**
 - Scattered throughout map
