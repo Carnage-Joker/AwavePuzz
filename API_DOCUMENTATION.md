@@ -1280,15 +1280,174 @@ end)
 
 **Location**: `src/server/MapManager.lua`
 **Type**: Class
-**Description**: Handles cloning of map models from `ServerStorage.Maps` and exposes spawn points to other systems.
+**Description**: Handles cloning of map models from `ServerStorage.Maps`, exposes spawn points to other systems, and manages automatic base camp creation.
+
+### Constructor
+
+```lua
+MapManager.new() -> MapManager
+```
+
+Initializes the manager, creates a BaseCampSetup instance, and reads fallback spawn folders.
 
 ### Methods
 
-- `MapManager.new()` – Initializes the manager and reads fallback spawn folders.
-- `load(mapId)` / `loadDefault()` – Selects a map and extracts spawn points.
-- `getZombieSpawnPoints()` – Returns table of zombie spawn `Vector3`s.
-- `getResourceSpawnPoints()` – Returns table of resource spawn `Vector3`s.
-- `getCurrentMapId()` – Returns the active map identifier for UI announcements.
+#### load
+```lua
+MapManager:load(mapId: string) -> void
+```
+Selects a map, clones it into workspace, extracts spawn points, and creates base camp if enabled.
+
+**Parameters:**
+- `mapId` (string): The map identifier from MapConfig
+
+**Note**: Automatically calls `BaseCampSetup:setupForMap()` if `GameConfig.AUTO_CREATE_BASE_CAMP` is true.
+
+#### loadDefault
+```lua
+MapManager:loadDefault() -> void
+```
+Loads the default map specified in MapConfig.
+
+#### getZombieSpawnPoints
+```lua
+MapManager:getZombieSpawnPoints() -> table
+```
+Returns table of zombie spawn positions.
+
+**Returns**: Array of `Vector3` positions
+
+#### getResourceSpawnPoints
+```lua
+MapManager:getResourceSpawnPoints() -> table
+```
+Returns table of resource spawn positions.
+
+**Returns**: Array of `Vector3` positions
+
+#### getCurrentMapId
+```lua
+MapManager:getCurrentMapId() -> string?
+```
+Returns the active map identifier for UI announcements.
+
+**Returns**: `string` map ID or `nil` if no map loaded
+
+#### extractPoints
+```lua
+MapManager:extractPoints() -> void
+```
+Internal method to extract spawn points from the current map model.
+
+---
+
+## BaseCampSetup
+
+**Location**: `src/server/BaseCampSetup.lua`
+**Type**: Class
+**Description**: Creates and manages defensive base camp structures in the center of the map. Automatically generates walls, gates, cover positions, and zombie targeting zones.
+
+### Constructor
+
+```lua
+BaseCampSetup.new() -> BaseCampSetup
+```
+
+Creates a new BaseCampSetup instance.
+
+### Methods
+
+#### setupForMap
+```lua
+BaseCampSetup:setupForMap(mapManager: MapManager) -> (Model, Model)
+```
+Sets up the base camp for the current map using MapManager's spawn points.
+
+**Parameters:**
+- `mapManager` (MapManager): The map manager instance with loaded spawn points
+
+**Returns:**
+- `baseCamp` (Model): The created base camp model
+- `baseCaptureZone` (Model): The BaseCaptureZone model for zombie targeting
+
+**Note**: This method is called automatically by MapManager when a map loads if `GameConfig.AUTO_CREATE_BASE_CAMP` is true.
+
+#### buildBaseCamp
+```lua
+BaseCampSetup:buildBaseCamp(centerPos: Vector3, parentModel: Instance?) -> (Model, Model)
+```
+Builds the complete base camp structure at the specified position.
+
+**Parameters:**
+- `centerPos` (Vector3): Center position for the base camp
+- `parentModel` (Instance, optional): Parent to place base camp under (defaults to workspace)
+
+**Returns:**
+- `baseCamp` (Model): The created base camp model containing platform, walls, gates, and cover
+- `baseCaptureZone` (Model): The BaseCaptureZone model with HitBox for zombie targeting
+
+**Structure Created:**
+- Base platform (30x30 studs, concrete)
+- 4 defensive walls (12 studs high, 2 studs thick)
+- 4 gates at cardinal directions (8 studs wide, semi-transparent)
+- 8 cover positions (4x3x1 studs, arranged in circle)
+- BaseCaptureZone model with invisible HitBox
+
+#### calculateMapCenter
+```lua
+BaseCampSetup:calculateMapCenter(zombieSpawnPoints: table) -> Vector3
+```
+Calculates the center position of the map based on zombie spawn points.
+
+**Parameters:**
+- `zombieSpawnPoints` (table): Array of Vector3 positions
+
+**Returns**: `Vector3` - The calculated center position with ground-level Y coordinate
+
+**Note**: Uses raycasting to find proper ground level. Falls back to Vector3.new(0, 5, 0) if no spawn points provided.
+
+#### cleanup
+```lua
+BaseCampSetup:cleanup() -> void
+```
+Removes existing base camp and BaseCaptureZone from workspace.
+
+**Note**: Called automatically when a new map is loaded to remove the previous base camp.
+
+### Configuration
+
+The base camp appearance is configured via the `CAMP_CONFIG` table in BaseCampSetup.lua:
+
+```lua
+local CAMP_CONFIG = {
+    BASE_SIZE = 30,              -- Size of central base structure (studs)
+    WALL_HEIGHT = 12,            -- Height of defensive walls
+    WALL_THICKNESS = 2,          -- Thickness of walls
+    GATE_WIDTH = 8,              -- Width of gates in walls
+    NUM_GATES = 4,               -- Number of gates
+    COVER_COUNT = 8,             -- Number of cover positions
+    COVER_SIZE = Vector3.new(4, 3, 1), -- Size of cover objects
+    
+    -- Colors and materials
+    WALL_COLOR = Color3.fromRGB(80, 80, 80),
+    BASE_COLOR = Color3.fromRGB(100, 100, 100),
+    GATE_COLOR = Color3.fromRGB(120, 80, 40),
+    COVER_COLOR = Color3.fromRGB(70, 70, 70),
+    
+    WALL_MATERIAL = Enum.Material.Concrete,
+    BASE_MATERIAL = Enum.Material.Concrete,
+    GATE_MATERIAL = Enum.Material.Wood,
+    COVER_MATERIAL = Enum.Material.Metal,
+}
+```
+
+### Integration
+
+The base camp system integrates with:
+- **MapManager**: Automatic creation during map loading
+- **TargetingService**: Zombies target the BaseCaptureZone HitBox
+- **BaseManager**: Health tracking for the base (unchanged)
+- **GameConfig**: Toggle auto-creation with `AUTO_CREATE_BASE_CAMP`
 
 ---
 

@@ -16,9 +16,9 @@ All game systems are implemented and functional:
 
 ## Implementation Statistics
 
-- **Total Lua Files**: 41 (all in src/ directory)
-- **Documentation Files**: 7 (README, INSTALLATION, API_DOCUMENTATION, GAME_DESIGN, IMPLEMENTATION_SUMMARY, PUZZLE_SYSTEM, FPS_DOCUMENTATION)
-- **Server Scripts**: 16 modules
+- **Total Lua Files**: 42 (all in src/ directory)
+- **Documentation Files**: 8 (README, INSTALLATION, API_DOCUMENTATION, GAME_DESIGN, IMPLEMENTATION_SUMMARY, PUZZLE_SYSTEM, FPS_DOCUMENTATION, BASE_CAMP_SYSTEM)
+- **Server Scripts**: 17 modules (added BaseCampSetup)
 - **Client Scripts**: 16 scripts
 - **Shared Modules**: 9 config modules
 
@@ -82,7 +82,23 @@ All game systems are implemented and functional:
    - Dynamic zombie spawning
    - AI pathfinding with PathfindingService
    - Zombie attack system (players and base)
-     6. Final Synthesis - Multi-stage combination puzzle
+
+4. **Base Camp System** ✨ NEW
+   - Automatically created at map center
+   - 30x30 stud defensive platform
+   - 12-stud high concrete walls with 4 gates
+   - 8 cover positions for tactical defense
+   - BaseCaptureZone integration for zombie targeting
+   - Configurable via GameConfig.AUTO_CREATE_BASE_CAMP
+   - See BASE_CAMP_SYSTEM.md for details
+
+5. **Cure Crafting System**
+   - 5 unique puzzle types:
+     1. Pattern Recognition - Memory/sequence puzzle
+     2. Code Decryption - Cipher puzzle
+     3. Sample Analysis - Timing puzzle
+     4. Chemical Mixing - Precision puzzle
+     5. Final Synthesis - Multi-stage combination puzzle
    - Cure stations with ProximityPrompts
    - Interactive puzzle UI with time limits
    - Server-authoritative puzzle validation
@@ -91,7 +107,7 @@ All game systems are implemented and functional:
    - Progress tracking (0-100%)
    - Win condition when final synthesis complete
 
-5. **Alliance System** ✅ PHASE 4 COMPLETE + PUZZLE INTEGRATION
+6. **Alliance System** ✅ PHASE 4 COMPLETE + PUZZLE INTEGRATION
    - Request alliances with other players
    - Accept/decline mechanics with UI
    - Betrayal functionality with puzzle/component stealing:

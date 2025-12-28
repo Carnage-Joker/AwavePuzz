@@ -26,6 +26,7 @@ function ItemSpawner.new()
 	self.playerManager = nil
 	self.fpsWeaponService = nil
 	self.activeItems = {}
+	self.activeItemCount = 0 -- Track count for O(1) access
 	self.spawnTimer = 0
 	self.itemCounter = 0 -- For unique ID generation
 
@@ -247,12 +248,14 @@ function ItemSpawner:spawnItem(itemType)
 		end
 	end)
 
-	self.activeItems[itemId] = {
+	-- Use helper method to add item and maintain synchronization
+	local itemData = {
 		itemType = itemType,
 		instance = part,
 		touchConnection = touchConnection,
 		rotationConnection = rotationConnection
 	}
+	self:addActiveItem(itemId, itemData)
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
 
@@ -260,12 +263,20 @@ function ItemSpawner:spawnItem(itemType)
 end
 
 function ItemSpawner:onItemCollected(player, itemId, itemType, part)
-	local item = self.activeItems[itemId]
-	if not item then
+	-- Early return if player is nil to avoid nil access errors
+	if not player then
+		warn("ItemSpawner:onItemCollected called with nil player")
 		return
 	end
 
-	print(player.Name .. " collected " .. itemType .. " pack")
+	-- Retrieve the active item for this id; it may have already been cleaned up
+	local item = self.activeItems[itemId]
+	if not item then
+		warn("ItemSpawner:onItemCollected could not find active item for id " .. tostring(itemId))
+		return
+	end
+	local playerName = player.Name
+	print(playerName .. " collected " .. itemType .. " pack")
 
 	-- Track if reward was successfully granted
 	local rewardGranted = false
@@ -278,7 +289,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 			if equippedWeapon then
 				local success = self.fpsWeaponService:addAmmo(player, equippedWeapon, GameConfig.AMMO_PACK_AMOUNT, true) -- true = add to reserve
 				if success then
-					print(player.Name .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
+					print(playerName .. " received " .. GameConfig.AMMO_PACK_AMOUNT .. " reserve ammo")
 					rewardGranted = true
 				end
 			else
@@ -287,7 +298,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 					player:SetAttribute("LastPickupFailed", "NoEquippedWeaponForAmmo")
 					player:SetAttribute("LastPickupFailedMessage", "You need to equip a weapon before using an ammo pack.")
 				end
-				print(player.Name .. " tried to use an ammo pack without an equipped weapon")
+				print(playerName .. " tried to use an ammo pack without an equipped weapon")
 			end
 		end
 	elseif itemType == "Health" then
@@ -306,10 +317,10 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 				-- Use PlayerManager:healPlayer for consistent health management
 				local success = self.playerManager:healPlayer(player, GameConfig.HEALTH_PACK_AMOUNT)
 				if success then
-					print(player.Name .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
+					print(playerName .. " healed for " .. GameConfig.HEALTH_PACK_AMOUNT .. " HP")
 					rewardGranted = true
 				else
-					print(player.Name .. " tried to use a health pack but healing failed")
+					print(playerName .. " tried to use a health pack but healing failed")
 				end
 			else
 				-- Provide feedback when player tries to pick up a health pack at full health
@@ -317,25 +328,28 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 					player:SetAttribute("LastPickupFailed", "HealthFull")
 					player:SetAttribute("LastPickupFailedMessage", "You are already at full health.")
 				end
-				print(player.Name .. " tried to use a health pack but is already at full health")
+				print(playerName .. " tried to use a health pack but is already at full health")
 			end
 		end
 	end
 
 	-- Only clean up the item if the reward was successfully granted
 	if rewardGranted then
-		if item.touchConnection then
-			item.touchConnection:Disconnect()
-		end
-		if item.rotationConnection then
-			item.rotationConnection:Disconnect()
-		end
+		-- Get item data before removing it from activeItems
+		local success, item = self:removeActiveItem(itemId)
+		
+		if success and item then
+			if item.touchConnection then
+				item.touchConnection:Disconnect()
+			end
+			if item.rotationConnection then
+				item.rotationConnection:Disconnect()
+			end
 
-		if part and part.Parent then
-			part:Destroy()
+			if part and part.Parent then
+				part:Destroy()
+			end
 		end
-
-		self.activeItems[itemId] = nil
 	end
 end
 
@@ -360,12 +374,18 @@ function ItemSpawner:update(deltaTime)
 		end
 
 		if remainingSlots == 1 then
-			-- Only one slot left: alternate between Ammo and Health to avoid starving one type
+			-- Only one slot left: alternate between Ammo and Health based on successful spawns
+			local beforeCount = self:getActiveItemCount()
 			self:spawnItem(self.nextSpawnItemType)
-			if self.nextSpawnItemType == "Ammo" then
-				self.nextSpawnItemType = "Health"
-			else
-				self.nextSpawnItemType = "Ammo"
+			local afterCount = self:getActiveItemCount()
+
+			-- Only toggle the next type if we actually spawned an item
+			if afterCount > beforeCount then
+				if self.nextSpawnItemType == "Ammo" then
+					self.nextSpawnItemType = "Health"
+				else
+					self.nextSpawnItemType = "Ammo"
+				end
 			end
 		else
 			-- Two or more slots: attempt to spawn both ammo and health, as before
@@ -380,23 +400,59 @@ function ItemSpawner:update(deltaTime)
 	end
 end
 
+-- Helper method to add an item to activeItems table
+-- Centralizes add operations to keep activeItemCount synchronized
+function ItemSpawner:addActiveItem(itemId, itemData)
+	if self.activeItems[itemId] ~= nil then
+		warn("[ItemSpawner] Attempted to add duplicate itemId: " .. tostring(itemId))
+		return false
+	end
+	
+	self.activeItems[itemId] = itemData
+	self.activeItemCount = self.activeItemCount + 1
+	return true
+end
+
+-- Helper method to remove an item from activeItems table
+-- Centralizes remove operations to keep activeItemCount synchronized
+function ItemSpawner:removeActiveItem(itemId)
+	if self.activeItems[itemId] == nil then
+		warn("[ItemSpawner] Attempted to remove non-existent itemId: " .. tostring(itemId))
+		return false
+	end
+	
+	local item = self.activeItems[itemId]
+	self.activeItems[itemId] = nil
+	self.activeItemCount = self.activeItemCount - 1
+	return true, item
+end
+
 function ItemSpawner:getActiveItemCount()
-	return #self.activeItems
+	return self.activeItemCount
 end
 
 function ItemSpawner:clearAllItems()
-	for itemId, item in pairs(self.activeItems) do
-		if item.touchConnection then
-			item.touchConnection:Disconnect()
-		end
-		if item.rotationConnection then
-			item.rotationConnection:Disconnect()
-		end
-		if item.instance and item.instance.Parent then
-			item.instance:Destroy()
+	-- Make a copy of keys to avoid issues with modifying table during iteration
+	local itemIds = {}
+	for itemId in pairs(self.activeItems) do
+		table.insert(itemIds, itemId)
+	end
+	
+	-- Remove each item using the helper method
+	for _, itemId in ipairs(itemIds) do
+		local success, item = self:removeActiveItem(itemId)
+		if success and item then
+			if item.touchConnection then
+				item.touchConnection:Disconnect()
+			end
+			if item.rotationConnection then
+				item.rotationConnection:Disconnect()
+			end
+			if item.instance and item.instance.Parent then
+				item.instance:Destroy()
+			end
 		end
 	end
-	self.activeItems = {}
 end
 
 return ItemSpawner

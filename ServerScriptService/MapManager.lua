@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local MapConfig = require(SharedFolder:WaitForChild("MapConfig"))
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local BaseCampSetup = require(script.Parent:WaitForChild("BaseCampSetup"))
 
 local MapManager = {}
 MapManager.__index = MapManager
@@ -36,6 +38,7 @@ function MapManager.new()
 	self.currentMapModel = nil
 	self.zombieSpawnPoints = {}
 	self.resourceSpawnPoints = {}
+	self.baseCampSetup = BaseCampSetup.new()
 	self:extractPoints()
 	return self
 end
@@ -81,6 +84,17 @@ function MapManager:load(mapId)
 	end
 
 	self:extractPoints()
+	
+	-- Setup base camp after extracting spawn points (if enabled in config)
+	if not GameConfig.AUTO_CREATE_BASE_CAMP then
+		print("[MapManager] Auto base camp creation is disabled in GameConfig")
+	elseif #self.zombieSpawnPoints == 0 then
+		warn("[MapManager] No zombie spawn points found, skipping base camp setup")
+	else
+		-- Recreate BaseCampSetup with map-specific config
+		self.baseCampSetup = BaseCampSetup.new(data)
+		self.baseCampSetup:setupForMap(self)
+	end
 end
 
 function MapManager:loadDefault()
