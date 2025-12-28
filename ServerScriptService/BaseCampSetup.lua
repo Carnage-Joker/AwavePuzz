@@ -18,9 +18,11 @@ local CAMP_CONFIG = {
 	BASE_SIZE = 30, -- Size of the central base structure (studs)
 	WALL_HEIGHT = 12, -- Height of defensive walls
 	WALL_THICKNESS = 2, -- Thickness of walls
+	DEFAULT_HEIGHT = 5, -- Default Y position if ground detection fails
 	
 	-- Defensive features
 	GATE_WIDTH = 8, -- Width of gates in walls
+	GATE_TRANSPARENCY = 0.3, -- Transparency of gates (0=opaque, 1=invisible)
 	NUM_GATES = 4, -- Number of gates (one per cardinal direction)
 	COVER_COUNT = 8, -- Number of cover positions
 	COVER_SIZE = Vector3.new(4, 3, 1), -- Size of cover objects
@@ -47,7 +49,7 @@ end
 function BaseCampSetup:calculateMapCenter(zombieSpawnPoints)
 	if not zombieSpawnPoints or #zombieSpawnPoints == 0 then
 		-- Default to workspace center if no spawn points
-		return Vector3.new(0, 5, 0)
+		return Vector3.new(0, CAMP_CONFIG.DEFAULT_HEIGHT, 0)
 	end
 	
 	local totalX, totalY, totalZ = 0, 0, 0
@@ -67,13 +69,24 @@ function BaseCampSetup:calculateMapCenter(zombieSpawnPoints)
 	local rayDirection = Vector3.new(0, -200, 0)
 	local raycastParams = RaycastParams.new()
 	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	raycastParams.FilterDescendantsInstances = {workspace:FindFirstChild("Zombies"), workspace:FindFirstChild("BaseCamp")}
+	
+	-- Build filter list, only include folders that exist
+	local filterList = {}
+	local zombiesFolder = workspace:FindFirstChild("Zombies")
+	if zombiesFolder then
+		table.insert(filterList, zombiesFolder)
+	end
+	local baseCampFolder = workspace:FindFirstChild("BaseCamp")
+	if baseCampFolder then
+		table.insert(filterList, baseCampFolder)
+	end
+	raycastParams.FilterDescendantsInstances = filterList
 	
 	local raycastResult = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
 	if raycastResult then
 		centerY = raycastResult.Position.Y + 0.5
 	else
-		centerY = 5 -- Default height if no ground found
+		centerY = CAMP_CONFIG.DEFAULT_HEIGHT -- Default height if no ground found
 	end
 	
 	return Vector3.new(centerX, centerY, centerZ)
@@ -158,7 +171,7 @@ function BaseCampSetup:createGates(centerPos)
 		gate.Anchored = true
 		gate.Color = CAMP_CONFIG.GATE_COLOR
 		gate.Material = CAMP_CONFIG.GATE_MATERIAL
-		gate.Transparency = 0.3 -- Semi-transparent to show as gates
+		gate.Transparency = CAMP_CONFIG.GATE_TRANSPARENCY -- Semi-transparent to show as gates
 		gate.CanCollide = false -- Players can pass through
 		gate.TopSurface = Enum.SurfaceType.Smooth
 		gate.BottomSurface = Enum.SurfaceType.Smooth

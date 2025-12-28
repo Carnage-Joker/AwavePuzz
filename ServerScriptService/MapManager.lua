@@ -86,12 +86,12 @@ function MapManager:load(mapId)
 	self:extractPoints()
 	
 	-- Setup base camp after extracting spawn points (if enabled in config)
-	if GameConfig.AUTO_CREATE_BASE_CAMP and #self.zombieSpawnPoints > 0 then
-		self.baseCampSetup:setupForMap(self)
-	elseif not GameConfig.AUTO_CREATE_BASE_CAMP then
+	if not GameConfig.AUTO_CREATE_BASE_CAMP then
 		print("[MapManager] Auto base camp creation is disabled in GameConfig")
-	else
+	elseif #self.zombieSpawnPoints == 0 then
 		warn("[MapManager] No zombie spawn points found, skipping base camp setup")
+	else
+		self.baseCampSetup:setupForMap(self)
 	end
 end
 

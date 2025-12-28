@@ -75,7 +75,8 @@ local gates = {}
 for _, gateName in ipairs({"NorthGate", "SouthGate", "EastGate", "WestGate"}) do
 	local gate = baseCamp:FindFirstChild(gateName)
 	assert(gate ~= nil, gateName .. " not found")
-	assert(gate.Transparency == 0.3, gateName .. " should be semi-transparent")
+	-- Note: Transparency value (0.3) matches CAMP_CONFIG.GATE_TRANSPARENCY in BaseCampSetup.lua
+	assert(gate.Transparency == 0.3, gateName .. " should be semi-transparent (0.3)")
 	assert(gate.CanCollide == false, gateName .. " should not collide")
 	table.insert(gates, gate)
 end
