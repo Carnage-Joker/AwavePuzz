@@ -9,6 +9,8 @@
 --   Name: Display name for the map
 --   Model: Name of the map model in ReplicatedStorage.Maps
 --   Description: Brief description of the map
+--   BaseCampConfig: (Optional) Override values for base camp appearance/layout
+--     Any fields specified here will override GameConfig.BASE_CAMP defaults
 
 local MapConfig = {}
 
@@ -18,11 +20,18 @@ MapConfig.Maps = {
 		Model = "Village",
 		Description = "Compact Village surrounded by wasteland.",
 		Default = true
+		-- BaseCampConfig can be added here to customize base camp for this map
+		-- Example:
+		-- BaseCampConfig = {
+		--     BASE_SIZE = 25,
+		--     WALL_COLOR = Color3.fromRGB(100, 100, 100),
+		-- }
 	},
 	DesertRuins = {
 		Name = "Desert Ruins",
 		Model = "DesertRuins",
 		Description = "Open space with long sight-lines and scattered cover."
+		-- BaseCampConfig can be added here to customize base camp for this map
 	}
 }
 

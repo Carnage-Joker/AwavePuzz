@@ -248,13 +248,14 @@ function ItemSpawner:spawnItem(itemType)
 		end
 	end)
 
-	self.activeItems[itemId] = {
+	-- Use helper method to add item and maintain synchronization
+	local itemData = {
 		itemType = itemType,
 		instance = part,
 		touchConnection = touchConnection,
 		rotationConnection = rotationConnection
 	}
-	self.activeItemCount = self.activeItemCount + 1
+	self:addActiveItem(itemId, itemData)
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
 
@@ -328,19 +329,21 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 
 	-- Only clean up the item if the reward was successfully granted
 	if rewardGranted then
-		if item.touchConnection then
-			item.touchConnection:Disconnect()
-		end
-		if item.rotationConnection then
-			item.rotationConnection:Disconnect()
-		end
+		-- Get item data before removing it from activeItems
+		local success, item = self:removeActiveItem(itemId)
+		
+		if success and item then
+			if item.touchConnection then
+				item.touchConnection:Disconnect()
+			end
+			if item.rotationConnection then
+				item.rotationConnection:Disconnect()
+			end
 
-		if part and part.Parent then
-			part:Destroy()
+			if part and part.Parent then
+				part:Destroy()
+			end
 		end
-
-		self.activeItems[itemId] = nil
-		self.activeItemCount = self.activeItemCount - 1
 	end
 end
 
@@ -391,24 +394,59 @@ function ItemSpawner:update(deltaTime)
 	end
 end
 
+-- Helper method to add an item to activeItems table
+-- Centralizes add operations to keep activeItemCount synchronized
+function ItemSpawner:addActiveItem(itemId, itemData)
+	if self.activeItems[itemId] ~= nil then
+		warn("[ItemSpawner] Attempted to add duplicate itemId: " .. tostring(itemId))
+		return false
+	end
+	
+	self.activeItems[itemId] = itemData
+	self.activeItemCount = self.activeItemCount + 1
+	return true
+end
+
+-- Helper method to remove an item from activeItems table
+-- Centralizes remove operations to keep activeItemCount synchronized
+function ItemSpawner:removeActiveItem(itemId)
+	if self.activeItems[itemId] == nil then
+		warn("[ItemSpawner] Attempted to remove non-existent itemId: " .. tostring(itemId))
+		return false
+	end
+	
+	local item = self.activeItems[itemId]
+	self.activeItems[itemId] = nil
+	self.activeItemCount = self.activeItemCount - 1
+	return true, item
+end
+
 function ItemSpawner:getActiveItemCount()
 	return self.activeItemCount
 end
 
 function ItemSpawner:clearAllItems()
-	for itemId, item in pairs(self.activeItems) do
-		if item.touchConnection then
-			item.touchConnection:Disconnect()
-		end
-		if item.rotationConnection then
-			item.rotationConnection:Disconnect()
-		end
-		if item.instance and item.instance.Parent then
-			item.instance:Destroy()
+	-- Make a copy of keys to avoid issues with modifying table during iteration
+	local itemIds = {}
+	for itemId in pairs(self.activeItems) do
+		table.insert(itemIds, itemId)
+	end
+	
+	-- Remove each item using the helper method
+	for _, itemId in ipairs(itemIds) do
+		local success, item = self:removeActiveItem(itemId)
+		if success and item then
+			if item.touchConnection then
+				item.touchConnection:Disconnect()
+			end
+			if item.rotationConnection then
+				item.rotationConnection:Disconnect()
+			end
+			if item.instance and item.instance.Parent then
+				item.instance:Destroy()
+			end
 		end
 	end
-	self.activeItems = {}
-	self.activeItemCount = 0
 end
 
 return ItemSpawner
