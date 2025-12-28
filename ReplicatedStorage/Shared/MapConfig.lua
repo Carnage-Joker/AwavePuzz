@@ -19,7 +19,7 @@ MapConfig.Maps = {
 		Name = "Village",
 		Model = "Village",
 		Description = "Compact Village surrounded by wasteland.",
-		Default = true
+		Default = true,
 		-- BaseCampConfig can be added here to customize base camp for this map
 		-- Example:
 		-- BaseCampConfig = {
@@ -30,7 +30,7 @@ MapConfig.Maps = {
 	DesertRuins = {
 		Name = "Desert Ruins",
 		Model = "DesertRuins",
-		Description = "Open space with long sight-lines and scattered cover."
+		Description = "Open space with long sight-lines and scattered cover.",
 		-- BaseCampConfig can be added here to customize base camp for this map
 	}
 }
