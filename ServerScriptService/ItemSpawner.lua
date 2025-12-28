@@ -269,9 +269,8 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		return
 	end
 
-	-- Retrieve the active item for this id; it may have already been cleaned up
-	local item = self.activeItems[itemId]
-	if not item then
+	-- Ensure there is still an active item for this id; it may have already been cleaned up
+	if not self.activeItems[itemId] then
 		warn("ItemSpawner:onItemCollected could not find active item for id " .. tostring(itemId))
 		return
 	end
