@@ -249,7 +249,8 @@ function ClientController.initializeUI()
 		"EpilogueUI",
 		"AchievementUI",
 		"CreditsUI",
-		"FunFactUI"
+		"FunFactUI",
+		"SynthesisUI"
 	}
 	
 	for _, moduleName in ipairs(uiModules) do
