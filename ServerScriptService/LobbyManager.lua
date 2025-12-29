@@ -63,14 +63,33 @@ end
 
 -- Get available maps for voting
 function LobbyManager:getMapOptions()
+	local ServerStorage = game:GetService("ServerStorage")
+	local mapsFolder = ServerStorage:FindFirstChild("Maps")
+	
 	local options = {}
 	for mapId, mapData in pairs(MapConfig.Maps) do
-		table.insert(options, {
-			id = mapId,
-			name = mapData.Name,
-			description = mapData.Description or ""
-		})
+		-- Only include maps that have models in ServerStorage.Maps
+		if mapsFolder then
+			local mapModel = mapsFolder:FindFirstChild(mapData.Model)
+			if mapModel then
+				table.insert(options, {
+					id = mapId,
+					name = mapData.Name,
+					description = mapData.Description or ""
+				})
+			else
+				warn(string.format("[LobbyManager] Skipping map '%s' - model '%s' not found in ServerStorage.Maps", mapId, mapData.Model))
+			end
+		else
+			warn("[LobbyManager] Maps folder not found in ServerStorage, cannot validate map availability")
+		end
 	end
+	
+	-- If no maps are available, log error
+	if #options == 0 then
+		warn("[LobbyManager] No valid maps found for voting!")
+	end
+	
 	return options
 end
 
@@ -80,17 +99,22 @@ function LobbyManager:startVoting()
 		return false
 	end
 
-	-- Reset votes
+	-- Get map options (filtered for available models)
+	local mapOptions = self:getMapOptions()
+	
+	if #mapOptions == 0 then
+		warn("[LobbyManager] Cannot start voting - no valid maps available")
+		return false
+	end
+
+	-- Reset votes (only for available maps)
 	self.votes = {}
-	for mapId in pairs(MapConfig.Maps) do
-		self.votes[mapId] = {}
+	for _, mapOption in ipairs(mapOptions) do
+		self.votes[mapOption.id] = {}
 	end
 
 	self.votingActive = true
 	self.votingTimer = GameConfig.LOBBY_VOTING_TIME
-
-	-- Get map options
-	local mapOptions = self:getMapOptions()
 
 	-- Notify all clients that voting has started
 	if self.remoteEvents.MapVoteStart then
@@ -100,7 +124,7 @@ function LobbyManager:startVoting()
 		})
 	end
 
-	print("[LobbyManager] Map voting started")
+	print(string.format("[LobbyManager] Map voting started with %d available maps", #mapOptions))
 	return true
 end
 

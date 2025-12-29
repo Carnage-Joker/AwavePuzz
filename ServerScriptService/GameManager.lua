@@ -118,6 +118,9 @@ function GameManager.new(allianceService)
 		self.mapManager:loadDefault()
 		self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
 		self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+		
+		-- Pass zombie spawn points to ResourceSpawner for intelligent placement
+		self.resourceSpawner:setZombieSpawnPoints(self.mapManager:getZombieSpawnPoints())
 	else
 		self.spawner:loadSpawnPoints()
 	end
@@ -894,6 +897,9 @@ function GameManager:updateLobby(deltaTime)
 			self.mapManager:load(selectedMapId)
 			self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
 			self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+			
+			-- Pass zombie spawn points to ResourceSpawner for intelligent placement
+			self.resourceSpawner:setZombieSpawnPoints(self.mapManager:getZombieSpawnPoints())
 		end
 
 		self:startGame()
