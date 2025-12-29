@@ -207,23 +207,35 @@ function MapManager:extractPoints()
 		end
 	end
 
-	-- Fallback to workspace only if ActiveMap doesn't have resource spawn folders
-	if #self.resourceSpawnPoints == 0 and not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
-		local workspaceResourceFolder = workspace:FindFirstChild("ResourceSpawnPoints")
-		if workspaceResourceFolder then
-			collectPointsFromFolder(self.resourceSpawnPoints, workspaceResourceFolder)
-			print(string.format("[MapManager] Using workspace.ResourceSpawnPoints as fallback for '%s'", mapName))
-		else
-			-- Check workspace SpawnPoints/ResourceSpawns
-			local workspaceSpawnPoints = workspace:FindFirstChild("SpawnPoints")
-			if workspaceSpawnPoints then
-				local workspaceResourceSpawns = workspaceSpawnPoints:FindFirstChild("ResourceSpawns")
-				if workspaceResourceSpawns then
-					collectPointsFromFolder(self.resourceSpawnPoints, workspaceResourceSpawns)
-					print(string.format("[MapManager] Using workspace.SpawnPoints.ResourceSpawns as fallback for '%s'", mapName))
-				end
+	-- Helper: apply workspace fallback for spawn points when ActiveMap folders are missing
+	local function applyWorkspaceSpawnFallback(spawnPointsArray, primaryFolderName, spawnPointsFolderName, subFolderName, mapId)
+		local workspacePrimaryFolder = workspace:FindFirstChild(primaryFolderName)
+		if workspacePrimaryFolder then
+			collectPointsFromFolder(spawnPointsArray, workspacePrimaryFolder)
+			print(string.format("[MapManager] Using workspace.%s as fallback for '%s'", primaryFolderName, mapId))
+			return
+		end
+
+		-- Check workspace SpawnPoints/<subFolderName>
+		local workspaceSpawnPoints = workspace:FindFirstChild(spawnPointsFolderName)
+		if workspaceSpawnPoints then
+			local subFolder = workspaceSpawnPoints:FindFirstChild(subFolderName)
+			if subFolder then
+				collectPointsFromFolder(spawnPointsArray, subFolder)
+				print(string.format("[MapManager] Using workspace.%s.%s as fallback for '%s'", spawnPointsFolderName, subFolderName, mapId))
 			end
 		end
+	end
+
+	-- Fallback to workspace only if ActiveMap doesn't have resource spawn folders
+	if #self.resourceSpawnPoints == 0 and not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
+		applyWorkspaceSpawnFallback(
+			self.resourceSpawnPoints,
+			"ResourceSpawnPoints",
+			"SpawnPoints",
+			"ResourceSpawns",
+			mapName
+		)
 	end
 	
 	-- Log spawn point counts
