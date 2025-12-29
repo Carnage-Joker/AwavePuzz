@@ -121,58 +121,160 @@ What will you choose?
 }
 
 -- ========================================
--- EPILOGUE CONFIGURATION
+-- EPILOGUE CONFIGURATION (DIEGETIC SYSTEM LOGS)
 -- ========================================
 
--- Full epilogue text - displayed in sequence
+-- New diegetic epilogue - framed as system logs and warnings, not tutorials
+-- Delivered as voiceover-style documentation
 StoryConfig.EpiloguePages = {
-	-- Page 1: The Outbreak
+	-- Log 1: System Initialization
 	{
-		Title = "THE OUTBREAK",
-		Text = StoryConfig.Backstory.Discovery .. "\n\n" .. StoryConfig.Backstory.Infection,
-		DisplayTime = 8
+		Title = "SYSTEM LOG :: INITIALIZATION",
+		Text = [[
+AETHER CONTAINMENT FACILITY - DAY 23
+STATUS: CRITICAL FAILURE
+
+Neural interface active.
+You are being documented.
+
+The facility is compromised.
+The infected are learning.
+Extraction is not available.]],
+		DisplayTime = 7,
+		VoiceoverStyle = "System"
 	},
 	
-	-- Page 2: The Virus
+	-- Log 2: Threat Assessment
 	{
-		Title = "THE AETHER VIRUS",
-		Text = StoryConfig.Backstory.Symptoms,
-		DisplayTime = 7
+		Title = "THREAT ASSESSMENT :: WAVE PROTOCOL",
+		Text = [[
+WARNING: Hostiles escalate indefinitely.
+Wave intensity increases exponentially.
+No plateau. No mercy.
+
+Historical data: Longest survival - 47 minutes.
+Average survival - 18 minutes.
+
+Your timer starts now.]],
+		DisplayTime = 7,
+		VoiceoverStyle = "System"
 	},
 	
-	-- Page 3: The Cure
+	-- Log 3: Base Defense Protocol
 	{
-		Title = "THE CURE",
-		Text = StoryConfig.Backstory.TheCure,
-		DisplayTime = 8
+		Title = "PRIORITY ALERT :: BASE INTEGRITY",
+		Text = [[
+The base is your final line of defense.
+Base integrity failure is absolute.
+
+No warnings.
+No countdown.
+Breach → Immediate termination.
+
+Defend it. Or lose everything.]],
+		DisplayTime = 7,
+		VoiceoverStyle = "Warning"
 	},
 	
-	-- Page 4: The Alliance Question
+	-- Log 4: Cure Synthesis Parameters
 	{
-		Title = "SURVIVE TOGETHER",
-		Text = StoryConfig.AllianceNarrative.TheDilemma,
-		DisplayTime = 6
+		Title = "OBJECTIVE :: CURE SYNTHESIS",
+		Text = [[
+Five components exist in this facility.
+Chemical A. Chemical B. Biological Sample.
+Research Notes. Catalyst.
+
+Synthesis protocol:
+→ Collect all five components
+→ Access base cure station
+→ Complete timed puzzle sequence under combat conditions
+
+Failure → Components wasted.
+Success → Convergence contained.
+
+Choose your moment carefully.]],
+		DisplayTime = 10,
+		VoiceoverStyle = "System"
 	},
 	
-	-- Page 5: The Betrayal Temptation
+	-- Log 5: Synthesis Warning
 	{
-		Title = "OR DIE ALONE",
-		Text = StoryConfig.AllianceNarrative.TheTemptation,
-		DisplayTime = 6
+		Title = "SYNTHESIS WARNING",
+		Text = [[
+NOTE: Infected intensify attacks during synthesis.
+As if they understand what you're doing.
+
+The cure station cannot be moved.
+You will be vulnerable.
+They will not wait.
+
+Coordinate. Defend. Survive.]],
+		DisplayTime = 8,
+		VoiceoverStyle = "Warning"
 	},
 	
-	-- Page 6: The Historical Warning
+	-- Log 6: Alliance Protocol
 	{
-		Title = "HISTORY REPEATS",
-		Text = StoryConfig.AllianceNarrative.TheTruth,
-		DisplayTime = 8
+		Title = "TACTICAL NOTE :: ALLIANCE SYSTEMS",
+		Text = [[
+Friendly fire protocols: ACTIVE.
+Exception: Allied personnel.
+
+Alliance benefits:
+→ Shared resources
+→ Coordinated defense
+→ Pooled cure progress
+
+Historical data: Allied teams survive 85% longer.
+Solo operators: 4.2 waves average.
+
+Cooperation is statistically optimal.]],
+		DisplayTime = 9,
+		VoiceoverStyle = "System"
 	},
 	
-	-- Page 7: The Final Choice
+	-- Log 7: Betrayal Mechanics
 	{
-		Title = "THE CONVERGENCE",
-		Text = StoryConfig.AllianceNarrative.TheHope,
-		DisplayTime = 10
+		Title = "RISK ASSESSMENT :: BETRAYAL PROTOCOL",
+		Text = [[
+Betrayal parameters documented:
+
+Hostile action against ally → Betrayal window opens (30 seconds)
+
+Outcome A: Betrayer eliminates target → 75% resource transfer
+Outcome B: Target survives → No penalty
+Outcome C: Target eliminates betrayer → 100% resource seizure
+
+Risk: High. Reward: Significant. Choice: Yours.
+
+Previous team destroyed themselves over resources.
+You can be different.
+History suggests you won't be.]],
+		DisplayTime = 12,
+		VoiceoverStyle = "System"
+	},
+	
+	-- Log 8: Final Transmission
+	{
+		Title = "FINAL TRANSMISSION",
+		Text = [[
+You are not being instructed.
+You are being documented.
+
+The convergence does not stop.
+The base will not hold forever.
+Your allies may not remain allies.
+
+Five components.
+One cure.
+Multiple survivors.
+
+Do the math.
+
+Good luck, operator.
+You'll need it.]],
+		DisplayTime = 10,
+		VoiceoverStyle = "Warning"
 	}
 }
 
@@ -183,10 +285,17 @@ StoryConfig.TotalEpiloguePages = #StoryConfig.EpiloguePages
 StoryConfig.EpilogueSkippable = true
 
 -- Skip button text
-StoryConfig.SkipButtonText = "Press ESC to Skip"
+StoryConfig.SkipButtonText = "[ESC] Skip Briefing"
+
+-- Mute button text
+StoryConfig.MuteButtonText = "[M] Mute Audio"
 
 -- Continue button text
-StoryConfig.ContinueButtonText = "Click to Continue"
+StoryConfig.ContinueButtonText = "[SPACE] Continue"
+
+-- Audio settings
+StoryConfig.EpilogueAudioEnabled = true
+StoryConfig.EpilogueDefaultVolume = 0.7
 
 -- ========================================
 -- VICTORY/DEFEAT MESSAGES
