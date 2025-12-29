@@ -163,7 +163,14 @@ function MapManager:extractPoints()
 	-- Extract zombie spawn points from ActiveMap
 	local spawnFolder = root:FindFirstChild("ZombieSpawnPoints")
 	if spawnFolder then
+		local beforeCount = #self.zombieSpawnPoints
 		collectPointsFromFolder(self.zombieSpawnPoints, spawnFolder)
+		local afterCount = #self.zombieSpawnPoints
+		
+		-- Log info if folder exists but contains no valid spawn points
+		if afterCount == beforeCount and usingActiveMap then
+			print(string.format("[MapManager] INFO: ActiveMap '%s' has ZombieSpawnPoints folder but no valid spawn points found (folder may be empty or contain only invalid children)", mapName))
+		end
 	elseif usingActiveMap then
 		-- Only warn if we're using ActiveMap and folder is missing
 		warn(string.format("[MapManager] ActiveMap '%s' missing ZombieSpawnPoints folder. Expected: workspace.ActiveMap.ZombieSpawnPoints", mapName))
@@ -181,6 +188,7 @@ function MapManager:extractPoints()
 	-- Extract resource spawn points - check both conventions
 	-- 1. Legacy convention: ResourceSpawnPoints folder
 	local resourceFolder = root:FindFirstChild("ResourceSpawnPoints")
+	local resourcePointsBeforeCount = #self.resourceSpawnPoints
 	if resourceFolder then
 		collectPointsFromFolder(self.resourceSpawnPoints, resourceFolder)
 	end
@@ -197,6 +205,13 @@ function MapManager:extractPoints()
 		local itemSpawns = spawnPointsFolder:FindFirstChild("ItemSpawns")
 		if itemSpawns then
 			collectPointsFromFolder(self.itemSpawnPoints, itemSpawns)
+		end
+	end
+	
+	-- Log info if resource folders exist but contain no valid spawn points
+	if usingActiveMap and #self.resourceSpawnPoints == resourcePointsBeforeCount then
+		if resourceFolder or (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
+			print(string.format("[MapManager] INFO: ActiveMap '%s' has resource spawn folder(s) but no valid spawn points found (folder may be empty or contain only invalid children)", mapName))
 		end
 	end
 

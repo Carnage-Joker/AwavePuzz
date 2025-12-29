@@ -80,10 +80,18 @@ function ResourceSpawner:setSpawnPoints(points)
 	end
 
 	self.spawnPoints = {}
+	local invalidCount = 0
 	for _, pos in ipairs(points) do
 		if typeof(pos) == "Vector3" then
 			table.insert(self.spawnPoints, pos)
+		else
+			invalidCount = invalidCount + 1
 		end
+	end
+	
+	-- Warn about invalid spawn point data
+	if invalidCount > 0 then
+		warn(string.format("[ResourceSpawner] Skipped %d non-Vector3 spawn point(s) during configuration", invalidCount))
 	end
 
 	if #self.spawnPoints == 0 then
