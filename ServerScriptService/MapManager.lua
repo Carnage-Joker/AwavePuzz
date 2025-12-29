@@ -155,12 +155,27 @@ function MapManager:extractPoints()
 	self.resourceSpawnPoints = {}
 	self.itemSpawnPoints = {}
 
+	-- Determine root: ActiveMap takes priority, workspace is fallback only
 	local root = self.currentMapModel or workspace
+	local mapName = self.currentMapId or "Workspace"
+	local usingActiveMap = (self.currentMapModel ~= nil)
 
-	-- Extract zombie spawn points
+	-- Extract zombie spawn points from ActiveMap
 	local spawnFolder = root:FindFirstChild("ZombieSpawnPoints")
 	if spawnFolder then
 		collectPointsFromFolder(self.zombieSpawnPoints, spawnFolder)
+	elseif usingActiveMap then
+		-- Only warn if we're using ActiveMap and folder is missing
+		warn(string.format("[MapManager] ActiveMap '%s' missing ZombieSpawnPoints folder. Expected: workspace.ActiveMap.ZombieSpawnPoints", mapName))
+	end
+
+	-- Fallback to workspace only if ActiveMap doesn't have the folder
+	if #self.zombieSpawnPoints == 0 and not spawnFolder then
+		local workspaceFolder = workspace:FindFirstChild("ZombieSpawnPoints")
+		if workspaceFolder then
+			collectPointsFromFolder(self.zombieSpawnPoints, workspaceFolder)
+			print(string.format("[MapManager] Using workspace.ZombieSpawnPoints as fallback for '%s'", mapName))
+		end
 	end
 
 	-- Extract resource spawn points - check both conventions
@@ -185,35 +200,44 @@ function MapManager:extractPoints()
 		end
 	end
 
-	-- Fallback if no zombie spawn points provided on the active map
-	if #self.zombieSpawnPoints == 0 then
-		local defaultFolder = workspace:FindFirstChild("ZombieSpawnPoints")
-		if defaultFolder then
-			collectPointsFromFolder(self.zombieSpawnPoints, defaultFolder)
+	-- Warn if resource spawn points missing in ActiveMap
+	if usingActiveMap and #self.resourceSpawnPoints == 0 then
+		if not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
+			warn(string.format("[MapManager] ActiveMap '%s' missing resource spawn folders. Expected: workspace.ActiveMap.ResourceSpawnPoints or workspace.ActiveMap.SpawnPoints.ResourceSpawns", mapName))
 		end
 	end
 
-	-- Fallback if no resource spawn points provided on the active map
-	if #self.resourceSpawnPoints == 0 then
-		local defaultResourceFolder = workspace:FindFirstChild("ResourceSpawnPoints")
-		if defaultResourceFolder then
-			collectPointsFromFolder(self.resourceSpawnPoints, defaultResourceFolder)
+	-- Fallback to workspace only if ActiveMap doesn't have resource spawn folders
+	if #self.resourceSpawnPoints == 0 and not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
+		local workspaceResourceFolder = workspace:FindFirstChild("ResourceSpawnPoints")
+		if workspaceResourceFolder then
+			collectPointsFromFolder(self.resourceSpawnPoints, workspaceResourceFolder)
+			print(string.format("[MapManager] Using workspace.ResourceSpawnPoints as fallback for '%s'", mapName))
+		else
+			-- Check workspace SpawnPoints/ResourceSpawns
+			local workspaceSpawnPoints = workspace:FindFirstChild("SpawnPoints")
+			if workspaceSpawnPoints then
+				local workspaceResourceSpawns = workspaceSpawnPoints:FindFirstChild("ResourceSpawns")
+				if workspaceResourceSpawns then
+					collectPointsFromFolder(self.resourceSpawnPoints, workspaceResourceSpawns)
+					print(string.format("[MapManager] Using workspace.SpawnPoints.ResourceSpawns as fallback for '%s'", mapName))
+				end
+			end
 		end
 	end
 	
 	-- Log spawn point counts
-	local mapName = self.currentMapId or "Workspace"
-	print(string.format("[MapManager] Spawn points extracted for '%s':", mapName))
-	print(string.format("  - Zombie spawns: %d", #self.zombieSpawnPoints))
-	print(string.format("  - Resource spawns: %d", #self.resourceSpawnPoints))
-	print(string.format("  - Item spawns: %d", #self.itemSpawnPoints))
+	print(string.format("[MapManager] Loaded map '%s':", mapName))
+	print(string.format("  - Zombie spawn points: %d", #self.zombieSpawnPoints))
+	print(string.format("  - Resource spawn points: %d", #self.resourceSpawnPoints))
+	print(string.format("  - Item spawn points: %d", #self.itemSpawnPoints))
 	
 	-- Warn if spawn points are critically low
 	if #self.zombieSpawnPoints == 0 then
-		warn("[MapManager] WARNING: No zombie spawn points found! Zombies will not spawn correctly.")
+		warn(string.format("[MapManager] WARNING: No zombie spawn points found for '%s'! Zombies will not spawn correctly.", mapName))
 	end
 	if #self.resourceSpawnPoints == 0 then
-		warn("[MapManager] WARNING: No resource spawn points found! Resources may not spawn optimally.")
+		warn(string.format("[MapManager] WARNING: No resource spawn points found for '%s'! Resources will not spawn.", mapName))
 	end
 end
 
