@@ -206,7 +206,7 @@ function TestMapSystem.runTests()
 	local failed = 0
 	
 	for _, test in ipairs(tests) do
-		-- Test functions must return boolean: true for pass, false for fail
+		-- Test functions must explicitly return true on success; nil/false will be treated as failure
 		local success, result = pcall(test.func)
 		-- If pcall succeeds and result is explicitly true, test passed
 		if success and result == true then
