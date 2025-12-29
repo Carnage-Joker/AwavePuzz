@@ -16,9 +16,9 @@ local MapConfig = {}
 
 MapConfig.Maps = {
 	ResearchOutpost = {
-		Name = "Village",
-		Model = "Village",
-		Description = "Compact Village surrounded by wasteland.",
+		Name = "Research Outpost",
+		Model = "ResearchOutpost",
+		Description = "Abandoned research facility with tight corridors and defensive positions.",
 		Default = true,
 		-- BaseCampConfig can be added here to customize base camp for this map
 		-- Example:
@@ -27,11 +27,20 @@ MapConfig.Maps = {
 		--     WALL_COLOR = Color3.fromRGB(100, 100, 100),
 		-- }
 	},
-	DesertRuins = {
-		Name = "Desert Ruins",
-		Model = "DesertRuins",
-		Description = "Open space with long sight-lines and scattered cover.",
-		-- BaseCampConfig can be added here to customize base camp for this map
+	Village = {
+		Name = "Village",
+		Model = "Village",
+		Description = "Compact village surrounded by wasteland with mixed terrain.",
+	},
+	Dockyards = {
+		Name = "Dockyards",
+		Model = "Dockyards",
+		Description = "Industrial dockyards with cargo containers and open water hazards.",
+	},
+	ResearchOutpost_Night = {
+		Name = "Research Outpost (Night)",
+		Model = "ResearchOutpost_Night",
+		Description = "Research facility at night with limited visibility and atmospheric tension.",
 	}
 }
 

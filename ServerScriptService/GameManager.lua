@@ -116,8 +116,7 @@ function GameManager.new(allianceService)
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
-		self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
-		self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+		self:configureSpawnersForMap()
 	else
 		self.spawner:loadSpawnPoints()
 	end
@@ -126,6 +125,14 @@ function GameManager.new(allianceService)
 	self:_hookSpectatorRemotes()
 
 	return self
+end
+
+-- Helper method to configure spawners with map spawn points
+function GameManager:configureSpawnersForMap()
+	self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
+	self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+	-- Pass zombie spawn points to ResourceSpawner for intelligent placement
+	self.resourceSpawner:setZombieSpawnPoints(self.mapManager:getZombieSpawnPoints())
 end
 
 function GameManager:setupRemoteEvents()
@@ -892,8 +899,7 @@ function GameManager:updateLobby(deltaTime)
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
 		if GameConfig.ENABLE_MULTI_MAP then
 			self.mapManager:load(selectedMapId)
-			self.spawner:setSpawnPoints(self.mapManager:getZombieSpawnPoints())
-			self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
+			self:configureSpawnersForMap()
 		end
 
 		self:startGame()
