@@ -13,6 +13,13 @@ local MapValidator = require(script.Parent:WaitForChild("MapValidator"))
 local MapManager = {}
 MapManager.__index = MapManager
 
+-- Helper to check if we should attempt to load default map as fallback
+local function shouldLoadDefaultMap(currentMapId, defaultMapId)
+	-- Don't load default if it's the same as current (avoid recursion)
+	-- Don't load default if there is no default
+	return defaultMapId ~= nil and defaultMapId ~= currentMapId
+end
+
 local function collectPointsFromFolder(outTable, folder)
 	if not folder then
 		return
@@ -76,7 +83,7 @@ function MapManager:load(mapId)
 		warn("[MapManager] Map model '" .. tostring(data.Model) .. "' missing in ServerStorage.Maps, falling back to default")
 		-- Try to load default map instead (but avoid infinite recursion)
 		local defaultId, defaultData = MapConfig.getDefault()
-		if defaultId and defaultId ~= id and defaultData then
+		if shouldLoadDefaultMap(id, defaultId) and defaultData then
 			local defaultTemplate = mapsFolder:FindFirstChild(defaultData.Model)
 			if defaultTemplate then
 				print("[MapManager] Loading default map: " .. defaultId)
@@ -97,7 +104,7 @@ function MapManager:load(mapId)
 	if not isValid then
 		warn("[MapManager] Map validation failed for '" .. data.Model .. "', attempting to load default map")
 		local defaultId, defaultData = MapConfig.getDefault()
-		if defaultId and defaultId ~= id and defaultData then
+		if shouldLoadDefaultMap(id, defaultId) and defaultData then
 			print("[MapManager] Falling back to default map: " .. defaultId)
 			self:load(defaultId)
 			return
