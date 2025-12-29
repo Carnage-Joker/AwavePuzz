@@ -45,10 +45,10 @@ function ResourceSpawner.new()
 		self.resourceFolder.Parent = workspace
 	end
 
-	-- Find or create spawn points
-	self:findSpawnPoints()
+	-- Note: Spawn points must be injected via setSpawnPoints()
+	-- No automatic workspace scanning
 
-	print("ResourceSpawner initialized with " .. #self.spawnPoints .. " spawn points")
+	print("[ResourceSpawner] Initialized (spawn points must be set via setSpawnPoints)")
 
 	return self
 end
@@ -80,11 +80,25 @@ function ResourceSpawner:setSpawnPoints(points)
 	end
 
 	self.spawnPoints = {}
+	local invalidCount = 0
 	for _, pos in ipairs(points) do
-		table.insert(self.spawnPoints, pos)
+		if typeof(pos) == "Vector3" then
+			table.insert(self.spawnPoints, pos)
+		else
+			invalidCount = invalidCount + 1
+		end
+	end
+	
+	-- Warn about invalid spawn point data
+	if invalidCount > 0 then
+		warn(string.format("[ResourceSpawner] Skipped %d non-Vector3 spawn point(s) during configuration", invalidCount))
 	end
 
-	print("[ResourceSpawner] Set spawn points:", #self.spawnPoints)
+	if #self.spawnPoints == 0 then
+		warn("[ResourceSpawner] WARNING: No spawn points set! Resources will not spawn.")
+	else
+		print("[ResourceSpawner] Configured with " .. #self.spawnPoints .. " spawn points")
+	end
 end
 
 local function getPivotPosition(inst)
@@ -260,9 +274,10 @@ function ResourceSpawner:pickSmartSpawnPoint()
 	local zombieRing = self:getZombieRingDistance(basePos, zombieSpawns)
 	local minOuter = zombieRing and (zombieRing * CONFIG.OUTER_RING_MULTIPLIER) or nil
 
-	-- If we have no spawn points, fallback to default behaviour
+	-- If we have no spawn points, warn and return nil
 	if #self.spawnPoints == 0 then
-		return Vector3.new(0, 2, 0)
+		warn("[ResourceSpawner] Cannot pick spawn point - no spawn points configured. Call setSpawnPoints() first.")
+		return nil
 	end
 
 	local bestPos = nil
@@ -344,35 +359,6 @@ function ResourceSpawner:pickSmartSpawnPoint()
 	return bestPos
 end
 
-function ResourceSpawner:findSpawnPoints()
-	local spawnPointsFolder = workspace:FindFirstChild("SpawnPoints")
-
-	if spawnPointsFolder then
-		local itemSpawns = spawnPointsFolder:FindFirstChild("ItemSpawns") or spawnPointsFolder:FindFirstChild("ResourceSpawns")
-
-		if itemSpawns then
-			for _, spawnPoint in ipairs(itemSpawns:GetChildren()) do
-				if spawnPoint:IsA("BasePart") then
-					table.insert(self.spawnPoints, spawnPoint.Position)
-				end
-			end
-		end
-	end
-
-	if #self.spawnPoints == 0 then
-		warn("No resource spawn points found. Creating default spawn locations...")
-
-		-- Default around base (not origin) so multi-map doesn’t dump everything at 0,0,0
-		local basePos = self:tryFindBasePosition()
-		local radius = 80
-		for i = 1, 8 do
-			local angle = (i / 8) * math.pi * 2
-			local x = basePos.X + math.cos(angle) * radius
-			local z = basePos.Z + math.sin(angle) * radius
-			table.insert(self.spawnPoints, Vector3.new(x, basePos.Y + 10, z))
-		end
-	end
-end
 
 function ResourceSpawner:getRandomComponent()
 	local components = GameConfig.CURE_COMPONENT_NAMES
@@ -381,7 +367,8 @@ end
 
 function ResourceSpawner:getRandomSpawnPoint()
 	if #self.spawnPoints == 0 then
-		return Vector3.new(0, 2, 0)
+		warn("[ResourceSpawner] No spawn points available")
+		return nil
 	end
 	return self.spawnPoints[math.random(1, #self.spawnPoints)]
 end
@@ -393,6 +380,11 @@ function ResourceSpawner:spawnResource()
 
 	-- NEW: intelligent selection
 	local spawnPoint = self:pickSmartSpawnPoint()
+	if not spawnPoint then
+		-- No spawn points configured, cannot spawn
+		return nil
+	end
+	
 	local componentName = self:getRandomComponent()
 	local resourceId = "resource_" .. os.time() .. "_" .. math.random(1000, 9999)
 
