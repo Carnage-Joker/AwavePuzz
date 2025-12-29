@@ -26,11 +26,8 @@ local function countSpawnPoints(folder)
 			count = count + 1
 		elseif child:IsA("Attachment") then
 			count = count + 1
-		elseif child:IsA("Model") then
-			local primary = child.PrimaryPart or (child:IsA("Model") and child:GetPrimaryPartCFrame() and child.PrimaryPart)
-			if primary then
-				count = count + 1
-			end
+		elseif child:IsA("Model") and child.PrimaryPart then
+			count = count + 1
 		end
 	end
 	return count

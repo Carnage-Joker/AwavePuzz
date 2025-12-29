@@ -23,12 +23,8 @@ local function collectPointsFromFolder(outTable, folder)
 			table.insert(outTable, point.Position)
 		elseif point:IsA("Attachment") then
 			table.insert(outTable, point.WorldPosition)
-		elseif point:IsA("Model") then
-			local primary = point.PrimaryPart
-				or (point:IsA("Model") and point:GetPrimaryPartCFrame() and point.PrimaryPart)
-			if primary then
-				table.insert(outTable, primary.Position)
-			end
+		elseif point:IsA("Model") and point.PrimaryPart then
+			table.insert(outTable, point.PrimaryPart.Position)
 		end
 	end
 end
@@ -78,9 +74,9 @@ function MapManager:load(mapId)
 	local template = mapsFolder:FindFirstChild(data.Model)
 	if not template then
 		warn("[MapManager] Map model '" .. tostring(data.Model) .. "' missing in ServerStorage.Maps, falling back to default")
-		-- Try to load default map instead
+		-- Try to load default map instead (but avoid infinite recursion)
 		local defaultId, defaultData = MapConfig.getDefault()
-		if defaultId ~= id and defaultData then
+		if defaultId and defaultId ~= id and defaultData then
 			local defaultTemplate = mapsFolder:FindFirstChild(defaultData.Model)
 			if defaultTemplate then
 				print("[MapManager] Loading default map: " .. defaultId)
@@ -88,7 +84,7 @@ function MapManager:load(mapId)
 				return
 			end
 		end
-		-- If default also fails, use workspace spawn points
+		-- If default also fails or is the same as current, use workspace spawn points
 		self.currentMapId = nil
 		self:extractPoints()
 		return
@@ -101,12 +97,12 @@ function MapManager:load(mapId)
 	if not isValid then
 		warn("[MapManager] Map validation failed for '" .. data.Model .. "', attempting to load default map")
 		local defaultId, defaultData = MapConfig.getDefault()
-		if defaultId ~= id and defaultData then
+		if defaultId and defaultId ~= id and defaultData then
 			print("[MapManager] Falling back to default map: " .. defaultId)
 			self:load(defaultId)
 			return
 		else
-			warn("[MapManager] No valid default map available, using workspace spawn points")
+			warn("[MapManager] No valid default map available or default is current map, using workspace spawn points")
 			self.currentMapId = nil
 			self:extractPoints()
 			return
