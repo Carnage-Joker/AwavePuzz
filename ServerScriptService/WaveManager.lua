@@ -13,6 +13,7 @@ function WaveManager.new()
 	self.zombiesAlive = 0
 	self.zombiesSpawned = 0
 	self.waveActive = false
+	self.intensityMultiplier = 1.0 -- For synthesis system to increase zombie intensity
 	return self
 end
 
@@ -81,6 +82,17 @@ end
 
 function WaveManager:getZombiesRemaining()
 	return self.zombiesAlive
+end
+
+-- Set intensity multiplier for special events (like cure synthesis)
+function WaveManager:setIntensityMultiplier(multiplier)
+	self.intensityMultiplier = multiplier or 1.0
+	print("[WaveManager] Intensity multiplier set to", self.intensityMultiplier)
+end
+
+-- Get current intensity multiplier
+function WaveManager:getIntensityMultiplier()
+	return self.intensityMultiplier
 end
 
 return WaveManager
