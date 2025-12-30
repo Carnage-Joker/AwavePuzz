@@ -19,6 +19,7 @@ BetrayalService.__index = BetrayalService
 local POOLED_TRANSFER_PERCENT = 0.75
 local PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = 1.00
 local BETRAYAL_WINDOW_DURATION = 30 -- seconds
+local STARTING_WEAPON = "Pistol" -- Starting weapon to exclude from transfers
 
 function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager)
 	local self = setmetatable({}, BetrayalService)
@@ -181,6 +182,7 @@ function BetrayalService:resolveOutcome1_SuccessfulBetrayal(betrayer, victim, da
 	-- Notify clients
 	self.remoteEvents.BetrayalOutcome:FireClient(betrayer, {
 		type = "success",
+		message = string.format("Betrayal successful! You eliminated %s and claimed 75%% of their pool!", victim.Name)
 	})
 end
 
@@ -363,7 +365,7 @@ function BetrayalService:applyPersonalTransfer(source, target, transferPercent)
 	end
 	
 	for weaponId in pairs(sourceData.weapons or {}) do
-		if weaponId ~= "Pistol" then -- Keep starting weapon
+		if weaponId ~= STARTING_WEAPON then -- Keep starting weapon
 			table.insert(deduction.weapons, weaponId)
 		end
 	end
@@ -416,7 +418,7 @@ function BetrayalService:selectWeaponsForTransfer(snapshot, targetValue)
 		end
 		
 		-- Skip starting weapon
-		if weapon.weaponId == "Pistol" then
+		if weapon.weaponId == STARTING_WEAPON then
 			continue
 		end
 		
