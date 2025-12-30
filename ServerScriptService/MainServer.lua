@@ -8,7 +8,7 @@ local Players = game:GetService("Players")
 
 -- Require managers / services
 local GameManager = require(script.Parent.GameManager)
-local AllianceService = require(script.Parent.AllianceService)
+local AllianceService = require(script.Parent.AllianceServiceV2) -- Using V2 with networked alliance pools
 local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
 local SprintService = require(script.Parent.SprintService)

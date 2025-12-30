@@ -441,7 +441,7 @@ end)
 -- Remote Event Handlers
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
-	-- Alliance Update
+-- Alliance Update
 local allianceUpdateEvent = remoteEvents:WaitForChild("AllianceUpdate")
 allianceUpdateEvent.OnClientEvent:Connect(function(data)
 	if data.type == "request" then
@@ -476,6 +476,42 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 	elseif data.type == "cooldown" then
 		-- On betrayal cooldown
 		showNotification(data.message, 3)
+	
+	elseif data.type == "locked" then
+		-- Player is locked from alliance changes
+		showNotification(data.message, 3)
+	
+	elseif data.type == "traitor" then
+		-- Player is marked as traitor
+		showNotification(data.message, 3)
+	
+	elseif data.type == "error" then
+		-- Error occurred
+		showNotification(data.message, 3)
+	end
+end)
+
+-- Betrayal Started Event
+local betrayalStartedEvent = remoteEvents:WaitForChild("BetrayalStarted")
+betrayalStartedEvent.OnClientEvent:Connect(function(data)
+	if data.type == "betrayer" then
+		showNotification("Betrayal initiated! Eliminate " .. data.victim .. " in " .. data.duration .. "s!", 5)
+	elseif data.type == "victim" then
+		showNotification("You've been betrayed by " .. data.betrayer .. "! Survive " .. data.duration .. "s!", 5)
+	end
+end)
+
+-- Betrayal Outcome Event
+local betrayalOutcomeEvent = remoteEvents:WaitForChild("BetrayalOutcome")
+betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
+	if data.type == "success" then
+		showNotification(data.message, 5)
+	elseif data.type == "victory" then
+		showNotification(data.message, 5)
+	elseif data.type == "stalemate_betrayer" then
+		showNotification(data.message, 6)
+	elseif data.type == "stalemate_victim" then
+		showNotification(data.message, 5)
 	end
 end)
 

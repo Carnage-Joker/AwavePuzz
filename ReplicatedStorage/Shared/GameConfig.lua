@@ -97,9 +97,13 @@ GameConfig.Spawning = {
 }
 
 -- Alliance Settings
-GameConfig.ALLIANCE_DAMAGE_MULTIPLIER = 0 -- Allies can't damage each other
+GameConfig.ALLIANCE_DAMAGE_MULTIPLIER = 0 -- Direct allies can't damage each other (only direct edges)
 GameConfig.BETRAYAL_COOLDOWN = 60 -- Seconds before can betray again
 GameConfig.BETRAYAL_WINDOW = 30 -- Seconds for betrayal combat window
+
+-- Betrayal Transfer Percentages
+GameConfig.POOLED_TRANSFER_PERCENT = 0.75 -- 75% pooled transfer on Outcome 1 & 2
+GameConfig.PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = 1.00 -- 100% personal transfer on Outcome 3
 
 -- Resource Settings
 GameConfig.RESOURCE_SPAWN_RATE = 20 -- Seconds between resource spawns

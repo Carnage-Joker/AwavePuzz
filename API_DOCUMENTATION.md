@@ -2046,3 +2046,208 @@ clientController:requestAlliance(targetPlayer)
 
 **Document Version**: 1.0  
 **Last Updated**: 2025-11-15
+---
+
+## AllianceServiceV2 (New Networked System)
+
+**Location**: `ServerScriptService/AllianceServiceV2.lua`  
+**Type**: Class  
+**Description**: New alliance system with networked resource pooling, undirected alliance graph, and 3-outcome betrayal mechanics.
+
+**See**: `ALLIANCE_POOLING_SYSTEM.md` for complete documentation
+
+### Key Features
+
+- Undirected alliance graph with connected components
+- Direct-ally-only friendly fire protection
+- Immutable snapshot pooling for betrayal
+- 3-outcome betrayal system (75% pooled, 75% mirrored, 100% personal + Traitor)
+- Disconnect treated as death
+- Atomic transaction system preventing duping
+- Deterministic weapon selection for transfers
+
+### Core Modules
+
+#### AllianceGraph
+
+**Location**: `ServerScriptService/Alliance/AllianceGraph.lua`
+
+```lua
+-- Create graph
+local graph = AllianceGraph.new()
+
+-- Manage edges
+graph:addEdge(player1, player2) -> boolean
+graph:removeEdge(player1, player2) -> boolean
+graph:removeAllEdges(player) -> boolean
+
+-- Queries
+graph:getDirectAllies(player) -> {Player}
+graph:areDirectAllies(player1, player2) -> boolean
+graph:getComponent(player) -> {userId}  -- BFS connected component
+```
+
+#### PoolCalculator
+
+**Location**: `ServerScriptService/Alliance/PoolCalculator.lua`
+
+```lua
+-- Create calculator
+local calc = PoolCalculator.new(playerManager, allianceGraph)
+
+-- Get contribution for single player
+calc:getContribution(playerId) -> {
+    currency = number,
+    resources = {[name]=count},
+    components = {[name]=count},
+    progressPoints = number,
+    weapons = {list={}, valueTotal=number}
+}
+
+-- Create immutable snapshot
+calc:snapshotPool(targetPlayer) -> {
+    members = {userId1, userId2, ...},
+    contributions = {[userId]=contribution},
+    totals = {...},
+    timestamp = number
+}
+```
+
+#### InventoryLedger
+
+**Location**: `ServerScriptService/Alliance/InventoryLedger.lua`
+
+```lua
+-- Create ledger
+local ledger = InventoryLedger.new(playerManager)
+
+-- Atomic transactions
+ledger:begin() -> boolean
+ledger:applyDeduction(userId, deductionStruct) -> boolean
+ledger:applyGrant(userId, grantStruct) -> boolean
+ledger:commit() -> boolean
+ledger:rollback() -> boolean
+```
+
+#### BetrayalService
+
+**Location**: `ServerScriptService/Alliance/BetrayalService.lua`
+
+```lua
+-- Create service
+local service = BetrayalService.new(graph, calc, ledger, playerManager)
+
+-- Start betrayal (removes edge, creates snapshots, starts 30s window)
+service:startBetrayal(betrayer, victim) -> boolean, errorMessage
+
+-- Handle kills during window
+service:onPlayerKilled(killer, victim) -> void
+
+-- Handle disconnects
+service:onPlayerDisconnect(player) -> void
+
+-- Query status
+service:isPlayerLocked(player) -> boolean
+service:isTraitor(player) -> boolean
+```
+
+#### WeaponValues
+
+**Location**: `ReplicatedStorage/Shared/WeaponValues.lua`
+
+```lua
+WeaponValues.getValue(weaponId) -> number
+WeaponValues.getTotalValue(weaponList) -> number
+WeaponValues.sortWeapons(weaponList) -> sortedList  -- Deterministic
+```
+
+### Betrayal Outcomes
+
+#### Outcome 1: Successful Betrayal
+- **Trigger**: Betrayer kills victim within 30 seconds
+- **Transfer**: 75% of victim's pooled resources to betrayer
+- **Deduction**: Proportional across all members of victim's pool
+
+#### Outcome 2: Failed Betrayal
+- **Trigger**: Victim kills betrayer within 30 seconds
+- **Transfer**: 75% of betrayer's pooled resources to victim
+- **Deduction**: Proportional across all members of betrayer's pool
+
+#### Outcome 3: Stalemate
+- **Trigger**: 30 seconds expire without either killing the other
+- **Transfer**: 100% of betrayer's PERSONAL inventory to victim
+- **Penalty**: Betrayer marked as Traitor (cannot ally for rest of round)
+- **Effect**: All of betrayer's remaining alliances severed
+
+### Remote Events
+
+#### BetrayalStarted
+**Direction**: Server → Client
+
+```lua
+{
+    type = "betrayer" | "victim",
+    victim = string,  -- victim name (if betrayer)
+    betrayer = string,  -- betrayer name (if victim)
+    duration = number  -- window duration in seconds
+}
+```
+
+#### BetrayalOutcome
+**Direction**: Server → Client
+
+```lua
+{
+    type = "success" | "victory" | "stalemate_betrayer" | "stalemate_victim",
+    message = string
+}
+```
+
+### Configuration
+
+```lua
+-- GameConfig.lua
+POOLED_TRANSFER_PERCENT = 0.75  -- Outcome 1 & 2
+PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = 1.00  -- Outcome 3
+BETRAYAL_WINDOW = 30  -- seconds
+BETRAYAL_COOLDOWN = 60  -- seconds
+```
+
+### Integration
+
+```lua
+-- MainServer.lua
+local AllianceService = require(script.Parent.AllianceServiceV2)
+local allianceService = AllianceService.new()
+
+-- Set dependencies
+allianceService:setPlayerManager(playerManager)
+allianceService:setCureService(cureService)
+allianceService:setPuzzleService(puzzleService)
+
+-- Initialize players
+allianceService:initializePlayer(player)
+
+-- Handle kills
+allianceService:onPlayerKilled(deadPlayer, killerPlayer)
+
+-- Handle disconnects
+allianceService:removePlayer(player)  -- calls onPlayerDisconnect internally
+```
+
+### Security Features
+
+- **Server-authoritative**: All calculations server-side
+- **Snapshot immutability**: Pool values frozen at betrayal start
+- **Atomic transactions**: No duping possible
+- **Validation**: All deductions validated before application
+- **Disconnect handling**: Treated as death, deductions still apply
+
+### Acceptance Tests
+
+✓ Graph pooling includes all connected component members  
+✓ Friendly fire only OFF for direct allies  
+✓ Snapshots don't change after betrayal start  
+✓ No duping (deducted == transferred)  
+✓ Disconnect doesn't avoid deductions  
+
