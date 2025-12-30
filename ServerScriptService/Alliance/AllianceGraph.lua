@@ -8,7 +8,7 @@ local AllianceGraph = {}
 AllianceGraph.__index = AllianceGraph
 
 function AllianceGraph.new()
-local self = setmetatable({}, AllianceGraph)
+	local self = setmetatable({}, AllianceGraph)
 
 -- Store edges as adjacency list: userId -> {allyUserId = true, ...}
 self.edges = {}

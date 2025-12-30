@@ -12,7 +12,7 @@ local PoolCalculator = {}
 PoolCalculator.__index = PoolCalculator
 
 function PoolCalculator.new(playerManager, allianceGraph)
-local self = setmetatable({}, PoolCalculator)
+	local self = setmetatable({}, PoolCalculator)
 
 self.playerManager = playerManager
 self.allianceGraph = allianceGraph

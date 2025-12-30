@@ -8,7 +8,7 @@ local InventoryLedger = {}
 InventoryLedger.__index = InventoryLedger
 
 function InventoryLedger.new(playerManager)
-local self = setmetatable({}, InventoryLedger)
+	local self = setmetatable({}, InventoryLedger)
 
 self.playerManager = playerManager
 self.activeTransaction = nil

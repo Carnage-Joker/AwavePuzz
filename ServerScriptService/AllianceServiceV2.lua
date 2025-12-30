@@ -24,7 +24,7 @@ local AllianceServiceV2 = {}
 AllianceServiceV2.__index = AllianceServiceV2
 
 function AllianceServiceV2.new()
-local self = setmetatable({}, AllianceServiceV2)
+	local self = setmetatable({}, AllianceServiceV2)
 
 -- Pending alliance requests
 self.pendingRequests = {}     -- player UserId -> set of pending request UserIds

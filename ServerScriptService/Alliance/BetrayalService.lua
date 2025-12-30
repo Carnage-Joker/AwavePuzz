@@ -298,6 +298,9 @@ function BetrayalService:applyPooledTransfer(winner, loserSnapshot, transferPerc
 		weapons = {}
 	}
 	
+	-- Track deductions per user to avoid overwriting
+	local userDeductions = {} -- userId -> deduction struct
+	
 	-- Calculate deductions for each member in loser's pool
 	for _, userId in ipairs(loserSnapshot.members) do
 		local contribution = loserSnapshot.contributions[userId]
@@ -329,7 +332,8 @@ function BetrayalService:applyPooledTransfer(winner, loserSnapshot, transferPerc
 			
 			totalTransferred.currency = totalTransferred.currency + deduction.currency
 			
-			self.inventoryLedger:applyDeduction(userId, deduction)
+			-- Store deduction for later weapon addition
+			userDeductions[userId] = deduction
 		end
 	end
 	
@@ -337,9 +341,24 @@ function BetrayalService:applyPooledTransfer(winner, loserSnapshot, transferPerc
 	local targetWeaponValue = math.floor(loserSnapshot.totals.weaponValueTotal * transferPercent)
 	local weaponsToTransfer = self:selectWeaponsForTransfer(loserSnapshot, targetWeaponValue)
 	
-	-- Apply weapon deductions
+	-- Add weapon deductions to existing user deductions (don't overwrite)
 	for userId, weaponIds in pairs(weaponsToTransfer.byOwner) do
-		local deduction = {weapons = weaponIds}
+		if userDeductions[userId] then
+			-- Add weapons to existing deduction
+			userDeductions[userId].weapons = weaponIds
+		else
+			-- Create new deduction for this user (only weapons)
+			userDeductions[userId] = {
+				currency = 0,
+				resources = {},
+				components = {},
+				weapons = weaponIds
+			}
+		end
+	end
+	
+	-- Apply all deductions (now with weapons included)
+	for userId, deduction in pairs(userDeductions) do
 		self.inventoryLedger:applyDeduction(userId, deduction)
 	end
 	
