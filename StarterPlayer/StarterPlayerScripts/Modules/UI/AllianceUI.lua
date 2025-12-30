@@ -492,32 +492,28 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 end)
 
 -- Betrayal Started Event
-local betrayalStartedEvent = remoteEvents:FindFirstChild("BetrayalStarted")
-if betrayalStartedEvent then
-	betrayalStartedEvent.OnClientEvent:Connect(function(data)
-		if data.type == "betrayer" then
-			showNotification("Betrayal initiated! Eliminate " .. data.victim .. " in " .. data.duration .. "s!", 5)
-		elseif data.type == "victim" then
-			showNotification("You've been betrayed by " .. data.betrayer .. "! Survive " .. data.duration .. "s!", 5)
-		end
-	end)
-end
+local betrayalStartedEvent = remoteEvents:WaitForChild("BetrayalStarted")
+betrayalStartedEvent.OnClientEvent:Connect(function(data)
+	if data.type == "betrayer" then
+		showNotification("Betrayal initiated! Eliminate " .. data.victim .. " in " .. data.duration .. "s!", 5)
+	elseif data.type == "victim" then
+		showNotification("You've been betrayed by " .. data.betrayer .. "! Survive " .. data.duration .. "s!", 5)
+	end
+end)
 
 -- Betrayal Outcome Event
-local betrayalOutcomeEvent = remoteEvents:FindFirstChild("BetrayalOutcome")
-if betrayalOutcomeEvent then
-	betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
-		if data.type == "success" then
-			showNotification(data.message, 5)
-		elseif data.type == "victory" then
-			showNotification(data.message, 5)
-		elseif data.type == "stalemate_betrayer" then
-			showNotification(data.message, 6)
-		elseif data.type == "stalemate_victim" then
-			showNotification(data.message, 5)
-		end
-	end)
-end
+local betrayalOutcomeEvent = remoteEvents:WaitForChild("BetrayalOutcome")
+betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
+	if data.type == "success" then
+		showNotification(data.message, 5)
+	elseif data.type == "victory" then
+		showNotification(data.message, 5)
+	elseif data.type == "stalemate_betrayer" then
+		showNotification(data.message, 6)
+	elseif data.type == "stalemate_victim" then
+		showNotification(data.message, 5)
+	end
+end)
 
 -- Accept button handler
 acceptButton.MouseButton1Click:Connect(function()
