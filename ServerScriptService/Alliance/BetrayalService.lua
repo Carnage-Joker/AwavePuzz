@@ -204,6 +204,7 @@ function BetrayalService:resolveOutcome2_FailedBetrayal(victor, betrayer, data)
 	-- Notify clients
 	self.remoteEvents.BetrayalOutcome:FireClient(victor, {
 		type = "victory",
+		message = string.format("You defeated betrayer %s and claimed 75%% of their pool!", betrayer.Name)
 	})
 end
 
