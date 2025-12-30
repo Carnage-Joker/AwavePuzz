@@ -389,8 +389,11 @@ function BetrayalService:applyPersonalTransfer(source, target, transferPercent)
 		deduction.components[componentName] = count
 	end
 	
+	local normalizedStartingWeaponId = string.lower(tostring(STARTING_WEAPON))
+	
 	for weaponId in pairs(sourceData.weapons or {}) do
-		if weaponId ~= STARTING_WEAPON then -- Keep starting weapon
+		local weaponKey = string.lower(tostring(weaponId))
+		if weaponKey ~= normalizedStartingWeaponId then -- Keep starting weapon (case-insensitive)
 			table.insert(deduction.weapons, weaponId)
 		end
 	end
