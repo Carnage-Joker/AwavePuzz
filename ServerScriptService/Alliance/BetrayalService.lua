@@ -15,10 +15,10 @@ local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 local BetrayalService = {}
 BetrayalService.__index = BetrayalService
 
--- Constants
-local POOLED_TRANSFER_PERCENT = 0.75
-local PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = 1.00
-local BETRAYAL_WINDOW_DURATION = 30 -- seconds
+-- Constants (prefer GameConfig values, fall back to existing defaults)
+local POOLED_TRANSFER_PERCENT = GameConfig.POOLED_TRANSFER_PERCENT or 0.75
+local PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = GameConfig.PERSONAL_TRANSFER_PERCENT_ON_STALEMATE or 1.00
+local BETRAYAL_WINDOW_DURATION = GameConfig.BETRAYAL_WINDOW_DURATION or 30 -- seconds
 local STARTING_WEAPON = "Pistol" -- Starting weapon to exclude from transfers
 
 function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager)
