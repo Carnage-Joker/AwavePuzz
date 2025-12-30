@@ -469,8 +469,15 @@ function BetrayalService:selectWeaponsForTransfer(snapshot, targetValue)
 			continue
 		end
 		
+		-- Avoid significantly overshooting the target when we already have some value
+		local newTotal = result.totalValue + weapon.value
+		if newTotal > targetValue and result.totalValue > 0 then
+			-- Try smaller weapons later in the sorted list instead of overshooting with this one
+			continue
+		end
+		
 		table.insert(result.list, weapon.weaponId)
-		result.totalValue = result.totalValue + weapon.value
+		result.totalValue = newTotal
 		
 		if not result.byOwner[weapon.ownerId] then
 			result.byOwner[weapon.ownerId] = {}
