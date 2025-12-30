@@ -97,8 +97,33 @@ function BetrayalService:startBetrayal(betrayer, victim)
 	local victimSnapshot = self.poolCalculator:snapshotPool(victim)
 	local betrayerSnapshot = self.poolCalculator:snapshotPool(betrayer)
 	
-	if not victimSnapshot or not betrayerSnapshot then
-		return false, "Failed to create snapshots"
+	-- Helper to validate that a snapshot has a members list containing the given player
+	local function snapshotHasPlayer(snapshot, player)
+		if type(snapshot) ~= "table" then
+			return false
+		end
+		
+		local members = snapshot.members
+		if type(members) ~= "table" then
+			return false
+		end
+		
+		for _, member in ipairs(members) do
+			-- Support common representations: Player instance, UserId number, or player name string
+			if member == player or member == player.UserId or member == player.Name then
+				return true
+			end
+		end
+		
+		return false
+	end
+	
+	if not victimSnapshot
+		or not betrayerSnapshot
+		or not snapshotHasPlayer(victimSnapshot, victim)
+		or not snapshotHasPlayer(betrayerSnapshot, betrayer) then
+		
+		return false, "Failed to create valid snapshots"
 	end
 	
 	-- 3) Lock both players from alliance changes
