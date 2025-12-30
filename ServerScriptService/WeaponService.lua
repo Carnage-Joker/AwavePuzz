@@ -245,7 +245,8 @@ function WeaponService:handleWeaponFire(player, payload)
 							target = hitPlayer.Name
 						})
 					end
-					-- If allied, damage is prevented (friendly fire protection)
+					-- If allied (direct edge), damage is prevented (friendly fire protection)
+					-- Note: Indirect allies (connected via other players) CAN damage each other
 				end
 			end
 		end
