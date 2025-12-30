@@ -19,7 +19,7 @@ BetrayalService.__index = BetrayalService
 local POOLED_TRANSFER_PERCENT = GameConfig.POOLED_TRANSFER_PERCENT or 0.75
 local PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = GameConfig.PERSONAL_TRANSFER_PERCENT_ON_STALEMATE or 1.00
 local BETRAYAL_WINDOW_DURATION = GameConfig.BETRAYAL_WINDOW_DURATION or 30 -- seconds
-local STARTING_WEAPON = "Pistol" -- Starting weapon to exclude from transfers
+local STARTING_WEAPON = WeaponValues.PISTOL_ID -- Starting weapon to exclude from transfers
 
 function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager)
     local self = setmetatable({}, BetrayalService)
