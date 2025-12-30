@@ -86,19 +86,19 @@ function EpilogueUI:createUI()
 	contentContainer.BackgroundTransparency = 1
 	contentContainer.Parent = self.frame
 	
-	-- Title label
+	-- Title label - styled as system log header
 	local titleLabel = Instance.new("TextLabel")
 	titleLabel.Name = "TitleLabel"
 	titleLabel.Size = UDim2.new(1, 0, 0.15, 0)
 	titleLabel.Position = UDim2.new(0.5, 0, 0.1, 0)
 	titleLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 	titleLabel.BackgroundTransparency = 1
-	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.Font = Enum.Font.Code
 	titleLabel.Text = "THE OUTBREAK"
-	titleLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
+	titleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 	titleLabel.TextScaled = true
 	titleLabel.TextSize = 48
-	titleLabel.TextStrokeTransparency = 0.7
+	titleLabel.TextStrokeTransparency = 0.5
 	titleLabel.Parent = contentContainer
 	
 	-- Story text container with ScrollingFrame for long text
@@ -110,17 +110,17 @@ function EpilogueUI:createUI()
 	textContainer.BackgroundTransparency = 1
 	textContainer.Parent = contentContainer
 	
-	-- Story text label
+	-- Story text label - styled as monospace system log
 	local storyText = Instance.new("TextLabel")
 	storyText.Name = "StoryText"
 	storyText.Size = UDim2.new(1, 0, 1, 0)
 	storyText.Position = UDim2.new(0.5, 0, 0.5, 0)
 	storyText.AnchorPoint = Vector2.new(0.5, 0.5)
 	storyText.BackgroundTransparency = 1
-	storyText.Font = Enum.Font.Gotham
+	storyText.Font = Enum.Font.Code
 	storyText.Text = ""
-	storyText.TextColor3 = Color3.fromRGB(220, 220, 220)
-	storyText.TextSize = 24
+	storyText.TextColor3 = Color3.fromRGB(200, 220, 240)
+	storyText.TextSize = 22
 	storyText.TextWrapped = true
 	storyText.TextXAlignment = Enum.TextXAlignment.Left
 	storyText.TextYAlignment = Enum.TextYAlignment.Top
@@ -143,16 +143,16 @@ function EpilogueUI:createUI()
 	if StoryConfig.EpilogueSkippable then
 		local skipButton = Instance.new("TextButton")
 		skipButton.Name = "SkipButton"
-		skipButton.Size = UDim2.new(0.2, 0, 0.06, 0)
-		skipButton.Position = UDim2.new(0.95, 0, 0.05, 0)
+		skipButton.Size = UDim2.new(0.25, 0, 0.06, 0)
+		skipButton.Position = UDim2.new(0.98, 0, 0.05, 0)
 		skipButton.AnchorPoint = Vector2.new(1, 0)
 		skipButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 		skipButton.BackgroundTransparency = 0.3
 		skipButton.BorderSizePixel = 0
-		skipButton.Font = Enum.Font.Gotham
+		skipButton.Font = Enum.Font.Code
 		skipButton.Text = StoryConfig.SkipButtonText
-		skipButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-		skipButton.TextSize = 18
+		skipButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+		skipButton.TextSize = 16
 		skipButton.Parent = self.frame
 		
 		skipButton.MouseButton1Click:Connect(function()
@@ -162,20 +162,50 @@ function EpilogueUI:createUI()
 		self.skipButton = skipButton
 	end
 	
-	-- Continue button (bottom center)
+	-- Mute button (top right, below skip)
+	local muteButton = Instance.new("TextButton")
+	muteButton.Name = "MuteButton"
+	muteButton.Size = UDim2.new(0.25, 0, 0.06, 0)
+	muteButton.Position = UDim2.new(0.98, 0, 0.12, 0)
+	muteButton.AnchorPoint = Vector2.new(1, 0)
+	muteButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	muteButton.BackgroundTransparency = 0.3
+	muteButton.BorderSizePixel = 0
+	muteButton.Font = Enum.Font.Code
+	muteButton.Text = StoryConfig.MuteButtonText
+	muteButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+	muteButton.TextSize = 16
+	muteButton.Parent = self.frame
+	
+	self.audioMuted = false
+	muteButton.MouseButton1Click:Connect(function()
+		self.audioMuted = not self.audioMuted
+		if self.audioMuted then
+			muteButton.Text = "[M] Unmute Audio"
+			muteButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+		else
+			muteButton.Text = StoryConfig.MuteButtonText
+			muteButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+		end
+		-- TODO: Implement audio muting when voiceover is added
+	end)
+	
+	self.muteButton = muteButton
+	
+	-- Continue button (bottom center) - styled as system prompt
 	local continueButton = Instance.new("TextButton")
 	continueButton.Name = "ContinueButton"
 	continueButton.Size = UDim2.new(0.3, 0, 0.08, 0)
 	continueButton.Position = UDim2.new(0.5, 0, 0.92, 0)
 	continueButton.AnchorPoint = Vector2.new(0.5, 0.5)
-	continueButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	continueButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 	continueButton.BackgroundTransparency = 0.2
 	continueButton.BorderSizePixel = 2
-	continueButton.BorderColor3 = Color3.fromRGB(100, 200, 255)
-	continueButton.Font = Enum.Font.GothamBold
+	continueButton.BorderColor3 = Color3.fromRGB(80, 150, 200)
+	continueButton.Font = Enum.Font.Code
 	continueButton.Text = StoryConfig.ContinueButtonText
-	continueButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	continueButton.TextSize = 22
+	continueButton.TextColor3 = Color3.fromRGB(180, 220, 255)
+	continueButton.TextSize = 20
 	continueButton.Parent = self.frame
 	
 	continueButton.MouseButton1Click:Connect(function()
@@ -209,6 +239,18 @@ function EpilogueUI:show()
 			self:skip()
 		elseif input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.Return then
 			self:nextPage()
+		elseif input.KeyCode == Enum.KeyCode.M then
+			-- Toggle mute
+			if self.muteButton then
+				self.audioMuted = not self.audioMuted
+				if self.audioMuted then
+					self.muteButton.Text = "[M] Unmute Audio"
+					self.muteButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+				else
+					self.muteButton.Text = StoryConfig.MuteButtonText
+					self.muteButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+				end
+			end
 		end
 	end)
 	

@@ -508,6 +508,35 @@ function GameManager:setAchievementService(achievementService)
 	print("[GameManager] AchievementService linked")
 end
 
+function GameManager:setFunFactService(funFactService)
+	self.funFactService = funFactService
+	print("[GameManager] FunFactService linked")
+end
+
+function GameManager:setCureSynthesisService(cureSynthesisService)
+	self.cureSynthesisService = cureSynthesisService
+	print("[GameManager] CureSynthesisService linked")
+end
+
+function GameManager:getWaveManager()
+	-- GameManager handles waves directly, return self for WaveManager interface compatibility
+	-- CureSynthesisService needs access to intensity multiplier control
+	return self
+end
+
+-- WaveManager interface compatibility methods
+function GameManager:setIntensityMultiplier(multiplier)
+	self.intensityMultiplier = multiplier or 1.0
+	print("[GameManager] Wave intensity multiplier set to", self.intensityMultiplier)
+	
+	-- TODO: Apply multiplier to zombie spawning/attack rates
+	-- This could modify spawn intervals, attack intervals, or damage
+end
+
+function GameManager:getIntensityMultiplier()
+	return self.intensityMultiplier or 1.0
+end
+
 function GameManager:showVictoryCredits(alivePlayers)
 	-- Build survivor data for credits
 	local survivorData = {}
@@ -625,6 +654,13 @@ function GameManager:startWave()
 
 	print("Starting Wave " .. self.currentWave)
 	
+	-- Update wave reached for fun facts
+	if self.funFactService then
+		for _, player in ipairs(Players:GetPlayers()) do
+			self.funFactService:updatePlayerStat(player, "waveReached", self.currentWave)
+		end
+	end
+	
 	-- Start spectator tracking for this round (first wave only)
 	if self.currentWave == 1 then
 		self.spectatorManager:startRound()
@@ -686,6 +722,14 @@ function GameManager:onWaveComplete()
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
+	end
+	
+	-- Display fun fact during intermission
+	if self.funFactService then
+		-- Delay slightly so players can see wave complete message first
+		task.delay(2, function()
+			self.funFactService:broadcastFactToAll()
+		end)
 	end
 end
 
@@ -839,6 +883,11 @@ function GameManager:onPlayerDied(player)
 	end
 
 	self:incrementPlayerDeaths(player)
+	
+	-- Track death for fun facts
+	if self.funFactService then
+		self.funFactService:incrementPlayerStat(player, "deaths")
+	end
 
 	self.spectatorManager:onPlayerDied(player)
 	self.spectatorManager:onSpectatorTargetDied(player.UserId)

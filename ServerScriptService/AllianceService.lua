@@ -62,6 +62,11 @@ function AllianceService:setPlayerManager(playerManager)
 	self.playerManager = playerManager
 end
 
+-- Set game manager reference
+function AllianceService:setGameManager(gameManager)
+	self.gameManager = gameManager
+end
+
 function AllianceService:setupRemoteEvents()
 	-- Use shared utility to create remote events
 	-- RemoteEvent Documentation:
@@ -261,7 +266,7 @@ function AllianceService:handleBreakAlliance(player, target)
 		with = target,
 		withName = target.Name,
 		betrayer = true,
-		message = "Betrayal initiated! You have 30 seconds to eliminate " .. target.Name .. " to claim 65% of resources."
+		message = "Betrayal initiated! You have 30 seconds to eliminate " .. target.Name .. " to claim 75% of pooled resources."
 	})
 
 	self.remoteEvents.AllianceUpdate:FireClient(target, {
@@ -364,6 +369,11 @@ function AllianceService:onVictimSurvives(betrayer, victim)
 	end
 	
 	print(victim.Name .. " survived betrayal and claimed 75% of " .. betrayer.Name .. "'s resources!")
+	
+	-- Track betrayal survival for fun facts
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(victim, "betrayalsSurvived")
+	end
 end
 
 -- Transfer resources from victim to betrayer
@@ -447,6 +457,11 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 	end
 
 	print(killer.Name .. " defeated betrayer " .. betrayer.Name .. " and claimed all resources (100%)!")
+	
+	-- Track betrayal survival for fun facts
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(killer, "betrayalsSurvived")
+	end
 end
 
 -- Integration point: Call this from MainServer.lua or WeaponService.lua when a player is killed
@@ -503,17 +518,17 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 		self.activeWindows[betrayer.UserId] = nil
 	end
 
-	-- Outcome 1: Transfer 65% of resources since betrayal was successful
-	self:transferBetrayalResources(betrayer, victim, 0.65)
+	-- Outcome 1: Transfer 75% of pooled resources since betrayal was successful
+	self:transferBetrayalResources(betrayer, victim, 0.75)
 
 	-- Trigger puzzle stealing mechanics
 	if self.puzzleService then
 		self.puzzleService:onBetrayal(betrayer, victim)
 	end
 
-	-- Transfer 65% of cure components from victim to betrayer
+	-- Transfer 75% of cure components from victim to betrayer
 	if self.cureService then
-		self:transferCureComponents(betrayer, victim, 0.65)
+		self:transferCureComponents(betrayer, victim, 0.75)
 	end
 
 	-- Notify betrayer of successful betrayal
@@ -521,11 +536,16 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 		self.remoteEvents.AllianceUpdate:FireClient(betrayer, {
 			type = "betrayal_success",
 			victim = victim.Name,
-			message = "Betrayal successful! You eliminated " .. victim.Name .. " and claimed 65% of their resources."
+			message = "Betrayal successful! You eliminated " .. victim.Name .. " and claimed 75% of pooled resources."
 		})
 	end
 
-	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed 65% of their resources!")
+	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed 75% of pooled resources!")
+	
+	-- Track betrayal for fun facts
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(betrayer, "betrayalsCommitted")
+	end
 end
 
 -- Transfer cure components from one player to another
