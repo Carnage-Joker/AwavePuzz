@@ -13,6 +13,8 @@ local CureService = require(script.Parent.CureService)
 local PuzzleService = require(script.Parent.PuzzleService)
 local SprintService = require(script.Parent.SprintService)
 local AchievementService = require(script.Parent.AchievementService)
+local FunFactService = require(script.Parent.FunFactService)
+local CureSynthesisService = require(script.Parent.CureSynthesisService)
 
 print("=== Aether Wave: Convergence Server Starting ===")
 
@@ -84,6 +86,18 @@ print("Services linked")
 local achievementService = AchievementService.new(playerManager, gameManager)
 gameManager:setAchievementService(achievementService)
 print("AchievementService initialized and linked")
+
+-- Fun Fact service (for downtime and loading screen facts)
+local funFactService = FunFactService.new()
+gameManager:setFunFactService(funFactService)
+allianceService:setGameManager(gameManager)
+print("FunFactService initialized and linked")
+
+-- Cure Synthesis service (high-pressure endgame system)
+local cureSynthesisService = CureSynthesisService.new(cureService, gameManager:getWaveManager(), gameManager)
+cureSynthesisService:setPuzzleService(puzzleService)
+gameManager:setCureSynthesisService(cureSynthesisService)
+print("CureSynthesisService initialized and linked")
 
 -- Setup cure stations
 local cureStationSetup = require(game.ReplicatedStorage.Shared.CureStationSetup)
