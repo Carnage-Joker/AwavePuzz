@@ -91,7 +91,7 @@ break
 end
 
 -- Validate resources
-if deduction.resources then
+if success and deduction.resources then
 for resourceName, amount in pairs(deduction.resources) do
 local current = playerData.inventory[resourceName] or 0
 if current < amount then
@@ -102,8 +102,12 @@ end
 end
 end
 
+if not success then
+break
+end
+
 -- Validate components
-if deduction.components then
+if success and deduction.components then
 for componentName, amount in pairs(deduction.components) do
 local current = playerData.cureComponents[componentName] or 0
 if current < amount then
@@ -114,8 +118,12 @@ end
 end
 end
 
+if not success then
+break
+end
+
 -- Validate weapons
-if deduction.weapons then
+if success and deduction.weapons then
 for _, weaponId in ipairs(deduction.weapons) do
 if not playerData.weapons[weaponId] then
 success = false
