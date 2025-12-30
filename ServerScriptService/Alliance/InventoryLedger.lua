@@ -133,7 +133,11 @@ end
 end
 
 if not success then
-warn("[InventoryLedger] Transaction validation failed: " .. (errorMsg or "Unknown error"))
+local finalErrorMsg = errorMsg
+if finalErrorMsg == nil or finalErrorMsg == "" then
+finalErrorMsg = "Unknown error"
+end
+warn("[InventoryLedger] Transaction validation failed: " .. finalErrorMsg)
 self:rollback()
 return false
 end
