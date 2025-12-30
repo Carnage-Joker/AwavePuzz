@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Roblox Studio (latest version)
-- At least 2 player slots for testing
+- At least 2 player slots for basic testing (3+ players recommended for comprehensive testing)
 - Game loaded with updated alliance system
 
 ## Test Environment Setup
@@ -13,7 +13,7 @@
 1. Open Roblox Studio
 2. Go to **Test** tab
 3. Click **Players** dropdown
-4. Select at least **2 Players**
+4. Select at least **2 Players** (or **3+ Players** for full test coverage)
 5. Click **Start** to begin local server test
 
 ## Test Scenarios
