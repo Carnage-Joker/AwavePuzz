@@ -22,40 +22,40 @@ local BETRAYAL_WINDOW_DURATION = 30 -- seconds
 local STARTING_WEAPON = "Pistol" -- Starting weapon to exclude from transfers
 
 function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager)
-	local self = setmetatable({}, BetrayalService)
-	
-	self.allianceGraph = allianceGraph
-	self.poolCalculator = poolCalculator
-	self.inventoryLedger = inventoryLedger
-	self.playerManager = playerManager
-	
-	-- Track active betrayal windows
-	-- Structure: {betrayerId -> {victimId, victimSnapshot, betrayerSnapshot, startTime, windowActive}}
-	self.activeWindows = {}
-	
-	-- Track players locked from alliance changes during betrayal
-	self.lockedPlayers = {} -- userId -> true
-	
-	-- Track traitors (players who failed stalemate)
-	self.traitors = {} -- userId -> true
-	
-	-- Setup remote events
-	self:setupRemoteEvents()
-	
-	return self
+    local self = setmetatable({}, BetrayalService)
+    
+    self.allianceGraph = allianceGraph
+    self.poolCalculator = poolCalculator
+    self.inventoryLedger = inventoryLedger
+    self.playerManager = playerManager
+    
+    -- Track active betrayal windows
+    -- Structure: {betrayerId -> {victimId, victimSnapshot, betrayerSnapshot, startTime, windowActive}}
+    self.activeWindows = {}
+    
+    -- Track players locked from alliance changes during betrayal
+    self.lockedPlayers = {} -- userId -> true
+    
+    -- Track traitors (players who failed stalemate)
+    self.traitors = {} -- userId -> true
+    
+    -- Setup remote events
+    self:setupRemoteEvents()
+    
+    return self
 end
 
 function BetrayalService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"BetrayalStarted",
-		"BetrayalOutcome",
-		"BetrayalStatus"
-	})
+    self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+        "BetrayalStarted",
+        "BetrayalOutcome",
+        "BetrayalStatus"
+    })
 end
 
 -- Check if a player is locked from alliance changes
 function BetrayalService:isPlayerLocked(player)
-	return self.lockedPlayers[player.UserId] == true
+    return self.lockedPlayers[player.UserId] == true
 end
 
 -- Check if a player is a traitor
