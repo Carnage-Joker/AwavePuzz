@@ -153,6 +153,22 @@ Base camp system feature documentation:
 - Visual design
 - Configuration options
 
+#### [docs/features/map-structure.md](docs/features/MAP_STRUCTURE.md)
+
+Map structure standards and creation guide:
+- Required folder structure
+- Spawn point requirements
+- Map validation
+- Creating new maps
+
+#### [docs/features/device-compatibility.md](docs/features/DEVICE_COMPATIBILITY.md)
+
+Cross-platform device compatibility:
+- PC/Mac, Mobile, Console, VR support
+- InputManager system
+- Platform-specific controls
+- UI scaling
+
 ### Testing Documentation
 
 #### [docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)
