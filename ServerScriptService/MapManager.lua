@@ -125,9 +125,11 @@ function MapManager:load(mapId)
 	self.currentMapModel = template:Clone()
 	self.currentMapModel.Name = "ActiveMap"
 	
-	-- Position the map at (5000, 0, 0) to keep it separate from spawn area
+	-- Position the map with a +X offset to keep it separate from spawn area
 	if self.currentMapModel.PrimaryPart then
-		self.currentMapModel:SetPrimaryPartCFrame(CFrame.new(5000, 0, 0))
+		local currentCFrame = self.currentMapModel:GetPrimaryPartCFrame()
+		local mapOffset = Vector3.new(5000, 0, 0)
+		self.currentMapModel:SetPrimaryPartCFrame(currentCFrame + mapOffset)
 	else
 		-- If no PrimaryPart, move all parts
 		local mapOffset = Vector3.new(5000, 0, 0)
