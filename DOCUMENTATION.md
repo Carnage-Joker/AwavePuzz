@@ -7,15 +7,14 @@ This document provides a comprehensive guide to all documentation available for 
 If you're new to the project, start here:
 
 1. **[README.md](README.md)** - Project overview, features, and quick start guide
-2. **[QUICKSTART.md](QUICKSTART.md)** - ✨ Quick start guide for the restructured repository
+2. **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for the restructured repository
 3. **[INSTALLATION.md](INSTALLATION.md)** - Step-by-step installation guide for Roblox Studio
 4. **[GAME_DESIGN.md](GAME_DESIGN.md)** - Understand the game mechanics and design philosophy
 
 ### Repository Structure Notes
 
-The repository was recently restructured to match Roblox Studio's layout:
-- **[RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md)** - Details on the restructuring changes
 - **[ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md)** - Documentation for placeholder files
+- **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - Detailed project structure guide
 
 ## 🔧 Development Documentation
 
@@ -36,20 +35,30 @@ Complete API reference for all game modules, including:
 
 Explains the code organization and architectural decisions:
 - Shared utilities (MathUtil, RemoteEventUtil)
-- Why certain files appear duplicate but serve different purposes
 - Active vs legacy code
 - Migration guides
 - Best practices for development
 
-#### [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
-**15KB | 406 lines**
+### Implementation Documentation
 
-Complete implementation status document:
-- Feature checklist (all phases complete)
-- File structure overview
-- Configuration highlights
-- Testing checklist
-- Phase-by-phase development progress
+#### [docs/implementation/overview.md](docs/implementation/overview.md)
+
+Current implementation status and feature summary:
+- All implemented systems overview
+- Architecture notes
+- Known limitations
+
+#### [docs/implementation/alliance-v2.md](docs/implementation/alliance-v2.md)
+
+Detailed alliance pooling and betrayal system implementation.
+
+#### [docs/implementation/base-camp.md](docs/implementation/base-camp.md)
+
+Base camp system implementation details.
+
+#### [docs/implementation/device-compatibility.md](docs/implementation/device-compatibility.md)
+
+Cross-platform compatibility implementation (mobile, console, VR).
 
 ### System-Specific Documentation
 
@@ -99,8 +108,9 @@ Quick reference card for animation configuration:
 - Weapon positioning
 - Event flow diagram
 
-#### [PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)
-**9.3KB | 271 lines**
+### Feature Documentation
+
+#### [docs/features/puzzle-system.md](docs/features/puzzle-system.md)
 
 Complete puzzle system documentation:
 - 6 puzzle types explained
@@ -112,8 +122,7 @@ Complete puzzle system documentation:
 - Setup and testing procedures
 - Troubleshooting guide
 
-#### [ZOMBIE_AI.md](ZOMBIE_AI.md)
-**13KB | 406 lines**
+#### [docs/features/zombie-ai.md](docs/features/zombie-ai.md)
 
 Zombie AI behavior and improvements documentation:
 - AI targeting system
@@ -128,10 +137,60 @@ For advanced AI features, see:
 - [docs/ai_changes.md](docs/ai_changes.md) - Detailed tactical AI implementation
 - [docs/ai_testing_guide.md](docs/ai_testing_guide.md) - Testing procedures for AI systems
 
+#### [docs/features/alliance-system.md](docs/features/alliance-system.md)
+
+Alliance pooling system documentation:
+- Alliance graph mechanics
+- Resource pooling
+- Betrayal mechanics
+- Configuration
+
+#### [docs/features/base-camp.md](docs/features/base-camp.md)
+
+Base camp system feature documentation:
+- Automatic generation
+- Defensive structures
+- Visual design
+- Configuration options
+
+#### [docs/features/map-structure.md](docs/features/MAP_STRUCTURE.md)
+
+Map structure standards and creation guide:
+- Required folder structure
+- Spawn point requirements
+- Map validation
+- Creating new maps
+
+#### [docs/features/device-compatibility.md](docs/features/DEVICE_COMPATIBILITY.md)
+
+Cross-platform device compatibility:
+- PC/Mac, Mobile, Console, VR support
+- InputManager system
+- Platform-specific controls
+- UI scaling
+
+### Testing Documentation
+
+#### [docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)
+
+Complete testing guide for the alliance and betrayal system.
+
+#### [docs/testing/TESTING_MAP_AND_LOBBY.md](docs/testing/TESTING_MAP_AND_LOBBY.md)
+
+Testing guide for map positioning and lobby improvements.
+
+### Historical Summaries
+
+See [docs/summaries/](docs/summaries/) for:
+- CONSOLIDATION_SUMMARY.md - Documentation consolidation history
+- CONVERGENCE_UPGRADE_SUMMARY.md - Game systems upgrade summary
+- GUI_IMPROVEMENTS_SUMMARY.md - GUI cleanup summary
+- MAP_POSITION_AND_LOBBY_IMPROVEMENTS.md - Map system improvements
+- MULTI_MAP_IMPLEMENTATION.md - Multi-map system implementation
+
 ### Communication and Data Flow
 
 #### [docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)
-**13KB | 433 lines**
 
 Complete RemoteEvent reference:
 - All RemoteEvents organized by domain
@@ -142,7 +201,6 @@ Complete RemoteEvent reference:
 - Naming conventions
 
 #### [docs/STRUCTURE.md](docs/STRUCTURE.md)
-**Size varies**
 
 Project structure and organization guide:
 - File organization conventions
@@ -175,7 +233,7 @@ Project structure and organization guide:
 ### "I want to understand how the code works"
 1. [CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md) - High-level architecture
 2. [API_DOCUMENTATION.md](API_DOCUMENTATION.md) - Detailed API reference
-3. [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - What's implemented
+3. [docs/implementation/overview.md](docs/implementation/overview.md) - What's implemented
 
 ### "I want to add weapon animations"
 1. [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md) - Step-by-step tutorial
@@ -185,7 +243,7 @@ Project structure and organization guide:
 ### "I want to tune game balance"
 1. [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) - FPS system tuning
 2. [GAME_DESIGN.md](GAME_DESIGN.md) - Design philosophy
-3. [PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md) - Puzzle configuration
+3. [docs/features/puzzle-system.md](docs/features/puzzle-system.md) - Puzzle configuration
 
 ### "I want to add new features"
 1. [CODE_ARCHITECTURE.md](CODE_ARCHITECTURE.md) - Architecture patterns
@@ -195,36 +253,40 @@ Project structure and organization guide:
 ### "I need to troubleshoot an issue"
 1. [INSTALLATION.md](INSTALLATION.md) - Setup troubleshooting
 2. [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) - Animation troubleshooting
-3. [PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md) - Puzzle troubleshooting
+3. [docs/features/puzzle-system.md](docs/features/puzzle-system.md) - Puzzle troubleshooting
 4. [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) - FPS system troubleshooting
 
 ## 📊 Documentation Statistics
 
-- **Total Documentation Files**: 18 core documents + additional guides in docs/
-- **Total Documentation Size**: ~220KB
+- **Core Documentation**: 15 files in root directory
+- **Implementation Docs**: 4 files in docs/implementation/
+- **Feature Docs**: 4 files in docs/features/
+- **Testing Guides**: 2 files in docs/testing/
+- **Historical Summaries**: 5 files in docs/summaries/
+- **Technical Docs**: 5 files in docs/
+- **Total**: ~35 organized documentation files
 - **Most Comprehensive**: API_DOCUMENTATION.md (45KB)
-- **Quick References**: ANIMATION_QUICK_REFERENCE.md (6.4KB), QUICKSTART.md (7.2KB)
 
 ## 🔍 Quick Search Guide
 
 ### Configuration Files
-- Game balance → `src/shared/GameConfig.lua`
-- FPS settings → `src/shared/FPSConfig.lua`
-- Weapon stats → `src/shared/WeaponConfig.lua`
-- Wave progression → `src/shared/WaveConfig.lua`
-- Puzzle settings → `src/shared/PuzzleConfig.lua`
-- Zombie types → `src/shared/ZombieTypes.lua`
+- Game balance → `ReplicatedStorage/Shared/GameConfig.lua`
+- FPS settings → `ReplicatedStorage/Shared/FPSConfig.lua`
+- Weapon stats → `ReplicatedStorage/Shared/WeaponConfig.lua`
+- Wave progression → `ReplicatedStorage/Shared/WaveConfig.lua`
+- Puzzle settings → `ReplicatedStorage/Shared/PuzzleConfig.lua`
+- Zombie types → `ReplicatedStorage/Shared/ZombieTypes.lua`
 
 ### Key Modules
-- Main entry point → `src/server/MainServer.lua`
-- Game orchestration → `src/server/GameManager.lua`
-- Zombie spawning → `src/server/Spawner.lua`
-- Zombie AI → `src/server/AIScripts/ZombieBrain.lua`
-- Player data → `src/server/PlayerManager.lua`
-- Alliances → `src/server/AllianceService.lua`
-- Puzzles → `src/server/PuzzleService.lua`
-- FPS camera → `src/client/FirstPersonCamera.client.lua`
-- FPS weapons → `src/client/FPSWeaponController.client.lua`
+- Main entry point → `ServerScriptService/MainServer.lua`
+- Game orchestration → `ServerScriptService/GameManager.lua`
+- Zombie spawning → `ServerScriptService/Spawner.lua`
+- Zombie AI → `ServerScriptService/AI/ZombieBrain.lua`
+- Player data → `ServerScriptService/PlayerManager.lua`
+- Alliances → `ServerScriptService/AllianceServiceV2.lua`
+- Puzzles → `ServerScriptService/PuzzleService.lua`
+- FPS camera → `StarterPlayer/StarterPlayerScripts/FPS/FirstPersonCamera.lua`
+- FPS weapons → `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua`
 
 ## 🎯 Documentation Goals
 
@@ -258,6 +320,6 @@ If you can't find what you're looking for:
 
 ---
 
-**Last Updated**: 2025-12-25
-**Documentation Version**: 2.0 (Consolidated)
+**Last Updated**: January 2026
+**Documentation Version**: 3.0 (Reorganized into chapters)
 **Project Status**: ✅ Complete and Production-Ready

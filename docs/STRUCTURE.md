@@ -492,10 +492,10 @@ See [INSTALLATION.md](../INSTALLATION.md) for detailed setup instructions.
 
 ## Related Documentation
 
-- [RESTRUCTURE_CHANGELOG.md](../RESTRUCTURE_CHANGELOG.md) - Complete restructure documentation
+- [DOCUMENTATION.md](../DOCUMENTATION.md) - Complete documentation index
 - [ASSET_PLACEHOLDERS.md](../ASSET_PLACEHOLDERS.md) - Asset requirements and specifications
 - [INSTALLATION.md](../INSTALLATION.md) - Complete setup guide
-- [REMOTE_EVENTS.md](../REMOTE_EVENTS.md) - RemoteEvent reference
+- [REMOTE_EVENTS.md](REMOTE_EVENTS.md) - RemoteEvent reference
 - [API_DOCUMENTATION.md](../API_DOCUMENTATION.md) - API reference
 - [CODE_ARCHITECTURE.md](../CODE_ARCHITECTURE.md) - Architecture overview
 
@@ -521,7 +521,7 @@ If migrating from the old `src/` structure:
 
 ## Questions?
 
-For questions about the structure or migration:
-1. Check [RESTRUCTURE_CHANGELOG.md](../RESTRUCTURE_CHANGELOG.md)
+For questions about the structure:
+1. Check [DOCUMENTATION.md](../DOCUMENTATION.md) for comprehensive documentation index
 2. Review placeholder README files in each directory
 3. Open an issue on GitHub with the "structure" label

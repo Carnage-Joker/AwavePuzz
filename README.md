@@ -222,16 +222,19 @@ AwavePuzz/
 │   ├── Maps/                      # 🆕 Map models (placeholders)
 │   ├── Models/                    # 🆕 Weapon/object models (placeholders)
 │   └── ZombieModels/              # 🆕 Zombie models (placeholders)
-├── Archive/Legacy/Code/           # 🆕 Archived legacy code (3 levels deep)
+├── Archive/Legacy/Code/           # Archived legacy code (3 levels deep)
 ├── docs/                          # Documentation
-│   └── STRUCTURE.md               # ✨ UPDATED: Complete structure guide
-├── RESTRUCTURE_CHANGELOG.md       # 🆕 Restructure documentation
-├── ASSET_PLACEHOLDERS.md          # 🆕 Asset requirements guide
+│   ├── implementation/            # Implementation summaries
+│   ├── features/                  # Feature documentation
+│   ├── testing/                   # Testing guides
+│   ├── summaries/                 # Historical summaries
+│   └── STRUCTURE.md               # Complete structure guide
+├── ASSET_PLACEHOLDERS.md          # Asset requirements guide
 ├── README.md
 └── LICENSE
 ```
 
-> **Note**: The repository now uses Roblox service names (ServerScriptService, ReplicatedStorage, etc.) to match the game structure exactly. See [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) for migration details.
+> **Note**: The repository now uses Roblox service names (ServerScriptService, ReplicatedStorage, etc.) to match the game structure exactly. See [docs/STRUCTURE.md](docs/STRUCTURE.md) for detailed structure guide.
 
 ## 📖 The Story: The Aether Wave
 
@@ -387,10 +390,10 @@ For detailed setup instructions, see [INSTALLATION.md](INSTALLATION.md)
 - ✅ Placeholder files for all required assets
 - ✅ Old `src/` structure archived in `Archive/Legacy/Code/`
 
-For complete step-by-step instructions, asset creation guides, and migration information, refer to:
+For complete step-by-step instructions, asset creation guides, and structure information, refer to:
 - [INSTALLATION.md](INSTALLATION.md) - Complete setup guide
 - [ASSET_PLACEHOLDERS.md](ASSET_PLACEHOLDERS.md) - Asset requirements
-- [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) - Migration guide
+- [docs/STRUCTURE.md](docs/STRUCTURE.md) - Project structure guide
 
 ## 🎮 How to Play
 
@@ -433,11 +436,13 @@ This game is built using:
 
 ### Documentation
 
+**📖 Complete Documentation Index: [DOCUMENTATION.md](DOCUMENTATION.md)**
+
 #### Core Documentation
 - **[README.md](README.md)** - This file - game overview and quick start
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
-- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Implementation details and progress
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for the restructured repository
 
 #### Technical References
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference for all modules
@@ -445,14 +450,27 @@ This game is built using:
 - **[docs/STRUCTURE.md](docs/STRUCTURE.md)** - Project structure and organization guide
 - **[docs/REMOTE_EVENTS.md](docs/REMOTE_EVENTS.md)** - RemoteEvent reference with payload documentation
 
+#### Implementation Documentation
+- **[docs/implementation/overview.md](docs/implementation/overview.md)** - Implementation status and feature summary
+- **[docs/implementation/alliance-v2.md](docs/implementation/alliance-v2.md)** - Alliance pooling and betrayal system
+- **[docs/implementation/base-camp.md](docs/implementation/base-camp.md)** - Base camp system implementation
+- **[docs/implementation/device-compatibility.md](docs/implementation/device-compatibility.md)** - Cross-platform support
+
+#### Feature Documentation
+- **[docs/features/puzzle-system.md](docs/features/puzzle-system.md)** - Puzzle mechanics and integration
+- **[docs/features/zombie-ai.md](docs/features/zombie-ai.md)** - Zombie AI behavior and improvements
+- **[docs/features/alliance-system.md](docs/features/alliance-system.md)** - Alliance pooling system
+- **[docs/features/base-camp.md](docs/features/base-camp.md)** - Base camp feature documentation
+
 #### System-Specific Documentation
-- **[BASE_CAMP_SYSTEM.md](BASE_CAMP_SYSTEM.md)** - 🆕 Base camp auto-generation and configuration guide
 - **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - FPS system documentation and tuning guide
 - **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - Weapon animation system guide
 - **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - Step-by-step animation creation tutorial
 - **[ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md)** - Quick reference for animation configuration
-- **[PUZZLE_SYSTEM.md](PUZZLE_SYSTEM.md)** - Puzzle mechanics, types, and integration guide
-- **[ZOMBIE_AI.md](ZOMBIE_AI.md)** - Zombie AI behavior and improvements documentation
+
+#### Testing Guides
+- **[docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)** - Alliance system testing
+- **[docs/testing/TESTING_MAP_AND_LOBBY.md](docs/testing/TESTING_MAP_AND_LOBBY.md)** - Map and lobby testing
 
 ### Project Structure
 
@@ -478,9 +496,9 @@ The repository is organized to match Roblox Studio services exactly:
 - **`Archive/Legacy/Code/`** - 🆕 Archived legacy code (3 levels deep for safety)
 - **`docs/`** - Project documentation
 
-For detailed information about the restructure, naming conventions, and migration guide, see:
-- [RESTRUCTURE_CHANGELOG.md](RESTRUCTURE_CHANGELOG.md) - Complete restructure details
-- [docs/STRUCTURE.md](docs/STRUCTURE.md) - Structure reference
+For detailed information about the structure, naming conventions, and documentation organization, see:
+- [docs/STRUCTURE.md](docs/STRUCTURE.md) - Complete structure reference
+- [DOCUMENTATION.md](DOCUMENTATION.md) - Documentation index
 
 ## 📝 License
 
