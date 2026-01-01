@@ -136,8 +136,6 @@ function MapManager:load(mapId)
 		for _, descendant in ipairs(self.currentMapModel:GetDescendants()) do
 			if descendant:IsA("BasePart") then
 				descendant.CFrame = descendant.CFrame + mapOffset
-			elseif descendant:IsA("Attachment") then
-				-- Attachments will move with their parent parts
 			end
 		end
 	end
