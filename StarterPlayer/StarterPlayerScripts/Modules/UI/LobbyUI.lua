@@ -247,7 +247,7 @@ readyButton.MouseButton1Click:Connect(function()
 	
 	local playerReadyEvent = remoteEvents:FindFirstChild("PlayerReady")
 	if playerReadyEvent then
-		playerReadyEvent:FireServer()
+		playerReadyEvent:FireServer(isReady)
 	end
 end)
 
