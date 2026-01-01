@@ -250,8 +250,20 @@ function BaseCampSetup:buildBaseCamp(centerPos, parentModel)
 	local cover = self:createCover(centerPos)
 	local baseCaptureZone = self:createBaseCaptureZone(centerPos)
 	
+	-- Create spawn location for players
+	local spawnLocation = Instance.new("SpawnLocation")
+	spawnLocation.Name = "BaseCampSpawn"
+	spawnLocation.Size = Vector3.new(10, 1, 10)
+	spawnLocation.Position = centerPos + Vector3.new(0, 2, 0) -- Slightly above platform
+	spawnLocation.Anchored = true
+	spawnLocation.CanCollide = false
+	spawnLocation.Transparency = 1 -- Invisible
+	spawnLocation.Duration = 0 -- Instant respawn
+	spawnLocation.Neutral = true -- All players spawn here
+	
 	-- Parent all parts to the base camp model
 	platform.Parent = baseCamp
+	spawnLocation.Parent = baseCamp
 	
 	for _, wall in ipairs(walls) do
 		wall.Parent = baseCamp
