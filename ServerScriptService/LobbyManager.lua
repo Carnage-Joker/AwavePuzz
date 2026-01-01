@@ -22,6 +22,15 @@ function LobbyManager.new()
 	self.votingTimer = 0
 	self.currentMapId = nil
 
+	-- Ready/Waiting state
+	self.playersReady = {} -- userId -> boolean (true if ready to start)
+	self.playersWaiting = {} -- userId -> boolean (true if waiting for friends)
+	self.extendedTimer = false -- Whether timer has been extended
+
+	-- Server switch cooldown (rate limiting)
+	self.lastServerSwitchTime = {} -- userId -> timestamp of last switch attempt
+	self.SERVER_SWITCH_COOLDOWN = 30 -- 30 seconds between switch attempts
+
 	-- References set later
 	self.mapManager = nil
 	self.gameManager = nil
@@ -40,7 +49,11 @@ function LobbyManager:setupRemoteEvents()
 		"MapVoteUpdate",   -- Server -> Client: Update vote counts
 		"MapVoteEnd",      -- Server -> Client: Voting ended, show selected map
 		"CastMapVote",     -- Client -> Server: Player casts a vote
-		"LobbyStateUpdate" -- Server -> Client: Update lobby state (timer, etc.)
+		"LobbyStateUpdate", -- Server -> Client: Update lobby state (timer, etc.)
+		"PlayerReady",     -- Client -> Server: Player marks ready
+		"PlayerWaiting",   -- Client -> Server: Player is waiting for friends
+		"SwitchServer",    -- Client -> Server: Player wants to switch servers
+		"LobbyPlayersUpdate" -- Server -> Client: Update player ready/waiting status
 	})
 
 	-- Listen for player votes
@@ -50,6 +63,21 @@ function LobbyManager:setupRemoteEvents()
 			return
 		end
 		self:handlePlayerVote(player, mapId)
+	end)
+	
+	-- Listen for player ready status
+	self.remoteEvents.PlayerReady.OnServerEvent:Connect(function(player)
+		self:handlePlayerReady(player)
+	end)
+	
+	-- Listen for player waiting status
+	self.remoteEvents.PlayerWaiting.OnServerEvent:Connect(function(player, isWaiting)
+		self:handlePlayerWaiting(player, isWaiting)
+	end)
+	
+	-- Listen for server switch requests
+	self.remoteEvents.SwitchServer.OnServerEvent:Connect(function(player)
+		self:handleServerSwitch(player)
 	end)
 end
 
@@ -115,6 +143,7 @@ function LobbyManager:startVoting()
 
 	self.votingActive = true
 	self.votingTimer = GameConfig.LOBBY_VOTING_TIME
+	self.extendedTimer = false -- Reset extended flag
 
 	-- Notify all clients that voting has started
 	if self.remoteEvents.MapVoteStart then
@@ -123,6 +152,9 @@ function LobbyManager:startVoting()
 			duration = GameConfig.LOBBY_VOTING_TIME
 		})
 	end
+	
+	-- Broadcast initial player status
+	self:broadcastPlayerStatus()
 
 	print(string.format("[LobbyManager] Map voting started with %d available maps", #mapOptions))
 	return true
@@ -261,6 +293,108 @@ function LobbyManager:reset()
 	self.votes = {}
 	self.votingActive = false
 	self.votingTimer = 0
+	self.playersReady = {}
+	self.playersWaiting = {}
+	self.extendedTimer = false
+end
+
+-- Handle player marking themselves as ready
+function LobbyManager:handlePlayerReady(player)
+	if not player then return end
+	
+	self.playersReady[player.UserId] = true
+	self.playersWaiting[player.UserId] = false -- Can't be ready and waiting
+	
+	print(string.format("[LobbyManager] Player %s is ready", player.Name))
+	self:broadcastPlayerStatus()
+end
+
+-- Handle player waiting for friends/others
+function LobbyManager:handlePlayerWaiting(player, isWaiting)
+	if not player then return end
+	
+	self.playersWaiting[player.UserId] = isWaiting
+	if isWaiting then
+		self.playersReady[player.UserId] = false -- Can't be waiting and ready
+		
+		-- Extend timer if not already extended and voting is active
+		if not self.extendedTimer and self.votingActive then
+			self.votingTimer = math.max(self.votingTimer, GameConfig.LOBBY_VOTING_TIME)
+			self.extendedTimer = true
+			print(string.format("[LobbyManager] Timer extended due to %s waiting for friends", player.Name))
+		end
+	end
+	
+	print(string.format("[LobbyManager] Player %s waiting status: %s", player.Name, tostring(isWaiting)))
+	self:broadcastPlayerStatus()
+end
+
+-- Handle server switch request
+function LobbyManager:handleServerSwitch(player)
+	if not player then return end
+	
+	-- Check for rate limiting
+	local currentTime = tick()
+	local lastSwitchTime = self.lastServerSwitchTime[player.UserId] or 0
+	local timeSinceLastSwitch = currentTime - lastSwitchTime
+	
+	if timeSinceLastSwitch < self.SERVER_SWITCH_COOLDOWN then
+		local remainingCooldown = math.ceil(self.SERVER_SWITCH_COOLDOWN - timeSinceLastSwitch)
+		warn(string.format("[LobbyManager] Player %s attempted server switch too soon. Cooldown: %d seconds remaining", 
+			player.Name, remainingCooldown))
+		return
+	end
+	
+	-- Update last switch time
+	self.lastServerSwitchTime[player.UserId] = currentTime
+	
+	local TeleportService = game:GetService("TeleportService")
+	local placeId = game.PlaceId
+	
+	print(string.format("[LobbyManager] Player %s requesting server switch", player.Name))
+	
+	-- Teleport player to a different server
+	local success, errorMessage = pcall(function()
+		TeleportService:Teleport(placeId, player)
+	end)
+	
+	if not success then
+		warn(string.format("[LobbyManager] Failed to teleport %s: %s", player.Name, tostring(errorMessage)))
+	end
+end
+
+-- Broadcast player ready/waiting status to all clients
+function LobbyManager:broadcastPlayerStatus()
+	local Players = game:GetService("Players")
+	local statusData = {
+		totalPlayers = #Players:GetPlayers(),
+		readyPlayers = 0,
+		waitingPlayers = 0,
+		players = {}
+	}
+	
+	for _, player in ipairs(Players:GetPlayers()) do
+		local isReady = self.playersReady[player.UserId] or false
+		local isWaiting = self.playersWaiting[player.UserId] or false
+		
+		if isReady then
+			statusData.readyPlayers = statusData.readyPlayers + 1
+		end
+		if isWaiting then
+			statusData.waitingPlayers = statusData.waitingPlayers + 1
+		end
+		
+		table.insert(statusData.players, {
+			name = player.Name,
+			userId = player.UserId,
+			ready = isReady,
+			waiting = isWaiting
+		})
+	end
+	
+	if self.remoteEvents.LobbyPlayersUpdate then
+		self.remoteEvents.LobbyPlayersUpdate:FireAllClients(statusData)
+	end
 end
 
 -- Remove a player's vote when they leave
