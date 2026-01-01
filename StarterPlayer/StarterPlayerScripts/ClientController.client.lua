@@ -244,6 +244,7 @@ function ClientController.initializeUI()
 		"PuzzleMenuUI",
 		"ScoreboardUI",
 		"MapVotingUI",
+		"LobbyUI",
 		"SpectatorUI",
 		"TitleScreenUI",
 		"EpilogueUI",

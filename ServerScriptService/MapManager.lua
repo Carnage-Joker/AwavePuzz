@@ -124,6 +124,22 @@ function MapManager:load(mapId)
 	-- Clone and place the new map
 	self.currentMapModel = template:Clone()
 	self.currentMapModel.Name = "ActiveMap"
+	
+	-- Position the map at (5000, 0, 0) to keep it separate from spawn area
+	if self.currentMapModel.PrimaryPart then
+		self.currentMapModel:SetPrimaryPartCFrame(CFrame.new(5000, 0, 0))
+	else
+		-- If no PrimaryPart, move all parts
+		local mapOffset = Vector3.new(5000, 0, 0)
+		for _, descendant in ipairs(self.currentMapModel:GetDescendants()) do
+			if descendant:IsA("BasePart") then
+				descendant.CFrame = descendant.CFrame + mapOffset
+			elseif descendant:IsA("Attachment") then
+				-- Attachments will move with their parent parts
+			end
+		end
+	end
+	
 	self.currentMapModel.Parent = workspace
 
 	self:extractPoints()
