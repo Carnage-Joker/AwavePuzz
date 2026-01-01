@@ -254,9 +254,9 @@ function BaseCampSetup:buildBaseCamp(centerPos, parentModel)
 	local spawnLocation = Instance.new("SpawnLocation")
 	spawnLocation.Name = "BaseCampSpawn"
 	spawnLocation.Size = Vector3.new(10, 1, 10)
-	spawnLocation.Position = centerPos + Vector3.new(0, 2, 0) -- Slightly above platform
+	spawnLocation.Position = centerPos + Vector3.new(0, 0.5, 0) -- On top of platform
 	spawnLocation.Anchored = true
-	spawnLocation.CanCollide = false
+	spawnLocation.CanCollide = true -- Enable collision so players don't fall through
 	spawnLocation.Transparency = 1 -- Invisible
 	spawnLocation.Duration = 0 -- Instant respawn
 	spawnLocation.Neutral = true -- All players spawn here

@@ -27,6 +27,10 @@ function LobbyManager.new()
 	self.playersWaiting = {} -- userId -> boolean (true if waiting for friends)
 	self.extendedTimer = false -- Whether timer has been extended
 
+	-- Server switch cooldown (rate limiting)
+	self.lastServerSwitchTime = {} -- userId -> timestamp of last switch attempt
+	self.SERVER_SWITCH_COOLDOWN = 30 -- 30 seconds between switch attempts
+
 	-- References set later
 	self.mapManager = nil
 	self.gameManager = nil
@@ -329,6 +333,21 @@ end
 function LobbyManager:handleServerSwitch(player)
 	if not player then return end
 	
+	-- Check for rate limiting
+	local currentTime = tick()
+	local lastSwitchTime = self.lastServerSwitchTime[player.UserId] or 0
+	local timeSinceLastSwitch = currentTime - lastSwitchTime
+	
+	if timeSinceLastSwitch < self.SERVER_SWITCH_COOLDOWN then
+		local remainingCooldown = math.ceil(self.SERVER_SWITCH_COOLDOWN - timeSinceLastSwitch)
+		warn(string.format("[LobbyManager] Player %s attempted server switch too soon. Cooldown: %d seconds remaining", 
+			player.Name, remainingCooldown))
+		return
+	end
+	
+	-- Update last switch time
+	self.lastServerSwitchTime[player.UserId] = currentTime
+	
 	local TeleportService = game:GetService("TeleportService")
 	local placeId = game.PlaceId
 	
@@ -376,13 +395,6 @@ function LobbyManager:broadcastPlayerStatus()
 	if self.remoteEvents.LobbyPlayersUpdate then
 		self.remoteEvents.LobbyPlayersUpdate:FireAllClients(statusData)
 	end
-end
-
--- Reset for a new round
-function LobbyManager:reset()
-	self.votes = {}
-	self.votingActive = false
-	self.votingTimer = 0
 end
 
 -- Remove a player's vote when they leave

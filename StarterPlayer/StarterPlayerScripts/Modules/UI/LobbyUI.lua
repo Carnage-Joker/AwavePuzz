@@ -139,8 +139,10 @@ local function updateButtonStates()
 		readyButton.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
 		readyButton.Text = "✓ READY"
 		waitingButton.BackgroundColor3 = Color3.fromRGB(100, 70, 40)
+		waitingButton.Text = "WAITING FOR FRIENDS"
 	elseif isWaiting then
 		readyButton.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
+		readyButton.Text = "I'M READY"
 		waitingButton.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
 		waitingButton.Text = "⏱ WAITING FOR FRIENDS"
 	else
