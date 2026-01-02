@@ -34,6 +34,7 @@ self.betrayalCooldowns = {}   -- player UserId -> timestamp of last betrayal
 self.puzzleService = nil      -- Will be set later
 self.cureService = nil        -- Will be set later
 self.playerManager = nil      -- Will be set later
+self.gameManager = nil        -- Will be set later
 
 -- New networked alliance modules (initialized after playerManager is set)
 self.allianceGraph = nil
@@ -83,6 +84,11 @@ function AllianceServiceV2:setPlayerManager(playerManager)
 self.playerManager = playerManager
 -- Initialize modules after playerManager is set
 self:initialize()
+end
+
+-- Set game manager reference
+function AllianceServiceV2:setGameManager(gameManager)
+self.gameManager = gameManager
 end
 
 function AllianceServiceV2:setupRemoteEvents()

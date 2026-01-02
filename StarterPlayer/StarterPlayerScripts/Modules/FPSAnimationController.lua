@@ -659,8 +659,18 @@ function FPSAnimationController.update(deltaTime)
 end
 
 function FPSAnimationController.initialize()
-	FPSAnimationController:setupRemoteEvents()
+	-- Initialize remote events for server replication
+	FPSAnimationController.remoteEvents = RemoteEventUtil.getOrCreateEvents({
+		"AnimationFire",
+		"AnimationSprint",
+		"AnimationADS",
+	})
+	
+	-- Create viewmodel
 	FPSAnimationController:createViewmodel()
+	
+	-- Setup event listeners
+	FPSAnimationController:setupEventListeners()
 	
 	-- Connect update loop
 	RunService.Heartbeat:Connect(function(deltaTime)
