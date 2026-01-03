@@ -21,13 +21,14 @@ local PERSONAL_TRANSFER_PERCENT_ON_STALEMATE = GameConfig.PERSONAL_TRANSFER_PERC
 local BETRAYAL_WINDOW_DURATION = GameConfig.BETRAYAL_WINDOW_DURATION or 30 -- seconds
 local STARTING_WEAPON = WeaponValues.PISTOL_ID -- Starting weapon to exclude from transfers
 
-function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager)
+function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, playerManager, gameManager)
     local self = setmetatable({}, BetrayalService)
     
     self.allianceGraph = allianceGraph
     self.poolCalculator = poolCalculator
     self.inventoryLedger = inventoryLedger
     self.playerManager = playerManager
+    self.gameManager = gameManager -- Can be nil initially, set later via setGameManager
     
     -- Track active betrayal windows
     -- Structure: {betrayerId -> {victimId, victimSnapshot, betrayerSnapshot, startTime, windowActive}}
@@ -51,6 +52,11 @@ function BetrayalService:setupRemoteEvents()
         "BetrayalOutcome",
         "BetrayalStatus"
     })
+end
+
+-- Set game manager reference (can be called after initialization)
+function BetrayalService:setGameManager(gameManager)
+	self.gameManager = gameManager
 end
 
 -- Check if a player is locked from alliance changes
@@ -197,6 +203,11 @@ function BetrayalService:resolveOutcome1_SuccessfulBetrayal(betrayer, victim, da
 	-- Transfer 75% of victim's POOLED resources
 	self:applyPooledTransfer(betrayer, data.victimSnapshot, POOLED_TRANSFER_PERCENT, "Successful Betrayal")
 	
+	-- Track betrayal for fun facts
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(betrayer, "betrayalsCommitted")
+	end
+	
 	-- Unlock players
 	self:unlockPlayer(betrayer)
 	self:unlockPlayer(victim)
@@ -220,6 +231,11 @@ function BetrayalService:resolveOutcome2_FailedBetrayal(victor, betrayer, data)
 	
 	-- Transfer 75% of betrayer's POOLED resources
 	self:applyPooledTransfer(victor, data.betrayerSnapshot, POOLED_TRANSFER_PERCENT, "Failed Betrayal")
+	
+	-- Track betrayal survival for fun facts
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(victor, "betrayalsSurvived")
+	end
 	
 	-- Unlock players
 	self:unlockPlayer(betrayer)
@@ -258,6 +274,11 @@ function BetrayalService:onWindowExpired(betrayerId)
 	
 	-- Transfer 100% of betrayer's PERSONAL inventory to victim
 	self:applyPersonalTransfer(betrayer, victim, PERSONAL_TRANSFER_PERCENT_ON_STALEMATE)
+	
+	-- Track betrayal survival for fun facts (victim survived)
+	if self.gameManager and self.gameManager.funFactService then
+		self.gameManager.funFactService:incrementPlayerStat(victim, "betrayalsSurvived")
+	end
 	
 	-- Apply Traitor flag to betrayer
 	self.traitors[betrayerId] = true
