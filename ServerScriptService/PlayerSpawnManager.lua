@@ -107,7 +107,7 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		for _, part in ipairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
 				-- Restore collision for all parts except HumanoidRootPart
-				if part.Name ~= "HumanoidRootPart" then
+				if part ~= humanoidRootPart then
 					part.CanCollide = true
 				end
 				
@@ -122,8 +122,7 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 			end
 		end
 		
-		-- Clear stored transparency values after restoration
-		self.originalTransparency[player.UserId] = nil
+		-- Note: Don't clear stored transparency yet - keep it for potential respawns during the round
 		
 		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
 		
@@ -144,17 +143,21 @@ function PlayerSpawnManager:keepPlayerInLobby(player)
 			local lobbyPosition = Vector3.new(5000, 10000, 0) -- High above map
 			humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
 			
-			-- Store original transparency values before modifying
+			-- Store original transparency values before modifying (only if not already stored)
 			if not self.originalTransparency[player.UserId] then
 				self.originalTransparency[player.UserId] = {}
+				
+				-- Store transparency values only on first call
+				for _, part in ipairs(player.Character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						self.originalTransparency[player.UserId][part] = part.Transparency
+					end
+				end
 			end
 			
 			-- Make invisible
 			for _, part in ipairs(player.Character:GetDescendants()) do
 				if part:IsA("BasePart") then
-					-- Store original transparency
-					self.originalTransparency[player.UserId][part] = part.Transparency
-					
 					part.CanCollide = false
 					part.Transparency = 1
 				end
@@ -190,19 +193,33 @@ end
 function PlayerSpawnManager:getMapSpawnPosition()
 	-- Get base camp position from GameManager if available
 	if self.gameManager and self.gameManager.baseManager then
-		local baseManager = self.gameManager.baseManager
 		local baseCamp = workspace:FindFirstChild("BaseCamp")
 		
-		if baseCamp and baseCamp.PrimaryPart then
-			-- Spawn near base camp
-			local baseCampPos = baseCamp.PrimaryPart.Position
-			-- Add some randomness to spread out players
-			local offset = Vector3.new(
-				math.random(-10, 10),
-				5,
-				math.random(-10, 10)
-			)
-			return baseCampPos + offset
+		if baseCamp then
+			-- Try to get position from PrimaryPart
+			if baseCamp.PrimaryPart then
+				local baseCampPos = baseCamp.PrimaryPart.Position
+				-- Add some randomness to spread out players
+				local offset = Vector3.new(
+					math.random(-10, 10),
+					5,
+					math.random(-10, 10)
+				)
+				return baseCampPos + offset
+			else
+				-- Fallback: find any BasePart in BaseCamp to get position
+				for _, child in ipairs(baseCamp:GetChildren()) do
+					if child:IsA("BasePart") then
+						local baseCampPos = child.Position
+						local offset = Vector3.new(
+							math.random(-10, 10),
+							5,
+							math.random(-10, 10)
+						)
+						return baseCampPos + offset
+					end
+				end
+			end
 		end
 	end
 	
@@ -217,7 +234,10 @@ function PlayerSpawnManager:resetForNewRound()
 	-- Clear spawn tracking
 	self.playersSpawnedOnMap = {}
 	
-	-- Reset all players to waiting state (no character)
+	-- Clear stored transparency values for new round
+	self.originalTransparency = {}
+	
+	-- Reset all players to waiting state
 	for userId, _ in pairs(self.playerSpawnState) do
 		self.playerSpawnState[userId] = "waiting"
 	end

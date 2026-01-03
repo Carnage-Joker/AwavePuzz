@@ -165,7 +165,10 @@ spawnManager:spawnPlayerOnMap(player)
 ```
 
 ## Notes
-- The lobby structure at (5000, 0, 0) is decorative and could be removed if not needed
-- Players are truly "menu-only" during lobby - they have invisible characters positioned high above the map
+- The lobby structure at (5000, 0, 0) is primarily decorative during the waiting phase
+  - It provides a physical space that could be used for visual elements or future features
+  - Players themselves are invisible and positioned high above the map during voting
+  - The structure is destroyed when the map loads to avoid conflicts
+- Players have characters during lobby but they are invisible and positioned at (5000, 10000, 0)
 - The FPS camera system automatically handles first-person view when characters spawn
 - Each new round recreates the lobby and respawns players through the same flow
