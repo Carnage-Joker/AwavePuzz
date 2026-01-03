@@ -113,8 +113,7 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		
 		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
 		
-		-- Set camera to first-person
-		self:setFirstPersonCamera(player)
+		-- Note: First-person camera is handled by the FPS system on the client side
 	end
 end
 
@@ -187,22 +186,6 @@ function PlayerSpawnManager:getMapSpawnPosition()
 	
 	-- Fallback: spawn at map offset with some height
 	return MAP_OFFSET + Vector3.new(0, 10, 0)
-end
-
--- Set player camera to first-person mode
-function PlayerSpawnManager:setFirstPersonCamera(player)
-	-- Set camera mode via player properties
-	if player.Character then
-		local humanoid = player.Character:FindFirstChild("Humanoid")
-		if humanoid then
-			-- Set camera to first person
-			player.CameraMode = Enum.CameraMode.LockFirstPerson
-			player.CameraMaxZoomDistance = 0.5
-			player.CameraMinZoomDistance = 0.5
-			
-			print(string.format("[PlayerSpawnManager] Set first-person camera for %s", player.Name))
-		end
-	end
 end
 
 -- Reset player spawn state for new round
