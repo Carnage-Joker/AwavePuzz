@@ -7,7 +7,7 @@ Players were spawning immediately when joining the game, before the map voting c
 Implemented a comprehensive player spawn management system that:
 1. Keeps players in an invisible "waiting" state during lobby/voting
 2. Spawns player characters on the map after voting completes
-3. Both lobby and map exist at position (5000, 0, 0)
+3. Lobby and map share X/Z at (5000, 0) — maps at (5000, 0, 0), lobby at (5000, 5, 0)
 4. First-person camera is handled by existing FPS system
 
 ## Key Components
