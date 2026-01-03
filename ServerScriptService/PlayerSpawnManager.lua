@@ -172,10 +172,10 @@ function PlayerSpawnManager:getMapSpawnPosition()
 			-- Try to get position from PrimaryPart
 			if baseCamp.PrimaryPart then
 				local baseCampPos = baseCamp.PrimaryPart.Position
-				-- Add some randomness to spread out players
+				-- Add randomness and higher Y offset to spawn above base structures
 				local offset = Vector3.new(
 					math.random(-10, 10),
-					5,
+					15, -- Increased from 5 to 15 to spawn above structures
 					math.random(-10, 10)
 				)
 				return baseCampPos + offset
@@ -186,7 +186,7 @@ function PlayerSpawnManager:getMapSpawnPosition()
 						local baseCampPos = child.Position
 						local offset = Vector3.new(
 							math.random(-10, 10),
-							5,
+							15, -- Increased from 5 to 15 to spawn above structures
 							math.random(-10, 10)
 						)
 						return baseCampPos + offset
