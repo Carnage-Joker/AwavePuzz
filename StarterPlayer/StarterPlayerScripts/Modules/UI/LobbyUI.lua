@@ -26,11 +26,11 @@ screenGui.Enabled = false -- Hidden by default
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Main lobby frame
+-- Main lobby frame - positioned at bottom center below voting UI
 local lobbyFrame = Instance.new("Frame")
 lobbyFrame.Name = "LobbyFrame"
-lobbyFrame.Size = UDim2.new(0, 400, 0, 300)
-lobbyFrame.Position = UDim2.new(0, 20, 0.5, -150)
+lobbyFrame.Size = UDim2.new(0, 500, 0, 180)
+lobbyFrame.Position = UDim2.new(0.5, -250, 1, -200)
 lobbyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 lobbyFrame.BackgroundTransparency = 0.1
 lobbyFrame.BorderSizePixel = 0
@@ -74,12 +74,12 @@ playerCountLabel.Parent = lobbyFrame
 -- Status message
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Name = "StatusMessage"
-statusLabel.Size = UDim2.new(1, -20, 0, 40)
-statusLabel.Position = UDim2.new(0, 10, 0, 90)
+statusLabel.Size = UDim2.new(1, -20, 0, 25)
+statusLabel.Position = UDim2.new(0, 10, 0, 80)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Waiting for more players..."
 statusLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-statusLabel.TextSize = 18
+statusLabel.TextSize = 16
 statusLabel.Font = Enum.Font.GothamBold
 statusLabel.TextWrapped = true
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -88,12 +88,12 @@ statusLabel.Parent = lobbyFrame
 -- Ready button
 local readyButton = Instance.new("TextButton")
 readyButton.Name = "ReadyButton"
-readyButton.Size = UDim2.new(1, -20, 0, 45)
-readyButton.Position = UDim2.new(0, 10, 0, 145)
+readyButton.Size = UDim2.new(0.48, -10, 0, 40)
+readyButton.Position = UDim2.new(0, 10, 0, 110)
 readyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 readyButton.Text = "I'M READY"
 readyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-readyButton.TextSize = 20
+readyButton.TextSize = 18
 readyButton.Font = Enum.Font.GothamBold
 readyButton.Parent = lobbyFrame
 
@@ -104,12 +104,12 @@ readyCorner.Parent = readyButton
 -- Waiting button
 local waitingButton = Instance.new("TextButton")
 waitingButton.Name = "WaitingButton"
-waitingButton.Size = UDim2.new(1, -20, 0, 40)
-waitingButton.Position = UDim2.new(0, 10, 0, 200)
+waitingButton.Size = UDim2.new(0.48, -10, 0, 40)
+waitingButton.Position = UDim2.new(0.52, 0, 0, 110)
 waitingButton.BackgroundColor3 = Color3.fromRGB(150, 100, 50)
 waitingButton.Text = "WAITING FOR FRIENDS"
 waitingButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-waitingButton.TextSize = 16
+waitingButton.TextSize = 14
 waitingButton.Font = Enum.Font.GothamBold
 waitingButton.Parent = lobbyFrame
 
@@ -120,8 +120,8 @@ waitingCorner.Parent = waitingButton
 -- Switch server button
 local switchButton = Instance.new("TextButton")
 switchButton.Name = "SwitchButton"
-switchButton.Size = UDim2.new(1, -20, 0, 35)
-switchButton.Position = UDim2.new(0, 10, 0, 250)
+switchButton.Size = UDim2.new(1, -20, 0, 30)
+switchButton.Position = UDim2.new(0, 10, 1, -40)
 switchButton.BackgroundColor3 = Color3.fromRGB(100, 100, 120)
 switchButton.Text = "SWITCH SERVER"
 switchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -184,17 +184,17 @@ end
 function LobbyUI.show()
 	screenGui.Enabled = true
 	
-	-- Animate in
-	lobbyFrame.Position = UDim2.new(-0.5, 0, 0.5, -150)
+	-- Animate in from bottom
+	lobbyFrame.Position = UDim2.new(0.5, -250, 1.2, 0)
 	TweenService:Create(lobbyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = UDim2.new(0, 20, 0.5, -150)
+		Position = UDim2.new(0.5, -250, 1, -200)
 	}):Play()
 end
 
 -- Hide lobby UI
 function LobbyUI.hide()
 	TweenService:Create(lobbyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-		Position = UDim2.new(-0.5, 0, 0.5, -150)
+		Position = UDim2.new(0.5, -250, 1.2, 0)
 	}):Play()
 	
 	task.wait(0.4)
