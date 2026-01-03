@@ -34,6 +34,7 @@ self.betrayalCooldowns = {}   -- player UserId -> timestamp of last betrayal
 self.puzzleService = nil      -- Will be set later
 self.cureService = nil        -- Will be set later
 self.playerManager = nil      -- Will be set later
+self.gameManager = nil        -- Will be set later
 
 -- New networked alliance modules (initialized after playerManager is set)
 self.allianceGraph = nil
@@ -62,7 +63,8 @@ self.betrayalService = BetrayalService.new(
 self.allianceGraph,
 self.poolCalculator,
 self.inventoryLedger,
-self.playerManager
+self.playerManager,
+self.gameManager
 )
 
 print("[AllianceServiceV2] Initialized with networked alliance pools")
@@ -88,6 +90,11 @@ end
 -- Set game manager reference
 function AllianceServiceV2:setGameManager(gameManager)
 self.gameManager = gameManager
+
+-- Pass gameManager to BetrayalService if it's already initialized
+if self.betrayalService then
+self.betrayalService:setGameManager(gameManager)
+end
 end
 
 function AllianceServiceV2:setupRemoteEvents()
