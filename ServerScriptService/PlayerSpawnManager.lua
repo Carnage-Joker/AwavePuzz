@@ -170,11 +170,17 @@ end
 function PlayerSpawnManager:spawnPlayerOnMap(player)
 	print(string.format("[PlayerSpawnManager] Spawning %s on map", player.Name))
 	
-	self.playerSpawnState[player.UserId] = "map"
+	-- Clear any stored transparency data tied to the old lobby character
+	self.originalTransparency[player.UserId] = nil
+	
+	-- Mark that this player has been spawned onto the map
 	self.playersSpawnedOnMap[player.UserId] = true
 	
-	-- Load character to spawn them on the map
+	-- Load character to spawn them on the map (this destroys the old character)
 	player:LoadCharacter()
+	
+	-- After initiating the character load, set the spawn state to map
+	self.playerSpawnState[player.UserId] = "map"
 end
 
 -- Spawn all players on the map (called when map voting completes)
