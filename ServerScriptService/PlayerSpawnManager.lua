@@ -19,7 +19,7 @@ function PlayerSpawnManager.new()
 	self.playersSpawnedOnMap = {} -- userId -> boolean
 	
 	-- Track player spawn state
-	self.playerSpawnState = {} -- userId -> "waiting" | "map" | "dead"
+	self.playerSpawnState = {} -- userId -> "waiting" | "map"
 	
 	-- Store original transparency values for proper restoration
 	self.originalTransparency = {} -- userId -> { [part] = transparency }
