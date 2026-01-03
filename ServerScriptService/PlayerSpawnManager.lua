@@ -21,6 +21,9 @@ function PlayerSpawnManager.new()
 	-- Track player spawn state
 	self.playerSpawnState = {} -- userId -> "waiting" | "map" | "dead"
 	
+	-- Store original transparency values for proper restoration
+	self.originalTransparency = {} -- userId -> { [part] = transparency }
+	
 	-- Reference to GameManager (set later)
 	self.gameManager = nil
 	
@@ -75,9 +78,17 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		local lobbyPosition = Vector3.new(5000, 10000, 0) -- High in the sky at X=5000
 		humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
 		
+		-- Store original transparency values before modifying
+		if not self.originalTransparency[player.UserId] then
+			self.originalTransparency[player.UserId] = {}
+		end
+		
 		-- Make them essentially invisible/non-interactive
 		for _, part in ipairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
+				-- Store original transparency
+				self.originalTransparency[player.UserId][part] = part.Transparency
+				
 				part.CanCollide = false
 				part.Transparency = 1
 			end
@@ -90,26 +101,29 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		local spawnPosition = self:getMapSpawnPosition()
 		humanoidRootPart.CFrame = CFrame.new(spawnPosition)
 		
-		-- Make them visible and interactive (restore default character properties)
+		-- Restore visibility and collision for all character parts
+		local storedTransparency = self.originalTransparency[player.UserId] or {}
+		
 		for _, part in ipairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
-				-- Restore collision for body parts (but not HumanoidRootPart to prevent physics issues)
+				-- Restore collision for all parts except HumanoidRootPart
 				if part.Name ~= "HumanoidRootPart" then
 					part.CanCollide = true
 				end
 				
-				-- Restore visibility for main body parts
-				if part.Parent == character and part:IsA("BasePart") then
+				-- Restore original transparency if we stored it, otherwise set to 0
+				if storedTransparency[part] ~= nil then
+					part.Transparency = storedTransparency[part]
+				else
+					-- Default to visible for character parts
+					-- Most body parts should be visible (transparency = 0)
 					part.Transparency = 0
 				end
 			end
 		end
 		
-		-- Specifically ensure head is visible
-		local head = character:FindFirstChild("Head")
-		if head and head:IsA("BasePart") then
-			head.Transparency = 0
-		end
+		-- Clear stored transparency values after restoration
+		self.originalTransparency[player.UserId] = nil
 		
 		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
 		
@@ -130,9 +144,17 @@ function PlayerSpawnManager:keepPlayerInLobby(player)
 			local lobbyPosition = Vector3.new(5000, 10000, 0) -- High above map
 			humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
 			
+			-- Store original transparency values before modifying
+			if not self.originalTransparency[player.UserId] then
+				self.originalTransparency[player.UserId] = {}
+			end
+			
 			-- Make invisible
 			for _, part in ipairs(player.Character:GetDescendants()) do
 				if part:IsA("BasePart") then
+					-- Store original transparency
+					self.originalTransparency[player.UserId][part] = part.Transparency
+					
 					part.CanCollide = false
 					part.Transparency = 1
 				end
@@ -205,6 +227,7 @@ end
 function PlayerSpawnManager:onPlayerRemoving(player)
 	self.playersSpawnedOnMap[player.UserId] = nil
 	self.playerSpawnState[player.UserId] = nil
+	self.originalTransparency[player.UserId] = nil
 	
 	-- Disconnect character added connection
 	if self.playerConnections[player.UserId] then

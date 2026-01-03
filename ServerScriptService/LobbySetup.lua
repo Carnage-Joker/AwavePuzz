@@ -41,17 +41,7 @@ function LobbySetup:createLobby()
 	platform.Transparency = 0
 	platform.Parent = lobbyModel
 	
-	-- Create spawn location for players
-	local spawnLocation = Instance.new("SpawnLocation")
-	spawnLocation.Name = "LobbySpawn"
-	spawnLocation.Size = Vector3.new(10, 1, 10)
-	spawnLocation.Position = LOBBY_POSITION + Vector3.new(0, 5, 0) -- Above platform
-	spawnLocation.Anchored = true
-	spawnLocation.CanCollide = false
-	spawnLocation.Transparency = 1 -- Invisible
-	spawnLocation.Duration = 0 -- Instant respawn
-	spawnLocation.Neutral = true -- All players can spawn here
-	spawnLocation.Parent = lobbyModel
+	-- Note: No SpawnLocation created - player spawning is managed by PlayerSpawnManager
 	
 	-- Create some walls around the lobby for aesthetic
 	local wallHeight = 8
