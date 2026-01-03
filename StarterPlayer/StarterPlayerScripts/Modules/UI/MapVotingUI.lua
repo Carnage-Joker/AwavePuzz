@@ -350,6 +350,8 @@ if mapVoteEndEvent then
 			titleLabel.Text = "VOTE FOR NEXT MAP"
 			titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 			votingFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+			-- Reset timer label color to its initial state
+			timerLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 		end)
 	end)
 end
