@@ -12,7 +12,7 @@ This guide describes how to test the new player spawn management system that ens
    - Spawns players on map after voting completes
 
 2. **LobbySetup** (`ServerScriptService/LobbySetup.lua`)
-   - Creates a physical lobby structure at (5000, 0, 0)
+   - Creates a physical lobby structure at (5000, 5, 0) - same X/Z as maps
    - Provides a waiting area (though players are invisible during voting)
    - Destroyed when map loads, recreated for next round
 
@@ -34,7 +34,7 @@ This guide describes how to test the new player spawn management system that ens
    - Players remain in invisible waiting state
    - Players can see and interact with map voting UI
    - No character visible or interactive
-   - Physical lobby structure exists at (5000, 0, 0) but is mostly decorative
+   - Physical lobby structure exists at (5000, 5, 0) but is mostly decorative
 
 3. **Map Loads After Voting**
    - Selected map loads at position (5000, 0, 0)
@@ -63,7 +63,7 @@ This guide describes how to test the new player spawn management system that ens
 2. **Lobby State**
    - [ ] Players should NOT see their characters
    - [ ] Players should see voting UI
-   - [ ] Check that physical lobby exists at (5000, 0, 0) using Workspace explorer
+   - [ ] Check that physical lobby exists at (5000, 5, 0) using Workspace explorer
    - [ ] Verify players are at position approximately (5000, 10000, 0)
 
 3. **Vote and Map Load**
@@ -165,7 +165,7 @@ spawnManager:spawnPlayerOnMap(player)
 ```
 
 ## Notes
-- The lobby structure at (5000, 0, 0) is primarily decorative during the waiting phase
+- The lobby structure at (5000, 5, 0) is primarily decorative during the waiting phase
   - It provides a physical space that could be used for visual elements or future features
   - Players themselves are invisible and positioned high above the map during voting
   - The structure is destroyed when the map loads to avoid conflicts

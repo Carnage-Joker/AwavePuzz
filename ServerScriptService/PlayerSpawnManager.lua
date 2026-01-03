@@ -21,9 +21,6 @@ function PlayerSpawnManager.new()
 	-- Track player spawn state
 	self.playerSpawnState = {} -- userId -> "waiting" | "map"
 	
-	-- Store original transparency values for proper restoration
-	self.originalTransparency = {} -- userId -> { [part] = transparency }
-	
 	-- Reference to GameManager (set later)
 	self.gameManager = nil
 	
@@ -78,17 +75,10 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		local lobbyPosition = Vector3.new(5000, 10000, 0) -- High in the sky at X=5000
 		humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
 		
-		-- Store original transparency values before modifying
-		if not self.originalTransparency[player.UserId] then
-			self.originalTransparency[player.UserId] = {}
-		end
-		
 		-- Make them essentially invisible/non-interactive
 		for _, part in ipairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
-				-- Store original transparency
-				self.originalTransparency[player.UserId][part] = part.Transparency
-				
+				-- Disable collision for all parts (including HumanoidRootPart)
 				part.CanCollide = false
 				part.Transparency = 1
 			end
@@ -102,27 +92,19 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 		humanoidRootPart.CFrame = CFrame.new(spawnPosition)
 		
 		-- Restore visibility and collision for all character parts
-		local storedTransparency = self.originalTransparency[player.UserId] or {}
-		
+		-- Note: We rely on Roblox's default character transparency values when the character spawns
 		for _, part in ipairs(character:GetDescendants()) do
 			if part:IsA("BasePart") then
 				-- Restore collision for all parts except HumanoidRootPart
+				-- HumanoidRootPart should remain non-collidable to prevent physics issues
 				if part ~= humanoidRootPart then
 					part.CanCollide = true
 				end
 				
-				-- Restore original transparency if we stored it, otherwise set to 0
-				if storedTransparency[part] ~= nil then
-					part.Transparency = storedTransparency[part]
-				else
-					-- Default to visible for character parts
-					-- Most body parts should be visible (transparency = 0)
-					part.Transparency = 0
-				end
+				-- Note: Transparency is left at default values set by Roblox when character spawns
+				-- This preserves accessories, clothing, and special effects correctly
 			end
 		end
-		
-		-- Note: Don't clear stored transparency yet - keep it for potential respawns during the round
 		
 		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
 		
@@ -143,18 +125,6 @@ function PlayerSpawnManager:keepPlayerInLobby(player)
 			local lobbyPosition = Vector3.new(5000, 10000, 0) -- High above map
 			humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
 			
-			-- Store original transparency values before modifying (only if not already stored)
-			if not self.originalTransparency[player.UserId] then
-				self.originalTransparency[player.UserId] = {}
-				
-				-- Store transparency values only on first call
-				for _, part in ipairs(player.Character:GetDescendants()) do
-					if part:IsA("BasePart") then
-						self.originalTransparency[player.UserId][part] = part.Transparency
-					end
-				end
-			end
-			
 			-- Make invisible
 			for _, part in ipairs(player.Character:GetDescendants()) do
 				if part:IsA("BasePart") then
@@ -169,9 +139,6 @@ end
 -- Spawn player on the map after voting completes
 function PlayerSpawnManager:spawnPlayerOnMap(player)
 	print(string.format("[PlayerSpawnManager] Spawning %s on map", player.Name))
-	
-	-- Clear any stored transparency data tied to the old lobby character
-	self.originalTransparency[player.UserId] = nil
 	
 	-- Mark that this player has been spawned onto the map
 	self.playersSpawnedOnMap[player.UserId] = true
@@ -240,9 +207,6 @@ function PlayerSpawnManager:resetForNewRound()
 	-- Clear spawn tracking
 	self.playersSpawnedOnMap = {}
 	
-	-- Clear stored transparency values for new round
-	self.originalTransparency = {}
-	
 	-- Reset all players to waiting state
 	for userId, _ in pairs(self.playerSpawnState) do
 		self.playerSpawnState[userId] = "waiting"
@@ -253,7 +217,6 @@ end
 function PlayerSpawnManager:onPlayerRemoving(player)
 	self.playersSpawnedOnMap[player.UserId] = nil
 	self.playerSpawnState[player.UserId] = nil
-	self.originalTransparency[player.UserId] = nil
 	
 	-- Disconnect character added connection
 	if self.playerConnections[player.UserId] then
