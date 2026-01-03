@@ -1,12 +1,12 @@
 -- LobbySetup.lua
 -- Creates a safe lobby area where players spawn before the map loads
--- This lobby is separate from the game map and provides a waiting area
+-- Lobby is positioned at (5000, 0, 0) to match the map loading position
 
 local LobbySetup = {}
 LobbySetup.__index = LobbySetup
 
--- Lobby position (at origin, separate from map at 5000, 0, 0)
-local LOBBY_POSITION = Vector3.new(0, 5, 0)
+-- Lobby position (at map offset, where maps also load)
+local LOBBY_POSITION = Vector3.new(5000, 5, 0)
 local LOBBY_SIZE = Vector3.new(50, 1, 50)
 
 function LobbySetup.new()

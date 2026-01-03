@@ -1,6 +1,7 @@
 -- PlayerSpawnManager.lua
 -- Manages player character spawning to ensure players spawn in lobby first, then on the map after voting
 -- Integrates with GameManager and LobbyManager to control spawn timing
+-- In lobby state, players have no character (menu-only mode)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,46 +19,40 @@ function PlayerSpawnManager.new()
 	self.playersSpawnedOnMap = {} -- userId -> boolean
 	
 	-- Track player spawn state
-	self.playerSpawnState = {} -- userId -> "lobby" | "map" | "dead"
+	self.playerSpawnState = {} -- userId -> "waiting" | "map" | "dead"
 	
 	-- Reference to GameManager (set later)
 	self.gameManager = nil
 	
-	-- Lobby spawn position (will be retrieved from LobbySetup)
-	self.lobbySpawnPosition = Vector3.new(0, 10, 0) -- Default fallback
+	-- Store player connections to manage character spawning
+	self.playerConnections = {} -- userId -> connection
 	
 	return self
 end
 
 function PlayerSpawnManager:setGameManager(gameManager)
 	self.gameManager = gameManager
-	
-	-- Get lobby spawn position from LobbySetup if available
-	if gameManager.lobbySetup and gameManager.lobbySetup.getLobbySpawnPosition then
-		self.lobbySpawnPosition = gameManager.lobbySetup:getLobbySpawnPosition()
-		print("[PlayerSpawnManager] Set lobby spawn position to", self.lobbySpawnPosition)
-	end
 end
 
 -- Initialize player spawning - called when player joins
 function PlayerSpawnManager:onPlayerAdded(player)
-	-- Disable automatic character spawning
-	-- Note: This must be done before the player's character loads
-	-- In practice, we'll manage this through custom spawn handling
+	print(string.format("[PlayerSpawnManager] Player %s added, holding in menu-only lobby", player.Name))
 	
-	print(string.format("[PlayerSpawnManager] Player %s added, preparing for lobby spawn", player.Name))
-	
-	-- Initialize spawn state
-	self.playerSpawnState[player.UserId] = "none"
+	-- Initialize spawn state to waiting (no character)
+	self.playerSpawnState[player.UserId] = "waiting"
 	self.playersSpawnedOnMap[player.UserId] = false
 	
+	-- Prevent character from auto-loading by destroying it immediately
+	if player.Character then
+		player.Character:Destroy()
+	end
+	
 	-- Connect to character added event to manage spawning
-	player.CharacterAdded:Connect(function(character)
+	local connection = player.CharacterAdded:Connect(function(character)
 		self:onCharacterAdded(player, character)
 	end)
 	
-	-- Spawn player in lobby initially
-	self:spawnPlayerInLobby(player)
+	self.playerConnections[player.UserId] = connection
 end
 
 -- Handle character added event
@@ -65,6 +60,14 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	local spawnState = self.playerSpawnState[player.UserId]
 	
 	print(string.format("[PlayerSpawnManager] Character added for %s, state: %s", player.Name, tostring(spawnState)))
+	
+	-- If player is in waiting state (lobby), destroy the character
+	-- They should only have a character when spawning on the map
+	if spawnState == "waiting" then
+		print(string.format("[PlayerSpawnManager] Player %s is in waiting state, removing character (menu-only mode)", player.Name))
+		character:Destroy()
+		return
+	end
 	
 	-- Wait for character to fully load
 	local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
@@ -74,12 +77,7 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	end
 	
 	-- Position character based on current spawn state
-	if spawnState == "lobby" then
-		-- Player is in lobby, position at lobby spawn
-		humanoidRootPart.CFrame = CFrame.new(self.lobbySpawnPosition)
-		print(string.format("[PlayerSpawnManager] Positioned %s in lobby", player.Name))
-		
-	elseif spawnState == "map" then
+	if spawnState == "map" then
 		-- Player should spawn on the map
 		local spawnPosition = self:getMapSpawnPosition()
 		humanoidRootPart.CFrame = CFrame.new(spawnPosition)
@@ -90,22 +88,15 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	end
 end
 
--- Spawn player in lobby (waiting area before map voting completes)
-function PlayerSpawnManager:spawnPlayerInLobby(player)
-	print(string.format("[PlayerSpawnManager] Spawning %s in lobby", player.Name))
+-- Keep player in menu-only lobby state (no character)
+function PlayerSpawnManager:keepPlayerInLobby(player)
+	print(string.format("[PlayerSpawnManager] Keeping %s in menu-only lobby", player.Name))
 	
-	self.playerSpawnState[player.UserId] = "lobby"
+	self.playerSpawnState[player.UserId] = "waiting"
 	
-	-- Load character if it doesn't exist
-	if not player.Character then
-		player:LoadCharacter()
-	else
-		-- Character already exists, just reposition it
-		local character = player.Character
-		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-		if humanoidRootPart then
-			humanoidRootPart.CFrame = CFrame.new(self.lobbySpawnPosition)
-		end
+	-- Destroy character if it exists
+	if player.Character then
+		player.Character:Destroy()
 	end
 end
 
@@ -116,7 +107,7 @@ function PlayerSpawnManager:spawnPlayerOnMap(player)
 	self.playerSpawnState[player.UserId] = "map"
 	self.playersSpawnedOnMap[player.UserId] = true
 	
-	-- Reload character to spawn them on the map
+	-- Load character to spawn them on the map
 	player:LoadCharacter()
 end
 
@@ -179,9 +170,9 @@ function PlayerSpawnManager:resetForNewRound()
 	-- Clear spawn tracking
 	self.playersSpawnedOnMap = {}
 	
-	-- Reset all players to lobby state
+	-- Reset all players to waiting state (no character)
 	for userId, _ in pairs(self.playerSpawnState) do
-		self.playerSpawnState[userId] = "none"
+		self.playerSpawnState[userId] = "waiting"
 	end
 end
 
@@ -189,6 +180,12 @@ end
 function PlayerSpawnManager:onPlayerRemoving(player)
 	self.playersSpawnedOnMap[player.UserId] = nil
 	self.playerSpawnState[player.UserId] = nil
+	
+	-- Disconnect character added connection
+	if self.playerConnections[player.UserId] then
+		self.playerConnections[player.UserId]:Disconnect()
+		self.playerConnections[player.UserId] = nil
+	end
 end
 
 -- Check if player has spawned on map
@@ -198,7 +195,7 @@ end
 
 -- Get current spawn state for a player
 function PlayerSpawnManager:getPlayerSpawnState(player)
-	return self.playerSpawnState[player.UserId] or "none"
+	return self.playerSpawnState[player.UserId] or "waiting"
 end
 
 return PlayerSpawnManager

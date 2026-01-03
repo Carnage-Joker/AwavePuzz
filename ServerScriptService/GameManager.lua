@@ -608,6 +608,12 @@ function GameManager:startLobby()
 	self.stateTimer = GameConfig.LOBBY_VOTING_TIME
 
 	self:resetForNewRound()
+	
+	-- Recreate lobby for new round
+	if self.lobbySetup then
+		self.lobbySetup:createLobby()
+	end
+	
 	self.lobbyManager:startVoting()
 
 	return true
@@ -646,8 +652,8 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		-- Spawn players in lobby for new round
-		self.playerSpawnManager:spawnPlayerInLobby(player)
+		-- Keep players in menu-only lobby for new round (no character until map loads)
+		self.playerSpawnManager:keepPlayerInLobby(player)
 	end
 end
 
@@ -954,6 +960,11 @@ function GameManager:updateLobby(deltaTime)
 	local selectedMapId = self.lobbyManager:getSelectedMapId()
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
 		if GameConfig.ENABLE_MULTI_MAP then
+			-- Clean up lobby before loading map
+			if self.lobbySetup then
+				self.lobbySetup:cleanup()
+			end
+			
 			self.mapManager:load(selectedMapId)
 			self:configureSpawnersForMap()
 			
