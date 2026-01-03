@@ -1,7 +1,7 @@
 -- PlayerSpawnManager.lua
 -- Manages player character spawning to ensure players spawn in lobby first, then on the map after voting
 -- Integrates with GameManager and LobbyManager to control spawn timing
--- In lobby state, players have no character (menu-only mode)
+-- In lobby state, players still have characters, but they are invisible, non-interactive, and positioned high above the map (menu-only mode)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
