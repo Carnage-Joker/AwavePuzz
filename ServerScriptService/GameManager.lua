@@ -27,6 +27,8 @@ local ShopService = require(script.Parent.ShopService)
 local MapManager = require(script.Parent.MapManager)
 local LobbyManager = require(script.Parent.LobbyManager)
 local SpectatorManager = require(script.Parent.SpectatorManager)
+local PlayerSpawnManager = require(script.Parent.PlayerSpawnManager)
+local LobbySetup = require(script.Parent.LobbySetup)
 
 local GameManager = {}
 GameManager.__index = GameManager
@@ -78,6 +80,14 @@ function GameManager.new(allianceService)
 	self.lobbyManager:setGameManager(self)
 
 	self.spectatorManager = SpectatorManager.new()
+	
+	-- Player spawn manager (controls when and where players spawn)
+	self.playerSpawnManager = PlayerSpawnManager.new()
+	self.playerSpawnManager:setGameManager(self)
+	
+	-- Lobby setup (creates lobby area for players before map loads)
+	self.lobbySetup = LobbySetup.new()
+	self.lobbySetup:createLobby()
 
 	self.playerManager:setWeaponService(self.weaponService)
 	
@@ -421,6 +431,9 @@ function GameManager:onPlayerAdded(player)
 
 	self:_hookPlayerDeath(player)
 	
+	-- Initialize player spawn manager
+	self.playerSpawnManager:onPlayerAdded(player)
+	
 	-- Handle title screen and epilogue for new players
 	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.SHOW_TITLE_SCREEN then
 		-- Show title screen to the new player
@@ -458,6 +471,7 @@ function GameManager:onPlayerRemoving(player)
 
 	self.lobbyManager:onPlayerLeave(player)
 	self.spectatorManager:onPlayerLeave(player)
+	self.playerSpawnManager:onPlayerRemoving(player)
 
 	self._deathDebounce[player.UserId] = nil
 	self._spectatorCycleCooldown[player.UserId] = nil
@@ -616,6 +630,7 @@ function GameManager:resetForNewRound()
 
 	self.spectatorManager:reset()
 	self.lobbyManager:reset()
+	self.playerSpawnManager:resetForNewRound()
 	
 	-- Reset per-round achievement stats
 	if self.achievementService and self.achievementService.resetRoundStats then
@@ -631,16 +646,8 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		if player.Character then
-			local humanoid = player.Character:FindFirstChild("Humanoid")
-			if humanoid then
-				humanoid.Health = humanoid.MaxHealth
-			else
-				player:LoadCharacterAsync()
-			end
-		else
-			player:LoadCharacterAsync()
-		end
+		-- Spawn players in lobby for new round
+		self.playerSpawnManager:spawnPlayerInLobby(player)
 	end
 end
 
@@ -949,6 +956,10 @@ function GameManager:updateLobby(deltaTime)
 		if GameConfig.ENABLE_MULTI_MAP then
 			self.mapManager:load(selectedMapId)
 			self:configureSpawnersForMap()
+			
+			-- Spawn all players on the map after it loads
+			print("[GameManager] Map loaded, spawning players on map")
+			self.playerSpawnManager:spawnAllPlayersOnMap()
 		end
 
 		self:startGame()
