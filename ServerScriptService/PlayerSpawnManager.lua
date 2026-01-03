@@ -36,16 +36,11 @@ end
 
 -- Initialize player spawning - called when player joins
 function PlayerSpawnManager:onPlayerAdded(player)
-	print(string.format("[PlayerSpawnManager] Player %s added, holding in menu-only lobby", player.Name))
+	print(string.format("[PlayerSpawnManager] Player %s added, preparing spawn management", player.Name))
 	
-	-- Initialize spawn state to waiting (no character)
+	-- Initialize spawn state to waiting (lobby mode)
 	self.playerSpawnState[player.UserId] = "waiting"
 	self.playersSpawnedOnMap[player.UserId] = false
-	
-	-- Prevent character from auto-loading by destroying it immediately
-	if player.Character then
-		player.Character:Destroy()
-	end
 	
 	-- Connect to character added event to manage spawning
 	local connection = player.CharacterAdded:Connect(function(character)
@@ -53,6 +48,11 @@ function PlayerSpawnManager:onPlayerAdded(player)
 	end)
 	
 	self.playerConnections[player.UserId] = connection
+	
+	-- If player already has a character, handle it immediately
+	if player.Character then
+		self:onCharacterAdded(player, player.Character)
+	end
 end
 
 -- Handle character added event
@@ -60,14 +60,6 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	local spawnState = self.playerSpawnState[player.UserId]
 	
 	print(string.format("[PlayerSpawnManager] Character added for %s, state: %s", player.Name, tostring(spawnState)))
-	
-	-- If player is in waiting state (lobby), destroy the character
-	-- They should only have a character when spawning on the map
-	if spawnState == "waiting" then
-		print(string.format("[PlayerSpawnManager] Player %s is in waiting state, removing character (menu-only mode)", player.Name))
-		character:Destroy()
-		return
-	end
 	
 	-- Wait for character to fully load
 	local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
@@ -77,10 +69,48 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	end
 	
 	-- Position character based on current spawn state
-	if spawnState == "map" then
+	if spawnState == "waiting" then
+		-- Player is in waiting/lobby state - put them in a safe location far away
+		-- This effectively makes them invisible to the game while in lobby
+		local lobbyPosition = Vector3.new(5000, 10000, 0) -- High in the sky at X=5000
+		humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
+		
+		-- Make them essentially invisible/non-interactive
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+				part.Transparency = 1
+			end
+		end
+		
+		print(string.format("[PlayerSpawnManager] Positioned %s in lobby waiting area (high above map)", player.Name))
+		
+	elseif spawnState == "map" then
 		-- Player should spawn on the map
 		local spawnPosition = self:getMapSpawnPosition()
 		humanoidRootPart.CFrame = CFrame.new(spawnPosition)
+		
+		-- Make them visible and interactive (restore default character properties)
+		for _, part in ipairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				-- Restore collision for body parts (but not HumanoidRootPart to prevent physics issues)
+				if part.Name ~= "HumanoidRootPart" then
+					part.CanCollide = true
+				end
+				
+				-- Restore visibility for main body parts
+				if part.Parent == character and part:IsA("BasePart") then
+					part.Transparency = 0
+				end
+			end
+		end
+		
+		-- Specifically ensure head is visible
+		local head = character:FindFirstChild("Head")
+		if head and head:IsA("BasePart") then
+			head.Transparency = 0
+		end
+		
 		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
 		
 		-- Set camera to first-person
@@ -88,15 +118,27 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	end
 end
 
--- Keep player in menu-only lobby state (no character)
+-- Keep player in lobby waiting state
 function PlayerSpawnManager:keepPlayerInLobby(player)
-	print(string.format("[PlayerSpawnManager] Keeping %s in menu-only lobby", player.Name))
+	print(string.format("[PlayerSpawnManager] Keeping %s in lobby waiting state", player.Name))
 	
 	self.playerSpawnState[player.UserId] = "waiting"
 	
-	-- Destroy character if it exists
+	-- If character exists, move it to lobby position
 	if player.Character then
-		player.Character:Destroy()
+		local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+		if humanoidRootPart then
+			local lobbyPosition = Vector3.new(5000, 10000, 0) -- High above map
+			humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
+			
+			-- Make invisible
+			for _, part in ipairs(player.Character:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+					part.Transparency = 1
+				end
+			end
+		end
 	end
 end
 
