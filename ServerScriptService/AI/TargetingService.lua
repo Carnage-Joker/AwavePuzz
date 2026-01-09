@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- TargetingService.lua
 -- Tactical target selection system for zombies
 -- Features overcrowding penalty, dynamic assignments, and base pressure
@@ -22,12 +23,12 @@ local CONFIG = {
 
 function TargetingService.new(baseManager)
 	local self = setmetatable({}, TargetingService)
-	
+
 	self.baseManager = baseManager
 	self.targetAssignments = {} -- [zombieModel] = {target, targetType, assignedTime}
 	self.targetCounts = {} -- [targetId] = count
 	self.lastUpdateTime = 0
-	
+
 	return self
 end
 
@@ -36,30 +37,30 @@ function TargetingService:getBaseTarget()
 	if not self.baseManager then
 		return nil, nil
 	end
-	
+
 	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
 	if not baseModel then
 		return nil, nil
 	end
-	
+
 	local hitbox = baseModel:FindFirstChild("HitBox", true)
 	if hitbox and hitbox:IsA("BasePart") then
 		return hitbox.Position, "base"
 	end
-	
+
 	if baseModel:IsA("Model") then
 		return baseModel:GetPivot().Position, "base"
 	elseif baseModel:IsA("BasePart") then
 		return baseModel.Position, "base"
 	end
-	
+
 	return nil, nil
 end
 
 -- Get all alive players as potential targets
 function TargetingService:getPlayerTargets()
 	local targets = {}
-	
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		if character then
@@ -79,7 +80,7 @@ function TargetingService:getPlayerTargets()
 			end
 		end
 	end
-	
+
 	return targets
 end
 
@@ -87,7 +88,7 @@ end
 function TargetingService:countZombiesNearTarget(targetPos, targetId)
 	local count = 0
 	local currentTime = tick()
-	
+
 	-- Count from assignments
 	for zombie, assignment in pairs(self.targetAssignments) do
 		if zombie and zombie.Parent then
@@ -99,18 +100,18 @@ function TargetingService:countZombiesNearTarget(targetPos, targetId)
 			end
 		end
 	end
-	
+
 	return count
 end
 
 -- Calculate overcrowding penalty for a target
 function TargetingService:calculateOvercrowdPenalty(targetPos, targetId)
 	local zombieCount = self:countZombiesNearTarget(targetPos, targetId)
-	
+
 	if zombieCount <= CONFIG.OVERCROWD_THRESHOLD then
 		return 0
 	end
-	
+
 	local excess = zombieCount - CONFIG.OVERCROWD_THRESHOLD
 	return excess * CONFIG.OVERCROWD_PENALTY
 end
@@ -120,10 +121,10 @@ function TargetingService:scoreTarget(zombiePos, targetPos, targetType, targetId
 	-- Base score from distance (closer = higher score)
 	local distance = (targetPos - zombiePos).Magnitude
 	local distanceScore = math.max(0, 200 - distance)
-	
+
 	-- Overcrowding penalty
 	local overcrowdPenalty = self:calculateOvercrowdPenalty(targetPos, targetId)
-	
+
 	-- Base gets bonus when players are heavily swarmed
 	local baseBonus = 0
 	if targetType == "base" then
@@ -135,14 +136,14 @@ function TargetingService:scoreTarget(zombiePos, targetPos, targetType, targetId
 				baseBonus = CONFIG.BASE_SCORE_BOOST * (waveNumber or 1)
 			end
 		end
-		
+
 		-- Apply BasePreference bonus if zombie has base preference
 		if zombieStats and zombieStats.BasePreference then
 			-- Scale bonus based on preference (0.0-1.0 becomes 0-100 bonus points)
 			baseBonus = baseBonus + (zombieStats.BasePreference * 100)
 		end
 	end
-	
+
 	local finalScore = distanceScore - overcrowdPenalty + baseBonus
 	return finalScore
 end
@@ -150,7 +151,7 @@ end
 -- Select best target for a zombie using tactical scoring
 function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 	local targets = {}
-	
+
 	-- Get zombie stats from the model's ZombieType attribute
 	local zombieStats = nil
 	local zombieType = zombieModel:GetAttribute("ZombieType")
@@ -158,13 +159,13 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 		local ZombieTypes = require(game:GetService("ReplicatedStorage").Shared.ZombieTypes)
 		zombieStats = ZombieTypes[zombieType]
 	end
-	
+
 	-- Get player targets
 	local playerTargets = self:getPlayerTargets()
 	for _, pTarget in ipairs(playerTargets) do
 		table.insert(targets, pTarget)
 	end
-	
+
 	-- Get base target
 	local basePos, baseType = self:getBaseTarget()
 	if basePos then
@@ -176,16 +177,16 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 			character = nil
 		})
 	end
-	
+
 	-- No targets available
 	if #targets == 0 then
 		return nil, nil, nil
 	end
-	
+
 	-- Score all targets
 	local bestTarget = nil
 	local bestScore = -math.huge
-	
+
 	for _, target in ipairs(targets) do
 		local score = self:scoreTarget(
 			zombiePos,
@@ -196,13 +197,13 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 			#playerTargets,
 			zombieStats
 		)
-		
+
 		if score > bestScore then
 			bestScore = score
 			bestTarget = target
 		end
 	end
-	
+
 	-- Record assignment
 	if bestTarget then
 		self.targetAssignments[zombieModel] = {
@@ -210,10 +211,10 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 			targetType = bestTarget.targetType,
 			assignedTime = tick()
 		}
-		
+
 		return bestTarget.position, bestTarget.targetType, bestTarget.player
 	end
-	
+
 	return nil, nil, nil
 end
 
@@ -226,7 +227,7 @@ function TargetingService:cleanupAssignments()
 			table.insert(toRemove, zombie)
 		end
 	end
-	
+
 	-- Remove collected zombies
 	for _, zombie in ipairs(toRemove) do
 		self.targetAssignments[zombie] = nil
@@ -246,7 +247,7 @@ end
 -- Update service (called periodically)
 function TargetingService:update(deltaTime)
 	self.lastUpdateTime = self.lastUpdateTime + deltaTime
-	
+
 	-- Periodic cleanup
 	if self.lastUpdateTime > 5.0 then
 		self:cleanupAssignments()
