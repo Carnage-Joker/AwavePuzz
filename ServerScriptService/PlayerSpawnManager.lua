@@ -1,32 +1,47 @@
+-- @ScriptType: ModuleScript
 -- PlayerSpawnManager.lua
--- Manages player character spawning to ensure players spawn in lobby first, then on the map after voting
--- Integrates with GameManager and LobbyManager to control spawn timing
--- In lobby state, players still have characters, but they are invisible, non-interactive, and positioned high above the map (menu-only mode)
+-- Manages player character spawning:
+-- - waiting state: lobby (frozen + optionally hidden)
+-- - map state: spawn near BaseCamp (unfrozen + visible)
+-- Ensures state is set BEFORE LoadCharacter().
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local LobbySetup = require(script.Parent.LobbySetup)
 
 local PlayerSpawnManager = {}
 PlayerSpawnManager.__index = PlayerSpawnManager
 
--- Spawn locations
-local MAP_OFFSET = Vector3.new(5000, 0, 0) -- Maps are loaded at this offset
+local MAP_OFFSET = Vector3.new(5000, 0, 0)
+local LOBBY_POS = LobbySetup.LOBBY_POSITION
+
+-- Ground-safe tuning
+local RAYCAST_HEIGHT = 300
+local RAYCAST_DEPTH = 800
+local SPAWN_CLEARANCE_Y = 4         -- stand a little above hit surface
+local MIN_VALID_Y = -1000           -- safety: if we hit nothing and y is awful, bump up
+local MAX_GROUND_SNAP_TRIES = 8
+
+-- Exclusion tuning
+local MAX_EXCLUSION_REROLLS = 12
+local EXCLUSION_PUSH_OUT = 18       -- if we detect we're inside, we try to push out a bit
 
 function PlayerSpawnManager.new()
 	local self = setmetatable({}, PlayerSpawnManager)
-	
-	-- Track which players have spawned on the map
+
 	self.playersSpawnedOnMap = {} -- userId -> boolean
-	
-	-- Track player spawn state
-	self.playerSpawnState = {} -- userId -> "waiting" | "map"
-	
-	-- Reference to GameManager (set later)
+	self.playerSpawnState = {}    -- userId -> "waiting" | "map"
 	self.gameManager = nil
-	
-	-- Store player connections to manage character spawning
-	self.playerConnections = {} -- userId -> connection
-	
+
+	self.playerConnections = {}   -- userId -> RBXScriptConnection
+	self._charHandling = {}       -- userId -> boolean
+
+	-- spawn bag (shuffled round-robin across Spawn1..SpawnN)
+	self._spawnBag = nil
+	self._spawnBagIndex = 1
+	self._spawnBagSource = nil
+
 	return self
 end
 
@@ -34,203 +49,430 @@ function PlayerSpawnManager:setGameManager(gameManager)
 	self.gameManager = gameManager
 end
 
--- Initialize player spawning - called when player joins
+local function setAttrIfNil(inst, key, value)
+	if inst:GetAttribute(key) == nil then
+		inst:SetAttribute(key, value)
+	end
+end
+
+local function setCharacterHidden(character, hidden)
+	if not character then return end
+
+	for _, inst in ipairs(character:GetDescendants()) do
+		if inst:IsA("BasePart") then
+			if hidden then
+				setAttrIfNil(inst, "PreHideTransparency", inst.Transparency)
+				setAttrIfNil(inst, "PreHideCanCollide", inst.CanCollide)
+				setAttrIfNil(inst, "PreHideCanTouch", inst.CanTouch)
+				setAttrIfNil(inst, "PreHideCanQuery", inst.CanQuery)
+
+				inst.Transparency = 1
+				inst.CanCollide = false
+				inst.CanTouch = false
+				inst.CanQuery = false
+			else
+				local preT = inst:GetAttribute("PreHideTransparency")
+				if typeof(preT) == "number" then inst.Transparency = preT end
+
+				local preC = inst:GetAttribute("PreHideCanCollide")
+				if typeof(preC) == "boolean" then inst.CanCollide = preC end
+
+				local preTouch = inst:GetAttribute("PreHideCanTouch")
+				if typeof(preTouch) == "boolean" then inst.CanTouch = preTouch end
+
+				local preQ = inst:GetAttribute("PreHideCanQuery")
+				if typeof(preQ) == "boolean" then inst.CanQuery = preQ end
+			end
+		elseif inst:IsA("Decal") then
+			if hidden then
+				setAttrIfNil(inst, "PreHideTransparency", inst.Transparency)
+				inst.Transparency = 1
+			else
+				local pre = inst:GetAttribute("PreHideTransparency")
+				if typeof(pre) == "number" then inst.Transparency = pre end
+			end
+		end
+	end
+end
+
+local function freezeCharacter(character, frozen)
+	if not character then return end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	local hum = character:FindFirstChildOfClass("Humanoid")
+
+	if hrp then
+		hrp.Anchored = frozen
+		hrp.AssemblyLinearVelocity = Vector3.zero
+		hrp.AssemblyAngularVelocity = Vector3.zero
+	end
+	if hum then
+		hum.PlatformStand = frozen
+	end
+end
+
+-- ---------- Exclusion Volumes ----------
+
+local function getBaseCampExclusionParts()
+	-- Preferred: Workspace.BaseCamp.ExclusionVolumes
+	local baseCamp = Workspace:FindFirstChild("BaseCamp")
+	if baseCamp then
+		local folder = baseCamp:FindFirstChild("ExclusionVolumes")
+		if folder and folder:IsA("Folder") then
+			local parts = {}
+			for _, c in ipairs(folder:GetChildren()) do
+				if c:IsA("BasePart") then table.insert(parts, c) end
+			end
+			if #parts > 0 then return parts end
+		end
+	end
+
+	-- Fallback: any ExclusionVolumes folder in the map
+	local anyFolder = Workspace:FindFirstChild("ExclusionVolumes", true)
+	if anyFolder and anyFolder:IsA("Folder") then
+		local parts = {}
+		for _, c in ipairs(anyFolder:GetChildren()) do
+			if c:IsA("BasePart") then table.insert(parts, c) end
+		end
+		if #parts > 0 then return parts end
+	end
+
+	return {}
+end
+
+local function pointInsidePartVolume(point, part)
+	-- Works for rotated boxes too
+	local localPos = part.CFrame:PointToObjectSpace(point)
+	local half = part.Size * 0.5
+	return (math.abs(localPos.X) <= half.X)
+		and (math.abs(localPos.Y) <= half.Y)
+		and (math.abs(localPos.Z) <= half.Z)
+end
+
+local function isInAnyExclusion(point, exclusionParts)
+	for _, p in ipairs(exclusionParts) do
+		if p and p.Parent and pointInsidePartVolume(point, p) then
+			return true, p
+		end
+	end
+	return false, nil
+end
+
+local function pushPointOutOfVolume(point, part)
+	-- crude but effective: push away from part center on XZ
+	local center = part.Position
+	local dir = (point - center)
+	dir = Vector3.new(dir.X, 0, dir.Z)
+
+	if dir.Magnitude < 0.01 then
+		dir = Vector3.new(1, 0, 0)
+	else
+		dir = dir.Unit
+	end
+
+	return point + (dir * EXCLUSION_PUSH_OUT)
+end
+
+-- ---------- Ground-safe spawn (raycast snap) ----------
+
+local function groundSnapPosition(pos, ignoreInstances)
+	local rayParams = RaycastParams.new()
+	rayParams.FilterType = Enum.RaycastFilterType.Exclude
+	rayParams.IgnoreWater = false
+	rayParams.FilterDescendantsInstances = ignoreInstances or {}
+
+	-- cast from above downwards
+	local origin = pos + Vector3.new(0, RAYCAST_HEIGHT, 0)
+	local dir = Vector3.new(0, -RAYCAST_DEPTH, 0)
+
+	local hit = Workspace:Raycast(origin, dir, rayParams)
+	if hit and hit.Position then
+		return Vector3.new(pos.X, hit.Position.Y + SPAWN_CLEARANCE_Y, pos.Z), true
+	end
+
+	-- no hit: keep xz but bump y to something sane
+	local safeY = pos.Y
+	if safeY < MIN_VALID_Y then safeY = 30 end
+	return Vector3.new(pos.X, safeY, pos.Z), false
+end
+
 function PlayerSpawnManager:onPlayerAdded(player)
 	print(string.format("[PlayerSpawnManager] Player %s added, preparing spawn management", player.Name))
-	
-	-- Initialize spawn state to waiting (lobby mode)
-	self.playerSpawnState[player.UserId] = "waiting"
-	self.playersSpawnedOnMap[player.UserId] = false
-	
-	-- Connect to character added event to manage spawning
-	local connection = player.CharacterAdded:Connect(function(character)
+
+	self.playerSpawnState[player.UserId] = self.playerSpawnState[player.UserId] or "waiting"
+	self.playersSpawnedOnMap[player.UserId] = self.playersSpawnedOnMap[player.UserId] or false
+
+	if self.playerConnections[player.UserId] then
+		self.playerConnections[player.UserId]:Disconnect()
+	end
+
+	self.playerConnections[player.UserId] = player.CharacterAdded:Connect(function(character)
 		self:onCharacterAdded(player, character)
 	end)
-	
-	self.playerConnections[player.UserId] = connection
-	
-	-- If player already has a character, handle it immediately
+
 	if player.Character then
 		self:onCharacterAdded(player, player.Character)
 	end
 end
 
--- Handle character added event
 function PlayerSpawnManager:onCharacterAdded(player, character)
-	local spawnState = self.playerSpawnState[player.UserId]
-	
-	print(string.format("[PlayerSpawnManager] Character added for %s, state: %s", player.Name, tostring(spawnState)))
-	
-	-- Wait for character to fully load
-	local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
-	if not humanoidRootPart then
+	if not player or not character then return end
+	if self._charHandling[player.UserId] then return end
+	self._charHandling[player.UserId] = true
+
+	local state = self.playerSpawnState[player.UserId] or "waiting"
+
+	local hrp = character:WaitForChild("HumanoidRootPart", 10)
+	if not hrp then
 		warn(string.format("[PlayerSpawnManager] Failed to get HumanoidRootPart for %s", player.Name))
+		self._charHandling[player.UserId] = nil
 		return
 	end
-	
-	-- Position character based on current spawn state
-	if spawnState == "waiting" then
-		-- Player is in waiting/lobby state - put them in a safe location far away
-		-- This effectively makes them invisible to the game while in lobby
-		local lobbyPosition = Vector3.new(5000, 10000, 0) -- High in the sky at X=5000
-		humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
-		
-		-- Make them essentially invisible/non-interactive
-		for _, part in ipairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				-- Disable collision for all parts (including HumanoidRootPart)
-				part.CanCollide = false
-				part.Transparency = 1
-			end
-		end
-		
-		print(string.format("[PlayerSpawnManager] Positioned %s in lobby waiting area (high above map)", player.Name))
-		
-	elseif spawnState == "map" then
-		-- Player should spawn on the map
-		local spawnPosition = self:getMapSpawnPosition()
-		humanoidRootPart.CFrame = CFrame.new(spawnPosition)
-		
-		-- Restore visibility and collision for all character parts
-		-- Note: We rely on Roblox's default character transparency values when the character spawns
-		for _, part in ipairs(character:GetDescendants()) do
-			if part:IsA("BasePart") then
-				-- Restore collision for all parts except HumanoidRootPart
-				-- HumanoidRootPart should remain non-collidable to prevent physics issues
-				if part ~= humanoidRootPart then
-					part.CanCollide = true
-				end
-				
-				-- Note: Transparency is left at default values set by Roblox when character spawns
-				-- This preserves accessories, clothing, and special effects correctly
-			end
-		end
-		
-		print(string.format("[PlayerSpawnManager] Positioned %s on map at %s", player.Name, tostring(spawnPosition)))
-		
-		-- Note: First-person camera is handled by the FPS system on the client side
+
+	if state == "waiting" then
+		hrp.CFrame = CFrame.new(LOBBY_POS)
+		freezeCharacter(character, true)
+		setCharacterHidden(character, true)
+		print(string.format("[PlayerSpawnManager] %s -> LOBBY (frozen/hidden)", player.Name))
+
+	elseif state == "map" then
+		local pos = self:getMapSpawnPosition()
+		hrp.CFrame = CFrame.new(pos)
+
+		setCharacterHidden(character, false)
+		freezeCharacter(character, false)
+
+		print(string.format("[PlayerSpawnManager] %s -> MAP (%s)", player.Name, tostring(pos)))
 	end
+
+	self._charHandling[player.UserId] = nil
 end
 
--- Keep player in lobby waiting state
 function PlayerSpawnManager:keepPlayerInLobby(player)
-	print(string.format("[PlayerSpawnManager] Keeping %s in lobby waiting state", player.Name))
-	
+	if not player then return end
+
 	self.playerSpawnState[player.UserId] = "waiting"
-	
-	-- If character exists, move it to lobby position
+	self.playersSpawnedOnMap[player.UserId] = false
+
 	if player.Character then
-		local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-		if humanoidRootPart then
-			local lobbyPosition = Vector3.new(5000, 10000, 0) -- High above map
-			humanoidRootPart.CFrame = CFrame.new(lobbyPosition)
-			
-			-- Make invisible
-			for _, part in ipairs(player.Character:GetDescendants()) do
-				if part:IsA("BasePart") then
-					part.CanCollide = false
-					part.Transparency = 1
-				end
-			end
+		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+		if hrp then
+			hrp.CFrame = CFrame.new(LOBBY_POS)
 		end
+		freezeCharacter(player.Character, true)
+		setCharacterHidden(player.Character, true)
 	end
 end
 
--- Spawn player on the map after voting completes
 function PlayerSpawnManager:spawnPlayerOnMap(player)
-	print(string.format("[PlayerSpawnManager] Spawning %s on map", player.Name))
-	
-	-- Mark that this player has been spawned onto the map
-	self.playersSpawnedOnMap[player.UserId] = true
-	
-	-- Load character to spawn them on the map (this destroys the old character)
-	player:LoadCharacter()
-	
-	-- After initiating the character load, set the spawn state to map
+	if not player then return end
+
+	-- MUST set state before LoadCharacter()
 	self.playerSpawnState[player.UserId] = "map"
+	self.playersSpawnedOnMap[player.UserId] = true
+
+	player:LoadCharacter()
 end
 
--- Spawn all players on the map (called when map voting completes)
 function PlayerSpawnManager:spawnAllPlayersOnMap()
-	print("[PlayerSpawnManager] Spawning all players on map")
-	
 	for _, player in ipairs(Players:GetPlayers()) do
-		-- Only spawn players who haven't been spawned on map yet
 		if not self.playersSpawnedOnMap[player.UserId] then
 			self:spawnPlayerOnMap(player)
+		else
+			self.playerSpawnState[player.UserId] = "map"
 		end
 	end
 end
 
--- Get spawn position on the map
 function PlayerSpawnManager:getMapSpawnPosition()
-	-- Get base camp position from GameManager if available
-	if self.gameManager and self.gameManager.baseManager then
-		local baseCamp = workspace:FindFirstChild("BaseCamp")
-		
-		if baseCamp then
-			-- Try to get position from PrimaryPart
-			if baseCamp.PrimaryPart then
-				local baseCampPos = baseCamp.PrimaryPart.Position
-				-- Add randomness and higher Y offset to spawn above base structures
-				local offset = Vector3.new(
-					math.random(-10, 10),
-					15, -- Increased from 5 to 15 to spawn above structures
-					math.random(-10, 10)
-				)
-				return baseCampPos + offset
-			else
-				-- Fallback: find any BasePart in BaseCamp to get position
-				for _, child in ipairs(baseCamp:GetChildren()) do
-					if child:IsA("BasePart") then
-						local baseCampPos = child.Position
-						local offset = Vector3.new(
-							math.random(-10, 10),
-							15, -- Increased from 5 to 15 to spawn above structures
-							math.random(-10, 10)
-						)
-						return baseCampPos + offset
-					end
+	-- Exclusions (base-camp / map volumes)
+	local exclusionParts = getBaseCampExclusionParts()
+
+	-- Ignore list for raycasts: characters + lobby + basecamp model so we prefer terrain/ground
+	local ignore = {}
+	do
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p.Character then table.insert(ignore, p.Character) end
+		end
+		local lobby = Workspace:FindFirstChild("LobbyArea")
+		if lobby then table.insert(ignore, lobby) end
+		local baseCamp = Workspace:FindFirstChild("BaseCamp")
+		if baseCamp then table.insert(ignore, baseCamp) end
+	end
+
+	-- 1) Prefer explicit per-map player spawns:
+	--    SpawnPoints.PlayerSpawns.Spawn1..SpawnN (or Spawn<number>) inside the loaded map model.
+	local function findPlayerSpawnsContainer()
+		local spawnPoints = Workspace:FindFirstChild("SpawnPoints", true)
+		if spawnPoints then
+			local playerSpawns = spawnPoints:FindFirstChild("PlayerSpawns")
+			if playerSpawns then
+				return playerSpawns
+			end
+		end
+
+		local playerSpawnsAny = Workspace:FindFirstChild("PlayerSpawns", true)
+		if playerSpawnsAny then
+			return playerSpawnsAny
+		end
+
+		return nil
+	end
+
+	local function buildSpawnBag(container)
+		local list = {}
+		for _, child in ipairs(container:GetChildren()) do
+			if child:IsA("BasePart") then
+				local n = tonumber(string.match(child.Name, "^Spawn(%d+)$"))
+				if n then
+					table.insert(list, { idx = n, part = child })
 				end
 			end
 		end
+		if #list == 0 then return nil end
+
+		table.sort(list, function(a, b) return a.idx < b.idx end)
+
+		local parts = {}
+		for i = 1, #list do parts[i] = list[i].part end
+
+		-- Fisher-Yates shuffle
+		for i = #parts, 2, -1 do
+			local j = math.random(1, i)
+			parts[i], parts[j] = parts[j], parts[i]
+		end
+
+		return parts
 	end
-	
-	-- Fallback: spawn at map offset with some height
-	return MAP_OFFSET + Vector3.new(0, 10, 0)
+
+	local function pickFromBag()
+		local playerSpawnsContainer = findPlayerSpawnsContainer()
+		if not playerSpawnsContainer then return nil end
+
+		if self._spawnBagSource ~= playerSpawnsContainer or not self._spawnBag or #self._spawnBag == 0 then
+			self._spawnBag = buildSpawnBag(playerSpawnsContainer)
+			self._spawnBagIndex = 1
+			self._spawnBagSource = playerSpawnsContainer
+		end
+
+		if not self._spawnBag or #self._spawnBag == 0 then return nil end
+
+		if self._spawnBagIndex > #self._spawnBag then
+			for i = #self._spawnBag, 2, -1 do
+				local j = math.random(1, i)
+				self._spawnBag[i], self._spawnBag[j] = self._spawnBag[j], self._spawnBag[i]
+			end
+			self._spawnBagIndex = 1
+		end
+
+		local part = self._spawnBag[self._spawnBagIndex]
+		self._spawnBagIndex += 1
+		if part and part:IsA("BasePart") then
+			return part.Position + Vector3.new(math.random(-3, 3), 0, math.random(-3, 3))
+		end
+		return nil
+	end
+
+	local function resolveCandidate(candidate)
+		if not candidate then return nil end
+
+		-- Exclusion rerolls / push-outs first (on XZ), then ground snap
+		local pos = candidate
+		for _ = 1, MAX_EXCLUSION_REROLLS do
+			local inside, which = isInAnyExclusion(pos, exclusionParts)
+			if not inside then break end
+
+			-- try push out + small random jitter
+			pos = pushPointOutOfVolume(pos, which)
+			pos = pos + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6))
+		end
+
+		-- Ground snap attempts (sometimes first ray hits something weird; re-try with slight jitters)
+		local snapped = pos
+		for _ = 1, MAX_GROUND_SNAP_TRIES do
+			local gs, hit = groundSnapPosition(snapped, ignore)
+			snapped = gs
+
+			-- after snap, ensure we are STILL not inside exclusion (since Y changes + volumes could be tall)
+			local inside = isInAnyExclusion(snapped, exclusionParts)
+			if not inside then
+				return snapped
+			end
+
+			-- if still inside, jitter and retry
+			snapped = snapped + Vector3.new(math.random(-8, 8), 0, math.random(-8, 8))
+			if not hit then
+				snapped = snapped + Vector3.new(0, 25, 0)
+			end
+		end
+
+		return snapped
+	end
+
+	-- Try explicit spawn bag first
+	do
+		for _ = 1, 6 do
+			local c = pickFromBag()
+			if c then
+				local final = resolveCandidate(c)
+				if final then return final end
+			end
+		end
+	end
+
+	-- 2) Fallback: Prefer BaseCamp spawn if present (but still respects exclusion + ground)
+	do
+		local baseCamp = Workspace:FindFirstChild("BaseCamp")
+		if baseCamp then
+			local ref = baseCamp:FindFirstChild("BaseCampSpawn")
+			if ref and ref:IsA("BasePart") then
+				local c = ref.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
+				local final = resolveCandidate(c)
+				if final then return final end
+			end
+
+			local primary = baseCamp.PrimaryPart
+			if primary then
+				local c = primary.Position + Vector3.new(math.random(-18, 18), 0, math.random(-18, 18))
+				local final = resolveCandidate(c)
+				if final then return final end
+			end
+		end
+	end
+
+	-- 3) Hard fallback: map offset above ground, then snap
+	local fallback = MAP_OFFSET + Vector3.new(math.random(-50, 50), 40, math.random(-50, 50))
+	return resolveCandidate(fallback) or (MAP_OFFSET + Vector3.new(0, 10, 0))
 end
 
--- Reset player spawn state for new round
 function PlayerSpawnManager:resetForNewRound()
-	print("[PlayerSpawnManager] Resetting for new round")
-	
-	-- Clear spawn tracking
 	self.playersSpawnedOnMap = {}
-	
-	-- Reset all players to waiting state
 	for userId, _ in pairs(self.playerSpawnState) do
 		self.playerSpawnState[userId] = "waiting"
 	end
+
+	self._spawnBag = nil
+	self._spawnBagIndex = 1
+	self._spawnBagSource = nil
 end
 
--- Handle player leaving
 function PlayerSpawnManager:onPlayerRemoving(player)
+	if not player then return end
+
 	self.playersSpawnedOnMap[player.UserId] = nil
 	self.playerSpawnState[player.UserId] = nil
-	
-	-- Disconnect character added connection
-	if self.playerConnections[player.UserId] then
-		self.playerConnections[player.UserId]:Disconnect()
-		self.playerConnections[player.UserId] = nil
+	self._charHandling[player.UserId] = nil
+
+	local conn = self.playerConnections[player.UserId]
+	if conn then
+		conn:Disconnect()
 	end
+	self.playerConnections[player.UserId] = nil
 end
 
--- Check if player has spawned on map
 function PlayerSpawnManager:hasPlayerSpawnedOnMap(player)
 	return self.playersSpawnedOnMap[player.UserId] or false
 end
 
--- Get current spawn state for a player
 function PlayerSpawnManager:getPlayerSpawnState(player)
 	return self.playerSpawnState[player.UserId] or "waiting"
 end
