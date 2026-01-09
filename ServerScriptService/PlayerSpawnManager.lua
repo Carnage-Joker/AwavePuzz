@@ -479,23 +479,26 @@ function PlayerSpawnManager:getMapSpawnPosition()
 	return resolveCandidate(fallback) or (MAP_OFFSET + Vector3.new(0, 10, 0))
 end
 
+-- Private method to clear spawn bag cache
+function PlayerSpawnManager:_clearSpawnBagCache()
+	self._spawnBag = nil
+	self._spawnBagIndex = 1
+	self._spawnBagSource = nil
+end
+
 function PlayerSpawnManager:resetForNewRound()
 	self.playersSpawnedOnMap = {}
 	for userId, _ in pairs(self.playerSpawnState) do
 		self.playerSpawnState[userId] = "waiting"
 	end
 
-	self._spawnBag = nil
-	self._spawnBagIndex = 1
-	self._spawnBagSource = nil
+	self:_clearSpawnBagCache()
 end
 
 -- Called when a new map is loaded to clear cached spawn points
 function PlayerSpawnManager:onMapLoaded()
 	print("[PlayerSpawnManager] Map loaded, clearing spawn bag cache")
-	self._spawnBag = nil
-	self._spawnBagIndex = 1
-	self._spawnBagSource = nil
+	self:_clearSpawnBagCache()
 end
 
 function PlayerSpawnManager:onPlayerRemoving(player)
