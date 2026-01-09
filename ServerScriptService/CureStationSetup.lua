@@ -1,3 +1,4 @@
+-- @ScriptType: Script
 -- CureStationSetup.lua
 -- Server script to setup cure stations with ProximityPrompts
 -- Place in ServerScriptService or run once to setup stations

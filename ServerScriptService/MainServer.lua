@@ -100,9 +100,10 @@ cureSynthesisService:setPuzzleService(puzzleService)
 gameManager:setCureSynthesisService(cureSynthesisService)
 print("CureSynthesisService initialized and linked")
 
--- Note: Cure station setup is handled by ServerScriptService/CureStationSetup.lua
--- That script should be a normal Script (not ModuleScript) with `-- @ScriptType: Script` as its first line.
--- It runs automatically on server startup.
+-- Note: Cure station setup is owned by ServerScriptService/CureStationSetup.lua
+-- which runs automatically on server startup as the single source of truth.
+-- Any older duplicates (e.g. ReplicatedStorage/Shared/CureStationSetup.lua) are legacy-only
+-- and MUST NOT be used or required; remove them when cleaning up redundant modules.
 
 ----------------------------------------------------------------
 -- Player connection handlers
