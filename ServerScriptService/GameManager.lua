@@ -130,6 +130,7 @@ function GameManager.new(allianceService)
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
 		self:configureSpawnersForMap()
+		self.playerSpawnManager:onMapLoaded()
 	else
 		self.spawner:loadSpawnPoints()
 	end
@@ -924,6 +925,9 @@ function GameManager:updateLobby(deltaTime)
 
 			self.mapManager:load(selectedMapId)
 			self:configureSpawnersForMap()
+
+			-- Notify PlayerSpawnManager that map has loaded
+			self.playerSpawnManager:onMapLoaded()
 
 			print("[GameManager] Map loaded, spawning players on map")
 			self.playerSpawnManager:spawnAllPlayersOnMap()
