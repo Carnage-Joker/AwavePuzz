@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 --[[
     ItemSpawner.lua (ModuleScript)
     Manages spawning of ammo and health packs inside the base area
@@ -109,16 +110,16 @@ end
 function ItemSpawner:getRandomSpawnPositionNearBase()
 	local basePos = self:tryFindBasePosition()
 	local radius = GameConfig.ITEM_SPAWN_RADIUS
-	
+
 	-- Random position within radius of base
 	local angle = math.random() * math.pi * 2
 	local distance = math.random() * radius
 	local x = basePos.X + math.cos(angle) * distance
 	local z = basePos.Z + math.sin(angle) * distance
-	
+
 	local candidatePos = Vector3.new(x, basePos.Y + 10, z)
 	local groundPos = self:raycastToGround(candidatePos)
-	
+
 	if groundPos then
 		return groundPos + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
 	else
@@ -134,7 +135,7 @@ function ItemSpawner:spawnItem(itemType)
 	end
 
 	local spawnPoint = self:getRandomSpawnPositionNearBase()
-	
+
 	-- Generate unique ID using counter and tick for collision prevention
 	self.itemCounter = self.itemCounter + 1
 	local itemId = string.format("item_%d_%.0f", self.itemCounter, tick() * 1000)
@@ -147,7 +148,7 @@ function ItemSpawner:spawnItem(itemType)
 	part.CanCollide = false
 	part:SetAttribute("ItemType", itemType)
 	part:SetAttribute("ItemId", itemId)
-	
+
 	-- Set color and material based on type
 	if itemType == "Ammo" then
 		part.Color = Color3.fromRGB(255, 200, 50) -- Yellow/Gold
@@ -156,7 +157,7 @@ function ItemSpawner:spawnItem(itemType)
 		part.Color = Color3.fromRGB(255, 50, 50) -- Red
 		part.Material = Enum.Material.Neon
 	end
-	
+
 	part.Parent = self.itemFolder
 
 	-- Add spinning animation
@@ -192,13 +193,13 @@ function ItemSpawner:spawnItem(itemType)
 	textLabel.TextStrokeTransparency = 0.5
 	textLabel.TextScaled = true
 	textLabel.Font = Enum.Font.GothamBold
-	
+
 	if itemType == "Ammo" then
 		textLabel.Text = "Ammo Pack"
 	elseif itemType == "Health" then
 		textLabel.Text = "Health Pack"
 	end
-	
+
 	textLabel.Parent = billboard
 
 	-- Add touch collection
@@ -336,7 +337,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 	if rewardGranted then
 		-- Get item data before removing it from activeItems
 		local success, item = self:removeActiveItem(itemId)
-		
+
 		if success and item then
 			if item.touchConnection then
 				item.touchConnection:Disconnect()
@@ -406,7 +407,7 @@ function ItemSpawner:addActiveItem(itemId, itemData)
 		warn("[ItemSpawner] Attempted to add duplicate itemId: " .. tostring(itemId))
 		return false
 	end
-	
+
 	self.activeItems[itemId] = itemData
 	self.activeItemCount = self.activeItemCount + 1
 	return true
@@ -419,7 +420,7 @@ function ItemSpawner:removeActiveItem(itemId)
 		warn("[ItemSpawner] Attempted to remove non-existent itemId: " .. tostring(itemId))
 		return false
 	end
-	
+
 	local item = self.activeItems[itemId]
 	self.activeItems[itemId] = nil
 	self.activeItemCount = self.activeItemCount - 1
@@ -436,7 +437,7 @@ function ItemSpawner:clearAllItems()
 	for itemId in pairs(self.activeItems) do
 		table.insert(itemIds, itemId)
 	end
-	
+
 	-- Remove each item using the helper method
 	for _, itemId in ipairs(itemIds) do
 		local success, item = self:removeActiveItem(itemId)
