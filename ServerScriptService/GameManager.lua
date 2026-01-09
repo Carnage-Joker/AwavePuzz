@@ -929,9 +929,6 @@ function GameManager:updateLobby(deltaTime)
 			-- Notify PlayerSpawnManager that map has loaded
 			self.playerSpawnManager:onMapLoaded()
 
-			-- Small wait to ensure map and BaseCamp are fully ready
-			task.wait(0.1)
-
 			print("[GameManager] Map loaded, spawning players on map")
 			self.playerSpawnManager:spawnAllPlayersOnMap()
 		end
