@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- WaveManager.lua
 -- Manages zombie waves and spawning
 
