@@ -156,6 +156,7 @@ PuzzleService:
 
 FPSWeaponService:
     AmmoUpdate ───────────────────► FPSHUD
+    WeaponReload ─────────────────► FPSHUD
 
 SprintService:
     SprintRequest ────────────────► FPSMovement (Client → Server)
