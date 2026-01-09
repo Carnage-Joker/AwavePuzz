@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- AchievementService.lua
 -- Server-side achievement tracking and unlocking
 
@@ -13,21 +14,21 @@ AchievementService.__index = AchievementService
 
 function AchievementService.new(playerManager, gameManager)
 	local self = setmetatable({}, AchievementService)
-	
+
 	self.playerManager = playerManager
 	self.gameManager = gameManager
-	
+
 	-- Track achievements per player (userId -> {achievementId -> true})
 	self.playerAchievements = {}
-	
+
 	-- Track stats for achievement conditions
 	self.playerStats = {}
-	
+
 	self:setupRemoteEvents()
 	self:setupEventListeners()
-	
+
 	print("[AchievementService] Initialized")
-	
+
 	return self
 end
 
@@ -55,7 +56,7 @@ function AchievementService:initializePlayer(player)
 		roundsLost = 0,
 		survivalTime = 0
 	}
-	
+
 	print(string.format("[AchievementService] Initialized tracking for %s", player.Name))
 end
 
@@ -67,18 +68,18 @@ end
 
 function AchievementService:unlockAchievement(player, achievementId)
 	if not player or not player.Parent then return end
-	
+
 	-- Check if already unlocked
 	if self.playerAchievements[player.UserId] and self.playerAchievements[player.UserId][achievementId] then
 		return false
 	end
-	
+
 	-- Mark as unlocked
 	if not self.playerAchievements[player.UserId] then
 		self:initializePlayer(player)
 	end
 	self.playerAchievements[player.UserId][achievementId] = true
-	
+
 	-- Find achievement data for logging
 	local achievementName = achievementId
 	for _, ach in ipairs(StoryConfig.Achievements) do
@@ -87,14 +88,14 @@ function AchievementService:unlockAchievement(player, achievementId)
 			break
 		end
 	end
-	
+
 	print(string.format("[AchievementService] %s unlocked: %s", player.Name, achievementName))
-	
+
 	-- Notify client
 	if self.remoteEvents.AchievementUnlocked then
 		self.remoteEvents.AchievementUnlocked:FireClient(player, achievementId)
 	end
-	
+
 	return true
 end
 
@@ -107,18 +108,18 @@ end
 
 function AchievementService:onPlayerKill(player, isHeadshot)
 	if not self.playerStats[player.UserId] then return end
-	
+
 	self.playerStats[player.UserId].kills = self.playerStats[player.UserId].kills + 1
-	
+
 	if isHeadshot then
 		self.playerStats[player.UserId].headshots = self.playerStats[player.UserId].headshots + 1
 	end
-	
+
 	-- Check achievements
 	if self.playerStats[player.UserId].kills == 1 then
 		self:unlockAchievement(player, "first_blood")
 	end
-	
+
 	if self.playerStats[player.UserId].headshots >= 10 then
 		self:unlockAchievement(player, "headshot_specialist")
 	end
@@ -126,9 +127,9 @@ end
 
 function AchievementService:onComponentCollected(player)
 	if not self.playerStats[player.UserId] then return end
-	
+
 	self.playerStats[player.UserId].componentsCollected = self.playerStats[player.UserId].componentsCollected + 1
-	
+
 	if self.playerStats[player.UserId].componentsCollected >= 10 then
 		self:unlockAchievement(player, "component_collector")
 	end
@@ -136,15 +137,15 @@ end
 
 function AchievementService:onAllianceFormed(player)
 	if not self.playerStats[player.UserId] then return end
-	
+
 	self.playerStats[player.UserId].alliancesFormed = self.playerStats[player.UserId].alliancesFormed + 1
 end
 
 function AchievementService:onAllianceBroken(player)
 	if not self.playerStats[player.UserId] then return end
-	
+
 	self.playerStats[player.UserId].alliancesBroken = self.playerStats[player.UserId].alliancesBroken + 1
-	
+
 	-- Check betrayer achievement
 	self:unlockAchievement(player, "betrayer")
 end
@@ -162,7 +163,7 @@ function AchievementService:onRoundEnd(isVictory, alivePlayers, baseHealthPercen
 			-- Check achievements based on round outcome
 			if isVictory then
 				self.playerStats[player.UserId].roundsWon = self.playerStats[player.UserId].roundsWon + 1
-				
+
 				-- Check if player helped complete the cure
 				local isAlive = false
 				for _, alivePlayer in ipairs(alivePlayers) do
@@ -171,33 +172,33 @@ function AchievementService:onRoundEnd(isVictory, alivePlayers, baseHealthPercen
 						break
 					end
 				end
-				
+
 				if isAlive then
 					self:unlockAchievement(player, "savior")
-					
+
 					-- Check for perfect run (no deaths)
 					if #alivePlayers == #Players:GetPlayers() then
 						self:unlockAchievement(player, "perfect_run")
 					end
-					
+
 					-- Check for clutch save (base health <= 10%)
 					if baseHealthPercent and baseHealthPercent <= 10 then
 						self:unlockAchievement(player, "clutch_save")
 					end
 				end
-				
+
 				-- Alliance-based achievements (mutually exclusive per victory)
 				local alliancesFormed = self.playerStats[player.UserId].alliancesFormed
 				local alliancesBroken = self.playerStats[player.UserId].alliancesBroken
-				
+
 				-- Check for lone wolf (no alliances formed this round)
 				if alliancesFormed == 0 then
 					self:unlockAchievement(player, "lone_wolf")
-				-- Check for trusted ally (alliances formed, none broken)
+					-- Check for trusted ally (alliances formed, none broken)
 				elseif alliancesBroken == 0 and alliancesFormed > 0 then
 					self:unlockAchievement(player, "trusted_ally")
 				end
-				
+
 				-- Check for team player (allied with everyone)
 				local totalPlayers = #Players:GetPlayers()
 				if alliancesFormed >= (totalPlayers - 1) and totalPlayers > 1 then
