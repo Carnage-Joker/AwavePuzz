@@ -1,13 +1,24 @@
+-- @ScriptType: ModuleScript
 -- LobbySetup.lua
--- Creates a safe lobby area where players spawn before the map loads
--- Lobby is positioned at (5000, 0, 0) to match the map loading position
+-- Creates a simple lobby area at the map offset so players can wait during title/epilogue/voting.
+-- Exposes LOBBY_POSITION for PlayerSpawnManager.
+
+local Workspace = game:GetService("Workspace")
 
 local LobbySetup = {}
 LobbySetup.__index = LobbySetup
 
--- Lobby position (at map offset, where maps also load)
-local LOBBY_POSITION = Vector3.new(5000, 5, 0)
-local LOBBY_SIZE = Vector3.new(50, 1, 50)
+-- Map pivot offset
+local MAP_OFFSET = Vector3.new(5000, 0, 0)
+
+-- ✅ Lobby is 3000 studs away from map pivot (Option B)
+local LOBBY_OFFSET = Vector3.new(3000, 0, 0)
+local LOBBY_BASE = MAP_OFFSET + LOBBY_OFFSET
+
+-- Public constant used by PlayerSpawnManager (standing height on platform)
+LobbySetup.LOBBY_POSITION = LOBBY_BASE + Vector3.new(0, 8, 0)
+
+local LOBBY_MODEL_NAME = "LobbyArea"
 
 function LobbySetup.new()
 	local self = setmetatable({}, LobbySetup)
@@ -15,108 +26,81 @@ function LobbySetup.new()
 	return self
 end
 
--- Create the lobby area
 function LobbySetup:createLobby()
 	print("[LobbySetup] Creating lobby area")
-	
-	-- Check if lobby already exists
-	local existingLobby = workspace:FindFirstChild("Lobby")
-	if existingLobby then
-		existingLobby:Destroy()
+
+	-- Destroy old lobby if present
+	if self.lobbyModel and self.lobbyModel.Parent then
+		self.lobbyModel:Destroy()
 	end
-	
-	-- Create lobby model
-	local lobbyModel = Instance.new("Model")
-	lobbyModel.Name = "Lobby"
-	
-	-- Create lobby platform
+
+	-- Also clear stray lobby models (defensive)
+	local existing = Workspace:FindFirstChild(LOBBY_MODEL_NAME)
+	if existing then
+		existing:Destroy()
+	end
+
+	local model = Instance.new("Model")
+	model.Name = LOBBY_MODEL_NAME
+
+	-- Platform
 	local platform = Instance.new("Part")
-	platform.Name = "LobbyPlatform"
-	platform.Size = LOBBY_SIZE
-	platform.Position = LOBBY_POSITION
+	platform.Name = "Platform"
 	platform.Anchored = true
 	platform.CanCollide = true
-	platform.Material = Enum.Material.SmoothPlastic
-	platform.Color = Color3.fromRGB(100, 100, 150) -- Light blue-gray
-	platform.Transparency = 0
-	platform.Parent = lobbyModel
-	
-	-- Note: No SpawnLocation created - player spawning is managed by PlayerSpawnManager
-	
-	-- Create some walls around the lobby for aesthetic
-	local wallHeight = 8
-	local wallThickness = 1
-	
-	-- North wall
-	local northWall = Instance.new("Part")
-	northWall.Name = "NorthWall"
-	northWall.Size = Vector3.new(LOBBY_SIZE.X, wallHeight, wallThickness)
-	northWall.Position = LOBBY_POSITION + Vector3.new(0, wallHeight/2, LOBBY_SIZE.Z/2)
-	northWall.Anchored = true
-	northWall.CanCollide = true
-	northWall.Material = Enum.Material.Concrete
-	northWall.Color = Color3.fromRGB(80, 80, 90)
-	northWall.Parent = lobbyModel
-	
-	-- South wall
-	local southWall = Instance.new("Part")
-	southWall.Name = "SouthWall"
-	southWall.Size = Vector3.new(LOBBY_SIZE.X, wallHeight, wallThickness)
-	southWall.Position = LOBBY_POSITION + Vector3.new(0, wallHeight/2, -LOBBY_SIZE.Z/2)
-	southWall.Anchored = true
-	southWall.CanCollide = true
-	southWall.Material = Enum.Material.Concrete
-	southWall.Color = Color3.fromRGB(80, 80, 90)
-	southWall.Parent = lobbyModel
-	
-	-- East wall
-	local eastWall = Instance.new("Part")
-	eastWall.Name = "EastWall"
-	eastWall.Size = Vector3.new(wallThickness, wallHeight, LOBBY_SIZE.Z)
-	eastWall.Position = LOBBY_POSITION + Vector3.new(LOBBY_SIZE.X/2, wallHeight/2, 0)
-	eastWall.Anchored = true
-	eastWall.CanCollide = true
-	eastWall.Material = Enum.Material.Concrete
-	eastWall.Color = Color3.fromRGB(80, 80, 90)
-	eastWall.Parent = lobbyModel
-	
-	-- West wall
-	local westWall = Instance.new("Part")
-	westWall.Name = "WestWall"
-	westWall.Size = Vector3.new(wallThickness, wallHeight, LOBBY_SIZE.Z)
-	westWall.Position = LOBBY_POSITION + Vector3.new(-LOBBY_SIZE.X/2, wallHeight/2, 0)
-	westWall.Anchored = true
-	westWall.CanCollide = true
-	westWall.Material = Enum.Material.Concrete
-	westWall.Color = Color3.fromRGB(80, 80, 90)
-	westWall.Parent = lobbyModel
-	
-	-- Add some lighting
-	local light = Instance.new("PointLight")
-	light.Brightness = 2
-	light.Range = 60
-	light.Color = Color3.fromRGB(255, 255, 200)
-	light.Parent = platform
-	
-	-- Parent to workspace
-	lobbyModel.Parent = workspace
-	self.lobbyModel = lobbyModel
-	
-	print("[LobbySetup] Lobby created at position", LOBBY_POSITION)
-	return lobbyModel
+	platform.Size = Vector3.new(60, 2, 60)
+	platform.Position = LOBBY_BASE + Vector3.new(0, 5, 0)
+	platform.TopSurface = Enum.SurfaceType.Smooth
+	platform.BottomSurface = Enum.SurfaceType.Smooth
+	platform.Parent = model
+
+	-- Simple walls (optional, helps stop sliding off)
+	local function wall(name, size, pos)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Anchored = true
+		p.CanCollide = true
+		p.Size = size
+		p.Position = pos
+		p.TopSurface = Enum.SurfaceType.Smooth
+		p.BottomSurface = Enum.SurfaceType.Smooth
+		p.Parent = model
+		return p
+	end
+
+	wall("Wall_N", Vector3.new(60, 12, 2), platform.Position + Vector3.new(0, 6, 31))
+	wall("Wall_S", Vector3.new(60, 12, 2), platform.Position + Vector3.new(0, 6, -31))
+	wall("Wall_E", Vector3.new(2, 12, 60), platform.Position + Vector3.new(31, 6, 0))
+	wall("Wall_W", Vector3.new(2, 12, 60), platform.Position + Vector3.new(-31, 6, 0))
+
+	-- SpawnLocation (optional)
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "LobbySpawn"
+	spawn.Anchored = true
+	spawn.CanCollide = true
+	spawn.Size = Vector3.new(6, 1, 6)
+	spawn.Position = platform.Position + Vector3.new(0, 2, 0)
+	spawn.Transparency = 1
+	spawn.Neutral = true
+	spawn.Duration = 0
+	spawn.Parent = model
+
+	model.Parent = Workspace
+
+	self.lobbyModel = model
+	print(string.format("[LobbySetup] Lobby created at position %d, %d, %d", LOBBY_BASE.X, 5, LOBBY_BASE.Z))
 end
 
--- Get the lobby spawn position
-function LobbySetup:getLobbySpawnPosition()
-	return LOBBY_POSITION + Vector3.new(0, 5, 0)
-end
-
--- Clean up the lobby
 function LobbySetup:cleanup()
 	if self.lobbyModel and self.lobbyModel.Parent then
 		self.lobbyModel:Destroy()
 	end
 	self.lobbyModel = nil
+
+	local existing = Workspace:FindFirstChild(LOBBY_MODEL_NAME)
+	if existing then
+		existing:Destroy()
+	end
 end
 
 return LobbySetup
