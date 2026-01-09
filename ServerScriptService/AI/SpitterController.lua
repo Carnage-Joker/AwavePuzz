@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- SpitterController.lua
 -- Specialized controller for Spitter zombies with ranged attacks and cover usage
 
@@ -25,21 +26,21 @@ local CONFIG = {
 
 function SpitterController.new(zombieModel, stats, baseManager, playerManager)
 	local self = setmetatable({}, SpitterController)
-	
+
 	self.zombieModel = zombieModel
 	self.humanoid = zombieModel:FindFirstChildOfClass("Humanoid")
 	self.rootPart = zombieModel:FindFirstChild("HumanoidRootPart")
 	self.stats = stats
 	self.baseManager = baseManager
 	self.playerManager = playerManager
-	
+
 	self.attackCooldown = 0
 	self.telegraphCooldown = 0
 	self.isTelegraphing = false
 	self.coverCheckCooldown = 0
 	self.currentCover = nil
 	self.inCover = false
-	
+
 	return self
 end
 
@@ -48,26 +49,26 @@ function SpitterController:hasLineOfSight(targetPos)
 	if not self.rootPart then
 		return false
 	end
-	
+
 	local origin = self.rootPart.Position + Vector3.new(0, 2, 0)
 	local direction = (targetPos - origin)
 	local distance = direction.Magnitude
-	
+
 	if distance > CONFIG.MAX_RANGE then
 		return false
 	end
-	
+
 	local raycastParams = RaycastParams.new()
 	raycastParams.FilterDescendantsInstances = {self.zombieModel}
 	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	
+
 	local result = workspace:Raycast(origin, direction, raycastParams)
-	
+
 	-- No obstacle = clear LOS
 	if not result then
 		return true
 	end
-	
+
 	-- Check if hit target or something beyond target
 	local hitDistance = (result.Position - origin).Magnitude
 	return hitDistance >= distance * 0.9 -- Allow some tolerance
@@ -78,17 +79,17 @@ function SpitterController:findCover()
 	if not self.rootPart then
 		return nil
 	end
-	
+
 	local myPos = self.rootPart.Position
 	local searchSize = Vector3.new(CONFIG.COVER_SEARCH_RADIUS, 10, CONFIG.COVER_SEARCH_RADIUS)
-	
+
 	-- Use GetPartBoundsInBox instead of deprecated Region3
 	local overlapParams = OverlapParams.new()
 	overlapParams.FilterDescendantsInstances = {self.zombieModel}
 	overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-	
+
 	local partsInRegion = workspace:GetPartBoundsInBox(CFrame.new(myPos), searchSize, overlapParams)
-	
+
 	local coverCandidates = {}
 	for _, part in ipairs(partsInRegion) do
 		-- Look for solid objects large enough to be cover
@@ -100,12 +101,12 @@ function SpitterController:findCover()
 			end
 		end
 	end
-	
+
 	-- Return random cover point
 	if #coverCandidates > 0 then
 		return coverCandidates[math.random(1, #coverCandidates)]
 	end
-	
+
 	return nil
 end
 
@@ -114,7 +115,7 @@ function SpitterController:getCoverPosition(coverPart)
 	if not coverPart then
 		return nil
 	end
-	
+
 	-- Position behind cover relative to target
 	local coverPos = coverPart.Position
 	local offset = Vector3.new(
@@ -122,7 +123,7 @@ function SpitterController:getCoverPosition(coverPart)
 		0,
 		math.random(-3, 3)
 	)
-	
+
 	return coverPos + offset
 end
 
@@ -131,19 +132,19 @@ function SpitterController:shouldSeekCover(targetPos)
 	if not self.rootPart then
 		return false
 	end
-	
+
 	-- If already in cover, stay there
 	if self.inCover then
 		return false
 	end
-	
+
 	-- Check LOS - if target can see us, seek cover
 	local hasLOS = self:hasLineOfSight(targetPos)
 	if hasLOS then
 		-- Roll for cover seeking
 		return math.random() < 0.4 -- 40% chance to seek cover when exposed
 	end
-	
+
 	return false
 end
 
@@ -152,10 +153,10 @@ function SpitterController:fireAcidSpit(targetPos)
 	if not self.rootPart then
 		return
 	end
-	
+
 	local origin = self.rootPart.Position + Vector3.new(0, 2, 0)
 	local direction = (targetPos - origin).Unit
-	
+
 	-- Create acid projectile
 	local projectile = Instance.new("Part")
 	projectile.Name = "AcidSpit"
@@ -167,24 +168,24 @@ function SpitterController:fireAcidSpit(targetPos)
 	projectile.Anchored = false
 	projectile.Position = origin
 	projectile.Parent = workspace
-	
+
 	-- Add velocity
 	local bodyVelocity = Instance.new("BodyVelocity")
 	bodyVelocity.Velocity = direction * CONFIG.PROJECTILE_SPEED
 	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
 	bodyVelocity.Parent = projectile
-	
+
 	-- Store damage info
 	projectile:SetAttribute("Damage", CONFIG.PROJECTILE_DAMAGE)
 	projectile:SetAttribute("IsZombieProjectile", true)
-	
+
 	-- Handle collision
 	local hitConnection
 	hitConnection = projectile.Touched:Connect(function(hit)
 		if hit:IsDescendantOf(self.zombieModel) then
 			return -- Don't hit self
 		end
-		
+
 		-- Check if hit player
 		local character = hit.Parent
 		if character and character:FindFirstChildOfClass("Humanoid") then
@@ -193,14 +194,14 @@ function SpitterController:fireAcidSpit(targetPos)
 				self.playerManager:damagePlayer(player, CONFIG.PROJECTILE_DAMAGE)
 			end
 		end
-		
+
 		-- Check if hit base
 		if hit.Name == "HitBox" or hit.Parent.Name == "BaseCaptureZone" then
 			if self.baseManager then
 				self.baseManager:damageBase(CONFIG.PROJECTILE_DAMAGE)
 			end
 		end
-		
+
 		-- Create splash effect
 		local splash = Instance.new("Part")
 		splash.Size = Vector3.new(3, 0.5, 3)
@@ -212,15 +213,15 @@ function SpitterController:fireAcidSpit(targetPos)
 		splash.Position = projectile.Position
 		splash.Parent = workspace
 		Debris:AddItem(splash, 0.5)
-		
+
 		-- Destroy projectile
 		hitConnection:Disconnect()
 		projectile:Destroy()
 	end)
-	
+
 	-- Auto-destroy after 3 seconds
 	Debris:AddItem(projectile, 3)
-	
+
 	print("[SpitterController] Fired acid spit at", targetPos)
 end
 
@@ -229,7 +230,7 @@ function SpitterController:telegraphAttack()
 	if not self.rootPart then
 		return
 	end
-	
+
 	-- Create telegraph indicator
 	local indicator = Instance.new("Part")
 	indicator.Name = "AttackTelegraph"
@@ -241,9 +242,9 @@ function SpitterController:telegraphAttack()
 	indicator.Anchored = true
 	indicator.Position = self.rootPart.Position + Vector3.new(0, 3, 0)
 	indicator.Parent = self.zombieModel
-	
+
 	Debris:AddItem(indicator, CONFIG.TELEGRAPH_TIME)
-	
+
 	self.isTelegraphing = true
 	self.telegraphCooldown = CONFIG.TELEGRAPH_TIME
 end
@@ -253,13 +254,13 @@ function SpitterController:tryAttack(targetPos, targetType, targetPlayer)
 	if not self.rootPart then
 		return false
 	end
-	
+
 	if self.attackCooldown > 0 or self.telegraphCooldown > 0 then
 		return false
 	end
-	
+
 	local distance = (targetPos - self.rootPart.Position).Magnitude
-	
+
 	-- Check if in attack range
 	if distance >= CONFIG.MIN_RANGE and distance <= CONFIG.MAX_RANGE then
 		-- Check LOS
@@ -267,11 +268,11 @@ function SpitterController:tryAttack(targetPos, targetType, targetPlayer)
 			-- Telegraph attack
 			self:telegraphAttack()
 			self.attackCooldown = CONFIG.ATTACK_COOLDOWN
-			
+
 			-- Store reference for safe callback
 			local zombieModel = self.zombieModel
 			local rootPart = self.rootPart
-			
+
 			-- Fire after telegraph with validation
 			task.delay(CONFIG.TELEGRAPH_TIME, function()
 				-- Validate objects still exist before firing
@@ -280,11 +281,11 @@ function SpitterController:tryAttack(targetPos, targetType, targetPlayer)
 					self.isTelegraphing = false
 				end
 			end)
-			
+
 			return true
 		end
 	end
-	
+
 	return false
 end
 
@@ -293,26 +294,26 @@ function SpitterController:getDesiredPosition(targetPos)
 	if not self.rootPart then
 		return targetPos
 	end
-	
+
 	local myPos = self.rootPart.Position
 	local distance = (targetPos - myPos).Magnitude
-	
+
 	-- If too close, back away
 	if distance < CONFIG.MIN_RANGE then
 		local direction = (myPos - targetPos).Unit
 		return myPos + (direction * 5)
 	end
-	
+
 	-- If too far, move closer (but not too close)
 	if distance > CONFIG.MAX_RANGE then
 		local direction = (targetPos - myPos).Unit
 		return myPos + (direction * 5)
 	end
-	
+
 	-- Check if should seek cover
 	if self.coverCheckCooldown <= 0 then
 		self.coverCheckCooldown = CONFIG.COVER_CHECK_INTERVAL
-		
+
 		if self:shouldSeekCover(targetPos) then
 			local cover = self:findCover()
 			if cover then
@@ -322,7 +323,7 @@ function SpitterController:getDesiredPosition(targetPos)
 			end
 		end
 	end
-	
+
 	-- Stay at current position (ideal range)
 	return myPos
 end
@@ -332,30 +333,30 @@ function SpitterController:update(deltaTime, targetPos, targetType, targetPlayer
 	if not self.zombieModel or not self.zombieModel.Parent then
 		return nil
 	end
-	
+
 	-- Update cooldowns
 	if self.attackCooldown > 0 then
 		self.attackCooldown = math.max(0, self.attackCooldown - deltaTime)
 	end
-	
+
 	if self.telegraphCooldown > 0 then
 		self.telegraphCooldown = math.max(0, self.telegraphCooldown - deltaTime)
 	end
-	
+
 	if self.coverCheckCooldown > 0 then
 		self.coverCheckCooldown = math.max(0, self.coverCheckCooldown - deltaTime)
 	end
-	
+
 	if not targetPos then
 		return nil
 	end
-	
+
 	-- Try to attack if possible
 	self:tryAttack(targetPos, targetType, targetPlayer)
-	
+
 	-- Get desired position (maintains range, uses cover)
 	local desiredPos = self:getDesiredPosition(targetPos)
-	
+
 	return desiredPos
 end
 
