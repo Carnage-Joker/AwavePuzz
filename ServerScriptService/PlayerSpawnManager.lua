@@ -302,6 +302,25 @@ function PlayerSpawnManager:getMapSpawnPosition()
 	-- 1) Prefer explicit per-map player spawns:
 	--    SpawnPoints.PlayerSpawns.Spawn1..SpawnN (or Spawn<number>) inside the loaded map model.
 	local function findPlayerSpawnsContainer()
+		-- First, try to find spawn points within the ActiveMap (preferred)
+		local activeMap = Workspace:FindFirstChild("ActiveMap")
+		if activeMap then
+			local spawnPoints = activeMap:FindFirstChild("SpawnPoints")
+			if spawnPoints then
+				local playerSpawns = spawnPoints:FindFirstChild("PlayerSpawns")
+				if playerSpawns then
+					return playerSpawns
+				end
+			end
+
+			-- Check for PlayerSpawns directly under ActiveMap
+			local playerSpawnsInMap = activeMap:FindFirstChild("PlayerSpawns")
+			if playerSpawnsInMap then
+				return playerSpawnsInMap
+			end
+		end
+
+		-- Fallback: search anywhere in Workspace (for compatibility)
 		local spawnPoints = Workspace:FindFirstChild("SpawnPoints", true)
 		if spawnPoints then
 			local playerSpawns = spawnPoints:FindFirstChild("PlayerSpawns")
@@ -346,15 +365,22 @@ function PlayerSpawnManager:getMapSpawnPosition()
 
 	local function pickFromBag()
 		local playerSpawnsContainer = findPlayerSpawnsContainer()
-		if not playerSpawnsContainer then return nil end
+		if not playerSpawnsContainer then 
+			print("[PlayerSpawnManager] No PlayerSpawns container found, using fallback")
+			return nil 
+		end
 
 		if self._spawnBagSource ~= playerSpawnsContainer or not self._spawnBag or #self._spawnBag == 0 then
 			self._spawnBag = buildSpawnBag(playerSpawnsContainer)
 			self._spawnBagIndex = 1
 			self._spawnBagSource = playerSpawnsContainer
+			print(string.format("[PlayerSpawnManager] Built spawn bag with %d spawn points", self._spawnBag and #self._spawnBag or 0))
 		end
 
-		if not self._spawnBag or #self._spawnBag == 0 then return nil end
+		if not self._spawnBag or #self._spawnBag == 0 then 
+			warn("[PlayerSpawnManager] Spawn bag is empty after building")
+			return nil 
+		end
 
 		if self._spawnBagIndex > #self._spawnBag then
 			for i = #self._spawnBag, 2, -1 do
@@ -423,19 +449,28 @@ function PlayerSpawnManager:getMapSpawnPosition()
 	do
 		local baseCamp = Workspace:FindFirstChild("BaseCamp")
 		if baseCamp then
+			print("[PlayerSpawnManager] Found BaseCamp, checking for spawn points")
 			local ref = baseCamp:FindFirstChild("BaseCampSpawn")
 			if ref and ref:IsA("BasePart") then
 				local c = ref.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
 				local final = resolveCandidate(c)
-				if final then return final end
+				if final then 
+					print("[PlayerSpawnManager] Using BaseCampSpawn position")
+					return final 
+				end
 			end
 
 			local primary = baseCamp.PrimaryPart
 			if primary then
 				local c = primary.Position + Vector3.new(math.random(-18, 18), 0, math.random(-18, 18))
 				local final = resolveCandidate(c)
-				if final then return final end
+				if final then 
+					print("[PlayerSpawnManager] Using BaseCamp PrimaryPart position")
+					return final 
+				end
 			end
+		else
+			warn("[PlayerSpawnManager] BaseCamp not found in Workspace, using hard fallback")
 		end
 	end
 
@@ -444,15 +479,26 @@ function PlayerSpawnManager:getMapSpawnPosition()
 	return resolveCandidate(fallback) or (MAP_OFFSET + Vector3.new(0, 10, 0))
 end
 
+-- Private method to clear spawn bag cache
+function PlayerSpawnManager:_clearSpawnBagCache()
+	self._spawnBag = nil
+	self._spawnBagIndex = 1
+	self._spawnBagSource = nil
+end
+
 function PlayerSpawnManager:resetForNewRound()
 	self.playersSpawnedOnMap = {}
 	for userId, _ in pairs(self.playerSpawnState) do
 		self.playerSpawnState[userId] = "waiting"
 	end
 
-	self._spawnBag = nil
-	self._spawnBagIndex = 1
-	self._spawnBagSource = nil
+	self:_clearSpawnBagCache()
+end
+
+-- Called when a new map is loaded to clear cached spawn points
+function PlayerSpawnManager:onMapLoaded()
+	print("[PlayerSpawnManager] Map loaded, clearing spawn bag cache")
+	self:_clearSpawnBagCache()
 end
 
 function PlayerSpawnManager:onPlayerRemoving(player)
