@@ -1,3 +1,5 @@
+-- @ScriptType: ModuleScript
+
 -- Spawner.lua
 -- Server script that spawns zombies based on wave configuration
 -- Features tactical AI, dynamic pressure, and intelligent composition
@@ -42,7 +44,7 @@ function Spawner.new(weaponService, baseManager, playerManager)
 
 	-- Optional integration
 	self.resourceSpawner = nil
-	
+
 	-- AI Services (validate GameConfig.AI exists before initialization)
 	if not GameConfig.AI then
 		warn("[Spawner] GameConfig.AI is not defined. AI services will not be initialized.")
@@ -55,13 +57,13 @@ function Spawner.new(weaponService, baseManager, playerManager)
 		self.surroundService = SurroundService.new()
 		self.aiDirector = AIDirector.new(baseManager, playerManager)
 		self.bossAuraService = BossAuraService.new()
-		
+
 		-- Enable debug mode if configured
 		if GameConfig.AI.DEBUG_MODE then
 			self.bossAuraService:setDebugMode(true)
 		end
 	end
-	
+
 	-- Current wave tracking
 	self.currentWave = 0
 
@@ -120,9 +122,44 @@ function Spawner:generateSpawnPointsForRound()
 end
 
 function Spawner:cleanupGeneratedSpawnPoints()
-	if self.spawnGenerator then
-		self.spawnGenerator:cleanupGeneratedSpawnPoints()
+	-- Clear any generated spawn points safely, even if the generator lacks the cleanup method
+	if not self.spawnGenerator then
+		self.allSpawnPoints = {}
+		return
 	end
+
+	local ok = false
+
+	-- Prefer a dedicated cleanup function if it exists
+	if type(self.spawnGenerator.cleanupGeneratedSpawnPoints) == "function" then
+		ok = pcall(function()
+			self.spawnGenerator:cleanupGeneratedSpawnPoints()
+		end)
+
+		-- Fallback: some generators use cleanup() or reset()
+	elseif type(self.spawnGenerator.cleanup) == "function" then
+		ok = pcall(function()
+			self.spawnGenerator:cleanup()
+		end)
+	elseif type(self.spawnGenerator.reset) == "function" then
+		ok = pcall(function()
+			self.spawnGenerator:reset()
+		end)
+	end
+
+	-- Final fallback: delete common “generated points” folders if your generator created them
+	if not ok then
+		for _, name in ipairs({
+			"GeneratedSpawnPoints",
+			"GeneratedZombieSpawnPoints",
+			"GeneratedSpawns",
+			"DebugSpawnPoints",
+			}) do
+			local f = workspace:FindFirstChild(name)
+			if f then f:Destroy() end
+		end
+	end
+
 	self.allSpawnPoints = {}
 	print("[Spawner] Cleaned up generated spawn points")
 end
@@ -228,7 +265,7 @@ function Spawner:spawnZombie(zombieType)
 		self.bossAuraService,
 		self.currentWave
 	)
-	
+
 	if brain then
 		self.zombieBrains[zombieModel] = brain
 		table.insert(self.activeZombies, zombieModel)
@@ -363,7 +400,7 @@ end
 -- Set current wave number (for AI services)
 function Spawner:setCurrentWave(waveNumber)
 	self.currentWave = waveNumber
-	
+
 	-- Initialize surge timer on first wave
 	if waveNumber == 1 and self.aiDirector then
 		self.aiDirector:initializeSurgeTimer()
@@ -397,16 +434,16 @@ function Spawner:update(deltaTime)
 	if self.targetingService then
 		self.targetingService:update(deltaTime)
 	end
-	
+
 	if self.surroundService then
 		self.surroundService:update(deltaTime)
 	end
-	
+
 	if self.aiDirector then
 		local totalZombies = #self.activeZombies + #self.spawnQueue
 		self.aiDirector:update(deltaTime, self.currentWave, totalZombies)
 	end
-	
+
 	if self.bossAuraService then
 		self.bossAuraService:update(deltaTime, self.activeZombies)
 	end
