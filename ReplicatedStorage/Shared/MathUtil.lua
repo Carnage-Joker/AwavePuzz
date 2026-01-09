@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- MathUtil.lua
 -- Shared mathematical utility functions used across client and server
 -- Consolidates duplicate utility functions from multiple files
@@ -26,12 +27,6 @@ function MathUtil.map(value, inMin, inMax, outMin, outMax)
 	if inMin == inMax then
 		warn("[MathUtil.map] Input range is zero (inMin == inMax). Returning outMin.")
 		return outMin
-	end
-
-	-- Validate that the input range is not inverted
-	if inMax < inMin then
-		warn("[MathUtil.map] Input range is inverted (inMax < inMin). Swapping inMin and inMax.")
-		inMin, inMax = inMax, inMin
 	end
 	return outMin + (outMax - outMin) * ((value - inMin) / (inMax - inMin))
 end
