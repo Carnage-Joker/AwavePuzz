@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- ZombieTypes.lua
 -- Configuration for different zombie types and their stats
 -- Extended with tactical AI parameters for each archetype

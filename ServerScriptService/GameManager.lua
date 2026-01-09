@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- GameManager.lua
 -- Main server-side game manager that orchestrates waves, base health, win/lose conditions
 -- Supports server disable via disableServer() method
@@ -62,7 +63,7 @@ function GameManager.new(allianceService)
 	self.weaponService = WeaponService.new(self.playerManager, allianceService)
 	self.fpsWeaponService = FPSWeaponService.new(self.playerManager, self.weaponService)
 	self.weaponService:setFPSWeaponService(self.fpsWeaponService)
-	
+
 	-- FPS Animation replication service
 	self.fpsAnimationService = FPSAnimationService.new()
 
@@ -80,22 +81,21 @@ function GameManager.new(allianceService)
 	self.lobbyManager:setGameManager(self)
 
 	self.spectatorManager = SpectatorManager.new()
-	
+
 	-- Player spawn manager (controls when and where players spawn)
 	self.playerSpawnManager = PlayerSpawnManager.new()
 	self.playerSpawnManager:setGameManager(self)
-	
+
 	-- Lobby setup (creates lobby area for players before map loads)
 	self.lobbySetup = LobbySetup.new()
 	self.lobbySetup:createLobby()
 
 	self.playerManager:setWeaponService(self.weaponService)
-	
+
 	-- Achievement tracking (will be initialized later to avoid circular dependency)
 	self.achievementService = nil
 
 	-- State
-	-- Start with title screen if enabled, otherwise waiting
 	if GameConfig.SHOW_TITLE_SCREEN then
 		self.currentState = GameManager.States.TITLE_SCREEN
 		print("[GameManager] Starting in TITLE_SCREEN state")
@@ -111,7 +111,7 @@ function GameManager.new(allianceService)
 	self.stateTimer = 0
 	self.waveTimeLimit = 0
 	self.waveTimeRemaining = 0
-	
+
 	-- Title screen and epilogue tracking
 	self.playersReadyForEpilogue = {} -- Track which players have passed title screen
 	self.playersCompletedEpilogue = {} -- Track which players have finished epilogue
@@ -123,6 +123,9 @@ function GameManager.new(allianceService)
 	self._deathDebounce = {}              -- userId -> true (for current round)
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
+
+	-- ✅ FIX: prevents double map load / double base setup / double spawning
+	self._lobbyResolved = false
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
@@ -146,26 +149,6 @@ function GameManager:configureSpawnersForMap()
 end
 
 function GameManager:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	-- RemoteEvent Documentation:
-	-- - WaveAnnounce: Server -> Client, announces new wave start {wave = number}
-	-- - WaveUpdate: Server -> Client, updates wave status {zombiesRemaining = number, timeRemaining = number}
-	-- - GameStateUpdate: Server -> Client, updates game state {state = string, data = table}
-	-- - CureUpdate: Server -> Client, updates cure progress {progress = number}
-	-- - BaseHealthUpdate: Server -> Client, updates base health {health = number, maxHealth = number}
-	-- - MapUpdate: Server -> Client, sends map information {mapId = string, mapName = string}
-	-- - ScoreboardUpdate: Server -> Client, updates scoreboard data {players = table}
-	-- - ShowScoreboard: Server -> Client, signals to display scoreboard
-	-- - HideScoreboard: Server -> Client, signals to hide scoreboard
-	-- - ShowTitleScreen: Server -> Client, signals to show title screen
-	-- - HideTitleScreen: Server -> Client, signals to hide title screen
-	-- - TitleScreenContinue: Client -> Server, player wants to continue from title
-	-- - ShowEpilogue: Server -> Client, signals to show epilogue
-	-- - HideEpilogue: Server -> Client, signals to hide epilogue
-	-- - EpilogueComplete: Client -> Server, player finished epilogue
-	-- - ShowCredits: Server -> Client, signals to show victory credits {survivorData = table}
-	-- - HideCredits: Server -> Client, signals to hide credits
-	-- - AchievementUnlocked: Server -> Client, signals achievement unlock {achievementId = string}
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WaveAnnounce",
 		"WaveUpdate",
@@ -184,9 +167,10 @@ function GameManager:setupRemoteEvents()
 		"EpilogueComplete",
 		"ShowCredits",
 		"HideCredits",
-		"AchievementUnlocked"
+		"AchievementUnlocked",
+		"BetrayalStarted"
 	})
-	
+
 	-- Hook title screen and epilogue events
 	self:_hookIntroRemotes()
 end
@@ -221,7 +205,7 @@ function GameManager:_hookIntroRemotes()
 			self:onPlayerPassedTitleScreen(player)
 		end)
 	end
-	
+
 	-- Hook epilogue complete event
 	if self.remoteEvents.EpilogueComplete then
 		self.remoteEvents.EpilogueComplete.OnServerEvent:Connect(function(player)
@@ -232,10 +216,10 @@ end
 
 function GameManager:onPlayerPassedTitleScreen(player)
 	if not player then return end
-	
+
 	print(string.format("[GameManager] Player %s passed title screen", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
-	
+
 	-- If showing epilogue, send them to epilogue
 	if GameConfig.SHOW_EPILOGUE and self.currentState == GameManager.States.TITLE_SCREEN then
 		print(string.format("[GameManager] Showing epilogue to %s", player.Name))
@@ -243,33 +227,31 @@ function GameManager:onPlayerPassedTitleScreen(player)
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
 	end
-	
+
 	-- Check if all players have passed title screen
 	self:checkAllPlayersReadyForEpilogue()
 end
 
 function GameManager:onPlayerCompletedEpilogue(player)
 	if not player then return end
-	
+
 	print(string.format("[GameManager] Player %s completed epilogue", player.Name))
 	self.playersCompletedEpilogue[player.UserId] = true
-	
+
 	-- Check if all players have completed epilogue
 	self:checkAllPlayersCompletedEpilogue()
 end
 
 function GameManager:checkAllPlayersReadyForEpilogue()
-	-- Check if all current players have passed the title screen
 	local allPlayers = Players:GetPlayers()
 	if #allPlayers == 0 then return end
-	
+
 	for _, player in ipairs(allPlayers) do
 		if not self.playersReadyForEpilogue[player.UserId] then
-			return -- Not all players ready yet
+			return
 		end
 	end
-	
-	-- All players ready, transition to epilogue or waiting
+
 	print("[GameManager] All players passed title screen")
 	if GameConfig.SHOW_EPILOGUE then
 		print("[GameManager] Transitioning to EPILOGUE state")
@@ -281,17 +263,15 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 end
 
 function GameManager:checkAllPlayersCompletedEpilogue()
-	-- Check if all current players have completed the epilogue
 	local allPlayers = Players:GetPlayers()
 	if #allPlayers == 0 then return end
-	
+
 	for _, player in ipairs(allPlayers) do
 		if not self.playersCompletedEpilogue[player.UserId] then
-			return -- Not all players completed yet
+			return
 		end
 	end
-	
-	-- All players completed, transition to waiting
+
 	print("[GameManager] All players completed epilogue, transitioning to WAITING")
 	self:setState(GameManager.States.WAITING)
 end
@@ -417,7 +397,7 @@ function GameManager:onPlayerAdded(player)
 	if self.fpsWeaponService and self.fpsWeaponService.initializePlayer then
 		self.fpsWeaponService:initializePlayer(player)
 	end
-	
+
 	-- Initialize FPS animation replication
 	if self.fpsAnimationService and self.fpsAnimationService.initializePlayer then
 		self.fpsAnimationService:initializePlayer(player)
@@ -430,27 +410,22 @@ function GameManager:onPlayerAdded(player)
 	self:broadcastScoreboard()
 
 	self:_hookPlayerDeath(player)
-	
+
 	-- Initialize player spawn manager
 	self.playerSpawnManager:onPlayerAdded(player)
-	
+
 	-- Handle title screen and epilogue for new players
 	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.SHOW_TITLE_SCREEN then
-		-- Show title screen to the new player
 		if self.remoteEvents.ShowTitleScreen then
 			self.remoteEvents.ShowTitleScreen:FireClient(player)
 		end
 	elseif self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
-		-- Late joiner during epilogue: show them the epilogue but don't block game progression
-		-- Mark as both ready and completed to prevent blocking other players
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
-		-- Still show them the epilogue, they can watch it independently
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
 	else
-		-- Game already started, skip intro for this player
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
 	end
@@ -463,8 +438,7 @@ function GameManager:onPlayerRemoving(player)
 	if self.fpsWeaponService and self.fpsWeaponService.removePlayer then
 		self.fpsWeaponService:removePlayer(player)
 	end
-	
-	-- Remove from FPS animation service
+
 	if self.fpsAnimationService and self.fpsAnimationService.removePlayer then
 		self.fpsAnimationService:removePlayer(player)
 	end
@@ -491,15 +465,12 @@ function GameManager:setState(newState)
 			cureProgress = self.cureProgress
 		})
 	end
-	
-	-- Handle special state transitions
+
 	if newState == GameManager.States.TITLE_SCREEN then
-		-- Show title screen to all players
 		if self.remoteEvents.ShowTitleScreen then
 			self.remoteEvents.ShowTitleScreen:FireAllClients()
 		end
 	elseif newState == GameManager.States.EPILOGUE then
-		-- Show epilogue to all players who haven't seen it
 		if self.remoteEvents.ShowEpilogue then
 			for _, player in ipairs(Players:GetPlayers()) do
 				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
@@ -533,18 +504,12 @@ function GameManager:setCureSynthesisService(cureSynthesisService)
 end
 
 function GameManager:getWaveManager()
-	-- GameManager handles waves directly, return self for WaveManager interface compatibility
-	-- CureSynthesisService needs access to intensity multiplier control
 	return self
 end
 
--- WaveManager interface compatibility methods
 function GameManager:setIntensityMultiplier(multiplier)
 	self.intensityMultiplier = multiplier or 1.0
 	print("[GameManager] Wave intensity multiplier set to", self.intensityMultiplier)
-	
-	-- TODO: Apply multiplier to zombie spawning/attack rates
-	-- This could modify spawn intervals, attack intervals, or damage
 end
 
 function GameManager:getIntensityMultiplier()
@@ -552,7 +517,6 @@ function GameManager:getIntensityMultiplier()
 end
 
 function GameManager:showVictoryCredits(alivePlayers)
-	-- Build survivor data for credits
 	local survivorData = {}
 	for _, player in ipairs(alivePlayers) do
 		local stats = self:getPlayerStats(player)
@@ -564,8 +528,7 @@ function GameManager:showVictoryCredits(alivePlayers)
 			}
 		})
 	end
-	
-	-- Send credits to all clients
+
 	if self.remoteEvents.ShowCredits then
 		self.remoteEvents.ShowCredits:FireAllClients(survivorData)
 		print("[GameManager] Victory credits shown with", #survivorData, "survivors")
@@ -607,13 +570,15 @@ function GameManager:startLobby()
 	self:setState(GameManager.States.LOBBY)
 	self.stateTimer = GameConfig.LOBBY_VOTING_TIME
 
+	-- ✅ FIX: reset latch for this lobby instance
+	self._lobbyResolved = false
+
 	self:resetForNewRound()
-	
-	-- Recreate lobby for new round
+
 	if self.lobbySetup then
 		self.lobbySetup:createLobby()
 	end
-	
+
 	self.lobbyManager:startVoting()
 
 	return true
@@ -630,15 +595,13 @@ function GameManager:resetForNewRound()
 	end
 
 	self.baseManager:reset()
-	
-	-- Generate intelligent spawn points for the new round
+
 	self.spawner:prepareForNewRound()
 
 	self.spectatorManager:reset()
 	self.lobbyManager:reset()
 	self.playerSpawnManager:resetForNewRound()
-	
-	-- Reset per-round achievement stats
+
 	if self.achievementService and self.achievementService.resetRoundStats then
 		self.achievementService:resetRoundStats()
 	end
@@ -652,7 +615,6 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		-- Keep players in menu-only lobby for new round (no character until map loads)
 		self.playerSpawnManager:keepPlayerInLobby(player)
 	end
 end
@@ -666,15 +628,13 @@ function GameManager:startWave()
 	end
 
 	print("Starting Wave " .. self.currentWave)
-	
-	-- Update wave reached for fun facts
+
 	if self.funFactService then
 		for _, player in ipairs(Players:GetPlayers()) do
 			self.funFactService:updatePlayerStat(player, "waveReached", self.currentWave)
 		end
 	end
-	
-	-- Start spectator tracking for this round (first wave only)
+
 	if self.currentWave == 1 then
 		self.spectatorManager:startRound()
 		print("[GameManager] Spectator mode enabled for this round")
@@ -692,15 +652,12 @@ function GameManager:startWave()
 		})
 	end
 
-	-- Ensure spawn points are available before spawning
 	if #self.spawner.allSpawnPoints == 0 then
 		print("[GameManager] No spawn points available, generating...")
 		self.spawner:generateSpawnPointsForRound()
 	end
 
-	-- Set current wave for AI Director and services
 	self.spawner:setCurrentWave(self.currentWave)
-	
 	self.spawner:spawnWave(waveData.Composition)
 end
 
@@ -736,10 +693,8 @@ function GameManager:onWaveComplete()
 	for _, player in ipairs(Players:GetPlayers()) do
 		self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
 	end
-	
-	-- Display fun fact during intermission
+
 	if self.funFactService then
-		-- Delay slightly so players can see wave complete message first
 		task.delay(2, function()
 			self.funFactService:broadcastFactToAll()
 		end)
@@ -765,8 +720,7 @@ function GameManager:onVictory()
 	self.spawner:clearAllZombies()
 	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
-	
-	-- Get alive players for credits
+
 	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
@@ -778,18 +732,16 @@ function GameManager:onVictory()
 		end
 	end
 	self:broadcastScoreboard()
-	
-	-- Trigger achievements
+
 	if self.achievementService then
 		local baseHealthPercent = self.baseManager:getHealthPercentage()
 		self.achievementService:onRoundEnd(true, alivePlayers, baseHealthPercent)
 	end
 
-	-- Show victory credits with survivor data
 	self:showVictoryCredits(alivePlayers)
-	
+
 	self:showEndOfRoundScoreboard()
-	-- Use configured credits display time plus scoreboard time, with safe fallbacks
+
 	local creditsTime = 20
 	local storyConfigModule = SharedFolder:FindFirstChild("StoryConfig")
 	if storyConfigModule then
@@ -818,8 +770,7 @@ function GameManager:onDefeat(reason)
 		self.playerStats[player.UserId].roundLosses += 1
 	end
 	self:broadcastScoreboard()
-	
-	-- Trigger achievements for defeat
+
 	if self.achievementService then
 		local baseHealthPercent = self.baseManager:getHealthPercentage()
 		self.achievementService:onRoundEnd(false, {}, baseHealthPercent)
@@ -896,8 +847,7 @@ function GameManager:onPlayerDied(player)
 	end
 
 	self:incrementPlayerDeaths(player)
-	
-	-- Track death for fun facts
+
 	if self.funFactService then
 		self.funFactService:incrementPlayerStat(player, "deaths")
 	end
@@ -958,17 +908,23 @@ function GameManager:updateLobby(deltaTime)
 	self.lobbyManager:update(deltaTime)
 
 	local selectedMapId = self.lobbyManager:getSelectedMapId()
+
+	-- ✅ FIX: one-shot latch to stop double load/spawn
+	if self._lobbyResolved then
+		return
+	end
+
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
+		self._lobbyResolved = true
+
 		if GameConfig.ENABLE_MULTI_MAP then
-			-- Clean up lobby before loading map
 			if self.lobbySetup then
 				self.lobbySetup:cleanup()
 			end
-			
+
 			self.mapManager:load(selectedMapId)
 			self:configureSpawnersForMap()
-			
-			-- Spawn all players on the map after it loads
+
 			print("[GameManager] Map loaded, spawning players on map")
 			self.playerSpawnManager:spawnAllPlayersOnMap()
 		end
@@ -991,13 +947,10 @@ function GameManager:updateEndOfRound(deltaTime)
 end
 
 function GameManager:updateTitleScreen(deltaTime)
-	-- Title screen state - players see the title screen
-	-- Wait for all players to continue or timeout
 	if GameConfig.TITLE_SCREEN_TIMEOUT then
 		self.stateTimer += deltaTime
-		
+
 		if self.stateTimer >= GameConfig.TITLE_SCREEN_TIMEOUT then
-			-- Timeout reached, force transition
 			if GameConfig.SHOW_EPILOGUE then
 				self:setState(GameManager.States.EPILOGUE)
 			else
@@ -1008,10 +961,7 @@ function GameManager:updateTitleScreen(deltaTime)
 end
 
 function GameManager:updateEpilogue(deltaTime)
-	-- Epilogue state - players watch the intro cinematic
-	-- Waiting for all players to complete or skip
-	-- Individual players transition themselves by sending EpilogueComplete event
-	-- The checkAllPlayersCompletedEpilogue function handles the state transition
+	-- no-op (handled by client events + checkAllPlayersCompletedEpilogue)
 end
 
 function GameManager:updateScoreboard(deltaTime)
@@ -1030,10 +980,10 @@ end
 function GameManager:update(deltaTime)
 	if self.currentState == GameManager.States.TITLE_SCREEN then
 		self:updateTitleScreen(deltaTime)
-	
+
 	elseif self.currentState == GameManager.States.EPILOGUE then
 		self:updateEpilogue(deltaTime)
-	
+
 	elseif self.currentState == GameManager.States.LOBBY then
 		self:updateLobby(deltaTime)
 

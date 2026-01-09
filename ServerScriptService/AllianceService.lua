@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- AllianceService.lua
 -- Server script that manages player alliances and betrayals
 -- Features:
@@ -31,7 +32,7 @@ function AllianceService.new()
 
 	-- Track pending betrayals (resources transfer based on outcome)
 	self.pendingBetrayals = {}    -- betrayer UserId -> {victimUserId, timestamp}
-	
+
 	-- Track active betrayal windows
 	self.activeWindows = {}       -- betrayer UserId -> true (for cleanup)
 
@@ -285,24 +286,24 @@ function AllianceService:startBetrayalWindow(betrayer, victim)
 	if not betrayer or not victim then
 		return
 	end
-	
+
 	local betrayerId = betrayer.UserId
 	local victimId = victim.UserId
-	
+
 	-- Mark window as active
 	self.activeWindows[betrayerId] = true
-	
+
 	-- Create timer using task.delay
 	task.delay(GameConfig.BETRAYAL_WINDOW, function()
 		-- Check if window is still active (not cancelled)
 		if not self.activeWindows[betrayerId] then
 			return
 		end
-		
+
 		-- Validate players still exist
 		local betrayerPlayer = Players:GetPlayerByUserId(betrayerId)
 		local victimPlayer = Players:GetPlayerByUserId(victimId)
-		
+
 		if not betrayerPlayer or not victimPlayer then
 			-- Cleanup if either player left
 			self.activeWindows[betrayerId] = nil
@@ -311,7 +312,7 @@ function AllianceService:startBetrayalWindow(betrayer, victim)
 			end
 			return
 		end
-		
+
 		-- After 30 seconds, check if betrayal is still pending
 		if self.pendingBetrayals[betrayerId] then
 			local pendingBetrayal = self.pendingBetrayals[betrayerId]
@@ -320,7 +321,7 @@ function AllianceService:startBetrayalWindow(betrayer, victim)
 				self:onVictimSurvives(betrayerPlayer, victimPlayer)
 			end
 		end
-		
+
 		-- Cleanup
 		self.activeWindows[betrayerId] = nil
 	end)
@@ -329,30 +330,30 @@ end
 -- Outcome 2: Victim survives the 30-second betrayal window
 function AllianceService:onVictimSurvives(betrayer, victim)
 	print("[AllianceService]", victim.Name, "survived betrayal by", betrayer.Name, "- victim gets 75%, betrayer gets 25%")
-	
+
 	-- Clear the pending betrayal
 	if self.pendingBetrayals[betrayer.UserId] then
 		self.pendingBetrayals[betrayer.UserId] = nil
 	end
-	
+
 	-- Clear the recent betrayal tracking
 	if self.recentBetrayals[betrayer.UserId] then
 		self.recentBetrayals[betrayer.UserId] = nil
 	end
-	
+
 	-- Transfer 75% of resources from betrayer to victim
 	self:transferBetrayalResources(victim, betrayer, 0.75)
-	
+
 	-- Transfer cure components 75% to victim, 25% stays with betrayer
 	if self.cureService then
 		self:transferCureComponents(victim, betrayer, 0.75)
 	end
-	
+
 	-- Transfer puzzles from betrayer to victim
 	if self.puzzleService and self.puzzleService.onSurvivorVictory then
 		self.puzzleService:onSurvivorVictory(victim, betrayer)
 	end
-	
+
 	-- Notify both players
 	if self.remoteEvents.AllianceUpdate then
 		self.remoteEvents.AllianceUpdate:FireClient(victim, {
@@ -360,16 +361,16 @@ function AllianceService:onVictimSurvives(betrayer, victim)
 			betrayer = betrayer.Name,
 			message = "You survived the betrayal! You received 75% of " .. betrayer.Name .. "'s resources."
 		})
-		
+
 		self.remoteEvents.AllianceUpdate:FireClient(betrayer, {
 			type = "betrayal_failed",
 			victim = victim.Name,
 			message = "Betrayal failed! " .. victim.Name .. " survived and took 75% of your resources."
 		})
 	end
-	
+
 	print(victim.Name .. " survived betrayal and claimed 75% of " .. betrayer.Name .. "'s resources!")
-	
+
 	-- Track betrayal survival for fun facts
 	if self.gameManager and self.gameManager.funFactService then
 		self.gameManager.funFactService:incrementPlayerStat(victim, "betrayalsSurvived")
@@ -457,7 +458,7 @@ function AllianceService:onBetrayerKilled(betrayer, killer)
 	end
 
 	print(killer.Name .. " defeated betrayer " .. betrayer.Name .. " and claimed all resources (100%)!")
-	
+
 	-- Track betrayal survival for fun facts
 	if self.gameManager and self.gameManager.funFactService then
 		self.gameManager.funFactService:incrementPlayerStat(killer, "betrayalsSurvived")
@@ -512,7 +513,7 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 	if self.recentBetrayals[betrayer.UserId] then
 		self.recentBetrayals[betrayer.UserId] = nil
 	end
-	
+
 	-- Clear active window flag to cancel timer
 	if self.activeWindows[betrayer.UserId] then
 		self.activeWindows[betrayer.UserId] = nil
@@ -541,7 +542,7 @@ function AllianceService:onBetrayerKillsVictim(betrayer, victim)
 	end
 
 	print(betrayer.Name .. " completed betrayal of " .. victim.Name .. " and claimed 75% of pooled resources!")
-	
+
 	-- Track betrayal for fun facts
 	if self.gameManager and self.gameManager.funFactService then
 		self.gameManager.funFactService:incrementPlayerStat(betrayer, "betrayalsCommitted")

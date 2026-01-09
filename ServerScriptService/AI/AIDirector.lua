@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- AIDirector.lua
 -- Dynamic base pressure and spawn composition director
 -- Controls zombie distribution and surge timing based on game state
@@ -23,24 +24,24 @@ local CONFIG = {
 
 function AIDirector.new(baseManager, playerManager)
 	local self = setmetatable({}, AIDirector)
-	
+
 	self.baseManager = baseManager
 	self.playerManager = playerManager
-	
+
 	self.basePressurePercent = 0.3 -- Current % of zombies to send to base
 	self.currentSurge = false
 	self.surgeEndTime = 0
 	self.nextSurgeTime = 0
-	
+
 	self.lastUpdateTime = tick()
-	
+
 	return self
 end
 
 -- Count alive players
 function AIDirector:countAlivePlayers()
 	local count = 0
-	
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		if character then
@@ -53,7 +54,7 @@ function AIDirector:countAlivePlayers()
 			end
 		end
 	end
-	
+
 	return count
 end
 
@@ -61,7 +62,7 @@ end
 function AIDirector:getAveragePlayerHP()
 	local totalHP = 0
 	local count = 0
-	
+
 	for _, player in ipairs(Players:GetPlayers()) do
 		local character = player.Character
 		if character then
@@ -76,11 +77,11 @@ function AIDirector:getAveragePlayerHP()
 			end
 		end
 	end
-	
+
 	if count == 0 then
 		return 100
 	end
-	
+
 	return totalHP / count
 end
 
@@ -90,7 +91,7 @@ function AIDirector:getZombiesPerPlayer(totalZombies)
 	if playerCount == 0 then
 		return totalZombies
 	end
-	
+
 	return totalZombies / playerCount
 end
 
@@ -100,38 +101,38 @@ function AIDirector:calculateBasePressure(waveNumber, totalZombies)
 	local avgPlayerHP = self:getAveragePlayerHP()
 	local baseHPPercent = self.baseManager:getHealthPercentage()
 	local zombiesPerPlayer = self:getZombiesPerPlayer(totalZombies)
-	
+
 	local pressure = CONFIG.BASE_PRESSURE_MIN
-	
+
 	-- Wave number influence (higher waves = more base pressure)
 	if waveNumber >= CONFIG.HIGH_WAVE_THRESHOLD then
 		local waveBonus = math.min(0.3, (waveNumber - CONFIG.HIGH_WAVE_THRESHOLD) * 0.05)
 		pressure = pressure + waveBonus
 	end
-	
+
 	-- Player count influence (fewer players = less base pressure, protect the players)
 	if alivePlayers <= CONFIG.LOW_PLAYER_THRESHOLD then
 		pressure = pressure - 0.15
 	end
-	
+
 	-- Base HP influence (low base HP = reduce base pressure, let them repair)
 	if baseHPPercent < CONFIG.LOW_BASE_HP_THRESHOLD then
 		pressure = pressure - 0.2
 	end
-	
+
 	-- Player HP influence (low player HP = reduce base pressure)
 	if avgPlayerHP < 40 then
 		pressure = pressure - 0.1
 	end
-	
+
 	-- Zombie density influence (more zombies per player = increase base pressure)
 	if zombiesPerPlayer > 5 then
 		pressure = pressure + 0.15
 	end
-	
+
 	-- Clamp to valid range
 	pressure = math.clamp(pressure, CONFIG.BASE_PRESSURE_MIN, CONFIG.BASE_PRESSURE_MAX)
-	
+
 	self.basePressurePercent = pressure
 	return pressure
 end
@@ -139,7 +140,7 @@ end
 -- Check if surge should trigger
 function AIDirector:checkSurge()
 	local currentTime = tick()
-	
+
 	-- Check if current surge is active
 	if self.currentSurge then
 		if currentTime >= self.surgeEndTime then
@@ -148,27 +149,27 @@ function AIDirector:checkSurge()
 		end
 		return self.currentSurge
 	end
-	
+
 	-- Check if it's time for new surge
 	if currentTime >= self.nextSurgeTime then
 		self.currentSurge = true
 		self.surgeEndTime = currentTime + CONFIG.SURGE_DURATION
-		
+
 		-- Schedule next surge
 		local nextInterval = math.random(CONFIG.SURGE_INTERVAL_MIN, CONFIG.SURGE_INTERVAL_MAX)
 		self.nextSurgeTime = currentTime + nextInterval
-		
+
 		print("[AIDirector] Surge started! Duration:", CONFIG.SURGE_DURATION, "Next surge in:", nextInterval)
 		return true
 	end
-	
+
 	return false
 end
 
 -- Get spawn composition mix for current wave
 function AIDirector:getSpawnComposition(waveNumber, totalZombies)
 	local composition = {}
-	
+
 	-- Base mix
 	local walkerPercent = 0.4
 	local runnerPercent = 0.3
@@ -178,43 +179,43 @@ function AIDirector:getSpawnComposition(waveNumber, totalZombies)
 	local flankerPercent = 0
 	local breacherPercent = 0
 	local screamerPercent = 0.05
-	
+
 	-- Adjust based on wave number
 	if waveNumber >= 3 then
 		flankerPercent = 0.15
 		runnerPercent = 0.2
 		walkerPercent = 0.25
 	end
-	
+
 	if waveNumber >= 5 then
 		breacherPercent = 0.1
 		spitterPercent = 0.2
 		walkerPercent = 0.2
 	end
-	
+
 	if waveNumber >= 7 then
 		screamerPercent = 0.1
 		bruiserPercent = 0.15
 	end
-	
+
 	-- Boss waves (every 5 waves)
 	if waveNumber % 5 == 0 then
 		bossPercent = 0.05
 		-- Reduce walkers for boss
 		walkerPercent = math.max(0.1, walkerPercent - 0.1)
 	end
-	
+
 	-- Surge modifies composition (more aggressive types)
 	if self.currentSurge then
 		runnerPercent = runnerPercent + 0.1
 		flankerPercent = flankerPercent + 0.1
 		walkerPercent = math.max(0.1, walkerPercent - 0.15)
 	end
-	
+
 	-- Normalize to 1.0
 	local total = walkerPercent + runnerPercent + spitterPercent + bruiserPercent + 
-	              bossPercent + flankerPercent + breacherPercent + screamerPercent
-	
+		bossPercent + flankerPercent + breacherPercent + screamerPercent
+
 	if total > 0 then
 		walkerPercent = walkerPercent / total
 		runnerPercent = runnerPercent / total
@@ -225,7 +226,7 @@ function AIDirector:getSpawnComposition(waveNumber, totalZombies)
 		breacherPercent = breacherPercent / total
 		screamerPercent = screamerPercent / total
 	end
-	
+
 	-- Convert to counts
 	composition.Walker = math.floor(totalZombies * walkerPercent)
 	composition.Runner = math.floor(totalZombies * runnerPercent)
@@ -235,29 +236,29 @@ function AIDirector:getSpawnComposition(waveNumber, totalZombies)
 	composition.Flanker = math.floor(totalZombies * flankerPercent)
 	composition.Breacher = math.floor(totalZombies * breacherPercent)
 	composition.Screamer = math.floor(totalZombies * screamerPercent)
-	
+
 	-- Ensure at least totalZombies are spawned (rounding fix)
 	local actualTotal = 0
 	for _, count in pairs(composition) do
 		actualTotal = actualTotal + count
 	end
-	
+
 	if actualTotal < totalZombies then
 		composition.Walker = composition.Walker + (totalZombies - actualTotal)
 	end
-	
+
 	return composition
 end
 
 -- Should this zombie target base? (based on pressure %)
 function AIDirector:shouldTargetBase(waveNumber, totalZombies)
 	local pressure = self:calculateBasePressure(waveNumber, totalZombies)
-	
+
 	-- During surge, increase base pressure
 	if self.currentSurge then
 		pressure = pressure + 0.2
 	end
-	
+
 	-- Random roll against pressure percentage
 	return math.random() < pressure
 end

@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- FPSMovementController.client.lua
 -- First-person movement controller with crouch, sprint, and air control
 -- Integrates with FirstPersonCamera for smooth movement-camera transitions
@@ -151,7 +152,7 @@ local function updateSprint(deltaTime)
 	-- Check if we can sprint
 	-- For gamepad/touch: Check movement vector magnitude
 	local isMovingForward = keysHeld.forward or (movementVector.Y > 0.2)
-	
+
 	local canSprint = wantsToSprint
 		and isGrounded
 		and isMoving
@@ -253,19 +254,19 @@ end
 local function setupInputCallbacks()
 	-- Initialize InputManager
 	InputManager.initialize()
-	
+
 	-- Sprint action
 	InputManager.bindAction(InputManager.Action.SPRINT, function(active)
 		wantsToSprint = active
 	end)
-	
+
 	-- Crouch action (toggle)
 	InputManager.bindAction(InputManager.Action.CROUCH, function(active)
 		if active then
 			wantsToCrouch = not wantsToCrouch
 		end
 	end)
-	
+
 	-- Jump action
 	InputManager.bindAction(InputManager.Action.JUMP, function(active)
 		if active then
@@ -278,11 +279,11 @@ local function setupInputCallbacks()
 			end
 		end
 	end)
-	
+
 	-- Movement axis (for gamepad/touch)
 	InputManager.bindAxis("Movement", function(vector)
 		movementVector = vector
-		
+
 		-- Update key states based on analog input
 		-- This allows the rest of the code to work with both digital and analog input
 		keysHeld.forward = vector.Y > 0.2
@@ -411,7 +412,7 @@ end
 local function initialize()
 	-- Setup InputManager callbacks
 	setupInputCallbacks()
-	
+
 	-- Connect legacy input events (for keyboard fallback)
 	UserInputService.InputBegan:Connect(onInputBegan)
 	UserInputService.InputEnded:Connect(onInputEnded)

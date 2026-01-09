@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- FunFactConfig.lua
 -- Configuration for randomized loading/downtime fun facts
 -- Facts are categorized and have unlock conditions for progressive revelation
@@ -377,11 +378,11 @@ function FunFactConfig.isFactUnlocked(fact, playerStats)
 	if fact.unlockType == FunFactConfig.UnlockTypes.ALWAYS then
 		return true
 	end
-	
+
 	if not playerStats then
 		return false
 	end
-	
+
 	if fact.unlockType == FunFactConfig.UnlockTypes.WAVE then
 		return (playerStats.waveReached or 0) >= fact.unlockValue
 	elseif fact.unlockType == FunFactConfig.UnlockTypes.BETRAYALS_COMMITTED then
@@ -393,7 +394,7 @@ function FunFactConfig.isFactUnlocked(fact, playerStats)
 	elseif fact.unlockType == FunFactConfig.UnlockTypes.DEATHS then
 		return (playerStats.deaths or 0) >= fact.unlockValue
 	end
-	
+
 	return false
 end
 

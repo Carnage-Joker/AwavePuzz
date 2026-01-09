@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- WaveConfig.lua
 -- Configuration for wave progression and zombie composition
 

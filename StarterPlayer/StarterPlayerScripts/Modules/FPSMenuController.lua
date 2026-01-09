@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- FPSMenuController.client.lua
 -- Controller-friendly menu system with keyboard navigation
 -- No mouse cursor during gameplay - all navigation via keyboard/controller
@@ -6,8 +7,6 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local GuiService = game:GetService("GuiService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -16,7 +15,15 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 
--- Utility: clamp function
+--------------------------------------------------------------------------------
+-- UTILS
+--------------------------------------------------------------------------------
+
+local function clamp(x, minv, maxv)
+	if x < minv then return minv end
+	if x > maxv then return maxv end
+	return x
+end
 
 --------------------------------------------------------------------------------
 -- STATE
@@ -26,7 +33,7 @@ local FPSMenuController = {}
 
 local isMenuOpen = false
 local isPaused = false
-local currentMenuType = nil -- "main", "pause", "settings"
+local currentMenuType = nil -- "pause", "settings", "controls"
 local selectedIndex = 1
 local menuItems = {}
 local settingsValues = {}
@@ -129,17 +136,17 @@ local function createMenuItem(text, itemType, callback, options)
 	item.BackgroundTransparency = 0.3
 	item.BorderSizePixel = 0
 	item.Parent = itemsContainer
-	
+
 	local itemCorner = Instance.new("UICorner")
 	itemCorner.CornerRadius = UDim.new(0, 8)
 	itemCorner.Parent = item
-	
+
 	local itemStroke = Instance.new("UIStroke")
 	itemStroke.Name = "SelectionStroke"
 	itemStroke.Thickness = 0
 	itemStroke.Color = Color3.fromRGB(100, 200, 255)
 	itemStroke.Parent = item
-	
+
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
 	label.Size = UDim2.new(0.6, -20, 1, 0)
@@ -151,9 +158,10 @@ local function createMenuItem(text, itemType, callback, options)
 	label.Text = text
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = item
-	
-	-- Value label for settings
+
 	local valueLabel = nil
+	options = options or {}
+
 	if itemType == "slider" or itemType == "toggle" or itemType == "choice" then
 		valueLabel = Instance.new("TextLabel")
 		valueLabel.Name = "Value"
@@ -165,25 +173,28 @@ local function createMenuItem(text, itemType, callback, options)
 		valueLabel.TextSize = 16
 		valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 		valueLabel.Parent = item
-		
+
 		if itemType == "toggle" then
-			valueLabel.Text = options.default and "ON" or "OFF"
+			local on = options.default and true or false
+			valueLabel.Text = on and "ON" or "OFF"
+			valueLabel.TextColor3 = on and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
 		elseif itemType == "slider" then
 			valueLabel.Text = tostring(options.default or 50)
 		elseif itemType == "choice" then
-			valueLabel.Text = options.choices[options.defaultIndex or 1]
+			valueLabel.Text = options.choices[(options.defaultIndex or 1)]
+			options.currentIndex = options.defaultIndex or 1
 		end
 	end
-	
+
 	table.insert(menuItemFrames, item)
-	
+
 	return {
 		frame = item,
 		label = label,
 		valueLabel = valueLabel,
 		itemType = itemType,
 		callback = callback,
-		options = options or {},
+		options = options,
 	}
 end
 
@@ -202,139 +213,111 @@ local function updateSelection()
 		local frame = item.frame
 		local stroke = frame:FindFirstChild("SelectionStroke")
 		local label = item.label
-		
+
 		if i == selectedIndex then
-			-- Selected state
-			if stroke then
-				stroke.Thickness = 2
-			end
+			if stroke then stroke.Thickness = 2 end
 			frame.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 			label.TextColor3 = Color3.fromRGB(100, 200, 255)
-			
-			-- Scale animation
-			local tween = TweenService:Create(frame, TweenInfo.new(0.1), {
+
+			TweenService:Create(frame, TweenInfo.new(0.1), {
 				Size = UDim2.new(1, 0, 0, 55)
-			})
-			tween:Play()
+			}):Play()
 		else
-			-- Unselected state
-			if stroke then
-				stroke.Thickness = 0
-			end
+			if stroke then stroke.Thickness = 0 end
 			frame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 			label.TextColor3 = Color3.new(1, 1, 1)
-			
-			local tween = TweenService:Create(frame, TweenInfo.new(0.1), {
+
+			TweenService:Create(frame, TweenInfo.new(0.1), {
 				Size = UDim2.new(1, 0, 0, 50)
-			})
-			tween:Play()
+			}):Play()
 		end
 	end
 end
 
 --------------------------------------------------------------------------------
--- MENU DEFINITIONS
+-- MENU DEFINITIONS (forward declarations)
 --------------------------------------------------------------------------------
 
-local function buildPauseMenu()
+local buildPauseMenu, buildSettingsMenu, buildControlsMenu
+
+buildPauseMenu = function()
 	clearMenuItems()
+	currentMenuType = "pause"
 	titleLabel.Text = "PAUSED"
-	
+
 	table.insert(menuItems, createMenuItem("Resume", "button", function()
 		FPSMenuController.closeMenu()
 	end))
-	
+
 	table.insert(menuItems, createMenuItem("Settings", "button", function()
 		buildSettingsMenu()
 		selectedIndex = 1
 		updateSelection()
 	end))
-	
+
 	table.insert(menuItems, createMenuItem("Controls", "button", function()
 		buildControlsMenu()
 		selectedIndex = 1
 		updateSelection()
 	end))
-	
+
 	table.insert(menuItems, createMenuItem("Leave Match", "button", function()
-		-- Teleport to lobby or disconnect
 		player:Kick("Left match")
 	end))
 end
 
-local function buildSettingsMenu()
+buildSettingsMenu = function()
 	clearMenuItems()
+	currentMenuType = "settings"
 	titleLabel.Text = "SETTINGS"
-	
-	-- Mouse Sensitivity
+
 	table.insert(menuItems, createMenuItem("Mouse Sensitivity", "slider", function(value)
 		settingsValues.sensitivity = value / 100
-		local settingsEvent = playerGui:FindFirstChild("BindableEvents")
-		if settingsEvent then
-			local event = settingsEvent:FindFirstChild("SettingsChanged")
-			if event then
-				event:Fire({ sensitivity = settingsValues.sensitivity })
-			end
-		end
+		local bindable = playerGui:FindFirstChild("BindableEvents")
+		local event = bindable and bindable:FindFirstChild("SettingsChanged")
+		if event then event:Fire({ sensitivity = settingsValues.sensitivity }) end
 	end, {
-		min = 10,
-		max = 200,
+		min = 10, max = 200,
 		default = math.floor((settingsValues.sensitivity or 0.5) * 100),
 		step = 5,
 	}))
-	
-	-- Field of View
+
 	table.insert(menuItems, createMenuItem("Field of View", "slider", function(value)
 		settingsValues.fov = value
-		local settingsEvent = playerGui:FindFirstChild("BindableEvents")
-		if settingsEvent then
-			local event = settingsEvent:FindFirstChild("SettingsChanged")
-			if event then
-				event:Fire({ fov = settingsValues.fov })
-			end
-		end
+		local bindable = playerGui:FindFirstChild("BindableEvents")
+		local event = bindable and bindable:FindFirstChild("SettingsChanged")
+		if event then event:Fire({ fov = settingsValues.fov }) end
 	end, {
-		min = 50,
-		max = 120,
+		min = 50, max = 120,
 		default = settingsValues.fov or 70,
 		step = 5,
 	}))
-	
-	-- Invert Y
+
 	table.insert(menuItems, createMenuItem("Invert Y-Axis", "toggle", function(value)
 		settingsValues.invertY = value
-		local settingsEvent = playerGui:FindFirstChild("BindableEvents")
-		if settingsEvent then
-			local event = settingsEvent:FindFirstChild("SettingsChanged")
-			if event then
-				event:Fire({ invertY = settingsValues.invertY })
-			end
-		end
+		local bindable = playerGui:FindFirstChild("BindableEvents")
+		local event = bindable and bindable:FindFirstChild("SettingsChanged")
+		if event then event:Fire({ invertY = settingsValues.invertY }) end
 	end, {
 		default = settingsValues.invertY or false,
 	}))
-	
-	-- Master Volume
+
 	table.insert(menuItems, createMenuItem("Master Volume", "slider", function(value)
 		settingsValues.masterVolume = value / 100
 	end, {
-		min = 0,
-		max = 100,
+		min = 0, max = 100,
 		default = math.floor((settingsValues.masterVolume or 1) * 100),
 		step = 5,
 	}))
-	
-	-- SFX Volume
+
 	table.insert(menuItems, createMenuItem("SFX Volume", "slider", function(value)
 		settingsValues.sfxVolume = value / 100
 	end, {
-		min = 0,
-		max = 100,
+		min = 0, max = 100,
 		default = math.floor((settingsValues.sfxVolume or 0.8) * 100),
 		step = 5,
 	}))
-	
-	-- Back button
+
 	table.insert(menuItems, createMenuItem("Back", "button", function()
 		buildPauseMenu()
 		selectedIndex = 1
@@ -342,11 +325,11 @@ local function buildSettingsMenu()
 	end))
 end
 
-local function buildControlsMenu()
+buildControlsMenu = function()
 	clearMenuItems()
+	currentMenuType = "controls"
 	titleLabel.Text = "CONTROLS"
-	
-	-- Display only, not editable in this version
+
 	local controls = {
 		{ "Move", "W/A/S/D" },
 		{ "Look", "Mouse" },
@@ -358,13 +341,10 @@ local function buildControlsMenu()
 		{ "Jump", "Space" },
 		{ "Weapon 1-4", "1/2/3/4" },
 	}
-	
+
 	for _, control in ipairs(controls) do
 		local item = createMenuItem(control[1], "display", nil, {})
-		if item.valueLabel then
-			item.valueLabel.Parent = nil
-		end
-		
+
 		local keyLabel = Instance.new("TextLabel")
 		keyLabel.Name = "Key"
 		keyLabel.Size = UDim2.new(0.4, -20, 1, 0)
@@ -377,7 +357,7 @@ local function buildControlsMenu()
 		keyLabel.TextXAlignment = Enum.TextXAlignment.Right
 		keyLabel.Parent = item.frame
 	end
-	
+
 	table.insert(menuItems, createMenuItem("Back", "button", function()
 		buildPauseMenu()
 		selectedIndex = 1
@@ -391,78 +371,57 @@ end
 
 local function navigateUp()
 	if #menuItems == 0 then return end
-	
-	selectedIndex = selectedIndex - 1
-	if selectedIndex < 1 then
-		selectedIndex = #menuItems
-	end
+	selectedIndex -= 1
+	if selectedIndex < 1 then selectedIndex = #menuItems end
 	updateSelection()
 end
 
 local function navigateDown()
 	if #menuItems == 0 then return end
-	
-	selectedIndex = selectedIndex + 1
-	if selectedIndex > #menuItems then
-		selectedIndex = 1
-	end
+	selectedIndex += 1
+	if selectedIndex > #menuItems then selectedIndex = 1 end
 	updateSelection()
 end
 
 local function adjustValue(direction)
 	local item = menuItems[selectedIndex]
 	if not item then return end
-	
+
 	if item.itemType == "slider" then
 		local options = item.options
 		local currentValue = tonumber(item.valueLabel.Text) or options.default
 		local step = options.step or 1
-		local newValue = currentValue + (direction * step)
-		newValue = clamp(newValue, options.min, options.max)
+		local newValue = clamp(currentValue + (direction * step), options.min, options.max)
 		item.valueLabel.Text = tostring(newValue)
-		
-		if item.callback then
-			item.callback(newValue)
-		end
-		
+		if item.callback then item.callback(newValue) end
+
 	elseif item.itemType == "toggle" then
 		local current = item.valueLabel.Text == "ON"
 		local newValue = not current
 		item.valueLabel.Text = newValue and "ON" or "OFF"
 		item.valueLabel.TextColor3 = newValue and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
-		
-		if item.callback then
-			item.callback(newValue)
-		end
-		
+		if item.callback then item.callback(newValue) end
+
 	elseif item.itemType == "choice" then
 		local options = item.options
 		local choices = options.choices
 		local currentIndex = options.currentIndex or 1
 		local newIndex = currentIndex + direction
-		
 		if newIndex < 1 then newIndex = #choices end
 		if newIndex > #choices then newIndex = 1 end
-		
 		options.currentIndex = newIndex
 		item.valueLabel.Text = choices[newIndex]
-		
-		if item.callback then
-			item.callback(choices[newIndex], newIndex)
-		end
+		if item.callback then item.callback(choices[newIndex], newIndex) end
 	end
 end
 
 local function selectItem()
 	local item = menuItems[selectedIndex]
 	if not item then return end
-	
 	if item.itemType == "button" then
-		if item.callback then
-			item.callback()
-		end
+		if item.callback then item.callback() end
 	elseif item.itemType == "toggle" then
-		adjustValue(1) -- Toggle
+		adjustValue(1)
 	end
 end
 
@@ -471,22 +430,20 @@ end
 --------------------------------------------------------------------------------
 
 local function handleInput(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+
 	if not isMenuOpen then
-		-- Check for pause key
 		if input.KeyCode == FPSConfig.Controls.PauseKey then
 			FPSMenuController.openMenu("pause")
 		end
 		return
 	end
-	
+
 	-- Debounce
-	local currentTime = tick()
-	if currentTime - lastInputTime < inputCooldown then
-		return
-	end
-	lastInputTime = currentTime
-	
-	-- Navigation
+	local now = tick()
+	if now - lastInputTime < inputCooldown then return end
+	lastInputTime = now
+
 	if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.Up then
 		navigateUp()
 	elseif input.KeyCode == Enum.KeyCode.S or input.KeyCode == Enum.KeyCode.Down then
@@ -498,7 +455,6 @@ local function handleInput(input, gameProcessedEvent)
 	elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
 		selectItem()
 	elseif input.KeyCode == Enum.KeyCode.Escape then
-		-- Back or close
 		if currentMenuType == "settings" or currentMenuType == "controls" then
 			buildPauseMenu()
 			selectedIndex = 1
@@ -517,8 +473,7 @@ UserInputService.InputBegan:Connect(handleInput)
 
 function FPSMenuController.openMenu(menuType)
 	menuType = menuType or "pause"
-	currentMenuType = menuType
-	
+
 	if menuType == "pause" then
 		buildPauseMenu()
 	elseif menuType == "settings" then
@@ -526,28 +481,25 @@ function FPSMenuController.openMenu(menuType)
 	elseif menuType == "controls" then
 		buildControlsMenu()
 	end
-	
+
 	selectedIndex = 1
 	updateSelection()
-	
+
 	screenGui.Enabled = true
 	isMenuOpen = true
 	isPaused = true
-	
-	-- Unlock mouse for menu
+
+	-- Keyboard/controller-only menu: keep cursor hidden
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	UserInputService.MouseIconEnabled = false -- Still hide cursor, use keyboard nav
-	
-	-- Notify other systems
+	UserInputService.MouseIconEnabled = false
+
 	local bindableFolder = playerGui:FindFirstChild("BindableEvents")
-	if bindableFolder then
-		local menuEvent = bindableFolder:FindFirstChild("MenuStateChanged")
-		if menuEvent then
-			menuEvent:Fire({ isOpen = true, menuType = menuType })
-		end
+	local menuEvent = bindableFolder and bindableFolder:FindFirstChild("MenuStateChanged")
+	if menuEvent then
+		menuEvent:Fire({ isOpen = true, menuType = currentMenuType })
 	end
-	
-	print("[FPSMenuController] Menu opened:", menuType)
+
+	print("[FPSMenuController] Menu opened:", currentMenuType)
 end
 
 function FPSMenuController.closeMenu()
@@ -555,25 +507,16 @@ function FPSMenuController.closeMenu()
 	isMenuOpen = false
 	isPaused = false
 	currentMenuType = nil
-	
-	-- Clear GuiService selection to prevent warnings
-	pcall(function()
-		GuiService.SelectedObject = nil
-	end)
-	
-	-- Lock mouse again
+
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	UserInputService.MouseIconEnabled = false
-	
-	-- Notify other systems
+
 	local bindableFolder = playerGui:FindFirstChild("BindableEvents")
-	if bindableFolder then
-		local menuEvent = bindableFolder:FindFirstChild("MenuStateChanged")
-		if menuEvent then
-			menuEvent:Fire({ isOpen = false })
-		end
+	local menuEvent = bindableFolder and bindableFolder:FindFirstChild("MenuStateChanged")
+	if menuEvent then
+		menuEvent:Fire({ isOpen = false })
 	end
-	
+
 	print("[FPSMenuController] Menu closed")
 end
 
@@ -590,7 +533,6 @@ end
 --------------------------------------------------------------------------------
 
 local function initialize()
-	-- Initialize default settings
 	settingsValues = {
 		sensitivity = FPSConfig.Camera.DefaultSensitivity,
 		fov = FPSConfig.Camera.DefaultFOV,
@@ -599,34 +541,33 @@ local function initialize()
 		sfxVolume = 0.8,
 		musicVolume = 0.5,
 	}
-	
-	-- Create settings changed event
+
 	local bindableFolder = playerGui:FindFirstChild("BindableEvents")
 	if not bindableFolder then
 		bindableFolder = Instance.new("Folder")
 		bindableFolder.Name = "BindableEvents"
 		bindableFolder.Parent = playerGui
 	end
-	
+
 	local settingsEvent = bindableFolder:FindFirstChild("SettingsChanged")
 	if not settingsEvent then
 		settingsEvent = Instance.new("BindableEvent")
 		settingsEvent.Name = "SettingsChanged"
 		settingsEvent.Parent = bindableFolder
 	end
-	
+
 	local menuEvent = bindableFolder:FindFirstChild("MenuStateChanged")
 	if not menuEvent then
 		menuEvent = Instance.new("BindableEvent")
 		menuEvent.Name = "MenuStateChanged"
 		menuEvent.Parent = bindableFolder
 	end
-	
+
 	print("[FPSMenuController] Initialized")
 end
 
 --------------------------------------------------------------------------------
--- PUBLIC API
+-- MODULE EXPORT
 --------------------------------------------------------------------------------
 
 local FPSMenuModule = {}
@@ -635,12 +576,7 @@ function FPSMenuModule.initialize()
 	initialize()
 end
 
-function FPSMenuModule.onCharacterAdded(character)
-	-- Handle character added
-end
-
-function FPSMenuModule.onCharacterRemoving()
-	-- Cleanup
-end
+function FPSMenuModule.onCharacterAdded(character) end
+function FPSMenuModule.onCharacterRemoving() end
 
 return FPSMenuModule

@@ -1,3 +1,5 @@
+-- @ScriptType: ModuleScript
+
 -- CureService
 -- ACTIVE cure system with puzzle integration and alliance support (PRIMARY implementation)
 --
@@ -158,9 +160,9 @@ end
 function CureService:getEffectiveComponentCount(player, componentName)
 	local userId = player.UserId
 	self:initializePlayer(player)
-	
+
 	local baseCount = self.playerComponents[userId][componentName] or 0
-	
+
 	-- If alliance service is available, pool with allies
 	if self.allianceService then
 		local allies = self.allianceService:getAllies(player)
@@ -172,7 +174,7 @@ function CureService:getEffectiveComponentCount(player, componentName)
 			end
 		end
 	end
-	
+
 	return baseCount
 end
 
@@ -180,14 +182,14 @@ end
 function CureService:getPooledComponents(player)
 	local userId = player.UserId
 	self:initializePlayer(player)
-	
+
 	local pooledComponents = {}
-	
+
 	-- Initialize with player's own components
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		pooledComponents[componentName] = self.playerComponents[userId][componentName] or 0
 	end
-	
+
 	-- If alliance service is available, add allies' components
 	if self.allianceService then
 		local allies = self.allianceService:getAllies(player)
@@ -202,22 +204,22 @@ function CureService:getPooledComponents(player)
 			end
 		end
 	end
-	
+
 	return pooledComponents
 end
 
 -- Calculate cure progress for a player (individual or pooled with allies)
 function CureService:calculatePlayerCureProgress(player)
 	local pooledComponents = self:getPooledComponents(player)
-	
+
 	local totalCollected = 0
 	local totalRequired = #GameConfig.CURE_COMPONENT_NAMES * GameConfig.CURE_COMPONENTS_REQUIRED
-	
+
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		local count = pooledComponents[componentName] or 0
 		totalCollected = totalCollected + math.min(count, GameConfig.CURE_COMPONENTS_REQUIRED)
 	end
-	
+
 	return (totalCollected / totalRequired) * 100
 end
 
@@ -225,10 +227,10 @@ end
 function CureService:updatePlayerCureProgress(player)
 	local progress = self:calculatePlayerCureProgress(player)
 	local pooledComponents = self:getPooledComponents(player)
-	
+
 	-- Send update to this player
 	self:sendCureProgressUpdate(player, progress, pooledComponents)
-	
+
 	-- Send update to all allies (they share the same progress)
 	if self.allianceService then
 		local allies = self.allianceService:getAllies(player)
@@ -236,7 +238,7 @@ function CureService:updatePlayerCureProgress(player)
 			self:sendCureProgressUpdate(ally, progress, pooledComponents)
 		end
 	end
-	
+
 	-- Update global progress for GameManager (use the best progress among all players/alliances)
 	self:updateGlobalCureProgress()
 end
@@ -247,7 +249,7 @@ function CureService:sendCureProgressUpdate(player, progress, components)
 	if not player or not Players:GetPlayerByUserId(player.UserId) then
 		return
 	end
-	
+
 	if self.remoteEvents and self.remoteEvents.PlayerCureProgressUpdate then
 		local success, err = pcall(function()
 			self.remoteEvents.PlayerCureProgressUpdate:FireClient(player, {
@@ -260,7 +262,7 @@ function CureService:sendCureProgressUpdate(player, progress, components)
 			warn("[CureService] Failed to send cure progress update to " .. player.Name .. ": " .. tostring(err))
 		end
 	end
-	
+
 	-- Also update via CureUpdate for compatibility
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
@@ -282,7 +284,7 @@ function CureService:updateGlobalCureProgress()
 	-- Find the maximum progress among all players/alliances
 	local maxProgress = 0
 	local processedAlliances = {} -- Track which alliances we've already counted
-	
+
 	for userId, _ in pairs(self.playerComponents) do
 		local player = Players:GetPlayerByUserId(userId)
 		if player then
@@ -297,7 +299,7 @@ function CureService:updateGlobalCureProgress()
 			end
 		end
 	end
-	
+
 	-- Update GameManager with the best progress
 	if self.gameManager then
 		self.gameManager:updateCureProgress(maxProgress)
@@ -307,23 +309,23 @@ end
 -- Get a unique key for a player's alliance group (for deduplication)
 function CureService:getAllianceKey(player)
 	local userId = player.UserId
-	
+
 	if not self.allianceService then
 		return tostring(userId)
 	end
-	
+
 	local allies = self.allianceService:getAllies(player)
 	if #allies == 0 then
 		return tostring(userId)
 	end
-	
+
 	-- Create a sorted list of all alliance member IDs
 	local memberIds = {userId}
 	for _, ally in ipairs(allies) do
 		table.insert(memberIds, ally.UserId)
 	end
 	table.sort(memberIds)
-	
+
 	-- Create a unique key from sorted IDs
 	local keyParts = {}
 	for _, id in ipairs(memberIds) do
@@ -335,7 +337,7 @@ end
 -- Called when an alliance is formed - update progress for both players
 function CureService:onAllianceFormed(player1, player2)
 	print("[CureService] Alliance formed between", player1.Name, "and", player2.Name, "- pooling resources")
-	
+
 	-- Explicitly update progress for both players (they now share pooled resources)
 	self:updatePlayerCureProgress(player1)
 	self:updatePlayerCureProgress(player2)
@@ -344,7 +346,7 @@ end
 -- Called when an alliance is broken - update progress for both players
 function CureService:onAllianceBroken(player1, player2)
 	print("[CureService] Alliance broken between", player1.Name, "and", player2.Name, "- resources no longer pooled")
-	
+
 	-- Update progress for both players individually (they no longer share)
 	self:updatePlayerCureProgress(player1)
 	self:updatePlayerCureProgress(player2)
@@ -396,10 +398,10 @@ function CureService:addComponentsToPlayer(player, componentName, amount)
 	if not player or not componentName or not amount or amount <= 0 then
 		return false
 	end
-	
+
 	self:initializePlayer(player)
 	local userId = player.UserId
-	
+
 	if self.playerComponents[userId] then
 		self.playerComponents[userId][componentName] = 
 			(self.playerComponents[userId][componentName] or 0) + amount
@@ -413,10 +415,10 @@ function CureService:removeComponentsFromPlayer(player, componentName, amount)
 	if not player or not componentName or not amount or amount <= 0 then
 		return 0
 	end
-	
+
 	self:initializePlayer(player)
 	local userId = player.UserId
-	
+
 	if self.playerComponents[userId] then
 		local currentCount = self.playerComponents[userId][componentName] or 0
 		local actualRemoved = math.min(currentCount, amount)
@@ -436,16 +438,16 @@ function CureService:transferComponents(fromPlayer, toPlayer, transferRatio)
 		warn("[CureService] Invalid transferRatio: must be between 0 and 1. Got:", transferRatio)
 		return
 	end
-	
+
 	self:initializePlayer(fromPlayer)
 	self:initializePlayer(toPlayer)
-	
+
 	local fromUserId = fromPlayer.UserId
 	local sourceComponents = self.playerComponents[fromUserId]
 	if not sourceComponents then
 		return
 	end
-	
+
 	-- Transfer components based on ratio
 	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
 		local count = sourceComponents[componentName] or 0
@@ -458,7 +460,7 @@ function CureService:transferComponents(fromPlayer, toPlayer, transferRatio)
 			end
 		end
 	end
-	
+
 	-- Update cure progress for both players
 	self:updatePlayerCureProgress(fromPlayer)
 	self:updatePlayerCureProgress(toPlayer)

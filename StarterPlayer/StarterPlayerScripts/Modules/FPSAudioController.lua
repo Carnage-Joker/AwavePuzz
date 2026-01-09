@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- FPSAudioController.client.lua
 -- Handles all FPS-related audio: gunfire, reload, footsteps, hitmarkers, etc.
 -- Provides placeholder system for sounds with clear documentation for asset IDs
@@ -29,7 +30,7 @@ local SoundAssets = {
 		Rifle = "rbxassetid://0",  -- Replace with rifle fire sound
 		Default = "rbxassetid://0", -- Default fire sound
 	},
-	
+
 	WeaponReload = {
 		Pistol = "rbxassetid://0",
 		SMG = "rbxassetid://0",
@@ -37,13 +38,13 @@ local SoundAssets = {
 		Rifle = "rbxassetid://0",
 		Default = "rbxassetid://0",
 	},
-	
+
 	-- UI/Feedback sounds
 	EmptyClick = "rbxassetid://0",     -- Click when trying to fire with no ammo
 	Hitmarker = "rbxassetid://0",      -- Standard hitmarker sound
 	HeadshotHitmarker = "rbxassetid://0", -- Headshot hitmarker (different pitch/sound)
 	KillConfirm = "rbxassetid://0",    -- Kill confirmation sound
-	
+
 	-- Movement sounds
 	Footsteps = {
 		Concrete = "rbxassetid://0",
@@ -52,11 +53,11 @@ local SoundAssets = {
 		Wood = "rbxassetid://0",
 		Default = "rbxassetid://0",
 	},
-	
+
 	-- Damage feedback
 	DamageTaken = "rbxassetid://0",    -- Sound when player takes damage
 	LowHealthHeartbeat = "rbxassetid://0", -- Heartbeat when low HP
-	
+
 	-- UI sounds
 	MenuSelect = "rbxassetid://0",
 	MenuNavigate = "rbxassetid://0",
@@ -103,7 +104,7 @@ local function createSound(soundId, parent, properties)
 	sound.RollOffMode = properties.RollOffMode or Enum.RollOffMode.Linear
 	sound.RollOffMaxDistance = properties.RollOffMaxDistance or 100
 	sound.Parent = parent or SoundService
-	
+
 	return sound
 end
 
@@ -112,23 +113,23 @@ local function playSound(soundId, properties, cleanup)
 		-- Placeholder sound - don't play
 		return nil
 	end
-	
+
 	properties = properties or {}
 	local volume = calculateVolume(properties.Volume or 0.5, properties.Category or "sfx")
 	properties.Volume = volume
-	
+
 	local parent = properties.Parent or SoundService
 	local sound = createSound(soundId, parent, properties)
-	
+
 	sound:Play()
-	
+
 	-- Auto cleanup
 	if cleanup ~= false then
 		sound.Ended:Connect(function()
 			sound:Destroy()
 		end)
 	end
-	
+
 	return sound
 end
 
@@ -136,9 +137,9 @@ local function playSoundAtPosition(soundId, position, properties)
 	if not soundId or soundId == "rbxassetid://0" then
 		return nil
 	end
-	
+
 	properties = properties or {}
-	
+
 	-- Create a temporary part for 3D sound
 	local soundPart = Instance.new("Part")
 	soundPart.Anchored = true
@@ -147,7 +148,7 @@ local function playSoundAtPosition(soundId, position, properties)
 	soundPart.Size = Vector3.new(0.1, 0.1, 0.1)
 	soundPart.Position = position
 	soundPart.Parent = workspace
-	
+
 	local sound = playSound(soundId, {
 		Volume = properties.Volume or 0.5,
 		Category = properties.Category or "sfx",
@@ -155,7 +156,7 @@ local function playSoundAtPosition(soundId, position, properties)
 		RollOffMode = Enum.RollOffMode.Linear,
 		RollOffMaxDistance = properties.MaxDistance or 100,
 	}, false)
-	
+
 	if sound then
 		sound.Ended:Connect(function()
 			sound:Destroy()
@@ -164,7 +165,7 @@ local function playSoundAtPosition(soundId, position, properties)
 	else
 		soundPart:Destroy()
 	end
-	
+
 	return sound
 end
 
@@ -174,9 +175,9 @@ end
 
 function FPSAudioController.playFireSound(weaponId)
 	if not FPSConfig.Audio.FireSoundEnabled then return end
-	
+
 	local soundId = SoundAssets.WeaponFire[weaponId] or SoundAssets.WeaponFire.Default
-	
+
 	playSound(soundId, {
 		Volume = 0.7,
 		Category = "sfx",
@@ -186,9 +187,9 @@ end
 
 function FPSAudioController.playReloadSound(weaponId)
 	if not FPSConfig.Audio.ReloadSoundEnabled then return end
-	
+
 	local soundId = SoundAssets.WeaponReload[weaponId] or SoundAssets.WeaponReload.Default
-	
+
 	playSound(soundId, {
 		Volume = 0.6,
 		Category = "sfx",
@@ -197,7 +198,7 @@ end
 
 function FPSAudioController.playEmptyClick()
 	if not FPSConfig.Audio.EmptyClickEnabled then return end
-	
+
 	playSound(SoundAssets.EmptyClick, {
 		Volume = 0.4,
 		Category = "sfx",
@@ -210,10 +211,10 @@ end
 
 function FPSAudioController.playHitmarkerSound(isHeadshot, isKill)
 	if not FPSConfig.Audio.HitmarkerSoundEnabled then return end
-	
+
 	local soundId = SoundAssets.Hitmarker
 	local volume = 0.5
-	
+
 	if isKill then
 		soundId = SoundAssets.KillConfirm
 		volume = 0.6
@@ -221,7 +222,7 @@ function FPSAudioController.playHitmarkerSound(isHeadshot, isKill)
 		soundId = SoundAssets.HeadshotHitmarker
 		volume = 0.55
 	end
-	
+
 	playSound(soundId, {
 		Volume = volume,
 		Category = "sfx",
@@ -234,16 +235,16 @@ end
 
 function FPSAudioController.playFootstep(material)
 	if not FPSConfig.Audio.FootstepsEnabled then return end
-	
+
 	local currentTime = tick()
 	if currentTime - lastFootstepTime < footstepInterval then
 		return
 	end
 	lastFootstepTime = currentTime
-	
+
 	-- Determine sound based on material
 	local soundId = SoundAssets.Footsteps.Default
-	
+
 	if material then
 		local materialName = material.Name
 		if materialName == Enum.Material.Concrete.Name or materialName == "Concrete" then
@@ -256,7 +257,7 @@ function FPSAudioController.playFootstep(material)
 			soundId = SoundAssets.Footsteps.Wood
 		end
 	end
-	
+
 	playSound(soundId, {
 		Volume = FPSConfig.Audio.FootstepVolume,
 		Category = "sfx",
@@ -268,10 +269,10 @@ end
 local function updateFootsteps()
 	local character = player.Character
 	if not character then return end
-	
+
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
-	
+
 	-- Check if moving
 	if humanoid.MoveDirection.Magnitude > 0.1 then
 		-- Get floor material
@@ -281,7 +282,7 @@ local function updateFootsteps()
 			local speed = humanoid.WalkSpeed
 			footstepInterval = 0.5 - (speed / 100) -- Faster steps at higher speeds
 			footstepInterval = math.clamp(footstepInterval, 0.2, 0.6)
-			
+
 			FPSAudioController.playFootstep(material)
 		end
 	end
@@ -300,20 +301,20 @@ end
 
 function FPSAudioController.setLowHealth(lowHealth)
 	if not FPSConfig.Audio.LowHealthHeartbeat then return end
-	
+
 	if lowHealth and not isLowHealth then
 		-- Start heartbeat
 		isLowHealth = true
 		if heartbeatSound then
 			heartbeatSound:Destroy()
 		end
-		
+
 		heartbeatSound = createSound(SoundAssets.LowHealthHeartbeat, SoundService, {
 			Volume = calculateVolume(0.4, "sfx"),
 			Looped = true,
 		})
 		heartbeatSound:Play()
-		
+
 	elseif not lowHealth and isLowHealth then
 		-- Stop heartbeat
 		isLowHealth = false
@@ -398,7 +399,7 @@ end
 local function setupBindableConnections()
 	local bindableFolder = playerGui:WaitForChild("BindableEvents", 10)
 	if not bindableFolder then return end
-	
+
 	-- Weapon fired
 	local weaponFiredEvent = bindableFolder:FindFirstChild("WeaponFired")
 	if weaponFiredEvent then
@@ -408,7 +409,7 @@ local function setupBindableConnections()
 			end
 		end)
 	end
-	
+
 	-- Reload
 	local reloadStartedEvent = bindableFolder:FindFirstChild("ReloadStarted")
 	if reloadStartedEvent then
@@ -418,7 +419,7 @@ local function setupBindableConnections()
 			end
 		end)
 	end
-	
+
 	-- Empty click
 	local emptyClickEvent = bindableFolder:FindFirstChild("EmptyClick")
 	if emptyClickEvent then
@@ -426,7 +427,7 @@ local function setupBindableConnections()
 			FPSAudioController.playEmptyClick()
 		end)
 	end
-	
+
 	-- Hitmarker
 	local hitmarkerEvent = bindableFolder:FindFirstChild("Hitmarker")
 	if hitmarkerEvent then
@@ -436,7 +437,7 @@ local function setupBindableConnections()
 			end
 		end)
 	end
-	
+
 	-- Damage taken
 	local damageTakenEvent = bindableFolder:FindFirstChild("DamageTaken")
 	if damageTakenEvent then
@@ -444,7 +445,7 @@ local function setupBindableConnections()
 			FPSAudioController.playDamageSound()
 		end)
 	end
-	
+
 	-- Settings changed
 	local settingsEvent = bindableFolder:FindFirstChild("SettingsChanged")
 	if settingsEvent then
@@ -498,7 +499,7 @@ local function initialize()
 		task.wait(1)
 		setupBindableConnections()
 	end)
-	
+
 	print("[FPSAudioController] Initialized")
 	print("[FPSAudioController] NOTE: Replace placeholder sound IDs in SoundAssets table")
 end

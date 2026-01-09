@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- FPSWeaponController.client.lua
 -- ADVANCED weapon controller for full FPS mechanics
 --
@@ -155,7 +156,7 @@ local function fireWeapon()
 		local randomRadius = math.random() * spread
 		local spreadX = math.cos(randomAngle) * randomRadius
 		local spreadY = math.sin(randomAngle) * randomRadius
-		
+
 		local spreadCFrame = CFrame.Angles(math.rad(spreadY), math.rad(spreadX), 0)
 		direction = spreadCFrame:VectorToWorldSpace(direction)
 	end
@@ -195,14 +196,14 @@ local function startReload()
 	})
 
 	isReloading = true
-	
+
 	-- Fire reload animation event
 	local reloadTime = weaponStats and weaponStats.ReloadTime or 2.0
 	reloadStartedBindable:Fire({
 		weaponId = currentWeapon,
 		duration = reloadTime
 	})
-	
+
 	ammoUpdateBindable:Fire({
 		weaponId = currentWeapon,
 		isReloading = true
@@ -212,10 +213,10 @@ end
 local function cancelReload()
 	if not isReloading then return end
 	isReloading = false
-	
+
 	-- Fire reload canceled event
 	reloadCanceledBindable:Fire()
-	
+
 	ammoUpdateBindable:Fire({
 		weaponId = currentWeapon,
 		isReloading = false
@@ -236,7 +237,7 @@ local function equipWeapon(weaponId)
 
 	-- Request weapon equip on server
 	weaponEquipEvent:FireServer(weaponId)
-	
+
 	-- Fire weapon equipped event for animations
 	weaponEquippedBindable:Fire(weaponId)
 end
@@ -253,7 +254,7 @@ local weaponSwitchConnections = {}
 local function setupInputCallbacks()
 	-- Initialize InputManager
 	InputManager.initialize()
-	
+
 	-- Fire action (can be held for automatic weapons)
 	local isFiring = false
 	InputManager.bindAction(InputManager.Action.FIRE, function(active)
@@ -274,7 +275,7 @@ local function setupInputCallbacks()
 			end
 		end
 	end)
-	
+
 	-- ADS action
 	InputManager.bindAction(InputManager.Action.AIM, function(active)
 		isAiming = active
@@ -284,17 +285,17 @@ local function setupInputCallbacks()
 			isADS = active
 		})
 	end)
-	
+
 	-- Reload action
 	InputManager.bindAction(InputManager.Action.RELOAD, function(active)
 		if active then
 			startReload()
 		end
 	end)
-	
+
 	-- Weapon switching (not all devices support these)
 	-- Weapons can also be switched via UI on touch devices
-	
+
 	-- Note: For VR, weapon switching would typically be done via radial menu or gestures
 	-- For touch, weapon switching is done via on-screen UI buttons
 end
@@ -333,7 +334,7 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 			max = data.max,
 			isReloading = false
 		})
-		
+
 		-- Update reload state
 		isReloading = false
 	end
@@ -345,7 +346,7 @@ hitConfirmEvent.OnClientEvent:Connect(function(data)
 		-- Simple hit detection - could be enhanced
 		local isHeadshot = false
 		local isKill = false
-		
+
 		hitmarkerBindable:Fire({
 			isHeadshot = isHeadshot,
 			isKill = isKill
@@ -387,7 +388,7 @@ end)
 local function initialize()
 	-- Setup InputManager callbacks
 	setupInputCallbacks()
-	
+
 	-- Connect legacy input events (for weapon switching on keyboard)
 	UserInputService.InputBegan:Connect(onInputBegan)
 	UserInputService.InputEnded:Connect(onInputEnded)
@@ -418,4 +419,3 @@ function FPSWeaponControllerModule.onCharacterRemoving()
 end
 
 return FPSWeaponControllerModule
-

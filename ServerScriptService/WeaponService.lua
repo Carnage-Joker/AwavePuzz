@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- WeaponService.lua
 -- Handles player weapon logic, raycast validation, and kill rewards
 -- Features proper gun cloning, positioning on hand, weapon switching with cleanup,
@@ -196,12 +197,12 @@ function WeaponService:handleWeaponFire(player, payload)
 		if self.fpsWeaponService:isReloading(player) then
 			return -- Can't fire while reloading
 		end
-		
+
 		-- Validate ammo availability
 		if not self.fpsWeaponService:validateShot(player, weaponId) then
 			return -- No ammo
 		end
-		
+
 		-- Consume ammo server-side
 		if not self.fpsWeaponService:consumeAmmo(player, weaponId, 1) then
 			return -- Failed to consume ammo
@@ -291,7 +292,7 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 	-- Log the PvP hit for potential tracking/stats
 	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
 		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
-	
+
 	-- Track last attacker for kill credit
 	-- Use an attribute to store the last attacker on the humanoid
 	if attackingPlayer and attackingPlayer.UserId then

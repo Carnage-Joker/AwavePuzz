@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- SurroundService.lua
 -- Manages surround slots and anti-pileup behavior for zombies
 -- Features slot reservation, ring distribution, and local separation steering
@@ -22,10 +23,10 @@ local CONFIG = {
 
 function SurroundService.new()
 	local self = setmetatable({}, SurroundService)
-	
+
 	self.slotReservations = {} -- [slotKey] = {zombie, reservedTime, ringIndex, slotIndex}
 	self.zombieSlots = {} -- [zombieModel] = {slotKey, targetPos, assignedTime}
-	
+
 	return self
 end
 
@@ -44,42 +45,42 @@ local function calculateSlotPosition(targetPos, ringIndex, slotIndex, totalSlots
 	else
 		radius = CONFIG.OUTER_RING_RADIUS
 	end
-	
+
 	local angleStep = (math.pi * 2) / totalSlots
 	local angle = angleStep * slotIndex
-	
+
 	local offsetX = math.cos(angle) * radius
 	local offsetZ = math.sin(angle) * radius
-	
+
 	return targetPos + Vector3.new(offsetX, 0, offsetZ)
 end
 
 -- Check if a slot is available
 function SurroundService:isSlotAvailable(slotKey, currentTime)
 	local reservation = self.slotReservations[slotKey]
-	
+
 	if not reservation then
 		return true
 	end
-	
+
 	-- Check if reservation expired
 	local timeSince = currentTime - reservation.reservedTime
 	if timeSince > CONFIG.SLOT_RESERVATION_TIME then
 		return true
 	end
-	
+
 	-- Check if zombie still exists
 	if not reservation.zombie or not reservation.zombie.Parent then
 		return true
 	end
-	
+
 	return false
 end
 
 -- Find available slot around target
 function SurroundService:findAvailableSlot(targetPos, targetId, preferRing, preferSide)
 	local currentTime = tick()
-	
+
 	-- Determine ring priority based on preference
 	local ringPriority
 	if preferRing == "inner" then
@@ -89,11 +90,11 @@ function SurroundService:findAvailableSlot(targetPos, targetId, preferRing, pref
 	else
 		ringPriority = {2, 1, 3} -- Default to middle
 	end
-	
+
 	-- Try each ring in priority order
 	for _, ringIndex in ipairs(ringPriority) do
 		local totalSlots = CONFIG.SLOTS_PER_RING
-		
+
 		-- Determine slot search order based on side preference
 		local slotOrder = {}
 		if preferSide == "flank" then
@@ -120,18 +121,18 @@ function SurroundService:findAvailableSlot(targetPos, targetId, preferRing, pref
 				table.insert(slotOrder, i)
 			end
 		end
-		
+
 		-- Try each slot in order
 		for _, slotIndex in ipairs(slotOrder) do
 			local slotKey = generateSlotKey(targetId, ringIndex, slotIndex)
-			
+
 			if self:isSlotAvailable(slotKey, currentTime) then
 				local slotPos = calculateSlotPosition(targetPos, ringIndex, slotIndex, totalSlots)
 				return slotPos, slotKey, ringIndex, slotIndex
 			end
 		end
 	end
-	
+
 	-- No slots available, return outer ring random position
 	local randomSlot = math.random(1, CONFIG.SLOTS_PER_RING)
 	local fallbackPos = calculateSlotPosition(targetPos, 3, randomSlot, CONFIG.SLOTS_PER_RING)
@@ -142,10 +143,10 @@ end
 -- Reserve a slot for a zombie
 function SurroundService:reserveSlot(zombieModel, slotKey, slotPos, ringIndex, slotIndex)
 	local currentTime = tick()
-	
+
 	-- Release any existing slot
 	self:releaseSlot(zombieModel)
-	
+
 	-- Reserve new slot
 	self.slotReservations[slotKey] = {
 		zombie = zombieModel,
@@ -153,7 +154,7 @@ function SurroundService:reserveSlot(zombieModel, slotKey, slotPos, ringIndex, s
 		ringIndex = ringIndex,
 		slotIndex = slotIndex
 	}
-	
+
 	self.zombieSlots[zombieModel] = {
 		slotKey = slotKey,
 		targetPos = slotPos,
@@ -183,21 +184,21 @@ function SurroundService:shouldRerollSlot(zombieModel, zombiePos)
 	if not zombieSlot then
 		return true
 	end
-	
+
 	local currentTime = tick()
 	local timeSince = currentTime - zombieSlot.assignedTime
-	
+
 	-- Timeout check
 	if timeSince > CONFIG.SLOT_TIMEOUT then
 		return true
 	end
-	
+
 	-- Distance check - if stuck far from slot for too long
 	local distanceToSlot = (zombiePos - zombieSlot.targetPos).Magnitude
 	if timeSince > 3.0 and distanceToSlot > 30 then
 		return true
 	end
-	
+
 	return false
 end
 
@@ -205,13 +206,13 @@ end
 function SurroundService:calculateSeparationSteering(zombieModel, zombiePos, nearbyZombies)
 	local separation = Vector3.new(0, 0, 0)
 	local count = 0
-	
+
 	for _, otherZombie in ipairs(nearbyZombies) do
 		if otherZombie ~= zombieModel and otherZombie.Parent then
 			local otherRoot = otherZombie:FindFirstChild("HumanoidRootPart")
 			if otherRoot then
 				local distance = (otherRoot.Position - zombiePos).Magnitude
-				
+
 				if distance < CONFIG.SEPARATION_RADIUS and distance > 0.1 then
 					-- Push away from nearby zombie
 					local direction = (zombiePos - otherRoot.Position).Unit
@@ -222,12 +223,12 @@ function SurroundService:calculateSeparationSteering(zombieModel, zombiePos, nea
 			end
 		end
 	end
-	
+
 	if count > 0 then
 		separation = separation / count
 		separation = separation * CONFIG.SEPARATION_STRENGTH
 	end
-	
+
 	return separation
 end
 
@@ -235,17 +236,17 @@ end
 function SurroundService:getSteeringTarget(zombieModel, zombiePos, baseTargetPos, nearbyZombies)
 	-- Get separation vector
 	local separation = self:calculateSeparationSteering(zombieModel, zombiePos, nearbyZombies)
-	
+
 	-- Apply separation to target
 	local steeringTarget = baseTargetPos + (separation * 10) -- Scale up separation influence
-	
+
 	return steeringTarget
 end
 
 -- Clean up expired reservations
 function SurroundService:cleanup()
 	local currentTime = tick()
-	
+
 	-- Collect slots to remove (safe iteration)
 	local slotsToRemove = {}
 	for slotKey, reservation in pairs(self.slotReservations) do
@@ -258,12 +259,12 @@ function SurroundService:cleanup()
 			end
 		end
 	end
-	
+
 	-- Remove collected slots
 	for _, slotKey in ipairs(slotsToRemove) do
 		self.slotReservations[slotKey] = nil
 	end
-	
+
 	-- Collect zombie slots to remove (safe iteration)
 	local zombiesToRemove = {}
 	for zombie, _ in pairs(self.zombieSlots) do
@@ -271,7 +272,7 @@ function SurroundService:cleanup()
 			table.insert(zombiesToRemove, zombie)
 		end
 	end
-	
+
 	-- Remove collected zombie slots
 	for _, zombie in ipairs(zombiesToRemove) do
 		self.zombieSlots[zombie] = nil

@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- ShopService.lua
 -- Handles server-authoritative weapon purchases and upgrades
 

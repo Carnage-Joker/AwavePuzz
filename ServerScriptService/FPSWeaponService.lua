@@ -1,3 +1,5 @@
+-- @ScriptType: ModuleScript
+
 -- FPSWeaponService.lua
 -- Server-side extension for FPS weapon mechanics
 -- Handles ammo tracking, reload validation, and (optional) hit multipliers

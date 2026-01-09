@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- WeaponValues.lua
 -- Defines the value/worth of each weapon for proportional transfer calculations
 -- Used by betrayal system to determine weapon transfers
@@ -33,20 +34,20 @@ function WeaponValues.sortWeapons(weaponList)
 	for _, weaponId in ipairs(weaponList) do
 		table.insert(sorted, weaponId)
 	end
-	
+
 	table.sort(sorted, function(a, b)
 		local valueA = WeaponValues.getValue(a)
 		local valueB = WeaponValues.getValue(b)
-		
+
 		if valueA == valueB then
 			-- Tiebreaker: alphabetical by weaponId
 			return a < b
 		end
-		
+
 		-- Higher value first
 		return valueA > valueB
 	end)
-	
+
 	return sorted
 end
 

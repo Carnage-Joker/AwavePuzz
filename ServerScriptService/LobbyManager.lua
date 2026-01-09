@@ -1,84 +1,70 @@
+-- @ScriptType: ModuleScript
 -- LobbyManager.lua
--- Manages the pre-round lobby where players vote on maps
--- Handles the game flow: Lobby (voting) → Round → Scoreboard → Lobby
+-- Server-authoritative map voting.
+-- API used by GameManager:
+-- - startVoting()
+-- - update(dt)
+-- - reset()
+-- - onPlayerLeave(player)
+-- - isVotingActive()
+-- - getSelectedMapId()
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local MapConfig = require(SharedFolder:WaitForChild("MapConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local MapConfig = require(Shared:WaitForChild("MapConfig"))
+local GameConfig = require(Shared:WaitForChild("GameConfig"))
 
 local LobbyManager = {}
 LobbyManager.__index = LobbyManager
 
+local function getRemoteEventsFolder()
+	local folder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "RemoteEvents"
+		folder.Parent = ReplicatedStorage
+	end
+	return folder
+end
+
+local function getOrCreateRemote(name)
+	local folder = getRemoteEventsFolder()
+	local evt = folder:FindFirstChild(name)
+	if not evt then
+		evt = Instance.new("RemoteEvent")
+		evt.Name = name
+		evt.Parent = folder
+	end
+	return evt
+end
+
 function LobbyManager.new()
 	local self = setmetatable({}, LobbyManager)
 
-	-- Voting state
-	self.votes = {} -- mapId -> { playerIds }
-	self.votingActive = false
-	self.votingTimer = 0
-	self.currentMapId = nil
-
-	-- Ready/Waiting state
-	self.playersReady = {} -- userId -> boolean (true if ready to start)
-	self.playersWaiting = {} -- userId -> boolean (true if waiting for friends)
-	self.extendedTimer = false -- Whether timer has been extended
-
-	-- Server switch cooldown (rate limiting)
-	self.lastServerSwitchTime = {} -- userId -> timestamp of last switch attempt
-	self.SERVER_SWITCH_COOLDOWN = 30 -- 30 seconds between switch attempts
-
-	-- References set later
 	self.mapManager = nil
 	self.gameManager = nil
 
-	-- Remote events
-	self.remoteEvents = {}
-	self:setupRemoteEvents()
+	self.votingActive = false
+	self.voteTimeRemaining = 0
+	self.availableMaps = {}
+	self.votes = {} -- userId -> mapId
+	self.selectedMapId = nil
+
+	-- Remotes (non-breaking: if your UI already uses different ones, this won’t crash)
+	self.remotes = {
+		MapVotingState = getOrCreateRemote("MapVotingState"),   -- start/stop payload
+		MapVoteCast = getOrCreateRemote("MapVoteCast"),         -- client -> server (mapId)
+		MapVotingUpdate = getOrCreateRemote("MapVotingUpdate"), -- server -> clients (counts/time)
+	}
+
+	-- Hook vote casting
+	self.remotes.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
+		self:castVote(player, mapId)
+	end)
 
 	return self
-end
-
-function LobbyManager:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"MapVoteStart",    -- Server -> Client: Voting has started, send map options
-		"MapVoteUpdate",   -- Server -> Client: Update vote counts
-		"MapVoteEnd",      -- Server -> Client: Voting ended, show selected map
-		"CastMapVote",     -- Client -> Server: Player casts a vote
-		"LobbyStateUpdate", -- Server -> Client: Update lobby state (timer, etc.)
-		"PlayerReady",     -- Client -> Server: Player marks ready
-		"PlayerWaiting",   -- Client -> Server: Player is waiting for friends
-		"SwitchServer",    -- Client -> Server: Player wants to switch servers
-		"LobbyPlayersUpdate" -- Server -> Client: Update player ready/waiting status
-	})
-
-	-- Listen for player votes
-	self.remoteEvents.CastMapVote.OnServerEvent:Connect(function(player, mapId)
-		-- Validate mapId: must be a string and exist in MapConfig.Maps
-		if not mapId or type(mapId) ~= "string" or not MapConfig.Maps[mapId] then
-			return
-		end
-		self:handlePlayerVote(player, mapId)
-	end)
-	
-	-- Listen for player ready status
-	self.remoteEvents.PlayerReady.OnServerEvent:Connect(function(player)
-		self:handlePlayerReady(player)
-	end)
-	
-	-- Listen for player waiting status
-	self.remoteEvents.PlayerWaiting.OnServerEvent:Connect(function(player, isWaiting)
-		self:handlePlayerWaiting(player, isWaiting)
-	end)
-	
-	-- Listen for server switch requests
-	self.remoteEvents.SwitchServer.OnServerEvent:Connect(function(player)
-		self:handleServerSwitch(player)
-	end)
 end
 
 function LobbyManager:setMapManager(mapManager)
@@ -89,327 +75,170 @@ function LobbyManager:setGameManager(gameManager)
 	self.gameManager = gameManager
 end
 
--- Get available maps for voting
-function LobbyManager:getMapOptions()
-	local ServerStorage = game:GetService("ServerStorage")
-	local mapsFolder = ServerStorage:FindFirstChild("Maps")
-	
-	local options = {}
-	for mapId, mapData in pairs(MapConfig.Maps) do
-		-- Only include maps that have models in ServerStorage.Maps
-		if mapsFolder then
-			local mapModel = mapsFolder:FindFirstChild(mapData.Model)
-			if mapModel then
-				table.insert(options, {
-					id = mapId,
-					name = mapData.Name,
-					description = mapData.Description or ""
-				})
-			else
-				warn(string.format("[LobbyManager] Skipping map '%s' - model '%s' not found in ServerStorage.Maps", mapId, mapData.Model))
-			end
-		else
-			warn("[LobbyManager] Maps folder not found in ServerStorage, cannot validate map availability")
-		end
-	end
-	
-	-- If no maps are available, log error
-	if #options == 0 then
-		warn("[LobbyManager] No valid maps found for voting!")
-	end
-	
-	return options
-end
-
--- Start the voting phase
-function LobbyManager:startVoting()
-	if self.votingActive then
-		return false
-	end
-
-	-- Get map options (filtered for available models)
-	local mapOptions = self:getMapOptions()
-	
-	if #mapOptions == 0 then
-		warn("[LobbyManager] Cannot start voting - no valid maps available")
-		return false
-	end
-
-	-- Reset votes (only for available maps)
-	self.votes = {}
-	for _, mapOption in ipairs(mapOptions) do
-		self.votes[mapOption.id] = {}
-	end
-
-	self.votingActive = true
-	self.votingTimer = GameConfig.LOBBY_VOTING_TIME
-	self.extendedTimer = false -- Reset extended flag
-
-	-- Notify all clients that voting has started
-	if self.remoteEvents.MapVoteStart then
-		self.remoteEvents.MapVoteStart:FireAllClients({
-			maps = mapOptions,
-			duration = GameConfig.LOBBY_VOTING_TIME
-		})
-	end
-	
-	-- Broadcast initial player status
-	self:broadcastPlayerStatus()
-
-	print(string.format("[LobbyManager] Map voting started with %d available maps", #mapOptions))
-	return true
-end
-
--- Handle a player's vote
-function LobbyManager:handlePlayerVote(player, mapId)
-	if not self.votingActive then
-		return
-	end
-
-	if not mapId or not MapConfig.Maps[mapId] then
-		return
-	end
-
-	-- Remove player's previous vote from all maps
-	for _, voterList in pairs(self.votes) do
-		for i, voterId in ipairs(voterList) do
-			if voterId == player.UserId then
-				table.remove(voterList, i)
-				break
-			end
-		end
-	end
-
-	-- Add vote to selected map
-	if self.votes[mapId] then
-		table.insert(self.votes[mapId], player.UserId)
-	end
-
-	-- Broadcast updated vote counts
-	self:broadcastVoteCounts()
-end
-
--- Broadcast current vote counts to all clients
-function LobbyManager:broadcastVoteCounts()
-	local voteCounts = {}
-	for mapId, voterList in pairs(self.votes) do
-		voteCounts[mapId] = #voterList
-	end
-
-	if self.remoteEvents.MapVoteUpdate then
-		self.remoteEvents.MapVoteUpdate:FireAllClients({
-			votes = voteCounts,
-			timeRemaining = math.floor(self.votingTimer)
-		})
-	end
-end
-
--- End voting and select the winning map
-function LobbyManager:endVoting()
-	if not self.votingActive then
-		return nil
-	end
-
+function LobbyManager:reset()
 	self.votingActive = false
-
-	-- Count votes and find winner(s) - handle ties
-	local winningMapId = nil
-	local maxVotes = 0
-	local tiedMaps = {}
-
-	-- Only maps with actual votes are included in tiedMaps.
-	-- If no votes are cast (maxVotes == 0), tiedMaps will be empty,
-	-- and the fallback to MapConfig.getRandom() below will select a random map.
-	for mapId, voterList in pairs(self.votes) do
-		local voteCount = #voterList
-		if voteCount > maxVotes then
-			maxVotes = voteCount
-			tiedMaps = { mapId }
-		elseif voteCount == maxVotes and voteCount > 0 then
-			-- Only include maps with actual votes in tie-breaking
-			table.insert(tiedMaps, mapId)
-		end
-	end
-
-	-- If there are tied maps or no votes, pick randomly from tied or all maps
-	if #tiedMaps > 1 then
-		-- Random selection among tied maps
-		winningMapId = tiedMaps[math.random(1, #tiedMaps)]
-	elseif #tiedMaps == 1 then
-		winningMapId = tiedMaps[1]
-	else
-		-- No votes at all, pick a random map
-		winningMapId = MapConfig.getRandom()
-	end
-
-	self.currentMapId = winningMapId
-
-	-- Notify clients
-	local mapData = MapConfig.get(winningMapId)
-	if self.remoteEvents.MapVoteEnd then
-		self.remoteEvents.MapVoteEnd:FireAllClients({
-			selectedMapId = winningMapId,
-			mapName = mapData and mapData.Name or "Unknown"
-		})
-	end
-
-	print("[LobbyManager] Voting ended. Selected map: " .. tostring(winningMapId))
-	return winningMapId
+	self.voteTimeRemaining = 0
+	self.availableMaps = {}
+	self.votes = {}
+	self.selectedMapId = nil
 end
 
--- Update the lobby state (called from game loop)
-function LobbyManager:update(deltaTime)
-	if not self.votingActive then
-		return
-	end
-
-	-- Track previous second before updating timer
-	local lastSecond = math.floor(self.votingTimer)
-	self.votingTimer = self.votingTimer - deltaTime
-	local currentSecond = math.floor(self.votingTimer)
-
-	-- Broadcast timer updates when the second changes
-	if lastSecond ~= currentSecond then
-		self:broadcastVoteCounts()
-	end
-
-	if self.votingTimer <= 0 then
-		self:endVoting()
-	end
+function LobbyManager:onPlayerLeave(player)
+	if not player then return end
+	self.votes[player.UserId] = nil
 end
 
--- Get the selected map ID after voting
-function LobbyManager:getSelectedMapId()
-	return self.currentMapId
-end
-
--- Check if voting is currently active
 function LobbyManager:isVotingActive()
 	return self.votingActive
 end
 
--- Reset for a new round
-function LobbyManager:reset()
-	self.votes = {}
-	self.votingActive = false
-	self.votingTimer = 0
-	self.playersReady = {}
-	self.playersWaiting = {}
-	self.extendedTimer = false
+function LobbyManager:getSelectedMapId()
+	return self.selectedMapId
 end
 
--- Handle player marking themselves as ready
-function LobbyManager:handlePlayerReady(player)
-	if not player then return end
-	
-	self.playersReady[player.UserId] = true
-	self.playersWaiting[player.UserId] = false -- Can't be ready and waiting
-	
-	print(string.format("[LobbyManager] Player %s is ready", player.Name))
-	self:broadcastPlayerStatus()
-end
-
--- Handle player waiting for friends/others
-function LobbyManager:handlePlayerWaiting(player, isWaiting)
-	if not player then return end
-	
-	self.playersWaiting[player.UserId] = isWaiting
-	if isWaiting then
-		self.playersReady[player.UserId] = false -- Can't be waiting and ready
-		
-		-- Extend timer if not already extended and voting is active
-		if not self.extendedTimer and self.votingActive then
-			self.votingTimer = math.max(self.votingTimer, GameConfig.LOBBY_VOTING_TIME)
-			self.extendedTimer = true
-			print(string.format("[LobbyManager] Timer extended due to %s waiting for friends", player.Name))
-		end
-	end
-	
-	print(string.format("[LobbyManager] Player %s waiting status: %s", player.Name, tostring(isWaiting)))
-	self:broadcastPlayerStatus()
-end
-
--- Handle server switch request
-function LobbyManager:handleServerSwitch(player)
-	if not player then return end
-	
-	-- Check for rate limiting
-	local currentTime = tick()
-	local lastSwitchTime = self.lastServerSwitchTime[player.UserId] or 0
-	local timeSinceLastSwitch = currentTime - lastSwitchTime
-	
-	if timeSinceLastSwitch < self.SERVER_SWITCH_COOLDOWN then
-		local remainingCooldown = math.ceil(self.SERVER_SWITCH_COOLDOWN - timeSinceLastSwitch)
-		warn(string.format("[LobbyManager] Player %s attempted server switch too soon. Cooldown: %d seconds remaining", 
-			player.Name, remainingCooldown))
-		return
-	end
-	
-	-- Update last switch time
-	self.lastServerSwitchTime[player.UserId] = currentTime
-	
-	local TeleportService = game:GetService("TeleportService")
-	local placeId = game.PlaceId
-	
-	print(string.format("[LobbyManager] Player %s requesting server switch", player.Name))
-	
-	-- Teleport player to a different server
-	local success, errorMessage = pcall(function()
-		TeleportService:Teleport(placeId, player)
-	end)
-	
-	if not success then
-		warn(string.format("[LobbyManager] Failed to teleport %s: %s", player.Name, tostring(errorMessage)))
-	end
-end
-
--- Broadcast player ready/waiting status to all clients
-function LobbyManager:broadcastPlayerStatus()
-	local Players = game:GetService("Players")
-	local statusData = {
-		totalPlayers = #Players:GetPlayers(),
-		readyPlayers = 0,
-		waitingPlayers = 0,
-		players = {}
-	}
-	
-	for _, player in ipairs(Players:GetPlayers()) do
-		local isReady = self.playersReady[player.UserId] or false
-		local isWaiting = self.playersWaiting[player.UserId] or false
-		
-		if isReady then
-			statusData.readyPlayers = statusData.readyPlayers + 1
-		end
-		if isWaiting then
-			statusData.waitingPlayers = statusData.waitingPlayers + 1
-		end
-		
-		table.insert(statusData.players, {
-			name = player.Name,
-			userId = player.UserId,
-			ready = isReady,
-			waiting = isWaiting
+function LobbyManager:_buildAvailableMaps()
+	local list = {}
+	for id, data in pairs(MapConfig.Maps) do
+		table.insert(list, {
+			id = id,
+			name = data.Name or id,
+			description = data.Description or "",
 		})
 	end
-	
-	if self.remoteEvents.LobbyPlayersUpdate then
-		self.remoteEvents.LobbyPlayersUpdate:FireAllClients(statusData)
-	end
+
+	-- stable order for UI
+	table.sort(list, function(a, b)
+		return tostring(a.name) < tostring(b.name)
+	end)
+
+	return list
 end
 
--- Remove a player's vote when they leave
-function LobbyManager:onPlayerLeave(player)
-	for _, voterList in pairs(self.votes) do
-		for i, voterId in ipairs(voterList) do
-			if voterId == player.UserId then
-				table.remove(voterList, i)
-				break
+function LobbyManager:_countVotes()
+	local counts = {}
+	for _, map in ipairs(self.availableMaps) do
+		counts[map.id] = 0
+	end
+	for _, mapId in pairs(self.votes) do
+		if counts[mapId] ~= nil then
+			counts[mapId] += 1
+		end
+	end
+	return counts
+end
+
+function LobbyManager:_chooseWinner(counts)
+	-- Winner = highest votes; tie-break = default map; else alphabetical
+	local bestId, bestCount = nil, -1
+
+	for mapId, c in pairs(counts) do
+		if c > bestCount then
+			bestCount = c
+			bestId = mapId
+		elseif c == bestCount and bestId then
+			-- tie-break: prefer default
+			local defaultId = select(1, MapConfig.getDefault())
+			if mapId == defaultId then
+				bestId = mapId
+			elseif bestId ~= defaultId then
+				-- stable tie-break by string id
+				if tostring(mapId) < tostring(bestId) then
+					bestId = mapId
+				end
 			end
 		end
 	end
 
-	if self.votingActive then
-		self:broadcastVoteCounts()
+	-- If no votes or no maps, fallback default
+	if not bestId then
+		bestId = select(1, MapConfig.getDefault())
+	end
+
+	return bestId
+end
+
+function LobbyManager:startVoting()
+	self:reset()
+
+	self.votingActive = true
+	self.voteTimeRemaining = GameConfig.LOBBY_VOTING_TIME or 20
+	self.availableMaps = self:_buildAvailableMaps()
+
+	print(string.format("[LobbyManager] Map voting started with %d available maps", #self.availableMaps))
+
+	-- Broadcast start state
+	self.remotes.MapVotingState:FireAllClients({
+		active = true,
+		timeRemaining = math.ceil(self.voteTimeRemaining),
+		maps = self.availableMaps,
+		votes = self:_countVotes(),
+	})
+
+	-- Auto-cast current players to default (optional, prevents empty)
+	local defaultId = select(1, MapConfig.getDefault())
+	for _, p in ipairs(Players:GetPlayers()) do
+		if not self.votes[p.UserId] then
+			self.votes[p.UserId] = defaultId
+		end
+	end
+
+	-- initial update push
+	self.remotes.MapVotingUpdate:FireAllClients({
+		timeRemaining = math.ceil(self.voteTimeRemaining),
+		votes = self:_countVotes(),
+	})
+end
+
+function LobbyManager:castVote(player, mapId)
+	if not self.votingActive then return end
+	if not player or typeof(mapId) ~= "string" then return end
+
+	-- validate mapId exists
+	if not MapConfig.get(mapId) then
+		return
+	end
+
+	self.votes[player.UserId] = mapId
+
+	self.remotes.MapVotingUpdate:FireAllClients({
+		timeRemaining = math.ceil(self.voteTimeRemaining),
+		votes = self:_countVotes(),
+	})
+end
+
+function LobbyManager:update(dt)
+	if not self.votingActive then return end
+
+	self.voteTimeRemaining -= dt
+	if self.voteTimeRemaining < 0 then
+		self.voteTimeRemaining = 0
+	end
+
+	-- push updates ~1/sec (cheap)
+	-- If you want tighter, remove this throttle.
+	self._acc = (self._acc or 0) + dt
+	if self._acc >= 1 then
+		self._acc = 0
+		self.remotes.MapVotingUpdate:FireAllClients({
+			timeRemaining = math.ceil(self.voteTimeRemaining),
+			votes = self:_countVotes(),
+		})
+	end
+
+	if self.voteTimeRemaining <= 0 then
+		-- finalize
+		self.votingActive = false
+		local counts = self:_countVotes()
+		self.selectedMapId = self:_chooseWinner(counts)
+
+		print(string.format("[LobbyManager] Voting ended. Selected map: %s", tostring(self.selectedMapId)))
+
+		self.remotes.MapVotingState:FireAllClients({
+			active = false,
+			timeRemaining = 0,
+			selectedMapId = self.selectedMapId,
+			votes = counts,
+		})
 	end
 end
 

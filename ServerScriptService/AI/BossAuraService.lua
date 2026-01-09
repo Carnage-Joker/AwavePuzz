@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- BossAuraService.lua
 -- Commander aura system for Boss zombies
 -- Provides tactical buffs to nearby zombies when Boss is present
@@ -20,13 +21,13 @@ local CONFIG = {
 
 function BossAuraService.new()
 	local self = setmetatable({}, BossAuraService)
-	
+
 	self.activeBosses = {} -- [bossModel] = {position, model}
 	self.affectedZombies = {} -- [zombieModel] = {bossModel, lastUpdate}
 	self.debugMode = false
 	self.debugParts = {} -- Visual indicators
 	self.lastUpdateTime = 0
-	
+
 	return self
 end
 
@@ -35,19 +36,19 @@ function BossAuraService:registerBoss(bossModel)
 	if not bossModel or not bossModel.Parent then
 		return
 	end
-	
+
 	local rootPart = bossModel:FindFirstChild("HumanoidRootPart")
 	if not rootPart then
 		return
 	end
-	
+
 	self.activeBosses[bossModel] = {
 		position = rootPart.Position,
 		model = bossModel
 	}
-	
+
 	print("[BossAura] Boss registered:", bossModel.Name)
-	
+
 	-- Create debug visual if enabled
 	if self.debugMode then
 		self:createDebugVisual(bossModel)
@@ -57,14 +58,14 @@ end
 -- Unregister a boss zombie
 function BossAuraService:unregisterBoss(bossModel)
 	self.activeBosses[bossModel] = nil
-	
+
 	-- Remove affected zombies linked to this boss
 	for zombie, data in pairs(self.affectedZombies) do
 		if data.bossModel == bossModel then
 			self.affectedZombies[zombie] = nil
 		end
 	end
-	
+
 	-- Remove debug visual
 	if self.debugParts[bossModel] then
 		if self.debugParts[bossModel].Parent then
@@ -72,7 +73,7 @@ function BossAuraService:unregisterBoss(bossModel)
 		end
 		self.debugParts[bossModel] = nil
 	end
-	
+
 	print("[BossAura] Boss unregistered:", bossModel and bossModel.Name or "unknown")
 end
 
@@ -90,7 +91,7 @@ end
 function BossAuraService:findNearestBoss(position)
 	local nearestBoss = nil
 	local nearestDistance = math.huge
-	
+
 	for bossModel, bossData in pairs(self.activeBosses) do
 		if bossModel and bossModel.Parent then
 			local rootPart = bossModel:FindFirstChild("HumanoidRootPart")
@@ -103,18 +104,18 @@ function BossAuraService:findNearestBoss(position)
 			end
 		end
 	end
-	
+
 	return nearestBoss, nearestDistance
 end
 
 -- Check if zombie is within aura range of any boss
 function BossAuraService:isZombieInAura(zombieModel, zombiePos)
 	local nearestBoss, distance = self:findNearestBoss(zombiePos)
-	
+
 	if nearestBoss and distance <= CONFIG.AURA_RADIUS then
 		return true, nearestBoss
 	end
-	
+
 	return false, nil
 end
 
@@ -124,16 +125,16 @@ function BossAuraService:applyAuraBuffs(zombieModel, zombieBrain)
 	if not rootPart then
 		return
 	end
-	
+
 	local inAura, nearestBoss = self:isZombieInAura(zombieModel, rootPart.Position)
-	
+
 	if inAura then
 		-- Track affected zombie
 		self.affectedZombies[zombieModel] = {
 			bossModel = nearestBoss,
 			lastUpdate = tick()
 		}
-		
+
 		-- Apply move speed boost (if not already applied)
 		local humanoid = zombieModel:FindFirstChildOfClass("Humanoid")
 		if humanoid and not zombieModel:GetAttribute("AuraSpeedApplied") then
@@ -141,7 +142,7 @@ function BossAuraService:applyAuraBuffs(zombieModel, zombieBrain)
 			humanoid.WalkSpeed = baseSpeed * CONFIG.MOVE_SPEED_BOOST
 			zombieModel:SetAttribute("AuraSpeedApplied", true)
 		end
-		
+
 		-- Mark zombie as aura-affected for other systems to check
 		zombieModel:SetAttribute("InBossAura", true)
 	else
@@ -149,7 +150,7 @@ function BossAuraService:applyAuraBuffs(zombieModel, zombieBrain)
 		if self.affectedZombies[zombieModel] then
 			self.affectedZombies[zombieModel] = nil
 		end
-		
+
 		-- Remove move speed boost
 		local humanoid = zombieModel:FindFirstChildOfClass("Humanoid")
 		if humanoid and zombieModel:GetAttribute("AuraSpeedApplied") then
@@ -157,7 +158,7 @@ function BossAuraService:applyAuraBuffs(zombieModel, zombieBrain)
 			humanoid.WalkSpeed = baseSpeed
 			zombieModel:SetAttribute("AuraSpeedApplied", false)
 		end
-		
+
 		zombieModel:SetAttribute("InBossAura", false)
 	end
 end
@@ -192,7 +193,7 @@ function BossAuraService:createDebugVisual(bossModel)
 	if not rootPart then
 		return
 	end
-	
+
 	-- Create aura sphere
 	local auraPart = Instance.new("Part")
 	auraPart.Name = "BossAuraDebug"
@@ -204,10 +205,10 @@ function BossAuraService:createDebugVisual(bossModel)
 	auraPart.CanCollide = false
 	auraPart.Anchored = true
 	auraPart.Parent = workspace
-	
+
 	-- Position at boss
 	auraPart.Position = rootPart.Position
-	
+
 	self.debugParts[bossModel] = auraPart
 end
 
@@ -232,7 +233,7 @@ end
 -- Enable/disable debug mode
 function BossAuraService:setDebugMode(enabled)
 	self.debugMode = enabled
-	
+
 	if not enabled then
 		-- Clean up all debug visuals
 		for _, debugPart in pairs(self.debugParts) do
@@ -249,7 +250,7 @@ function BossAuraService:setDebugMode(enabled)
 			end
 		end
 	end
-	
+
 	print("[BossAura] Debug mode:", enabled and "enabled" or "disabled")
 end
 
@@ -262,12 +263,12 @@ function BossAuraService:cleanup()
 			table.insert(bossesToRemove, bossModel)
 		end
 	end
-	
+
 	-- Remove collected bosses
 	for _, bossModel in ipairs(bossesToRemove) do
 		self:unregisterBoss(bossModel)
 	end
-	
+
 	-- Collect affected zombies to remove (safe iteration)
 	local zombiesToRemove = {}
 	for zombieModel, _ in pairs(self.affectedZombies) do
@@ -275,7 +276,7 @@ function BossAuraService:cleanup()
 			table.insert(zombiesToRemove, zombieModel)
 		end
 	end
-	
+
 	-- Remove collected zombies
 	for _, zombieModel in ipairs(zombiesToRemove) do
 		self.affectedZombies[zombieModel] = nil
@@ -285,14 +286,14 @@ end
 -- Update service
 function BossAuraService:update(deltaTime, allZombies)
 	self.lastUpdateTime = self.lastUpdateTime + deltaTime
-	
+
 	-- Update at interval
 	if self.lastUpdateTime >= CONFIG.UPDATE_INTERVAL then
 		self.lastUpdateTime = 0
-		
+
 		-- Cleanup invalid entries
 		self:cleanup()
-		
+
 		-- Update debug visuals
 		if self.debugMode then
 			self:updateDebugVisuals()

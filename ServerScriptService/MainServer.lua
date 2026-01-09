@@ -1,3 +1,4 @@
+-- @ScriptType: Script
 -- MainServer.lua
 -- Main server initialization script
 -- Place this as a Script (not ModuleScript) in ServerScriptService
@@ -99,12 +100,10 @@ cureSynthesisService:setPuzzleService(puzzleService)
 gameManager:setCureSynthesisService(cureSynthesisService)
 print("CureSynthesisService initialized and linked")
 
--- Setup cure stations
-local cureStationSetup = require(game.ReplicatedStorage.Shared.CureStationSetup)
-if not cureStationSetup then
-	warn("Cure station setup failed")
-end
-print("Cure stations setup complete")
+-- Note: Cure station setup is owned by ServerScriptService/CureStationSetup.lua
+-- which runs automatically on server startup as the single source of truth.
+-- Any older duplicates (e.g. ReplicatedStorage/Shared/CureStationSetup.lua) are legacy-only
+-- and MUST NOT be used or required; remove them when cleaning up redundant modules.
 
 ----------------------------------------------------------------
 -- Player connection handlers
@@ -129,16 +128,9 @@ Players.PlayerAdded:Connect(function(player)
 		-- Initialize sprint service for new character
 		sprintService:onCharacterAdded(player, character)
 
-		local humanoid = character:WaitForChild("Humanoid", 5)
-		if humanoid then
-			humanoid.Died:Connect(function()
-				print(player.Name .. " died")
-				-- Cancel any ongoing reload
-				fpsWeaponService:cancelReload(player)
-				-- Handle player death - puts them in spectator mode and checks lose conditions
-				gameManager:onPlayerDied(player)
-			end)
-		end
+		-- ✅ IMPORTANT:
+		-- Do NOT hook Humanoid.Died here.
+		-- GameManager already hooks deaths (with debounce) in _hookPlayerDeath().
 	end)
 end)
 
