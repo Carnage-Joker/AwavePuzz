@@ -1,354 +1,326 @@
+-- @ScriptType: ModuleScript
 -- IntelligentSpawnGenerator.lua
--- Generates intelligent zombie spawn points at the beginning of each round
--- Ensures zombies spawn on ground, not inside structures, trees, or water
+-- Robust spawn generation for PARTS-ONLY maps
+-- Uses ActiveMap bounds, ignores terrain reliance, returns spawn points + strategic selection
 
 local Workspace = game:GetService("Workspace")
-local Terrain = workspace:FindFirstChildOfClass("Terrain")
 local CollectionService = game:GetService("CollectionService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Load config to check debug flags
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 5)
-local GameConfig = nil
-if SharedFolder then
-	local configModule = SharedFolder:FindFirstChild("GameConfig")
-	if configModule then
-		local success, result = pcall(require, configModule)
-		if success then
-			GameConfig = result
-		end
-	end
-end
-
--- Try to require visualizer from Tests folder only if in Studio and debug is enabled
-local SpawnPointVisualizer
-local debugEnabled = GameConfig and (GameConfig.DEBUG or GameConfig.DEBUG_SPAWNS)
-local isStudio = RunService:IsStudio()
-
-if isStudio and debugEnabled then
-	local success, result = pcall(function()
-		local testsFolder = script.Parent:FindFirstChild("Tests")
-		if testsFolder then
-			local visualizerModule = testsFolder:FindFirstChild("SpawnPointVisualizer")
-			if visualizerModule then
-				return require(visualizerModule)
-			end
-		end
-		return nil
-	end)
-	
-	if success and result then
-		SpawnPointVisualizer = result
-		print("[SpawnGenerator] Debug visualizer loaded")
-	end
-	-- No error message if visualizer not found - it's purely optional
-end
 
 local IntelligentSpawnGenerator = {}
 IntelligentSpawnGenerator.__index = IntelligentSpawnGenerator
 
--- Configuration
+----------------------------------------------------------------
+-- CONFIG
+----------------------------------------------------------------
 local CONFIG = {
 	MIN_SPAWN_POINTS = 8,
 	MAX_SPAWN_POINTS = 16,
-	SPAWN_POINT_SPACING = 25, -- Minimum distance between spawn points
-	GROUND_CHECK_DISTANCE = 50, -- How far down to check for ground
-	SPAWN_HEIGHT_OFFSET = 3, -- How high above ground to spawn zombies
-	VALIDATION_RADIUS = 10, -- Radius to check for obstacles
-	MAP_BOUNDARY_MARGIN = 20, -- Margin from map edges
-	MAX_GENERATION_ATTEMPTS = 100 -- Max attempts to find valid spawn points
+	SPAWN_POINT_SPACING = 25,
+	SPAWN_HEIGHT_OFFSET = 3,
+	VALIDATION_RADIUS = 10,
+	MAP_MARGIN = 20,
+	MAX_ATTEMPTS_PER_POINT = 40,
+
+	-- Debug: set true if you want to see generated spawn markers in Workspace
+	DEBUG_DRAW = false,
+	DEBUG_FOLDER_NAME = "GeneratedZombieSpawnPoints",
+	DEBUG_MARKER_SIZE = Vector3.new(1.5, 1.5, 1.5)
 }
 
--- Zombie type spawn preferences
+-- Optional spawn preferences per zombie type (Spawner expects this method to exist)
 local SPAWN_PREFERENCES = {
-	Walker = { preferDistance = "medium", minDistance = 30, maxDistance = 80 },
-	Runner = { preferDistance = "close",  minDistance = 20, maxDistance = 60 },
-	Brute  = { preferDistance = "far",    minDistance = 50, maxDistance = 120 },
-	Spitter= { preferDistance = "medium", minDistance = 40, maxDistance = 90 },
-	Boss   = { preferDistance = "far",    minDistance = 60, maxDistance = 150 }
+	Walker  = { min = 30,  max = 90  },
+	Runner  = { min = 20,  max = 70  },
+	Brute   = { min = 50,  max = 140 },
+	Spitter = { min = 40,  max = 110 },
+	Boss    = { min = 70,  max = 170 }
 }
 
-local function ensureGeneratedFolder()
-	local folder = Workspace:FindFirstChild("GeneratedZombieSpawnPoints")
-	if not folder then
-		folder = Instance.new("Folder")
-		folder.Name = "GeneratedZombieSpawnPoints"
-		folder.Parent = Workspace
-	end
-	return folder
+----------------------------------------------------------------
+-- UTILS
+----------------------------------------------------------------
+local function getActiveMap()
+	return Workspace:FindFirstChild("ActiveMap")
 end
 
-local function createGeneratedMarker(pos, index)
-	local folder = ensureGeneratedFolder()
-	local p = Instance.new("Part")
-	p.Name = "GeneratedSpawn_" .. tostring(index)
-	p.Anchored = true
-	p.CanCollide = false
-	p.Transparency = 1
-	p.Size = Vector3.new(1, 1, 1)
-	p.Position = pos
-	p.Parent = folder
-	p:SetAttribute("IsGeneratedZombieSpawn", true)
+local function clamp(n, a, b)
+	return math.max(a, math.min(b, n))
 end
 
-function IntelligentSpawnGenerator.new()
-	local self = setmetatable({}, IntelligentSpawnGenerator)
-	self.generatedSpawnPoints = {}
-	self.mapBounds = nil
-	self.playerCenter = Vector3.new(0, 0, 0)
-	self.debugMode = false
-
-	-- Initialize visualizer if available
-	if SpawnPointVisualizer then
-		self.visualizer = SpawnPointVisualizer.new()
-	end
-
-	return self
-end
-
--- Get map boundaries by analyzing existing objects
-function IntelligentSpawnGenerator:analyzeMapBounds()
-	local positions = {}
-
-	local function collectPositions(folder)
-		if not folder then return end
-		for _, descendant in ipairs(folder:GetDescendants()) do
-			if descendant:IsA("BasePart") then
-				table.insert(positions, descendant.Position)
-			end
-		end
-	end
-
-	collectPositions(Workspace:FindFirstChild("Structures"))
-	collectPositions(Workspace:FindFirstChild("Trees"))
-	collectPositions(Workspace:FindFirstChild("Props"))
-	collectPositions(Workspace:FindFirstChild("ZombieSpawnPoints"))
-
-	if #positions == 0 then
-		self.mapBounds = { minX = -100, maxX = 100, minZ = -100, maxZ = 100 }
-	else
-		local minX, maxX = math.huge, -math.huge
-		local minZ, maxZ = math.huge, -math.huge
-
-		for _, pos in ipairs(positions) do
-			minX = math.min(minX, pos.X)
-			maxX = math.max(maxX, pos.X)
-			minZ = math.min(minZ, pos.Z)
-			maxZ = math.max(maxZ, pos.Z)
-		end
-
-		self.mapBounds = {
-			minX = minX - CONFIG.MAP_BOUNDARY_MARGIN,
-			maxX = maxX + CONFIG.MAP_BOUNDARY_MARGIN,
-			minZ = minZ - CONFIG.MAP_BOUNDARY_MARGIN,
-			maxZ = maxZ + CONFIG.MAP_BOUNDARY_MARGIN
-		}
-	end
-
-	print("[SpawnGenerator] Map bounds:", self.mapBounds.minX, self.mapBounds.maxX, self.mapBounds.minZ, self.mapBounds.maxZ)
-end
-
--- Find ground level at a given X,Z position
-function IntelligentSpawnGenerator:findGroundLevel(position)
-	local rayStart = Vector3.new(position.X, position.Y + CONFIG.GROUND_CHECK_DISTANCE, position.Z)
-	local rayDirection = Vector3.new(0, -CONFIG.GROUND_CHECK_DISTANCE * 2, 0)
-
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterDescendantsInstances = {}
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-
-	local result = Workspace:Raycast(rayStart, rayDirection, raycastParams)
-
-	if result and result.Position.Y > -100 then
-		return result.Position.Y, result.Material, result.Instance
-	end
-
-	return nil
-end
-
--- Check if a position is valid for spawning (no obstacles)
-function IntelligentSpawnGenerator:isValidSpawnPosition(position)
-	local region = Region3.new(
-		Vector3.new(position.X - CONFIG.VALIDATION_RADIUS, position.Y - 5, position.Z - CONFIG.VALIDATION_RADIUS),
-		Vector3.new(position.X + CONFIG.VALIDATION_RADIUS, position.Y + 10, position.Z + CONFIG.VALIDATION_RADIUS)
-	)
-
-	local partsInRegion = Workspace:FindPartsInRegion3(region, nil, 100)
-
-	for _, part in ipairs(partsInRegion) do
-		if part ~= Terrain and part.Material ~= Enum.Material.Air then
-			if part.Size.X > 2 or part.Size.Y > 2 or part.Size.Z > 2 then
-				return false
-			end
-		end
-	end
-
-	local rayStart = Vector3.new(position.X, position.Y + 10, position.Z)
-	local rayDirection = Vector3.new(0, -15, 0)
-
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterDescendantsInstances = {}
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-
-	local result = Workspace:Raycast(rayStart, rayDirection, raycastParams)
-	if result and (result.Position.Y - position.Y) > 5 then
-		return false
-	end
-
-	return true
-end
-
-function IntelligentSpawnGenerator:isFarEnoughFromOtherSpawns(position, existingSpawns)
-	for _, spawnPos in ipairs(existingSpawns) do
-		local distance = (position - spawnPos).Magnitude
-		if distance < CONFIG.SPAWN_POINT_SPACING then
+local function farEnough(pos, list)
+	for _, other in ipairs(list) do
+		if (pos - other).Magnitude < CONFIG.SPAWN_POINT_SPACING then
 			return false
 		end
 	end
 	return true
 end
 
-function IntelligentSpawnGenerator:generateSpawnPoint(existingSpawns)
-	if not self.mapBounds then
-		self:analyzeMapBounds()
+local function getOrCreateDebugFolder()
+	local f = Workspace:FindFirstChild(CONFIG.DEBUG_FOLDER_NAME)
+	if not f then
+		f = Instance.new("Folder")
+		f.Name = CONFIG.DEBUG_FOLDER_NAME
+		f.Parent = Workspace
 	end
-
-	for attempt = 1, CONFIG.MAX_GENERATION_ATTEMPTS do
-		local x = math.random(self.mapBounds.minX, self.mapBounds.maxX)
-		local z = math.random(self.mapBounds.minZ, self.mapBounds.maxZ)
-		local testPos = Vector3.new(x, 50, z)
-
-		local groundY = self:findGroundLevel(testPos)
-		if groundY then
-			local spawnPos = Vector3.new(x, groundY + CONFIG.SPAWN_HEIGHT_OFFSET, z)
-
-			if self:isValidSpawnPosition(spawnPos) and self:isFarEnoughFromOtherSpawns(spawnPos, existingSpawns) then
-				return spawnPos
-			end
-		end
-	end
-
-	return nil
+	return f
 end
 
-function IntelligentSpawnGenerator:generateSpawnPointsForRound()
-	print("[SpawnGenerator] Generating intelligent spawn points for new round...")
+local function drawDebugMarker(pos, index)
+	if not CONFIG.DEBUG_DRAW then return end
+	local folder = getOrCreateDebugFolder()
 
+	local p = Instance.new("Part")
+	p.Name = "Spawn_" .. tostring(index)
+	p.Anchored = true
+	p.CanCollide = false
+	p.Size = CONFIG.DEBUG_MARKER_SIZE
+	p.CFrame = CFrame.new(pos)
+	p.Material = Enum.Material.Neon
+	p.Transparency = 0.25
+	p.Parent = folder
+end
+
+----------------------------------------------------------------
+-- CLASS
+----------------------------------------------------------------
+function IntelligentSpawnGenerator.new()
+	return setmetatable({
+		mapBounds = nil,
+		generatedSpawnPoints = {},
+		_debugFolder = nil
+	}, IntelligentSpawnGenerator)
+end
+
+----------------------------------------------------------------
+-- CLEANUP (Spawner expects this method)
+----------------------------------------------------------------
+function IntelligentSpawnGenerator:cleanupGeneratedSpawnPoints()
+	-- Clear remembered generated points
 	self.generatedSpawnPoints = {}
-	-- clear exported markers each round
-	local genFolder = Workspace:FindFirstChild("GeneratedZombieSpawnPoints")
-	if genFolder then
-		genFolder:ClearAllChildren()
+
+	-- Remove debug markers if they exist
+	local f = Workspace:FindFirstChild(CONFIG.DEBUG_FOLDER_NAME)
+	if f then
+		f:Destroy()
 	end
+
+	print("[SpawnGenerator] Cleanup complete")
+end
+
+----------------------------------------------------------------
+-- MAP BOUNDS (FROM ACTIVE MAP GEOMETRY)
+----------------------------------------------------------------
+function IntelligentSpawnGenerator:analyzeMapBounds()
+	local map = getActiveMap()
+	if not map then
+		self.mapBounds = { minX = -100, maxX = 100, minZ = -100, maxZ = 100, topY = 300, bottomY = -300 }
+		warn("[SpawnGenerator] No ActiveMap found, using fallback bounds")
+		return
+	end
+
+	-- Prefer explicit MapBounds if present
+	local boundsObj = map:FindFirstChild("MapBounds")
+	local cf, size
+
+	if boundsObj then
+		if boundsObj:IsA("BasePart") then
+			cf, size = boundsObj.CFrame, boundsObj.Size
+		elseif boundsObj:IsA("Model") then
+			cf, size = boundsObj:GetBoundingBox()
+		else
+			-- weird type; fallback
+			cf, size = map:GetBoundingBox()
+		end
+	else
+		cf, size = map:GetBoundingBox()
+	end
+
+	self.mapBounds = {
+		minX = cf.Position.X - size.X / 2 + CONFIG.MAP_MARGIN,
+		maxX = cf.Position.X + size.X / 2 - CONFIG.MAP_MARGIN,
+		minZ = cf.Position.Z - size.Z / 2 + CONFIG.MAP_MARGIN,
+		maxZ = cf.Position.Z + size.Z / 2 - CONFIG.MAP_MARGIN,
+		topY = cf.Position.Y + size.Y / 2 + 200,
+		bottomY = cf.Position.Y - size.Y / 2 - 200
+	}
+
+	print("[SpawnGenerator] Map bounds:",
+		self.mapBounds.minX, self.mapBounds.maxX,
+		self.mapBounds.minZ, self.mapBounds.maxZ
+	)
+end
+
+----------------------------------------------------------------
+-- GROUND DETECTION (PARTS ONLY) - RAYCAST INTO ACTIVE MAP
+----------------------------------------------------------------
+function IntelligentSpawnGenerator:findGround(x, z)
+	local map = getActiveMap()
+	if not map then return nil end
+	if not self.mapBounds then self:analyzeMapBounds() end
+
+	local b = self.mapBounds
+	local origin = Vector3.new(x, b.topY, z)
+	local direction = Vector3.new(0, -(b.topY - b.bottomY), 0)
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { map }
+	params.IgnoreWater = true
+
+	local result = Workspace:Raycast(origin, direction, params)
+	if not result or not result.Instance then
+		return nil
+	end
+
+	return result.Position, result.Instance
+end
+
+----------------------------------------------------------------
+-- VALIDATION (DON'T SPAWN INSIDE SOLIDS)
+----------------------------------------------------------------
+function IntelligentSpawnGenerator:isClear(position, groundPart)
+	local box = CFrame.new(position + Vector3.new(0, 6, 0))
+	local size = Vector3.new(CONFIG.VALIDATION_RADIUS * 2, 12, CONFIG.VALIDATION_RADIUS * 2)
+
+	local overlap = OverlapParams.new()
+	overlap.FilterType = Enum.RaycastFilterType.Exclude
+	overlap.FilterDescendantsInstances = { groundPart }
+
+	local hits = Workspace:GetPartBoundsInBox(box, size, overlap)
+	for _, part in ipairs(hits) do
+		if part and part:IsA("BasePart") then
+			if part.CanCollide and part.Transparency < 0.95 then
+				if not CollectionService:HasTag(part, "IgnoreSpawnBlocker") then
+					return false
+				end
+			end
+		end
+	end
+
+	return true
+end
+
+----------------------------------------------------------------
+-- GENERATION
+----------------------------------------------------------------
+function IntelligentSpawnGenerator:generateSpawnPointsForRound()
+	print("[SpawnGenerator] Generating intelligent spawn points...")
+
+	-- Clean previous generated markers/points (prevents stacking if you enable debug)
+	self:cleanupGeneratedSpawnPoints()
 
 	if not self.mapBounds then
 		self:analyzeMapBounds()
 	end
 
-	local existingSpawnsFolder = Workspace:FindFirstChild("ZombieSpawnPoints")
+	-- Manual spawns live inside ActiveMap.ZombieSpawnPoints (NOT workspace root)
 	local baseSpawns = {}
-
-	if existingSpawnsFolder then
-		for _, spawnPoint in ipairs(existingSpawnsFolder:GetChildren()) do
-			if spawnPoint:IsA("BasePart") then
-				table.insert(baseSpawns, spawnPoint.Position)
+	local map = getActiveMap()
+	if map then
+		local folder = map:FindFirstChild("ZombieSpawnPoints")
+		if folder then
+			for _, p in ipairs(folder:GetChildren()) do
+				if p:IsA("BasePart") then
+					table.insert(baseSpawns, p.Position)
+				elseif p:IsA("Model") and p.PrimaryPart then
+					table.insert(baseSpawns, p.PrimaryPart.Position)
+				end
 			end
 		end
 	end
 
-	local targetCount = math.random(CONFIG.MIN_SPAWN_POINTS, CONFIG.MAX_SPAWN_POINTS)
-	local pointsToGenerate = math.max(0, targetCount - #baseSpawns)
+	local target = math.random(CONFIG.MIN_SPAWN_POINTS, CONFIG.MAX_SPAWN_POINTS)
+	local needed = math.max(0, target - #baseSpawns)
 
-	print("[SpawnGenerator] Target spawn points:", targetCount, "Existing:", #baseSpawns, "To generate:", pointsToGenerate)
+	print("[SpawnGenerator] Target:", target, "Manual:", #baseSpawns, "Generate:", needed)
 
-	local allSpawns = {}
-	for _, pos in ipairs(baseSpawns) do
-		table.insert(allSpawns, pos)
-	end
+	local all = table.clone(baseSpawns)
 
-	for i = 1, pointsToGenerate do
-		local newSpawn = self:generateSpawnPoint(allSpawns)
-		if newSpawn then
-			table.insert(allSpawns, newSpawn)
-			table.insert(self.generatedSpawnPoints, newSpawn)
-			createGeneratedMarker(newSpawn, i)
-			print("[SpawnGenerator] Generated spawn point", i, "at", newSpawn)
-		else
-			warn("[SpawnGenerator] Failed to generate spawn point", i)
+	for i = 1, needed do
+		local placed = false
+
+		for _ = 1, CONFIG.MAX_ATTEMPTS_PER_POINT do
+			local x = math.random(math.floor(self.mapBounds.minX), math.floor(self.mapBounds.maxX))
+			local z = math.random(math.floor(self.mapBounds.minZ), math.floor(self.mapBounds.maxZ))
+
+			local hitPos, ground = self:findGround(x, z)
+			if hitPos then
+				local spawnPos = hitPos + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
+				if self:isClear(spawnPos, ground) and farEnough(spawnPos, all) then
+					table.insert(all, spawnPos)
+					table.insert(self.generatedSpawnPoints, spawnPos)
+					drawDebugMarker(spawnPos, i)
+					placed = true
+					break
+				end
+			end
+		end
+
+		if not placed then
+			warn("[SpawnGenerator] Failed to place spawn", i)
 		end
 	end
 
-	if self.debugMode and self.visualizer then
-		self.visualizer:visualizeSpawnPoints(baseSpawns, self.generatedSpawnPoints)
+	-- Never return zero if manual exists
+	if #all == 0 and #baseSpawns > 0 then
+		warn("[SpawnGenerator] Falling back to manual spawn points only")
+		all = baseSpawns
 	end
 
-	print("[SpawnGenerator] Total spawn points available:", #allSpawns)
-	return allSpawns
+	print("[SpawnGenerator] Total spawn points:", #all)
+	return all
 end
 
+----------------------------------------------------------------
+-- STRATEGIC PICK (Spawner expects this method)
+----------------------------------------------------------------
 function IntelligentSpawnGenerator:getStrategicSpawnPoint(zombieType, allSpawnPoints, playerPositions)
-	if #allSpawnPoints == 0 then
+	if not allSpawnPoints or #allSpawnPoints == 0 then
 		return Vector3.new(0, 10, 0)
 	end
 
-	local preference = SPAWN_PREFERENCES[zombieType] or SPAWN_PREFERENCES.Walker
+	local pref = SPAWN_PREFERENCES[zombieType] or SPAWN_PREFERENCES.Walker
+	local minD, maxD = pref.min, pref.max
 
-	local playerCenter = Vector3.new(0, 0, 0)
-	if playerPositions and #playerPositions > 0 then
-		for _, pos in ipairs(playerPositions) do
-			playerCenter = playerCenter + pos
-		end
-		playerCenter = playerCenter / #playerPositions
+	-- Compute player center (if none, just pick random)
+	if not playerPositions or #playerPositions == 0 then
+		return allSpawnPoints[math.random(1, #allSpawnPoints)]
 	end
 
-	local scoredSpawns = {}
-	for i, spawnPos in ipairs(allSpawnPoints) do
-		local distanceToPlayers = (spawnPos - playerCenter).Magnitude
-		local score = 0
+	local center = Vector3.new(0, 0, 0)
+	for _, p in ipairs(playerPositions) do
+		center += p
+	end
+	center /= #playerPositions
 
-		if distanceToPlayers >= preference.minDistance and distanceToPlayers <= preference.maxDistance then
-			score = score + 100
+	-- Score spawns by how close they are to preferred range
+	local best = nil
+	local bestScore = -math.huge
+
+	for _, sp in ipairs(allSpawnPoints) do
+		local d = (sp - center).Magnitude
+
+		-- score: max when inside range, penalty outside
+		local score
+		if d >= minD and d <= maxD then
+			score = 100
 		else
-			local distancePenalty = math.min(50, math.abs(distanceToPlayers - preference.minDistance))
-			score = score - distancePenalty
+			local distToBand
+			if d < minD then distToBand = (minD - d) else distToBand = (d - maxD) end
+			score = 100 - clamp(distToBand, 0, 100)
 		end
 
-		score = score + math.random(-20, 20)
+		-- small randomness to avoid identical patterns
+		score += math.random(-10, 10)
 
-		table.insert(scoredSpawns, { position = spawnPos, score = score, index = i })
+		if score > bestScore then
+			bestScore = score
+			best = sp
+		end
 	end
 
-	table.sort(scoredSpawns, function(a, b) return a.score > b.score end)
-
-	local topSpawns = math.min(3, #scoredSpawns)
-	local selectedSpawn = scoredSpawns[math.random(1, topSpawns)]
-
-	if self.debugMode and self.visualizer then
-		self.visualizer:highlightSelectedSpawn(selectedSpawn.position, zombieType)
-	end
-
-	return selectedSpawn.position
-end
-
-function IntelligentSpawnGenerator:cleanupGeneratedSpawnPoints()
-	self.generatedSpawnPoints = {}
-	if self.visualizer then
-		self.visualizer:clearVisuals()
-	end
-	local genFolder = Workspace:FindFirstChild("GeneratedZombieSpawnPoints")
-	if genFolder then
-		genFolder:ClearAllChildren()
-	end
-	print("[SpawnGenerator] Cleaned up generated spawn points")
-end
-
-function IntelligentSpawnGenerator:setDebugMode(enabled)
-	self.debugMode = enabled
-	if self.visualizer then
-		self.visualizer:enableDebugMode(enabled)
-	end
-	print("[SpawnGenerator] Debug mode:", enabled and "enabled" or "disabled")
+	return best or allSpawnPoints[1]
 end
 
 return IntelligentSpawnGenerator
