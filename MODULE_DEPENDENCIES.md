@@ -109,6 +109,8 @@ GameManager:
     AchievementUnlocked ──────────► AchievementUI
     BetrayalStarted ──────────────► AllianceUI
 
+CureService:
+    PlayerCureProgressUpdate ─────► CureUI
 PlayerManager:
     InventoryUpdate ──────────────► InventoryUI
     CurrencyUpdate ───────────────► InventoryUI
