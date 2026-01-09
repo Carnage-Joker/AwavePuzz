@@ -117,7 +117,7 @@ The project is **production-ready** from a naming and architecture perspective. 
 
 ### 📊 Statistics
 - **Total Lua Files Reviewed**: 100+
-- **Total RemoteEvents Validated**: 61
+- **Total RemoteEvents Validated**: 71
 - **Services Analyzed**: 24
 - **Issues Found**: 0 critical, 0 moderate, 0 minor
 - **Project Health**: ✅ Excellent
