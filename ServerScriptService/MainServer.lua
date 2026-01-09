@@ -1,3 +1,4 @@
+-- @ScriptType: Script
 -- MainServer.lua
 -- Main server initialization script
 -- Place this as a Script (not ModuleScript) in ServerScriptService
@@ -129,16 +130,9 @@ Players.PlayerAdded:Connect(function(player)
 		-- Initialize sprint service for new character
 		sprintService:onCharacterAdded(player, character)
 
-		local humanoid = character:WaitForChild("Humanoid", 5)
-		if humanoid then
-			humanoid.Died:Connect(function()
-				print(player.Name .. " died")
-				-- Cancel any ongoing reload
-				fpsWeaponService:cancelReload(player)
-				-- Handle player death - puts them in spectator mode and checks lose conditions
-				gameManager:onPlayerDied(player)
-			end)
-		end
+		-- ✅ IMPORTANT:
+		-- Do NOT hook Humanoid.Died here.
+		-- GameManager already hooks deaths (with debounce) in _hookPlayerDeath().
 	end)
 end)
 
