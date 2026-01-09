@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 --[[
     ResourceSpawner.lua (ModuleScript)
     Phase 3: Manages spawning of cure components around the map
@@ -88,7 +89,7 @@ function ResourceSpawner:setSpawnPoints(points)
 			invalidCount = invalidCount + 1
 		end
 	end
-	
+
 	-- Warn about invalid spawn point data
 	if invalidCount > 0 then
 		warn(string.format("[ResourceSpawner] Skipped %d non-Vector3 spawn point(s) during configuration", invalidCount))
@@ -223,22 +224,35 @@ function ResourceSpawner:raycastToGround(pos)
 end
 
 function ResourceSpawner:isSpawnAreaClear(pos)
-	-- Quick obstacle check using radius box
-	local region = Region3.new(
-		Vector3.new(pos.X - CONFIG.VALIDATION_RADIUS, pos.Y - 3, pos.Z - CONFIG.VALIDATION_RADIUS),
-		Vector3.new(pos.X + CONFIG.VALIDATION_RADIUS, pos.Y + 8, pos.Z + CONFIG.VALIDATION_RADIUS)
-	)
-	local parts = Workspace:FindPartsInRegion3(region, nil, 80)
+	-- Define the same region extents you had:
+	local halfX = CONFIG.VALIDATION_RADIUS
+	local halfZ = CONFIG.VALIDATION_RADIUS
+	local minY = pos.Y - 3
+	local maxY = pos.Y + 8
+
+	local size = Vector3.new(halfX * 2, maxY - minY, halfZ * 2)
+	local centerY = (minY + maxY) * 0.5
+
+	-- Box CFrame centered on the region
+	local boxCFrame = CFrame.new(pos.X, centerY, pos.Z)
+
+	-- Ignore our own resource folder (and anything else you want)
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { self.resourceFolder }
+	params.MaxParts = 80
+
+	local parts = Workspace:GetPartBoundsInBox(boxCFrame, size, params)
+
 	for _, part in ipairs(parts) do
 		if part and part.Parent and part.CanCollide and part.Transparency < 0.95 then
-			-- ignore our own resource folder
-			if not part:IsDescendantOf(self.resourceFolder) then
-				return false
-			end
+			return false
 		end
 	end
+
 	return true
 end
+
 
 function ResourceSpawner:getOpennessScore(pos)
 	-- Favour open spaces: fewer hits in radial raycasts
@@ -384,7 +398,7 @@ function ResourceSpawner:spawnResource()
 		-- No spawn points configured, cannot spawn
 		return nil
 	end
-	
+
 	local componentName = self:getRandomComponent()
 	local resourceId = "resource_" .. os.time() .. "_" .. math.random(1000, 9999)
 
