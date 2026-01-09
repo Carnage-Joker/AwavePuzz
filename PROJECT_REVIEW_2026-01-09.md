@@ -43,14 +43,14 @@ Complete analysis of all scripts and modules to ensure proper naming and cross-r
 | WeaponService | 4 | ✅ |
 | ShopService | 2 | ✅ |
 | FPSWeaponService | 2 | ✅ |
-| SpectatorManager | 4 | ✅ |
+| SpectatorManager | 5 | ✅ |
 | LobbyManager | 3 | ✅ |
 | FunFactService | 3 | ✅ |
 | AchievementService | 1 | ✅ |
 | FPSAnimationService | 6 | ✅ |
 | CureSynthesisService | 5 | ✅ |
 
-**Total: 61 RemoteEvents properly defined**
+**Total: 62 RemoteEvents properly defined**
 
 #### Client-Side Listeners
 All client UI scripts properly wait for and listen to the correct RemoteEvents:
