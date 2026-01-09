@@ -1,3 +1,5 @@
+-- @ScriptType: ModuleScript
+
 -- PlayerManager.lua
 -- Manages player data, inventory, currency, alliances, and health
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
