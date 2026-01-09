@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- ZombieBrain.lua
 -- AI controller for zombies with tactical targeting and behavior
 -- 
@@ -72,7 +73,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	-- Old: 1.0s + up to 1.2s jitter = 2.2s max wait (too long, causes pausing)
 	-- New: 0.4s + up to 0.3s jitter = 0.7s max wait (smoother, continuous pressure)
 	self.repathInterval = stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
-	
+
 	-- Add jitter for performance and desynchronization
 	-- Use configured jitter values from GameConfig.AI
 	local minJitter = GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1
@@ -86,13 +87,13 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	end
 	local jitter = math.random() * (maxJitter - minJitter) + minJitter
 	self.repathInterval = self.repathInterval + jitter
-	
+
 	self.currentTarget = nil -- Last known target position
 	self.currentTargetType = nil -- "player" or "base"
 	self.currentTargetPlayer = nil -- Player reference if targeting player
 	self.currentSlot = nil -- Current surround slot position
 	self.lastMoveTarget = nil -- FIX: Track last move command for continuity
-	
+
 	-- Movement continuity thresholds from config
 	self.waypointSkipDistance = GameConfig.AI and GameConfig.AI.WAYPOINT_SKIP_DISTANCE or 3
 	self.movementReissueDistance = GameConfig.AI and GameConfig.AI.MOVEMENT_REISSUE_DISTANCE or 0.5
@@ -113,11 +114,11 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	-- Type-specific behavior
 	self.aiBehavior = stats.AIBehavior or "standard"
 	self.spitterController = nil
-	
+
 	-- Special behavior timers
 	self.screamerCallCooldown = 0
 	self.lastCallTime = 0
-	
+
 	-- LOS caching
 	self.losCache = {}
 	self.losCacheTime = 0
@@ -131,7 +132,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	if self.stats.Speed or self.stats.speed then
 		self.humanoid.WalkSpeed = self.stats.Speed or self.stats.speed
 	end
-	
+
 	-- Register with boss aura if this is a boss
 	if stats.HasAura and bossAuraService then
 		bossAuraService:registerBoss(zombieModel)
@@ -166,7 +167,7 @@ end
 function ZombieBrain:getNearbyZombies()
 	local nearby = {}
 	local zombiesFolder = workspace:FindFirstChild("Zombies")
-	
+
 	if zombiesFolder then
 		for _, zombie in ipairs(zombiesFolder:GetChildren()) do
 			if zombie ~= self.zombieModel and zombie:IsA("Model") then
@@ -177,7 +178,7 @@ function ZombieBrain:getNearbyZombies()
 			end
 		end
 	end
-	
+
 	return nearby
 end
 
@@ -186,14 +187,14 @@ function ZombieBrain:selectBestTarget()
 	if not self.targetingService then
 		return nil, nil, nil
 	end
-	
+
 	-- Use targeting service for tactical selection
 	local targetPos, targetType, targetPlayer = self.targetingService:selectBestTarget(
 		self.zombieModel,
 		self.rootPart.Position,
 		self.waveNumber
 	)
-	
+
 	return targetPos, targetType, targetPlayer
 end
 
@@ -202,48 +203,48 @@ function ZombieBrain:getSlotPosition(targetPos, targetId)
 	if not self.surroundService then
 		return targetPos
 	end
-	
+
 	-- Check if should re-roll slot
 	if self.surroundService:shouldRerollSlot(self.zombieModel, self.rootPart.Position) then
 		self.surroundService:releaseSlot(self.zombieModel)
 		self.currentSlot = nil
 	end
-	
+
 	-- Get or assign slot
 	if not self.currentSlot then
 		local slotPreference = self.stats.SlotPreference or "middle"
 		local sidePreference = nil
-		
+
 		-- Determine side preference based on type
 		if self.stats.PreferBackSlots then
 			sidePreference = "back"
 		elseif self.stats.FlankChance then
 			-- Roll for flank
 			local flankChance = self.stats.FlankChance
-			
+
 			-- Boss aura boosts flank chance
 			if self.bossAuraService then
 				flankChance = self.bossAuraService:getFlankChance(self.zombieModel, flankChance)
 			end
-			
+
 			if math.random() < flankChance then
 				sidePreference = "flank"
 			end
 		end
-		
+
 		local slotPos, slotKey, ringIndex, slotIndex = self.surroundService:findAvailableSlot(
 			targetPos,
 			targetId,
 			slotPreference,
 			sidePreference
 		)
-		
+
 		if slotPos then
 			self.surroundService:reserveSlot(self.zombieModel, slotKey, slotPos, ringIndex, slotIndex)
 			self.currentSlot = slotPos
 		end
 	end
-	
+
 	return self.currentSlot or targetPos
 end
 
@@ -252,17 +253,17 @@ function ZombieBrain:handleScreamerBehavior()
 	if self.aiBehavior ~= "screamer" then
 		return
 	end
-	
+
 	local callCooldown = self.stats.CallCooldown or 10.0
 	local currentTime = tick()
-	
+
 	if currentTime - self.lastCallTime >= callCooldown then
 		-- Emit "call" effect
 		self.lastCallTime = currentTime
-		
+
 		local callRadius = self.stats.CallRadius or 30
 		local callDuration = self.stats.CallDuration or 5.0
-		
+
 		-- Mark nearby zombies with call buff
 		local zombiesFolder = workspace:FindFirstChild("Zombies")
 		if zombiesFolder then
@@ -277,7 +278,7 @@ function ZombieBrain:handleScreamerBehavior()
 				end
 			end
 		end
-		
+
 		print("[ZombieBrain] Screamer called! Buffing nearby zombies")
 	end
 end
@@ -302,7 +303,7 @@ function ZombieBrain:tryAttack()
 
 		-- Calculate damage (with type-specific modifiers)
 		local damage = self.attackDamage
-		
+
 		-- Deal damage to appropriate target
 		if targetType == "player" and targetPlayer then
 			-- Validate player still exists and has character
@@ -313,7 +314,7 @@ function ZombieBrain:tryAttack()
 					if self.aiBehavior == "breacher" and self.stats.PlayerDamagePenalty then
 						damage = damage * self.stats.PlayerDamagePenalty
 					end
-					
+
 					if self.playerManager then
 						self.playerManager:damagePlayer(targetPlayer, damage)
 					end
@@ -324,7 +325,7 @@ function ZombieBrain:tryAttack()
 			if (self.aiBehavior == "bruiser" or self.aiBehavior == "breacher") and self.stats.BaseDamageBonus then
 				damage = damage * self.stats.BaseDamageBonus
 			end
-			
+
 			if self.baseManager then
 				self.baseManager:damageBase(damage)
 			end
@@ -354,7 +355,7 @@ function ZombieBrain:update(deltaTime)
 	-- Apply boss aura buffs if service available
 	if self.bossAuraService and not self.stats.HasAura then
 		self.bossAuraService:applyAuraBuffs(self.zombieModel, self)
-		
+
 		-- Adjust retarget interval based on aura
 		if self.zombieModel:GetAttribute("InBossAura") and self.bossAuraService.getRetargetInterval then
 			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
@@ -366,7 +367,7 @@ function ZombieBrain:update(deltaTime)
 	if self.attackCooldown > 0 then
 		self.attackCooldown = math.max(0, self.attackCooldown - deltaTime)
 	end
-	
+
 	-- Handle Screamer behavior
 	self:handleScreamerBehavior()
 
@@ -388,34 +389,34 @@ function ZombieBrain:update(deltaTime)
 
 	-- FIX: Decrement movement cooldown but don't block all movement
 	self.moveCooldown = self.moveCooldown - deltaTime
-	
+
 	-- FIX: Instead of blocking completely, provide movement continuity
 	-- Check if we need to recalculate path (cooldown expired)
 	local shouldRecalculatePath = self.moveCooldown <= 0
-	
+
 	if shouldRecalculatePath then
 		-- Reset cooldown with small random variance to prevent sync
 		-- Use a small fraction of the configured jitter for micro-variance (non-negative)
 		local microJitter = (GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1) * 0.5
 		local jitterOffset = math.random() * microJitter
 		self.moveCooldown = self.repathInterval + jitterOffset
-		
+
 		-- Recalculate target and path
 		if self.rootPart then
 			local targetPos, targetType, targetPlayer = self:selectBestTarget()
-			
+
 			if targetPos then
 				-- Store current target info
 				self.currentTarget = targetPos
 				self.currentTargetType = targetType
 				self.currentTargetPlayer = targetPlayer
-				
+
 				-- Get target ID for slot assignment
 				local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
-				
+
 				-- Get slot position with surround system
 				local slotPos = self:getSlotPosition(targetPos, targetId)
-				
+
 				-- Apply separation steering if service available
 				local finalTarget = slotPos
 				if self.surroundService then
@@ -427,7 +428,7 @@ function ZombieBrain:update(deltaTime)
 						nearbyZombies
 					)
 				end
-				
+
 				-- FIX: Issue new move command
 				self.humanoid:MoveTo(finalTarget)
 				self.lastMoveTarget = finalTarget
@@ -439,7 +440,7 @@ function ZombieBrain:update(deltaTime)
 		if self.lastMoveTarget and self.rootPart then
 			-- Check if we're close to the last target
 			local distanceToLastTarget = (self.lastMoveTarget - self.rootPart.Position).Magnitude
-			
+
 			-- If we've reached the last waypoint or are very close, move directly toward raw target
 			-- Use configurable waypoint skip distance
 			if distanceToLastTarget < self.waypointSkipDistance and self.currentTarget then
@@ -451,7 +452,7 @@ function ZombieBrain:update(deltaTime)
 				-- This prevents the zombie from stopping when it "thinks" it arrived
 				-- Use configurable movement reissue distance
 				self.humanoid:MoveTo(self.lastMoveTarget)
-			-- else: distance is between reissue and skip thresholds, already moving correctly
+				-- else: distance is between reissue and skip thresholds, already moving correctly
 			end
 		elseif self.currentTarget then
 			-- FIX: Fallback - if no last move target, use current target
@@ -468,12 +469,12 @@ function ZombieBrain:destroy()
 	if self.surroundService then
 		self.surroundService:releaseSlot(self.zombieModel)
 	end
-	
+
 	-- Release target assignment
 	if self.targetingService then
 		self.targetingService:releaseAssignment(self.zombieModel)
 	end
-	
+
 	-- Unregister from boss aura if this is a boss
 	if self.stats.HasAura and self.bossAuraService then
 		self.bossAuraService:unregisterBoss(self.zombieModel)
@@ -484,7 +485,7 @@ function ZombieBrain:destroy()
 		self.attackAnimationTrack:Stop()
 		self.attackAnimationTrack = nil
 	end
-	
+
 	-- Cleanup spitter controller
 	if self.spitterController then
 		self.spitterController:destroy()
