@@ -123,6 +123,11 @@ AllianceServiceV2:
     BreakAlliance ────────────────► AllianceUI (Client → Server)
     AllianceUpdate ───────────────► AllianceUI
 
+BetrayalService:
+    BetrayalStarted ──────────────► AllianceUI
+    BetrayalOutcome ──────────────► AllianceUI
+    BetrayalStatus ───────────────► AllianceUI
+
 SpectatorManager:
     EnterSpectatorMode ───────────► SpectatorUI
     ExitSpectatorMode ────────────► SpectatorUI
@@ -155,6 +160,7 @@ PuzzleService:
     RequestPuzzleProgress ────────► PuzzleUI (Client → Server)
 
 FPSWeaponService:
+    WeaponReload ─────────────────► FPSWeaponController (Client → Server)
     AmmoUpdate ───────────────────► FPSHUD
     WeaponReload ─────────────────► FPSHUD
 

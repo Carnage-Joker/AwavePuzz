@@ -36,8 +36,8 @@ Complete analysis of all scripts and modules to ensure proper naming and cross-r
 | GameManager | 19 | ✅ |
 | PlayerManager | 4 | ✅ |
 | CureService | 1 | ✅ |
-| PuzzleService | 5 | ✅ |
-| AllianceServiceV2 | 3 | ✅ |
+| PuzzleService | 7 | ✅ |
+| AllianceServiceV2 | 4 | ✅ |
 | BetrayalService | 3 | ✅ |
 | SprintService | 2 | ✅ |
 | WeaponService | 4 | ✅ |
@@ -50,7 +50,7 @@ Complete analysis of all scripts and modules to ensure proper naming and cross-r
 | FPSAnimationService | 6 | ✅ |
 | CureSynthesisService | 5 | ✅ |
 
-**Total: 62 RemoteEvents properly defined**
+**Total: 71 RemoteEvents properly defined**
 
 #### Client-Side Listeners
 All client UI scripts properly wait for and listen to the correct RemoteEvents:
