@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- StoryConfig.lua
 -- Story, lore, and narrative configuration for Aether Wave: Convergence
 -- Contains the backstory of the Aether Wave outbreak and narrative elements
@@ -143,7 +144,7 @@ Extraction is not available.]],
 		DisplayTime = 7,
 		VoiceoverStyle = "System"
 	},
-	
+
 	-- Log 2: Threat Assessment
 	{
 		Title = "THREAT ASSESSMENT :: WAVE PROTOCOL",
@@ -159,7 +160,7 @@ Your timer starts now.]],
 		DisplayTime = 7,
 		VoiceoverStyle = "System"
 	},
-	
+
 	-- Log 3: Base Defense Protocol
 	{
 		Title = "PRIORITY ALERT :: BASE INTEGRITY",
@@ -175,7 +176,7 @@ Defend it. Or lose everything.]],
 		DisplayTime = 7,
 		VoiceoverStyle = "Warning"
 	},
-	
+
 	-- Log 4: Cure Synthesis Parameters
 	{
 		Title = "OBJECTIVE :: CURE SYNTHESIS",
@@ -196,7 +197,7 @@ Choose your moment carefully.]],
 		DisplayTime = 10,
 		VoiceoverStyle = "System"
 	},
-	
+
 	-- Log 5: Synthesis Warning
 	{
 		Title = "SYNTHESIS WARNING",
@@ -212,7 +213,7 @@ Coordinate. Defend. Survive.]],
 		DisplayTime = 8,
 		VoiceoverStyle = "Warning"
 	},
-	
+
 	-- Log 6: Alliance Protocol
 	{
 		Title = "TACTICAL NOTE :: ALLIANCE SYSTEMS",
@@ -232,7 +233,7 @@ Cooperation is statistically optimal.]],
 		DisplayTime = 9,
 		VoiceoverStyle = "System"
 	},
-	
+
 	-- Log 7: Betrayal Mechanics
 	{
 		Title = "RISK ASSESSMENT :: BETRAYAL PROTOCOL",
@@ -253,7 +254,7 @@ History suggests you won't be.]],
 		DisplayTime = 12,
 		VoiceoverStyle = "System"
 	},
-	
+
 	-- Log 8: Final Transmission
 	{
 		Title = "FINAL TRANSMISSION",
@@ -329,7 +330,7 @@ StoryConfig.DefeatMessages = {
 StoryConfig.Credits = {
 	Title = "AETHER WAVE: CONVERGENCE",
 	Subtitle = "The Cure Has Been Found",
-	
+
 	Sections = {
 		{
 			Header = "SURVIVORS",
@@ -365,7 +366,7 @@ StoryConfig.Credits = {
 			}
 		}
 	},
-	
+
 	ClosingMessage = "Thank you for playing.\nThe choice was always yours.",
 	CreditsDisplayTime = 20, -- Total seconds to display credits
 	ScrollSpeed = 30 -- Pixels per second
@@ -398,7 +399,7 @@ StoryConfig.Achievements = {
 		Icon = "⚔️",
 		Rarity = "Rare"
 	},
-	
+
 	-- Cooperation Achievements
 	{
 		Id = "trusted_ally",
@@ -414,7 +415,7 @@ StoryConfig.Achievements = {
 		Icon = "👥",
 		Rarity = "Rare"
 	},
-	
+
 	-- Betrayal Achievements
 	{
 		Id = "betrayer",
@@ -430,7 +431,7 @@ StoryConfig.Achievements = {
 		Icon = "🐺",
 		Rarity = "Epic"
 	},
-	
+
 	-- Cure Achievements
 	{
 		Id = "component_collector",
@@ -446,7 +447,7 @@ StoryConfig.Achievements = {
 		Icon = "⭐",
 		Rarity = "Rare"
 	},
-	
+
 	-- Challenge Achievements
 	{
 		Id = "perfect_run",
