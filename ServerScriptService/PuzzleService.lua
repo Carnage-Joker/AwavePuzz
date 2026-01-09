@@ -1,5 +1,4 @@
 -- @ScriptType: ModuleScript
-
 -- PuzzleService.lua
 -- Server-side puzzle management system
 -- Handles puzzle generation, validation, and tracking for cure synthesis
