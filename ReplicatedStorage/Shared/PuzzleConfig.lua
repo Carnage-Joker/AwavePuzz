@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- PuzzleConfig.lua
 -- Configuration for puzzle mini-games required to synthesize cure components
 -- Each component type requires solving a specific puzzle when 5 pieces are collected
