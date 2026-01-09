@@ -1,3 +1,5 @@
+-- @ScriptType: ModuleScript
+
 -- PuzzleService.lua
 -- Server-side puzzle management system
 -- Handles puzzle generation, validation, and tracking for cure synthesis
@@ -19,10 +21,10 @@ local function normalizeAnswer(answer)
 	if answer == nil then
 		return nil
 	end
-	
+
 	-- Convert to string if not already
 	local str = type(answer) == "string" and answer or tostring(answer)
-	
+
 	-- Normalize: lowercase and remove whitespace
 	return str:lower():gsub("%s+", "")
 end
@@ -428,20 +430,20 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		-- Example: If clue says "Dr. Smith studied Compound X in Lab A",
 		-- verify player's grid matches this relationship
 		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
-		
+
 		-- Normalize answer for consistent validation
 		local normalizedAnswer = normalizeAnswer(answer)
 		if not normalizedAnswer then
 			return false
 		end
-		
+
 		-- Accept "correct" as the MVP answer for logic puzzles
 		if normalizedAnswer == "correct" then
 			return true
 		end
 		-- Could also validate against specific arrangements like "smithx", "jonezy", "brownz"
 		-- Format: scientist initial + element initial (e.g., "sx" = Smith + Compound X)
-		
+
 		return false
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
@@ -455,19 +457,19 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		--   5. Validate forms complete circuit (Hamiltonian path)
 		-- Could use graph algorithms like DFS/BFS for connectivity check
 		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
-		
+
 		-- Normalize answer for consistent validation
 		local normalizedAnswer = normalizeAnswer(answer)
 		if not normalizedAnswer then
 			return false
 		end
-		
+
 		-- Accept "circuit" as the MVP answer for abstract puzzles
 		if normalizedAnswer == "circuit" then
 			return true
 		end
 		-- Could also validate connection patterns like "1-2,2-3,3-4,4-5,5-6,6-1"
-		
+
 		return false
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
@@ -484,7 +486,7 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		--   3. Progress to next stage only if current stage correct
 		--   4. Return true only when all 5 stages completed
 		-- Could use puzzle.data.currentStage to track progress
-		
+
 		-- For MVP, synthesis is considered solved automatically if player attempts it
 		-- (All component puzzles must be solved to even access synthesis puzzle)
 		return true
@@ -661,7 +663,7 @@ function PuzzleService:onSurvivorVictory(survivor, betrayer)
 	for componentName, puzzleState in pairs(betrayerPuzzles) do
 		local survivorPuzzleState = survivorPuzzles[componentName]
 		local betrayerHasSolved = puzzleState.solved
-		
+
 		if betrayerHasSolved and survivorPuzzleState and not survivorPuzzleState.solved then
 			survivorPuzzles[componentName].solved = true
 			print("[PuzzleService]", survivor.Name, "claimed", componentName, "puzzle from defeated betrayer", betrayer.Name)
@@ -673,7 +675,7 @@ function PuzzleService:onSurvivorVictory(survivor, betrayer)
 		puzzleState.solved = false
 		puzzleState.attempts = 0
 	end
-	
+
 	print("[PuzzleService]", survivor.Name, "claimed all puzzles from defeated betrayer", betrayer.Name)
 end
 
