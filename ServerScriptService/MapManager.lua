@@ -1,5 +1,10 @@
+-- @ScriptType: ModuleScript
 -- MapManager.lua
 -- Loads and manages the active map for multi-map support
+-- Fixes:
+-- 1) Maps now load with their pivot placed at EXACTLY (5000,0,0) instead of "current + offset"
+-- 2) No more noisy "Workspace" warnings on startup; only validates/logs when a map is actually loaded
+-- 3) Uses :PivotTo() (preferred) and keeps rotation from the template pivot
 
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -13,17 +18,16 @@ local MapValidator = require(script.Parent:WaitForChild("MapValidator"))
 local MapManager = {}
 MapManager.__index = MapManager
 
+-- Desired world pivot position for ActiveMap
+local MAP_PIVOT_POSITION = Vector3.new(5000, 0, 0)
+
 -- Helper to check if we should attempt to load default map as fallback
 local function shouldLoadDefaultMap(currentMapId, defaultMapId)
-	-- Don't load default if it's the same as current (avoid recursion)
-	-- Don't load default if there is no default
 	return defaultMapId ~= nil and defaultMapId ~= currentMapId
 end
 
 local function collectPointsFromFolder(outTable, folder)
-	if not folder then
-		return
-	end
+	if not folder then return end
 
 	for _, point in ipairs(folder:GetChildren()) do
 		if point:IsA("BasePart") then
@@ -36,21 +40,41 @@ local function collectPointsFromFolder(outTable, folder)
 	end
 end
 
+-- Moves the cloned map so its pivot position becomes MAP_PIVOT_POSITION.
+-- Keeps current rotation from template.
+local function pivotMapModelTo(model, desiredPos)
+	if not model then return end
+
+	-- GetPivot works for Models even without PrimaryPart
+	local currentPivot = model:GetPivot()
+	local currentPos = currentPivot.Position
+
+	-- Preserve rotation, change translation only
+	local rotationOnly = currentPivot - currentPos
+	local desiredPivot = rotationOnly + desiredPos
+
+	model:PivotTo(desiredPivot)
+end
+
 function MapManager.new()
 	local self = setmetatable({}, MapManager)
+
 	self.currentMapId = nil
 	self.currentMapModel = nil
+
 	self.zombieSpawnPoints = {}
 	self.resourceSpawnPoints = {}
 	self.itemSpawnPoints = {}
-	self.baseCampSetup = nil -- Will be created when loading a map
-	self:extractPoints()
+
+	self.baseCampSetup = nil
+
+	-- IMPORTANT: do NOT extract from workspace here.
+	-- That’s what was causing the noisy "Workspace has no spawn points" warnings on server boot.
 	return self
 end
 
 function MapManager:load(mapId)
-	local id
-	local data
+	local id, data
 
 	if mapId ~= nil then
 		id = mapId
@@ -62,100 +86,92 @@ function MapManager:load(mapId)
 	end
 
 	if not data then
-		warn("[MapManager] No map data found, falling back to workspace spawn folders")
+		warn("[MapManager] No map data found. No map loaded.")
 		self.currentMapId = nil
-		self:extractPoints()
+		self.currentMapModel = nil
+		self:extractPoints(true) -- silent
 		return
 	end
 
 	self.currentMapId = id
 
-	-- Clone model into workspace
+	-- Clone model into workspace from ServerStorage.Maps
 	local mapsFolder = ServerStorage:FindFirstChild("Maps")
 	if not mapsFolder then
 		warn("[MapManager] Maps folder missing in ServerStorage")
-		self:extractPoints()
+		self.currentMapId = nil
+		self.currentMapModel = nil
+		self:extractPoints(true)
 		return
 	end
-	
+
 	local template = mapsFolder:FindFirstChild(data.Model)
 	if not template then
-		warn("[MapManager] Map model '" .. tostring(data.Model) .. "' missing in ServerStorage.Maps, falling back to default")
-		-- Try to load default map instead (but avoid infinite recursion)
+		warn(string.format("[MapManager] Map model '%s' missing in ServerStorage.Maps, falling back to default", tostring(data.Model)))
+
 		local defaultId, defaultData = MapConfig.getDefault()
 		if shouldLoadDefaultMap(id, defaultId) and defaultData then
 			local defaultTemplate = mapsFolder:FindFirstChild(defaultData.Model)
 			if defaultTemplate then
-				print("[MapManager] Loading default map: " .. defaultId)
-				self:load(defaultId)
-				return
+				print("[MapManager] Loading default map: " .. tostring(defaultId))
+				return self:load(defaultId)
 			end
 		end
-		-- If default also fails or is the same as current, use workspace spawn points
+
 		self.currentMapId = nil
-		self:extractPoints()
+		self.currentMapModel = nil
+		self:extractPoints(true)
 		return
 	end
-	
+
 	-- Validate the map model before loading
 	local isValid, errors, warnings, counts = MapValidator.validateMapModel(template)
 	MapValidator.logValidation(data.Model, isValid, errors, warnings, counts)
-	
+
 	if not isValid then
-		warn("[MapManager] Map validation failed for '" .. data.Model .. "', attempting to load default map")
+		warn(string.format("[MapManager] Map validation failed for '%s', attempting default map", tostring(data.Model)))
 		local defaultId, defaultData = MapConfig.getDefault()
 		if shouldLoadDefaultMap(id, defaultId) and defaultData then
-			print("[MapManager] Falling back to default map: " .. defaultId)
-			self:load(defaultId)
-			return
-		else
-			warn("[MapManager] No valid default map available or default is current map, using workspace spawn points")
-			self.currentMapId = nil
-			self:extractPoints()
-			return
+			print("[MapManager] Falling back to default map: " .. tostring(defaultId))
+			return self:load(defaultId)
 		end
+
+		self.currentMapId = nil
+		self.currentMapModel = nil
+		self:extractPoints(true)
+		return
 	end
-	
-	-- Destroy previous map model if exists
+
+	-- Destroy previous active map
 	if self.currentMapModel and self.currentMapModel.Parent then
 		self.currentMapModel:Destroy()
 	end
-	
+
 	-- Clone and place the new map
 	self.currentMapModel = template:Clone()
 	self.currentMapModel.Name = "ActiveMap"
-	
-	-- Position the map with a +X offset to keep it separate from spawn area
-	if self.currentMapModel.PrimaryPart then
-		local currentCFrame = self.currentMapModel:GetPrimaryPartCFrame()
-		local mapOffset = Vector3.new(5000, 0, 0)
-		self.currentMapModel:SetPrimaryPartCFrame(currentCFrame + mapOffset)
-	else
-		-- If no PrimaryPart, move all parts
-		local mapOffset = Vector3.new(5000, 0, 0)
-		for _, descendant in ipairs(self.currentMapModel:GetDescendants()) do
-			if descendant:IsA("BasePart") then
-				descendant.CFrame = descendant.CFrame + mapOffset
-			end
-		end
-	end
-	
+
+	-- Reposition map so its pivot is exactly at (5000,0,0)
+	pivotMapModelTo(self.currentMapModel, MAP_PIVOT_POSITION)
+
+	-- Helpful attribute for debugging other systems (BaseCampSetup etc.)
+	self.currentMapModel:SetAttribute("MapPivot", MAP_PIVOT_POSITION)
+
 	self.currentMapModel.Parent = workspace
 
-	self:extractPoints()
-	
-	-- Setup base camp after extracting spawn points (if enabled in config)
+	-- Extract points from ActiveMap (not workspace)
+	self:extractPoints(false)
+
+	-- Setup base camp after extracting spawn points (if enabled)
 	if not GameConfig.AUTO_CREATE_BASE_CAMP then
 		print("[MapManager] Auto base camp creation is disabled in GameConfig")
 	elseif #self.zombieSpawnPoints == 0 then
 		warn("[MapManager] No zombie spawn points found, skipping base camp setup")
 	else
-		-- Clean up previous BaseCampSetup before creating a new one
 		if self.baseCampSetup then
 			self.baseCampSetup:cleanup()
 		end
-		
-		-- Create new BaseCampSetup with map-specific config
+
 		self.baseCampSetup = BaseCampSetup.new(data)
 		self.baseCampSetup:setupForMap(self)
 	end
@@ -163,124 +179,68 @@ end
 
 function MapManager:loadDefault()
 	local defaultId = select(1, MapConfig.getDefault())
-	self:load(defaultId)
+	return self:load(defaultId)
 end
 
-function MapManager:extractPoints()
+-- silent=true prevents warnings/log spam (used only for fallback/no-map situations)
+function MapManager:extractPoints(silent)
 	self.zombieSpawnPoints = {}
 	self.resourceSpawnPoints = {}
 	self.itemSpawnPoints = {}
 
-	-- Determine root: ActiveMap takes priority, workspace is fallback only
-	local root = self.currentMapModel or workspace
-	local mapName = self.currentMapId or "Workspace"
 	local usingActiveMap = (self.currentMapModel ~= nil)
+	local root = self.currentMapModel
+	local mapName = self.currentMapId or "None"
 
-	-- Extract zombie spawn points from ActiveMap
-	local spawnFolder = root:FindFirstChild("ZombieSpawnPoints")
-	if spawnFolder then
-		local beforeCount = #self.zombieSpawnPoints
-		collectPointsFromFolder(self.zombieSpawnPoints, spawnFolder)
-		local afterCount = #self.zombieSpawnPoints
-		
-		-- Log info if folder exists but contains no valid spawn points
-		if afterCount == beforeCount and usingActiveMap then
-			print(string.format("[MapManager] INFO: ActiveMap '%s' has ZombieSpawnPoints folder but no valid spawn points found (folder may be empty or contain only invalid children)", mapName))
+	-- If no ActiveMap, do nothing (don’t fall back to workspace by default).
+	-- This stops the “Workspace has no spawn points” spam at startup.
+	if not usingActiveMap then
+		if not silent then
+			print("[MapManager] No ActiveMap loaded; spawn points remain empty.")
 		end
-	elseif usingActiveMap then
-		-- Only warn if we're using ActiveMap and folder is missing
-		warn(string.format("[MapManager] ActiveMap '%s' missing ZombieSpawnPoints folder. Expected: workspace.ActiveMap.ZombieSpawnPoints", mapName))
+		return
 	end
 
-	-- Fallback to workspace only if ActiveMap doesn't have the folder
-	if #self.zombieSpawnPoints == 0 and not spawnFolder then
-		local workspaceFolder = workspace:FindFirstChild("ZombieSpawnPoints")
-		if workspaceFolder then
-			collectPointsFromFolder(self.zombieSpawnPoints, workspaceFolder)
-			print(string.format("[MapManager] Using workspace.ZombieSpawnPoints as fallback for '%s'", mapName))
-		end
+	-- Zombie spawns
+	local zombieFolder = root:FindFirstChild("ZombieSpawnPoints")
+	if zombieFolder then
+		collectPointsFromFolder(self.zombieSpawnPoints, zombieFolder)
+	elseif not silent then
+		warn(string.format("[MapManager] ActiveMap '%s' missing ZombieSpawnPoints folder", tostring(mapName)))
 	end
 
-	-- Extract resource spawn points - check both conventions
-	-- 1. Legacy convention: ResourceSpawnPoints folder
-	local resourceFolder = root:FindFirstChild("ResourceSpawnPoints")
-	local resourcePointsBeforeCount = #self.resourceSpawnPoints
-	if resourceFolder then
-		collectPointsFromFolder(self.resourceSpawnPoints, resourceFolder)
+	-- Resource spawns (legacy + standard)
+	local resourceFolderLegacy = root:FindFirstChild("ResourceSpawnPoints")
+	if resourceFolderLegacy then
+		collectPointsFromFolder(self.resourceSpawnPoints, resourceFolderLegacy)
 	end
-	
-	-- 2. Standard convention: SpawnPoints/ResourceSpawns
+
 	local spawnPointsFolder = root:FindFirstChild("SpawnPoints")
 	if spawnPointsFolder then
 		local resourceSpawns = spawnPointsFolder:FindFirstChild("ResourceSpawns")
 		if resourceSpawns then
 			collectPointsFromFolder(self.resourceSpawnPoints, resourceSpawns)
 		end
-		
-		-- Extract item spawn points from standard convention
+
 		local itemSpawns = spawnPointsFolder:FindFirstChild("ItemSpawns")
 		if itemSpawns then
 			collectPointsFromFolder(self.itemSpawnPoints, itemSpawns)
 		end
 	end
-	
-	-- Log info if resource folders exist but contain no valid spawn points
-	if usingActiveMap and #self.resourceSpawnPoints == resourcePointsBeforeCount then
-		if resourceFolder or (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
-			print(string.format("[MapManager] INFO: ActiveMap '%s' has resource spawn folder(s) but no valid spawn points found (folder may be empty or contain only invalid children)", mapName))
-		end
-	end
 
-	-- Warn if resource spawn points missing in ActiveMap
-	if usingActiveMap and #self.resourceSpawnPoints == 0 then
-		if not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
-			warn(string.format("[MapManager] ActiveMap '%s' missing resource spawn folders. Expected: workspace.ActiveMap.ResourceSpawnPoints or workspace.ActiveMap.SpawnPoints.ResourceSpawns", mapName))
-		end
-	end
+	-- Log counts
+	if not silent then
+		print(string.format("[MapManager] Loaded map '%s':", tostring(mapName)))
+		print(string.format("  - Zombie spawn points: %d", #self.zombieSpawnPoints))
+		print(string.format("  - Resource spawn points: %d", #self.resourceSpawnPoints))
+		print(string.format("  - Item spawn points: %d", #self.itemSpawnPoints))
 
-	-- Helper: apply workspace fallback for spawn points when ActiveMap folders are missing
-	local function applyWorkspaceSpawnFallback(spawnPointsArray, primaryFolderName, spawnPointsFolderName, subFolderName, mapId)
-		local workspacePrimaryFolder = workspace:FindFirstChild(primaryFolderName)
-		if workspacePrimaryFolder then
-			collectPointsFromFolder(spawnPointsArray, workspacePrimaryFolder)
-			print(string.format("[MapManager] Using workspace.%s as fallback for '%s'", primaryFolderName, mapId))
-			return
+		if #self.zombieSpawnPoints == 0 then
+			warn(string.format("[MapManager] WARNING: No zombie spawn points found for '%s'!", tostring(mapName)))
 		end
-
-		-- Check workspace SpawnPoints/<subFolderName>
-		local workspaceSpawnPoints = workspace:FindFirstChild(spawnPointsFolderName)
-		if workspaceSpawnPoints then
-			local subFolder = workspaceSpawnPoints:FindFirstChild(subFolderName)
-			if subFolder then
-				collectPointsFromFolder(spawnPointsArray, subFolder)
-				print(string.format("[MapManager] Using workspace.%s.%s as fallback for '%s'", spawnPointsFolderName, subFolderName, mapId))
-			end
+		if #self.resourceSpawnPoints == 0 then
+			warn(string.format("[MapManager] WARNING: No resource spawn points found for '%s'!", tostring(mapName)))
 		end
-	end
-
-	-- Fallback to workspace only if ActiveMap doesn't have resource spawn folders
-	if #self.resourceSpawnPoints == 0 and not resourceFolder and not (spawnPointsFolder and spawnPointsFolder:FindFirstChild("ResourceSpawns")) then
-		applyWorkspaceSpawnFallback(
-			self.resourceSpawnPoints,
-			"ResourceSpawnPoints",
-			"SpawnPoints",
-			"ResourceSpawns",
-			mapName
-		)
-	end
-	
-	-- Log spawn point counts
-	print(string.format("[MapManager] Loaded map '%s':", mapName))
-	print(string.format("  - Zombie spawn points: %d", #self.zombieSpawnPoints))
-	print(string.format("  - Resource spawn points: %d", #self.resourceSpawnPoints))
-	print(string.format("  - Item spawn points: %d", #self.itemSpawnPoints))
-	
-	-- Warn if spawn points are critically low
-	if #self.zombieSpawnPoints == 0 then
-		warn(string.format("[MapManager] WARNING: No zombie spawn points found for '%s'! Zombies will not spawn correctly.", mapName))
-	end
-	if #self.resourceSpawnPoints == 0 then
-		warn(string.format("[MapManager] WARNING: No resource spawn points found for '%s'! Resources will not spawn.", mapName))
 	end
 end
 
