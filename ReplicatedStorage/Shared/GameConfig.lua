@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- GameConfig.lua
 -- Configuration for the Zombie Wave Game
 --[[
@@ -42,20 +43,20 @@ GameConfig.BASE_CAMP = {
 	WALL_HEIGHT = 12, -- Height of defensive walls
 	WALL_THICKNESS = 2, -- Thickness of walls
 	DEFAULT_HEIGHT = 5, -- Default Y position if ground detection fails
-	
+
 	-- Defensive features
 	GATE_WIDTH = 8, -- Width of gates in walls
 	GATE_TRANSPARENCY = 0.3, -- Transparency of gates (0=opaque, 1=invisible)
 	NUM_GATES = 4, -- Number of gates (one per cardinal direction)
 	COVER_COUNT = 8, -- Number of cover positions
 	COVER_SIZE = Vector3.new(4, 3, 1), -- Size of cover objects
-	
+
 	-- Colors and materials
 	WALL_COLOR = Color3.fromRGB(80, 80, 80), -- Gray walls
 	BASE_COLOR = Color3.fromRGB(100, 100, 100), -- Base platform color
 	GATE_COLOR = Color3.fromRGB(120, 80, 40), -- Brownish gates
 	COVER_COLOR = Color3.fromRGB(70, 70, 70), -- Dark gray cover
-	
+
 	WALL_MATERIAL = Enum.Material.Concrete,
 	BASE_MATERIAL = Enum.Material.Concrete,
 	GATE_MATERIAL = Enum.Material.Wood,
@@ -120,7 +121,7 @@ GameConfig.MAX_ITEMS_ON_MAP = 5 -- Maximum number of item packs on map at once
 GameConfig.ENABLE_MULTI_MAP = true
 
 -- Lobby & Round Settings
-GameConfig.LOBBY_VOTING_TIME = 20 -- Seconds for map voting
+GameConfig.LOBBY_VOTING_TIME = 5 -- Seconds for map voting
 GameConfig.LOBBY_MIN_PLAYERS = 1 -- Minimum players to start voting
 GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after round
 GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
@@ -138,34 +139,34 @@ GameConfig.AI = {
 	OVERCROWD_RADIUS = 15, -- Radius to check for overcrowding
 	OVERCROWD_THRESHOLD = 3, -- Max zombies before penalty
 	OVERCROWD_PENALTY = 50, -- Score penalty per zombie beyond threshold
-	
+
 	-- Surround System
 	INNER_RING_RADIUS = 8,
 	MIDDLE_RING_RADIUS = 15,
 	OUTER_RING_RADIUS = 25,
 	SLOTS_PER_RING = 8,
 	SEPARATION_RADIUS = 3,
-	
+
 	-- AI Director
 	BASE_PRESSURE_MIN = 0.2,
 	BASE_PRESSURE_MAX = 0.6,
 	SURGE_INTERVAL_MIN = 30,
 	SURGE_INTERVAL_MAX = 60,
-	
+
 	-- Boss Aura
 	BOSS_AURA_RADIUS = 40,
 	AURA_MOVE_SPEED_BOOST = 1.1,
 	AURA_RETARGET_BOOST = 0.5,
-	
+
 	-- Performance
 	DEFAULT_UPDATE_JITTER = 0.1, -- Base random offset for update intervals (reduced from 0.3)
 	MAX_UPDATE_JITTER = 0.3, -- Max random offset for update intervals (reduced from 1.2)
 	LOS_CACHE_TIME = 0.5, -- Cache line-of-sight checks
-	
+
 	-- Movement Continuity (Hesitation Fix)
 	WAYPOINT_SKIP_DISTANCE = 3, -- Distance threshold to skip intermediate waypoints and push toward target
 	MOVEMENT_REISSUE_DISTANCE = 0.5, -- Distance threshold to re-issue move commands
-	
+
 	-- Debug
 	DEBUG_MODE = false, -- Enable visual debug indicators
 }
