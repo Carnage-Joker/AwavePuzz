@@ -99,6 +99,7 @@ function ItemSpawner:raycastToGround(pos)
 	local params = RaycastParams.new()
 	params.FilterDescendantsInstances = { self.itemFolder }
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
 
 	local result = Workspace:Raycast(rayStart, rayDir, params)
 	if result and result.Position then

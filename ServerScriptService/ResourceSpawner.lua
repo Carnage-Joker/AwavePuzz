@@ -215,6 +215,7 @@ function ResourceSpawner:raycastToGround(pos)
 	local params = RaycastParams.new()
 	params.FilterDescendantsInstances = { self.resourceFolder }
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
 
 	local result = Workspace:Raycast(rayStart, rayDir, params)
 	if result and result.Position then
@@ -260,6 +261,7 @@ function ResourceSpawner:getOpennessScore(pos)
 	local params = RaycastParams.new()
 	params.FilterDescendantsInstances = { self.resourceFolder }
 	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.IgnoreWater = true
 
 	local origin = pos + Vector3.new(0, 3, 0)
 	for i = 1, CONFIG.OPENNESS_RAYS do

@@ -177,7 +177,7 @@ end
 local function groundSnapPosition(pos, ignoreInstances)
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
-	rayParams.IgnoreWater = false
+	rayParams.IgnoreWater = true
 	rayParams.FilterDescendantsInstances = ignoreInstances or {}
 
 	-- cast from above downwards
