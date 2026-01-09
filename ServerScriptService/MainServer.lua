@@ -101,7 +101,8 @@ gameManager:setCureSynthesisService(cureSynthesisService)
 print("CureSynthesisService initialized and linked")
 
 -- Note: Cure station setup is handled by ServerScriptService/CureStationSetup.lua
--- which runs automatically on server startup
+-- That script should be a normal Script (not ModuleScript) with `-- @ScriptType: Script` as its first line.
+-- It runs automatically on server startup.
 
 ----------------------------------------------------------------
 -- Player connection handlers
