@@ -1,7 +1,8 @@
+-- @ScriptType: ModuleScript
 -- SprintService.lua
 -- Server-authoritative sprint and stamina management
 -- Handles sprint validation and stamina tracking
--- NOTE: WalkSpeed is now controlled client-side (FPSMovementController)
+-- WalkSpeed controlled client-side (FPSMovement)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -14,6 +15,11 @@ local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
 local SprintService = {}
 SprintService.__index = SprintService
+
+-- Networking tuning (safe defaults)
+local NET_SEND_HZ = 5                -- 5 updates/sec typical HUD rate
+local NET_SEND_INTERVAL = 1 / NET_SEND_HZ
+local STAMINA_EPSILON = 0.25         -- minimum change before we bother sending
 
 function SprintService.new(playerManager)
 	local self = setmetatable({}, SprintService)
@@ -38,9 +44,6 @@ function SprintService.new(playerManager)
 		or 15
 
 	self.STAMINA_REGEN_DELAY = GameConfig.STAMINA_REGEN_DELAY or 1.0
-	
-	-- Threshold for sending stamina updates (prevent network spam)
-	self.STAMINA_UPDATE_THRESHOLD = GameConfig.STAMINA_UPDATE_THRESHOLD or 0.5
 
 	self:setupRemoteEvents()
 	self:startUpdateLoop()
@@ -53,13 +56,11 @@ end
 --------------------------------------------------------------------------------
 
 function SprintService:setupRemoteEvents()
-	-- Use shared utility to create remote events
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"SprintRequest",
 		"StaminaUpdate"
 	})
 
-	-- Handle sprint requests from clients
 	self.remoteEvents.SprintRequest.OnServerEvent:Connect(function(player, wantsSprint)
 		self:handleSprintRequest(player, wantsSprint)
 	end)
@@ -77,40 +78,35 @@ function SprintService:initializePlayer(player)
 		isSprinting = false,
 		wantsSprint = false,
 		timeSinceSprintStopped = 0,
+
+		-- net sync
+		_lastSentAt = 0,
+		_lastSentStamina = nil,
+		_lastSentSprint = nil,
 	}
 
-	-- Initial push so HUD has correct numbers
-	self:sendStaminaUpdate(player)
+	self:sendStaminaUpdate(player, true)
 end
 
 function SprintService:removePlayer(player)
-	local userId = player.UserId
-	self.sprintState[userId] = nil
-	
-	-- Clean up tracking tables to prevent memory leak
-	if self.lastUpdateTime then
-		self.lastUpdateTime[userId] = nil
-	end
-	if self.lastSentStamina then
-		self.lastSentStamina[userId] = nil
-	end
-	if self.lastSentSprinting then
-		self.lastSentSprinting[userId] = nil
-	end
+	self.sprintState[player.UserId] = nil
 end
 
 function SprintService:onCharacterAdded(player, _character)
 	local state = self.sprintState[player.UserId]
-	if not state then
-		return
-	end
+	if not state then return end
 
-	-- Reset sprint state on respawn
 	state.isSprinting = false
+	state.wantsSprint = false
 	state.stamina = self.STAMINA_MAX
 	state.timeSinceSprintStopped = 0
 
-	self:sendStaminaUpdate(player)
+	-- force send after respawn
+	state._lastSentAt = 0
+	state._lastSentStamina = nil
+	state._lastSentSprint = nil
+
+	self:sendStaminaUpdate(player, true)
 end
 
 --------------------------------------------------------------------------------
@@ -119,27 +115,23 @@ end
 
 function SprintService:handleSprintRequest(player, wantsSprint)
 	local state = self.sprintState[player.UserId]
-	if not state then
-		return
-	end
+	if not state then return end
 
 	state.wantsSprint = wantsSprint == true
+	-- optional: immediate send so HUD feels responsive when toggling sprint
+	self:sendStaminaUpdate(player, true)
 end
 
 --------------------------------------------------------------------------------
--- MOVEMENT CHECK (SERVER-SIDE VERIFICATION)
+-- MOVEMENT CHECK (SERVER VERIFICATION)
 --------------------------------------------------------------------------------
 
 function SprintService:isPlayerMoving(player): boolean
 	local character = player.Character
-	if not character then
-		return false
-	end
+	if not character then return false end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return false
-	end
+	if not humanoid then return false end
 
 	return humanoid.MoveDirection.Magnitude > 0.1
 end
@@ -150,21 +142,19 @@ end
 
 function SprintService:updatePlayerSprint(player, state, deltaTime)
 	local character = player.Character
-	if not character then
-		return
-	end
+	if not character then return end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
+	if not humanoid then return end
 
-	-- Determine if player is allowed to sprint from the server perspective
-	local canSprint = state.wantsSprint
+	local canSprint =
+		state.wantsSprint
 		and state.stamina > 0
 		and self:isPlayerMoving(player)
 
-	-- State transitions
+	local prevSprinting = state.isSprinting
+
+	-- state transitions
 	if canSprint and not state.isSprinting then
 		state.isSprinting = true
 		state.timeSinceSprintStopped = 0
@@ -173,24 +163,25 @@ function SprintService:updatePlayerSprint(player, state, deltaTime)
 		state.timeSinceSprintStopped = 0
 	end
 
-	-- Stamina handling
+	-- stamina handling
 	if state.isSprinting then
-		-- Deplete stamina while sprinting
 		state.stamina = math.max(0, state.stamina - self.STAMINA_DEPLETION_RATE * deltaTime)
 		state.timeSinceSprintStopped = 0
 
-		-- If stamina hits zero, force stop sprint
 		if state.stamina <= 0 then
 			state.isSprinting = false
 			state.timeSinceSprintStopped = 0
 		end
 	else
-		-- Regen starts after a short delay
 		state.timeSinceSprintStopped += deltaTime
-
 		if state.timeSinceSprintStopped >= self.STAMINA_REGEN_DELAY then
 			state.stamina = math.min(self.STAMINA_MAX, state.stamina + self.STAMINA_REGEN_RATE * deltaTime)
 		end
+	end
+
+	-- If sprinting state changed, push immediately
+	if prevSprinting ~= state.isSprinting then
+		self:sendStaminaUpdate(player, true)
 	end
 end
 
@@ -198,55 +189,53 @@ end
 -- CLIENT SYNC
 --------------------------------------------------------------------------------
 
-function SprintService:sendStaminaUpdate(player)
+function SprintService:sendStaminaUpdate(player, force: boolean?)
 	local state = self.sprintState[player.UserId]
-	if not state then
-		return
+	if not state then return end
+
+	local now = os.clock()
+
+	-- throttle by time
+	if not force then
+		if (now - (state._lastSentAt or 0)) < NET_SEND_INTERVAL then
+			return
+		end
 	end
 
+	local currentStamina = state.stamina
+	local isSprinting = state.isSprinting
+
+	-- throttle by change (avoid spam)
+	if not force then
+		local lastStam = state._lastSentStamina
+		local lastSprint = state._lastSentSprint
+
+		local staminaChanged = (lastStam == nil) or (math.abs(currentStamina - lastStam) >= STAMINA_EPSILON)
+		local sprintChanged = (lastSprint == nil) or (isSprinting ~= lastSprint)
+
+		if not staminaChanged and not sprintChanged then
+			return
+		end
+	end
+
+	state._lastSentAt = now
+	state._lastSentStamina = currentStamina
+	state._lastSentSprint = isSprinting
+
 	self.remoteEvents.StaminaUpdate:FireClient(player, {
-		current = state.stamina,
+		current = currentStamina,
 		max = self.STAMINA_MAX,
-		isSprinting = state.isSprinting,
+		isSprinting = isSprinting,
 	})
 end
 
 function SprintService:startUpdateLoop()
-	-- Store tracking tables on self for cleanup in removePlayer
-	self.lastUpdateTime = {}
-	self.lastSentStamina = {}
-	self.lastSentSprinting = {}
-
 	RunService.Heartbeat:Connect(function(deltaTime)
 		for userId, state in pairs(self.sprintState) do
 			local player = Players:GetPlayerByUserId(userId)
 			if player then
 				self:updatePlayerSprint(player, state, deltaTime)
-
-				-- Throttle network updates (~10x per second)
-				self.lastUpdateTime[userId] = (self.lastUpdateTime[userId] or 0) + deltaTime
-				
-				-- Only send if enough time has passed AND (stamina changed significantly OR sprint state changed)
-				local lastStamina = self.lastSentStamina[userId]
-				local lastSprint = self.lastSentSprinting[userId]
-				local staminaChanged = false
-				local sprintChanged = false
-				
-				-- First update for this player: treat both stamina and sprint as changed
-				if lastStamina == nil or lastSprint == nil then
-					staminaChanged = true
-					sprintChanged = true
-				else
-					staminaChanged = math.abs(lastStamina - state.stamina) > self.STAMINA_UPDATE_THRESHOLD
-					sprintChanged = (lastSprint ~= state.isSprinting)
-				end
-				
-				if self.lastUpdateTime[userId] >= 0.1 and (staminaChanged or sprintChanged) then
-					self:sendStaminaUpdate(player)
-					self.lastUpdateTime[userId] = 0
-					self.lastSentStamina[userId] = state.stamina
-					self.lastSentSprinting[userId] = state.isSprinting
-				end
+				self:sendStaminaUpdate(player, false)
 			end
 		end
 	end)
