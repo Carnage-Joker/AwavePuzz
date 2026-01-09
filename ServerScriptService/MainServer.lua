@@ -100,12 +100,10 @@ cureSynthesisService:setPuzzleService(puzzleService)
 gameManager:setCureSynthesisService(cureSynthesisService)
 print("CureSynthesisService initialized and linked")
 
--- Setup cure stations
-local cureStationSetup = require(game.ReplicatedStorage.Shared.CureStationSetup)
-if not cureStationSetup then
-	warn("Cure station setup failed")
-end
-print("Cure stations setup complete")
+-- Note: Cure station setup is owned by ServerScriptService/CureStationSetup.lua
+-- which runs automatically on server startup as the single source of truth.
+-- Any older duplicates (e.g. ReplicatedStorage/Shared/CureStationSetup.lua) are legacy-only
+-- and MUST NOT be used or required; remove them when cleaning up redundant modules.
 
 ----------------------------------------------------------------
 -- Player connection handlers
