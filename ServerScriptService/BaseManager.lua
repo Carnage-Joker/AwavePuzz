@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- BaseManager.lua
 -- Manages shared base health for the entire game
 -- Features live updates broadcast to clients on damage
