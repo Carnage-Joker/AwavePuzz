@@ -318,6 +318,18 @@ function PlayerSpawnManager:getMapSpawnPosition()
 			if playerSpawnsInMap then
 				return playerSpawnsInMap
 			end
+			
+			-- Check for loose Spawn1-Spawn8 parts directly in ActiveMap
+			local looseSpawns = {}
+			for _, child in ipairs(activeMap:GetChildren()) do
+				if child:IsA("BasePart") and string.match(child.Name, "^Spawn%d+$") then
+					table.insert(looseSpawns, child)
+				end
+			end
+			if #looseSpawns > 0 then
+				print(string.format("[PlayerSpawnManager] Found %d loose spawn parts in ActiveMap", #looseSpawns))
+				return activeMap
+			end
 		end
 
 		-- Fallback: search anywhere in Workspace (for compatibility)
@@ -332,6 +344,18 @@ function PlayerSpawnManager:getMapSpawnPosition()
 		local playerSpawnsAny = Workspace:FindFirstChild("PlayerSpawns", true)
 		if playerSpawnsAny then
 			return playerSpawnsAny
+		end
+		
+		-- Check for loose Spawn1-Spawn8 parts directly in Workspace
+		local looseSpawns = {}
+		for _, child in ipairs(Workspace:GetChildren()) do
+			if child:IsA("BasePart") and string.match(child.Name, "^Spawn%d+$") then
+				table.insert(looseSpawns, child)
+			end
+		end
+		if #looseSpawns > 0 then
+			print(string.format("[PlayerSpawnManager] Found %d loose spawn parts in Workspace", #looseSpawns))
+			return Workspace
 		end
 
 		return nil
