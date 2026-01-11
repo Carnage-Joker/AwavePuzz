@@ -438,35 +438,49 @@ function PlayerSpawnManager:getMapSpawnPosition()
 
 		-- Ground snap attempts (sometimes first ray hits something weird; re-try with slight jitters)
 		local snapped = pos
-		for _ = 1, MAX_GROUND_SNAP_TRIES do
+		for snapAttempt = 1, MAX_GROUND_SNAP_TRIES do
 			local gs, hit = groundSnapPosition(snapped, ignore)
 			snapped = gs
 
 			-- after snap, ensure we are STILL not inside exclusion (since Y changes + volumes could be tall)
-			local inside = isInAnyExclusion(snapped, exclusionParts)
+			local inside, whichVol = isInAnyExclusion(snapped, exclusionParts)
 			if not inside then
 				return snapped
 			end
 
-			-- if still inside, jitter and retry
+			-- if still inside, try to push out again, then jitter and retry
+			if whichVol then
+				snapped = pushPointOutOfVolume(snapped, whichVol)
+			end
 			snapped = snapped + Vector3.new(math.random(-8, 8), 0, math.random(-8, 8))
 			if not hit then
 				snapped = snapped + Vector3.new(0, 25, 0)
 			end
 		end
 
+		-- Final check: if still inside exclusion after all attempts, reject this candidate
+		local stillInside = isInAnyExclusion(snapped, exclusionParts)
+		if stillInside then
+			warn("[PlayerSpawnManager] Candidate spawn rejected - still inside exclusion volume after all attempts")
+			return nil
+		end
+
 		return snapped
 	end
 
-	-- Try explicit spawn bag first
+	-- Try explicit spawn bag first with more attempts
 	do
-		for _ = 1, 6 do
+		for attempt = 1, 12 do
 			local c = pickFromBag()
 			if c then
 				local final = resolveCandidate(c)
-				if final then return final end
+				if final then 
+					print(string.format("[PlayerSpawnManager] Found valid spawn from bag (attempt %d)", attempt))
+					return final 
+				end
 			end
 		end
+		warn("[PlayerSpawnManager] Failed to find valid spawn from explicit spawn points after 12 attempts")
 	end
 
 	-- 2) Fallback: Prefer BaseCamp spawn if present (but still respects exclusion + ground)
@@ -474,24 +488,33 @@ function PlayerSpawnManager:getMapSpawnPosition()
 		local baseCamp = Workspace:FindFirstChild("BaseCamp")
 		if baseCamp then
 			print("[PlayerSpawnManager] Found BaseCamp, checking for spawn points")
+			
+			-- Try BaseCampSpawn reference point multiple times with varying offsets
 			local ref = baseCamp:FindFirstChild("BaseCampSpawn")
 			if ref and ref:IsA("BasePart") then
-				local c = ref.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
-				local final = resolveCandidate(c)
-				if final then 
-					print("[PlayerSpawnManager] Using BaseCampSpawn position")
-					return final 
+				for _ = 1, 6 do
+					local c = ref.Position + Vector3.new(math.random(-15, 15), 0, math.random(-15, 15))
+					local final = resolveCandidate(c)
+					if final then 
+						print("[PlayerSpawnManager] Using BaseCampSpawn position")
+						return final 
+					end
 				end
+				warn("[PlayerSpawnManager] BaseCampSpawn exists but all positions were inside exclusion volumes")
 			end
 
+			-- Try BaseCamp PrimaryPart with larger radius to avoid interior
 			local primary = baseCamp.PrimaryPart
 			if primary then
-				local c = primary.Position + Vector3.new(math.random(-18, 18), 0, math.random(-18, 18))
-				local final = resolveCandidate(c)
-				if final then 
-					print("[PlayerSpawnManager] Using BaseCamp PrimaryPart position")
-					return final 
+				for _ = 1, 6 do
+					local c = primary.Position + Vector3.new(math.random(-25, 25), 0, math.random(-25, 25))
+					local final = resolveCandidate(c)
+					if final then 
+						print("[PlayerSpawnManager] Using BaseCamp PrimaryPart position")
+						return final 
+					end
 				end
+				warn("[PlayerSpawnManager] BaseCamp PrimaryPart exists but all positions were inside exclusion volumes")
 			end
 		else
 			warn("[PlayerSpawnManager] BaseCamp not found in Workspace, using hard fallback")

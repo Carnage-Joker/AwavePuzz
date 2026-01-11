@@ -30,6 +30,9 @@ function ItemSpawner.new()
 	self.activeItemCount = 0 -- Track count for O(1) access
 	self.spawnTimer = 0
 	self.itemCounter = 0 -- For unique ID generation
+	
+	-- Item spawn points (configured from map)
+	self.itemSpawnPoints = {}
 
 	-- Create item folder in workspace
 	self.itemFolder = workspace:FindFirstChild("ItemPickups")
@@ -50,6 +53,68 @@ end
 
 function ItemSpawner:setFPSWeaponService(fpsWeaponService)
 	self.fpsWeaponService = fpsWeaponService
+end
+
+-- Set item spawn points (called by MapManager when map loads)
+function ItemSpawner:setSpawnPoints(spawnPoints)
+	self.itemSpawnPoints = {}
+	
+	if not spawnPoints or #spawnPoints == 0 then
+		warn("[ItemSpawner] No spawn points provided")
+		return
+	end
+	
+	-- Extract positions from spawn point parts
+	for _, part in ipairs(spawnPoints) do
+		if part and part:IsA("BasePart") then
+			table.insert(self.itemSpawnPoints, part.Position)
+		end
+	end
+	
+	print(string.format("[ItemSpawner] Configured with %d spawn points", #self.itemSpawnPoints))
+end
+
+-- Find item spawn points from the map (preferred: ActiveMap.SpawnPoints.ItemSpawns)
+function ItemSpawner:findItemSpawnPoints()
+	local spawnParts = {}
+	
+	-- Preferred: Workspace.ActiveMap.SpawnPoints.ItemSpawns
+	local activeMap = Workspace:FindFirstChild("ActiveMap")
+	if activeMap then
+		local spawnPoints = activeMap:FindFirstChild("SpawnPoints")
+		if spawnPoints then
+			local itemSpawns = spawnPoints:FindFirstChild("ItemSpawns")
+			if itemSpawns and itemSpawns:IsA("Folder") then
+				for _, child in ipairs(itemSpawns:GetChildren()) do
+					if child:IsA("BasePart") then
+						table.insert(spawnParts, child)
+					end
+				end
+				if #spawnParts > 0 then
+					print(string.format("[ItemSpawner] Found %d item spawn points in ActiveMap.SpawnPoints.ItemSpawns", #spawnParts))
+					return spawnParts
+				end
+			end
+		end
+		
+		-- Fallback: Workspace.ActiveMap.ItemSpawns
+		local itemSpawnsInMap = activeMap:FindFirstChild("ItemSpawns")
+		if itemSpawnsInMap and itemSpawnsInMap:IsA("Folder") then
+			for _, child in ipairs(itemSpawnsInMap:GetChildren()) do
+				if child:IsA("BasePart") then
+					table.insert(spawnParts, child)
+				end
+			end
+			if #spawnParts > 0 then
+				print(string.format("[ItemSpawner] Found %d item spawn points in ActiveMap.ItemSpawns", #spawnParts))
+				return spawnParts
+			end
+		end
+	end
+	
+	-- No configured spawn points found
+	warn("[ItemSpawner] No item spawn points found in map. Items will spawn using fallback base position.")
+	return spawnParts
 end
 
 local function getPivotPosition(inst)
@@ -109,6 +174,27 @@ function ItemSpawner:raycastToGround(pos)
 end
 
 function ItemSpawner:getRandomSpawnPositionNearBase()
+	-- Prefer configured spawn points if available
+	if self.itemSpawnPoints and #self.itemSpawnPoints > 0 then
+		local randomIndex = math.random(1, #self.itemSpawnPoints)
+		local spawnPos = self.itemSpawnPoints[randomIndex]
+		
+		-- Apply small random offset for variety
+		local offsetX = (math.random() - 0.5) * 4
+		local offsetZ = (math.random() - 0.5) * 4
+		local candidatePos = spawnPos + Vector3.new(offsetX, 10, offsetZ)
+		
+		-- Raycast to ground
+		local groundPos = self:raycastToGround(candidatePos)
+		if groundPos then
+			return groundPos + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
+		else
+			-- Use the spawn point directly with height offset
+			return spawnPos + Vector3.new(0, CONFIG.SPAWN_HEIGHT_OFFSET, 0)
+		end
+	end
+	
+	-- Fallback: use base position (legacy behavior)
 	local basePos = self:tryFindBasePosition()
 	local radius = GameConfig.ITEM_SPAWN_RADIUS
 
