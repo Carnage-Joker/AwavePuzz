@@ -303,3 +303,7 @@ gameStateEvent.OnClientEvent:Connect(function(stateData)
 end)
 
 print("WaveUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local WaveUI = {}
+return WaveUI

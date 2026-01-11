@@ -502,3 +502,7 @@ RunService.RenderStepped:Connect(function()
 		resourceMarker.Visible = false
 	end
 end)
+
+-- Return module table (required for ModuleScript compatibility)
+local PlayerHUD = {}
+return PlayerHUD

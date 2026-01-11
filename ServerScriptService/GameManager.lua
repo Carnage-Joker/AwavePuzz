@@ -147,6 +147,10 @@ function GameManager:configureSpawnersForMap()
 	self.resourceSpawner:setSpawnPoints(self.mapManager:getResourceSpawnPoints())
 	-- Pass zombie spawn points to ResourceSpawner for intelligent placement
 	self.resourceSpawner:setZombieSpawnPoints(self.mapManager:getZombieSpawnPoints())
+	
+	-- Configure ItemSpawner with item spawn points from the map
+	local itemSpawnParts = self.itemSpawner:findItemSpawnPoints()
+	self.itemSpawner:setSpawnPoints(itemSpawnParts)
 end
 
 function GameManager:setupRemoteEvents()

@@ -247,3 +247,7 @@ SpectatorStateUpdate.OnClientEvent:Connect(function(payload)
 	end
 	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
 end)
+
+-- Return module table (required for ModuleScript compatibility)
+local SpectatorUI = {}
+return SpectatorUI

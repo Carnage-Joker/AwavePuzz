@@ -338,3 +338,7 @@ task.delay(3, function()
 end)
 
 print("ScoreboardUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local ScoreboardUI = {}
+return ScoreboardUI

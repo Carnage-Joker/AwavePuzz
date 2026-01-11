@@ -306,3 +306,7 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 		end
 	end
 end)
+
+-- Return module table (required for ModuleScript compatibility)
+local ShopUI = {}
+return ShopUI

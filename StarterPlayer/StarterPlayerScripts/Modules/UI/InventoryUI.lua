@@ -149,3 +149,7 @@ currencyEvent.OnClientEvent:Connect(function(payload)
 	local balance = tonumber(payload.balance) or 0
 	currencyLabel.Text = "Currency: " .. tostring(balance)
 end)
+
+-- Return module table (required for ModuleScript compatibility)
+local InventoryUI = {}
+return InventoryUI

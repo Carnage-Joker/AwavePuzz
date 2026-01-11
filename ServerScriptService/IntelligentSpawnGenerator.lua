@@ -114,9 +114,9 @@ end
 function IntelligentSpawnGenerator:analyzeMapBounds()
 	local map = getActiveMap()
 	if not map then
-		self.mapBounds = { minX = -100, maxX = 100, minZ = -100, maxZ = 100, topY = 300, bottomY = -300 }
-		warn("[SpawnGenerator] No ActiveMap found, using fallback bounds")
-		return
+		self.mapBounds = nil
+		warn("[SpawnGenerator] No ActiveMap found, cannot analyze map bounds. Spawn generation will be deferred until map is loaded.")
+		return false
 	end
 
 	-- Prefer explicit MapBounds if present
@@ -149,6 +149,7 @@ function IntelligentSpawnGenerator:analyzeMapBounds()
 		self.mapBounds.minX, self.mapBounds.maxX,
 		self.mapBounds.minZ, self.mapBounds.maxZ
 	)
+	return true
 end
 
 ----------------------------------------------------------------
@@ -210,8 +211,20 @@ function IntelligentSpawnGenerator:generateSpawnPointsForRound()
 	-- Clean previous generated markers/points (prevents stacking if you enable debug)
 	self:cleanupGeneratedSpawnPoints()
 
+	-- Ensure map bounds are analyzed, and defer if no ActiveMap exists
 	if not self.mapBounds then
-		self:analyzeMapBounds()
+		local success = self:analyzeMapBounds()
+		if not success then
+			warn("[SpawnGenerator] Cannot generate spawn points without ActiveMap. Returning empty list.")
+			return {}
+		end
+	end
+	
+	-- Double-check that ActiveMap still exists
+	local map = getActiveMap()
+	if not map then
+		warn("[SpawnGenerator] ActiveMap disappeared during spawn generation. Returning empty list.")
+		return {}
 	end
 
 	-- Manual spawns live inside ActiveMap.ZombieSpawnPoints (NOT workspace root)

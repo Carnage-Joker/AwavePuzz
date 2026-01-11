@@ -566,3 +566,7 @@ updatePlayerList()
 showNotification("Press LeftShift to open Alliance Menu", 5)
 
 print("AllianceUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local AllianceUI = {}
+return AllianceUI
