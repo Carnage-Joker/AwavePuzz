@@ -237,3 +237,7 @@ end)
 updateHealthBar(DEFAULT_MAX_HEALTH, DEFAULT_MAX_HEALTH)
 
 print("BaseHealthUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local BaseHealthUI = {}
+return BaseHealthUI

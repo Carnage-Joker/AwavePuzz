@@ -357,3 +357,7 @@ if mapVoteEndEvent then
 end
 
 print("MapVotingUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local MapVotingUI = {}
+return MapVotingUI

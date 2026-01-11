@@ -433,3 +433,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 end)
 
 print("PuzzleMenuUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local PuzzleMenuUI = {}
+return PuzzleMenuUI

@@ -464,3 +464,7 @@ end)
 updateProgress(0, {})
 
 print("CureUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local CureUI = {}
+return CureUI
