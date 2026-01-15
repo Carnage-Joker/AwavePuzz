@@ -119,9 +119,10 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	self.screamerCallCooldown = 0
 	self.lastCallTime = 0
 
-	-- LOS caching
+	-- LOS caching with timestamp
 	self.losCache = {}
-	self.losCacheTime = 0
+	self.losCacheTime = tick()
+	self.losCacheLifetime = 5 -- Clear cache every 5 seconds to prevent memory leak
 
 	-- Initialize type-specific controller
 	if self.aiBehavior == "ranged" then
@@ -310,9 +311,9 @@ function ZombieBrain:tryAttack()
 			if targetPlayer and targetPlayer.Character then
 				local targetHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 				if targetHumanoid and targetHumanoid.Health > 0 then
-					-- Apply player damage penalty if Breacher
+					-- Apply player damage penalty if Breacher (with fallback)
 					if self.aiBehavior == "breacher" and self.stats.PlayerDamagePenalty then
-						damage = damage * self.stats.PlayerDamagePenalty
+						damage = damage * (self.stats.PlayerDamagePenalty or 1)
 					end
 
 					if self.playerManager then
@@ -321,9 +322,9 @@ function ZombieBrain:tryAttack()
 				end
 			end
 		elseif targetType == "base" then
-			-- Apply base damage bonus if applicable
+			-- Apply base damage bonus if applicable (with fallback)
 			if (self.aiBehavior == "bruiser" or self.aiBehavior == "breacher") and self.stats.BaseDamageBonus then
-				damage = damage * self.stats.BaseDamageBonus
+				damage = damage * (self.stats.BaseDamageBonus or 1)
 			end
 
 			if self.baseManager then
@@ -361,6 +362,12 @@ function ZombieBrain:update(deltaTime)
 			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
 			self.repathInterval = self.bossAuraService:getRetargetInterval(self.zombieModel, baseInterval)
 		end
+	end
+
+	-- Periodic LOS cache cleanup to prevent memory leak
+	if tick() - self.losCacheTime > self.losCacheLifetime then
+		self.losCache = {}
+		self.losCacheTime = tick()
 	end
 
 	-- Update attack cooldown

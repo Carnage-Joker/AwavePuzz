@@ -54,6 +54,11 @@ local weaponReloadEvent = remoteEvents:WaitForChild("WeaponReload")
 local ammoUpdateEvent = remoteEvents:WaitForChild("AmmoUpdate")
 local hitConfirmEvent = remoteEvents:WaitForChild("WeaponHitConfirm")
 
+-- Connection storage for cleanup
+local inputBeganConn = nil
+local inputEndedConn = nil
+local fireConnection = nil
+
 -- Bindable events for UI and animation communication
 local bindableFolder = playerGui:WaitForChild("BindableEvents", 10)
 if not bindableFolder then
@@ -198,7 +203,10 @@ local function startReload()
 	isReloading = true
 
 	-- Fire reload animation event
-	local reloadTime = weaponStats and weaponStats.ReloadTime or 2.0
+	local reloadTime = 2.0
+	if weaponStats and weaponStats.ReloadTime then
+		reloadTime = weaponStats.ReloadTime
+	end
 	reloadStartedBindable:Fire({
 		weaponId = currentWeapon,
 		duration = reloadTime
@@ -212,6 +220,13 @@ end
 
 local function cancelReload()
 	if not isReloading then return end
+	
+	-- Cancel any active firing when reload starts
+	if fireConnection then
+		fireConnection:Disconnect()
+		fireConnection = nil
+	end
+	
 	isReloading = false
 
 	-- Fire reload canceled event
@@ -225,6 +240,12 @@ end
 
 local function equipWeapon(weaponId)
 	if currentWeapon == weaponId then return end
+
+	-- Cleanup any active fire connections on weapon switch
+	if fireConnection then
+		fireConnection:Disconnect()
+		fireConnection = nil
+	end
 
 	currentWeapon = weaponId
 	weaponStats = getWeaponStats(weaponId)
@@ -246,8 +267,6 @@ end
 -- INPUT HANDLING
 --------------------------------------------------------------------------------
 
-local fireConnection = nil
-local reloadConnection = nil
 local weaponSwitchConnections = {}
 
 -- Setup InputManager callbacks
@@ -327,7 +346,9 @@ end
 
 -- Ammo updates from server
 ammoUpdateEvent.OnClientEvent:Connect(function(data)
-	if typeof(data) == "table" and data.weaponId == currentWeapon then
+	-- Validate data structure to prevent crashes
+	if typeof(data) == "table" and data.weaponId == currentWeapon 
+		and data.current and data.reserve and data.max then
 		ammoUpdateBindable:Fire({
 			current = data.current,
 			reserve = data.reserve,
@@ -390,8 +411,8 @@ local function initialize()
 	setupInputCallbacks()
 
 	-- Connect legacy input events (for weapon switching on keyboard)
-	UserInputService.InputBegan:Connect(onInputBegan)
-	UserInputService.InputEnded:Connect(onInputEnded)
+	inputBeganConn = UserInputService.InputBegan:Connect(onInputBegan)
+	inputEndedConn = UserInputService.InputEnded:Connect(onInputEnded)
 
 	-- Equip default weapon
 	equipWeapon(WeaponConfig.DefaultWeapon)
@@ -415,7 +436,19 @@ function FPSWeaponControllerModule.onCharacterAdded(character)
 end
 
 function FPSWeaponControllerModule.onCharacterRemoving()
-	-- Cleanup if needed
+	-- Cleanup connections to prevent memory leaks
+	if inputBeganConn then
+		inputBeganConn:Disconnect()
+		inputBeganConn = nil
+	end
+	if inputEndedConn then
+		inputEndedConn:Disconnect()
+		inputEndedConn = nil
+	end
+	if fireConnection then
+		fireConnection:Disconnect()
+		fireConnection = nil
+	end
 end
 
 return FPSWeaponControllerModule

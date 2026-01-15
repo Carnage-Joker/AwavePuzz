@@ -382,6 +382,11 @@ function GameManager:_hookPlayerDeath(player)
 			if self._deathDebounce[player.UserId] then return end
 			self._deathDebounce[player.UserId] = true
 			self:onPlayerDied(player)
+			
+			-- Auto-clear debounce after 2 seconds to prevent permanent lock
+			task.delay(2, function()
+				self._deathDebounce[player.UserId] = nil
+			end)
 		end)
 	end
 
@@ -620,7 +625,10 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		self.playerSpawnManager:keepPlayerInLobby(player)
+		-- Validate playerSpawnManager exists
+		if self.playerSpawnManager and self.playerSpawnManager.keepPlayerInLobby then
+			self.playerSpawnManager:keepPlayerInLobby(player)
+		end
 	end
 end
 

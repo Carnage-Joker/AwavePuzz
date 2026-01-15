@@ -194,9 +194,19 @@ function Spawner:getStrategicSpawnPoint(zombieType)
 
 	local playerPositions = {}
 	for _, player in ipairs(Players:GetPlayers()) do
+		-- Validate character and HRP exist
 		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			table.insert(playerPositions, player.Character.HumanoidRootPart.Position)
+			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				table.insert(playerPositions, hrp.Position)
+			end
 		end
+	end
+
+	-- Validate spawnGenerator exists before calling
+	if not self.spawnGenerator then
+		warn("[Spawner] spawnGenerator not initialized, using fallback spawn")
+		return self.allSpawnPoints[math.random(1, #self.allSpawnPoints)]
 	end
 
 	return self.spawnGenerator:getStrategicSpawnPoint(zombieType, self.allSpawnPoints, playerPositions)
@@ -408,8 +418,9 @@ function Spawner:setCurrentWave(waveNumber)
 end
 
 function Spawner:onZombieDied(zombie)
-	for i, activeZombie in ipairs(self.activeZombies) do
-		if activeZombie == zombie then
+	-- Iterate backwards to safely remove during iteration
+	for i = #self.activeZombies, 1, -1 do
+		if self.activeZombies[i] == zombie then
 			table.remove(self.activeZombies, i)
 			break
 		end
