@@ -121,11 +121,16 @@ function GameManager.new(allianceService)
 
 	-- ✅ Debounce + broadcast control
 	self._deathDebounce = {}              -- userId -> true (for current round)
+	self._deathConnections = {}           -- userId -> array of connections for cleanup
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
 	-- ✅ FIX: prevents double map load / double base setup / double spawning
 	self._lobbyResolved = false
+	self._lastLobbyResolveAttempt = 0     -- Time-based debounce for lobby resolution
+	
+	-- Cleanup tracking
+	self._heartbeatConnection = nil       -- Will be set by MainServer
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
@@ -749,6 +754,14 @@ function GameManager:onVictory()
 	self.spawner:clearAllZombies()
 	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
+	
+	-- Clean up resources and items for next round
+	if self.resourceSpawner and self.resourceSpawner.clearAllResources then
+		self.resourceSpawner:clearAllResources()
+	end
+	if self.itemSpawner and self.itemSpawner.clearAllItems then
+		self.itemSpawner:clearAllItems()
+	end
 
 	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -802,6 +815,14 @@ function GameManager:onDefeat(reason)
 	self.spawner:clearAllZombies()
 	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
+	
+	-- Clean up resources and items for next round
+	if self.resourceSpawner and self.resourceSpawner.clearAllResources then
+		self.resourceSpawner:clearAllResources()
+	end
+	if self.itemSpawner and self.itemSpawner.clearAllItems then
+		self.itemSpawner:clearAllItems()
+	end
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
@@ -947,12 +968,22 @@ function GameManager:updateLobby(deltaTime)
 
 	local selectedMapId = self.lobbyManager:getSelectedMapId()
 
-	-- ✅ FIX: one-shot latch to stop double load/spawn
+	-- ✅ FIX: one-shot latch to stop double load/spawn with time-based debounce
 	if self._lobbyResolved then
 		return
 	end
+	
+	-- Time-based debounce to prevent race conditions
+	local now = tick()
+	if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < 1.0 then
+		-- Too soon since last attempt, skip to prevent race
+		return
+	end
+	
+	self._lastLobbyResolveAttempt = now
 
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
+		-- Mark as resolved immediately to prevent double loading
 		self._lobbyResolved = true
 
 		if GameConfig.ENABLE_MULTI_MAP then
@@ -960,7 +991,14 @@ function GameManager:updateLobby(deltaTime)
 				self.lobbySetup:cleanup()
 			end
 
-			self.mapManager:load(selectedMapId)
+			local mapLoaded = self.mapManager:load(selectedMapId)
+			if not mapLoaded then
+				warn("[GameManager] Failed to load map: " .. selectedMapId)
+				-- Reset flag to allow retry
+				self._lobbyResolved = false
+				return
+			end
+			
 			self:configureSpawnersForMap()
 
 			-- Notify PlayerSpawnManager that map has loaded
