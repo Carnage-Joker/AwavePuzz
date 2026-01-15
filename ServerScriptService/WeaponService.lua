@@ -173,7 +173,7 @@ function WeaponService:handleWeaponFire(player, payload)
 	end
 	
 	local unitDir = direction.Unit
-	-- Check for NaN from normalization errors
+	-- Check for NaN from normalization errors (NaN is the only value that doesn't equal itself)
 	if unitDir.X ~= unitDir.X or unitDir.Y ~= unitDir.Y or unitDir.Z ~= unitDir.Z then
 		return
 	end

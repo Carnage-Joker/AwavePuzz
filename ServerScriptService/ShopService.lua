@@ -136,9 +136,9 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if not (self.playerManager and self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId)) then
-			-- Player doesn't own the weapon, continue with purchase
-		else
+		-- Check if player already owns the weapon
+		if self.playerManager and self.playerManager.ownsWeapon and 
+		   self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
 			self:sendResult(player, false, "Weapon already unlocked")
 			return
 		end

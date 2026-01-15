@@ -194,9 +194,10 @@ function Spawner:getStrategicSpawnPoint(zombieType)
 
 	local playerPositions = {}
 	for _, player in ipairs(Players:GetPlayers()) do
-		-- Validate character and HRP exist
-		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+		-- Validate character exists first
+		local character = player.Character
+		if character then
+			local hrp = character:FindFirstChild("HumanoidRootPart")
 			if hrp then
 				table.insert(playerPositions, hrp.Position)
 			end
