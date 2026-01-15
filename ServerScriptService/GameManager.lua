@@ -397,9 +397,7 @@ function GameManager:_hookPlayerDeath(player)
 		end)
 		
 		-- Store connection for cleanup on player removal
-		if not self._deathConnections then
-			self._deathConnections = {}
-		end
+		-- Initialize table on first use
 		if not self._deathConnections[player.UserId] then
 			self._deathConnections[player.UserId] = {}
 		end
@@ -975,7 +973,8 @@ function GameManager:updateLobby(deltaTime)
 	
 	-- Time-based debounce to prevent race conditions
 	local now = tick()
-	if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < 1.0 then
+	local debounceTime = GameConfig.Security and GameConfig.Security.LOBBY_DEBOUNCE_TIME or 1.0
+	if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < debounceTime then
 		-- Too soon since last attempt, skip to prevent race
 		return
 	end

@@ -171,4 +171,10 @@ GameConfig.AI = {
 	DEBUG_MODE = false, -- Enable visual debug indicators
 }
 
+-- Security Settings
+GameConfig.Security = {
+	MAX_WEAPON_FIRE_DISTANCE = 15, -- Maximum distance from player for weapon fire origin (anti-wallhack)
+	LOBBY_DEBOUNCE_TIME = 1.0, -- Seconds between lobby resolution attempts (prevent race conditions)
+}
+
 return GameConfig

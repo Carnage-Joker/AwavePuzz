@@ -9,10 +9,10 @@ The game follows a **server-authoritative** architecture where all critical game
 ## Weapon & Combat Security
 
 ### Anti-Wallhack Protection
-**Location**: `ServerScriptService/WeaponService.lua:179-192`
+**Location**: `ServerScriptService/WeaponService.lua:184-196`
 
 The server validates weapon fire origin positions to prevent players from shooting through walls:
-- Maximum fire distance: **15 studs** from player's HumanoidRootPart
+- Maximum fire distance: **15 studs** from player's HumanoidRootPart (configurable via `GameConfig.Security.MAX_WEAPON_FIRE_DISTANCE`)
 - Rejected shots are logged with player name and distance
 - Prevents exploiters from spoofing fire position to shoot through geometry
 

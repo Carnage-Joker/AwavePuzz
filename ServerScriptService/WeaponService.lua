@@ -187,9 +187,9 @@ function WeaponService:handleWeaponFire(player, payload)
 		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 		if humanoidRootPart then
 			local distanceFromPlayer = (origin - humanoidRootPart.Position).Magnitude
-			-- Allow reasonable distance from player position (head/camera offset + tolerance)
-			local MAX_FIRE_DISTANCE = 15 -- studs from player center
-			if distanceFromPlayer > MAX_FIRE_DISTANCE then
+			-- Use configurable max distance from GameConfig
+			local maxDistance = GameConfig.Security and GameConfig.Security.MAX_WEAPON_FIRE_DISTANCE or 15
+			if distanceFromPlayer > maxDistance then
 				warn("[WeaponService] SECURITY: Rejected shot from " .. player.Name .. 
 					" - origin too far from player (" .. string.format("%.1f", distanceFromPlayer) .. " studs)")
 				return
