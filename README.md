@@ -443,6 +443,8 @@ This game is built using:
 - **[INSTALLATION.md](INSTALLATION.md)** - Complete setup guide for Roblox Studio
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for the restructured repository
+- **[SECURITY.md](SECURITY.md)** - 🆕 Security measures and anti-exploit documentation
+- **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - 🆕 Production deployment checklist
 
 #### Technical References
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete API reference for all modules
@@ -512,6 +514,18 @@ The game currently includes:
   - Recoil, spread, and ADS mechanics
   - Dynamic crosshair and hitmarkers
   - Controller-friendly menus
+- ✅ **Production-Ready Security** (NEW!)
+  - Server-authoritative architecture
+  - Anti-wallhack weapon validation (15 stud max fire distance)
+  - Rate limiting and cooldown enforcement
+  - Memory leak prevention with proper connection cleanup
+  - Input validation and type checking
+  - See [SECURITY.md](SECURITY.md) for complete details
+- ✅ **Optimized Performance** (NEW!)
+  - Proper resource cleanup on round end
+  - Time-based debouncing to prevent race conditions
+  - Death event connection lifecycle management
+  - Efficient AI update loops with jitter
 - ✅ Multiplayer support (up to 8 players)
 - ✅ Wave-based zombie combat with progressive difficulty
 - ✅ Server-authoritative raycast weapon system
@@ -522,6 +536,33 @@ The game currently includes:
 - ✅ Dynamic map support with MapManager
 - ✅ Base health and player tracking systems
 - ✅ Victory/defeat conditions
+- ✅ Achievement system with rarity levels
+- ✅ Dynamic music system
+- ✅ Story-driven intro and credits
+
+## 🛡️ Security Features
+
+The game implements comprehensive security measures:
+
+### Server Authority
+- All damage calculations are server-side
+- Currency changes are server-authoritative
+- Ammo consumption is validated server-side
+- Health modifications require server approval
+
+### Anti-Exploit Measures
+- **Weapon Fire Validation**: Origin position must be within 15 studs of player
+- **Rate Limiting**: Fire rate, spectator cycling, map loading all have cooldowns
+- **Input Validation**: All client payloads are type-checked and range-validated
+- **Ownership Checks**: Players can only modify resources they own
+
+### Performance & Stability
+- Proper connection cleanup prevents memory leaks
+- Time-based debouncing prevents race conditions
+- Resource/item cleanup on round end
+- Heartbeat connection tracking for shutdown cleanup
+
+See [SECURITY.md](SECURITY.md) for complete security documentation.
 
 ## 🎮 FPS Controls & Configuration
 
