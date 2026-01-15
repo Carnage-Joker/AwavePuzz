@@ -19,7 +19,7 @@ GameConfig.STARTING_HEALTH = 100
 GameConfig.RESPAWN_ENABLED = false
 GameConfig.STARTING_CURRENCY = 150
 GameConfig.CURRENCY_PER_WAVE = 75
-GameConfig.DEFAULT_WEAPON = "Pistol"
+GameConfig.DEFAULT_WEAPON = "Standard Issue Pistol" -- Must match WeaponConfig.DefaultWeapon
 
 -- Sprint Settings
 GameConfig.SPRINT_SPEED_MULTIPLIER = 1.5 -- How much faster sprinting is compared to walking

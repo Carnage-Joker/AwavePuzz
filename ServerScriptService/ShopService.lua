@@ -136,21 +136,23 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
+		if not (self.playerManager and self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId)) then
+			-- Player doesn't own the weapon, continue with purchase
+		else
 			self:sendResult(player, false, "Weapon already unlocked")
 			return
 		end
 
-		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		if self.playerManager.addWeapon then
+		if self.playerManager and self.playerManager.addWeapon then
 			self.playerManager:addWeapon(player, selectedItem.WeaponId)
 		end
 
-		if self.playerManager.equipWeapon then
+		if self.playerManager and self.playerManager.equipWeapon then
 			self.playerManager:equipWeapon(player, selectedItem.WeaponId)
 		end
 
@@ -163,44 +165,30 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+		-- Validate weaponService exists before deducting currency
+		if not (self.weaponService and self.weaponService.applyUpgrade) then
+			warn("[ShopService] weaponService or applyUpgrade missing")
+			self:sendResult(player, false, "Service temporarily unavailable")
+			return
+		end
+
+		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		if not (self.weaponService and self.weaponService.applyUpgrade) then
-			warn("[ShopService] weaponService or applyUpgrade missing")
-			-- Refund due to internal error
-			if self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
-			self:sendResult(player, false, "Upgrade service unavailable")
-			return
-		end
-
-		local success, applyErr = pcall(function()
-			return self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
-		end)
-
+		-- Apply upgrade (weaponService already validated above)
+		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
 		if not success then
-			warn("[ShopService] applyUpgrade error: " .. tostring(applyErr))
-			if self.playerManager.addCurrency then
+			-- Refund on failure
+			if self.playerManager and self.playerManager.addCurrency then
 				self.playerManager:addCurrency(player, price)
 			end
 			self:sendResult(player, false, "Upgrade failed")
 			return
 		end
 
-		if success and applyErr then
-			-- applyErr is actually the boolean result from applyUpgrade
-			self:sendResult(player, true, "Upgrade applied")
-		else
-			-- Refund if already owned or failed
-			if self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
-			self:sendResult(player, false, "Upgrade already owned")
-		end
+		self:sendResult(player, true, "Upgrade applied")
 	else
 		self:sendResult(player, false, "Unknown item type")
 	end

@@ -38,6 +38,10 @@ if not SharedFolder then
 end
 
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+
+-- Connection storage for cleanup
+local characterAddedConn = nil
+local characterRemovingConn = nil
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 print("[ClientController] Configuration loaded")
 
@@ -234,8 +238,16 @@ function ClientController.initialize()
 	ClientController.initializeMenu()
 	ClientController.initializeUI()
 
-	player.CharacterAdded:Connect(ClientController.onCharacterAdded)
-	player.CharacterRemoving:Connect(ClientController.onCharacterRemoving)
+	-- Disconnect old connections if they exist (on re-initialization)
+	if characterAddedConn then
+		characterAddedConn:Disconnect()
+	end
+	if characterRemovingConn then
+		characterRemovingConn:Disconnect()
+	end
+
+	characterAddedConn = player.CharacterAdded:Connect(ClientController.onCharacterAdded)
+	characterRemovingConn = player.CharacterRemoving:Connect(ClientController.onCharacterRemoving)
 
 	if player.Character then
 		task.defer(function()

@@ -294,7 +294,7 @@ function AllianceServiceV2:handleBreakAlliance(player, target)
 	self.betrayalCooldowns[player.UserId] = os.time()
 
 	-- Notify CureService that alliance is broken
-	if self.cureService and self.cureService.onAllianceBroken then
+	if self.cureService and typeof(self.cureService.onAllianceBroken) == "function" then
 		self.cureService:onAllianceBroken(player, target)
 	end
 

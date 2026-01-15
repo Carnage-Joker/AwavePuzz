@@ -225,6 +225,13 @@ end
 
 -- Update cure progress for a player and their allies
 function CureService:updatePlayerCureProgress(player)
+	-- Debounce to prevent race conditions with concurrent updates
+	local lastUpdate = player:GetAttribute("LastCureProgressUpdate") or 0
+	if tick() - lastUpdate < 0.1 then 
+		return -- Skip if updated very recently
+	end
+	player:SetAttribute("LastCureProgressUpdate", tick())
+
 	local progress = self:calculatePlayerCureProgress(player)
 	local pooledComponents = self:getPooledComponents(player)
 
@@ -233,7 +240,7 @@ function CureService:updatePlayerCureProgress(player)
 
 	-- Send update to all allies (they share the same progress)
 	if self.allianceService then
-		local allies = self.allianceService:getAllies(player)
+		local allies = self.allianceService:getAllies(player) or {}
 		for _, ally in ipairs(allies) do
 			self:sendCureProgressUpdate(ally, progress, pooledComponents)
 		end

@@ -61,6 +61,12 @@ end
 function FirstPersonCamera:_bindCharacter(character)
         self._character = character
         self._head = character:WaitForChild("Head", 5)
+        
+        -- Validate Head loaded successfully
+        if not self._head then
+        	warn("[FirstPersonCamera] Failed to load Head, camera may not function properly")
+        	return
+        end
 
         if self.config.HideCharacterInFirstPerson then
                         setCharacterTransparency(character, false)
