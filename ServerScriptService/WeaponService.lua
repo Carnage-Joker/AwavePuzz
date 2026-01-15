@@ -180,6 +180,22 @@ function WeaponService:handleWeaponFire(player, payload)
 	if not stats then
 		return
 	end
+	
+	-- SECURITY: Validate origin position is near player (anti-wallhack)
+	local character = player.Character
+	if character then
+		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+		if humanoidRootPart then
+			local distanceFromPlayer = (origin - humanoidRootPart.Position).Magnitude
+			-- Allow reasonable distance from player position (head/camera offset + tolerance)
+			local MAX_FIRE_DISTANCE = 15 -- studs from player center
+			if distanceFromPlayer > MAX_FIRE_DISTANCE then
+				warn("[WeaponService] SECURITY: Rejected shot from " .. player.Name .. 
+					" - origin too far from player (" .. string.format("%.1f", distanceFromPlayer) .. " studs)")
+				return
+			end
+		end
+	end
 
 	local state = self.playerWeaponState[player.UserId]
 	if not state then

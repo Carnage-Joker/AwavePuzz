@@ -376,13 +376,29 @@ end
 function GameManager:_hookPlayerDeath(player)
 	local function hookCharacter(char)
 		local humanoid = char:WaitForChild("Humanoid", 5)
-		if not humanoid then return end
+		if not humanoid then
+			-- Critical error: Humanoid missing after 5 seconds
+			warn("[GameManager] CRITICAL: Humanoid not found for player " .. player.Name .. " after 5 seconds. Forcing death.")
+			-- Force player death to prevent game state desync
+			self:onPlayerDied(player)
+			return
+		end
 
-		humanoid.Died:Connect(function()
+		-- Store connection for cleanup
+		local connection = humanoid.Died:Connect(function()
 			if self._deathDebounce[player.UserId] then return end
 			self._deathDebounce[player.UserId] = true
 			self:onPlayerDied(player)
 		end)
+		
+		-- Store connection for cleanup on player removal
+		if not self._deathConnections then
+			self._deathConnections = {}
+		end
+		if not self._deathConnections[player.UserId] then
+			self._deathConnections[player.UserId] = {}
+		end
+		table.insert(self._deathConnections[player.UserId], connection)
 	end
 
 	player.CharacterAdded:Connect(hookCharacter)
@@ -451,6 +467,14 @@ function GameManager:onPlayerRemoving(player)
 	self.lobbyManager:onPlayerLeave(player)
 	self.spectatorManager:onPlayerLeave(player)
 	self.playerSpawnManager:onPlayerRemoving(player)
+
+	-- Cleanup death connections to prevent memory leaks
+	if self._deathConnections and self._deathConnections[player.UserId] then
+		for _, connection in ipairs(self._deathConnections[player.UserId]) do
+			connection:Disconnect()
+		end
+		self._deathConnections[player.UserId] = nil
+	end
 
 	self._deathDebounce[player.UserId] = nil
 	self._spectatorCycleCooldown[player.UserId] = nil
@@ -747,7 +771,7 @@ function GameManager:onVictory()
 
 	self:showEndOfRoundScoreboard()
 
-	local creditsTime = 20
+	local creditsTime = 20 -- Safe default fallback
 	local storyConfigModule = SharedFolder:FindFirstChild("StoryConfig")
 	if storyConfigModule then
 		local ok, storyConfig = pcall(require, storyConfigModule)
@@ -756,10 +780,19 @@ function GameManager:onVictory()
 			local configuredDisplayTime = creditsConfig and creditsConfig.CreditsDisplayTime
 			if typeof(configuredDisplayTime) == "number" and configuredDisplayTime > 0 then
 				creditsTime = configuredDisplayTime
+			else
+				warn("[GameManager] StoryConfig.Credits.CreditsDisplayTime invalid, using default: " .. creditsTime)
 			end
+		else
+			warn("[GameManager] Failed to load StoryConfig, using default credits time: " .. creditsTime)
 		end
+	else
+		warn("[GameManager] StoryConfig module not found, using default credits time: " .. creditsTime)
 	end
-	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + creditsTime
+	
+	-- Ensure timer is valid (never NaN)
+	local scoreboardTime = GameConfig.SCOREBOARD_DISPLAY_TIME or 10
+	self.stateTimer = scoreboardTime + creditsTime
 end
 
 function GameManager:onDefeat(reason)

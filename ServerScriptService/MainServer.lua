@@ -150,8 +150,9 @@ end)
 ----------------------------------------------------------------
 
 local lastUpdate = tick()
+local heartbeatConnection -- Store connection for potential cleanup
 
-RunService.Heartbeat:Connect(function()
+heartbeatConnection = RunService.Heartbeat:Connect(function()
 	local currentTime = tick()
 	local deltaTime = currentTime - lastUpdate
 	lastUpdate = currentTime
@@ -159,6 +160,9 @@ RunService.Heartbeat:Connect(function()
 	-- GameManager handles waves, timers, and GameServer.update()
 	gameManager:update(deltaTime)
 end)
+
+-- Store connection in gameManager for cleanup if needed
+gameManager._heartbeatConnection = heartbeatConnection
 
 ----------------------------------------------------------------
 -- Auto-start logic
@@ -168,9 +172,12 @@ task.spawn(function()
 	print("Waiting for players...")
 
 	-- Simple "auto start when someone joins" behaviour
+	-- Minimum player count check for multiplayer safety
+	local minPlayers = 1 -- Can be increased for production
+	
 	repeat
 		task.wait(1)
-	until #Players:GetPlayers() >= 1
+	until #Players:GetPlayers() >= minPlayers
 
 	print("Starting lobby with " .. #Players:GetPlayers() .. " players")
 
