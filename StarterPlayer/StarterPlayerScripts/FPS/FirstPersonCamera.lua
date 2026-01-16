@@ -61,6 +61,23 @@ end
 function FirstPersonCamera:_bindCharacter(character)
         self._character = character
         self._head = character:WaitForChild("Head", 5)
+        
+        -- Validate Head loaded successfully or fall back to a safe anchor
+        if not self._head then
+                -- Try to fall back to HumanoidRootPart or torso parts
+                local fallbackPart = character:FindFirstChild("HumanoidRootPart")
+                        or character:FindFirstChild("UpperTorso")
+                        or character:FindFirstChild("Torso")
+
+                if fallbackPart then
+                        warn("[FirstPersonCamera] Failed to load Head, using fallback part '" .. fallbackPart.Name .. "' for camera anchor")
+                        self._head = fallbackPart
+                else
+                        warn("[FirstPersonCamera] Failed to load Head and no suitable fallback part found; disabling first-person camera for this character")
+                        self._running = false
+                        return
+                end
+        end
 
         if self.config.HideCharacterInFirstPerson then
                         setCharacterTransparency(character, false)

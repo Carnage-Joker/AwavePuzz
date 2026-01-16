@@ -380,6 +380,9 @@ end
 -- ✅ Hook Humanoid.Died -> onPlayerDied (authoritative)
 function GameManager:_hookPlayerDeath(player)
 	local function hookCharacter(char)
+		-- Clear death debounce on respawn to prevent race conditions
+		self._deathDebounce[player.UserId] = nil
+		
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if not humanoid then
 			-- Critical error: Humanoid missing after 5 seconds
@@ -653,7 +656,10 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		self.playerSpawnManager:keepPlayerInLobby(player)
+		-- Keep player in lobby if playerSpawnManager is available
+		if self.playerSpawnManager then
+			self.playerSpawnManager:keepPlayerInLobby(player)
+		end
 	end
 end
 

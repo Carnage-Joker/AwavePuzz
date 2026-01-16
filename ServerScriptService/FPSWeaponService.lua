@@ -22,6 +22,7 @@ function FPSWeaponService.new(playerManager, weaponService)
 
 	self.playerAmmo = {} -- userId -> { weaponId -> { current, reserve, max } }
 	self.playerReloadState = {} -- userId -> { isReloading, reloadStartTime, weaponId }
+	self.activeReloadTasks = {} -- userId -> task handle (to cancel on disconnect)
 
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
@@ -37,6 +38,10 @@ function FPSWeaponService:setupRemoteEvents()
 	})
 
 	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
+		-- Validate payload structure to prevent client exploits
+		if typeof(payload) ~= "table" or not payload.weaponId then
+			return
+		end
 		self:handleReload(player, payload)
 	end)
 end
@@ -53,6 +58,13 @@ end
 
 function FPSWeaponService:removePlayer(player)
 	local userId = player.UserId
+	
+	-- Cancel any pending reload timers to prevent memory leaks
+	if self.activeReloadTasks[userId] then
+		task.cancel(self.activeReloadTasks[userId])
+		self.activeReloadTasks[userId] = nil
+	end
+	
 	self.playerAmmo[userId] = nil
 	self.playerReloadState[userId] = nil
 end
@@ -160,22 +172,39 @@ function FPSWeaponService:handleReload(player, payload)
 		weaponId = weaponId,
 	}
 
-	task.delay(reloadTime, function()
-		if not player or not player.Parent then return end
+	-- Cancel previous reload task if exists
+	if self.activeReloadTasks[userId] then
+		task.cancel(self.activeReloadTasks[userId])
+	end
+
+	-- Store task handle to enable cancellation on player disconnect
+	self.activeReloadTasks[userId] = task.delay(reloadTime, function()
+		if not player or not player.Parent then
+			self.activeReloadTasks[userId] = nil
+			return
+		end
 
 		local currentReloadState = self.playerReloadState[userId]
-		if not currentReloadState or not currentReloadState.isReloading then return end
-		if currentReloadState.weaponId ~= weaponId then return end
+		if not currentReloadState or not currentReloadState.isReloading then
+			self.activeReloadTasks[userId] = nil
+			return
+		end
+		if currentReloadState.weaponId ~= weaponId then
+			self.activeReloadTasks[userId] = nil
+			return
+		end
 
 		local currentEquipped = self.playerManager:getEquippedWeapon(player)
 		if currentEquipped ~= weaponId then
 			self.playerReloadState[userId] = nil
+			self.activeReloadTasks[userId] = nil
 			return
 		end
 
 		local currentAmmo = self:getAmmo(player, weaponId)
 		if not currentAmmo then
 			self.playerReloadState[userId] = nil
+			self.activeReloadTasks[userId] = nil
 			return
 		end
 
@@ -186,6 +215,7 @@ function FPSWeaponService:handleReload(player, payload)
 		currentAmmo.reserve -= ammoToAdd
 
 		self.playerReloadState[userId] = nil
+		self.activeReloadTasks[userId] = nil
 		self:sendAmmoUpdate(player, weaponId)
 	end)
 end

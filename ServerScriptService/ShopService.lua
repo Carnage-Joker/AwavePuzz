@@ -136,6 +136,14 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
+		-- Validate playerManager is available (required for all shop operations)
+		if not self.playerManager then
+			warn("[ShopService] playerManager is not initialized")
+			self:sendResult(player, false, "Shop service unavailable")
+			return
+		end
+
+		-- Check if player already owns the weapon
 		if self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
 			self:sendResult(player, false, "Weapon already unlocked")
 			return
@@ -163,44 +171,28 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+		-- Validate weaponService exists before deducting currency
+		if not (self.weaponService and self.weaponService.applyUpgrade) then
+			warn("[ShopService] weaponService or applyUpgrade missing")
+			self:sendResult(player, false, "Service temporarily unavailable")
+			return
+		end
+
+		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		if not (self.weaponService and self.weaponService.applyUpgrade) then
-			warn("[ShopService] weaponService or applyUpgrade missing")
-			-- Refund due to internal error
-			if self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
-			self:sendResult(player, false, "Upgrade service unavailable")
-			return
-		end
-
-		local success, applyErr = pcall(function()
-			return self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
-		end)
-
+		-- Apply upgrade (weaponService already validated above)
+		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
 		if not success then
-			warn("[ShopService] applyUpgrade error: " .. tostring(applyErr))
-			if self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
+			-- Refund on failure (playerManager already validated earlier)
+			self.playerManager:addCurrency(player, price)
 			self:sendResult(player, false, "Upgrade failed")
 			return
 		end
 
-		if success and applyErr then
-			-- applyErr is actually the boolean result from applyUpgrade
-			self:sendResult(player, true, "Upgrade applied")
-		else
-			-- Refund if already owned or failed
-			if self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
-			self:sendResult(player, false, "Upgrade already owned")
-		end
+		self:sendResult(player, true, "Upgrade applied")
 	else
 		self:sendResult(player, false, "Unknown item type")
 	end
