@@ -625,8 +625,8 @@ function GameManager:resetForNewRound()
 			playerData.isAlive = true
 		end
 
-		-- Validate playerSpawnManager exists
-		if self.playerSpawnManager and self.playerSpawnManager.keepPlayerInLobby then
+		-- Keep player in lobby if playerSpawnManager is available
+		if self.playerSpawnManager then
 			self.playerSpawnManager:keepPlayerInLobby(player)
 		end
 	end
