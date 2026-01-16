@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- InputManager.lua
 -- Cross-platform input abstraction for keyboard, mouse, gamepad, touch, and VR
 -- Provides unified interface for all input devices with device detection

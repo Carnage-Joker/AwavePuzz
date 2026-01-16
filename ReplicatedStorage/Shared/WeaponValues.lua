@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- WeaponValues.lua
 -- Defines the value/worth of each weapon for proportional transfer calculations
 -- Used by betrayal system to determine weapon transfers

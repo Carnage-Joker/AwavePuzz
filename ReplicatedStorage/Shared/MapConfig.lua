@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- MapConfig.lua
 -- Describes available maps and helper utilities for the multi-map system
 
