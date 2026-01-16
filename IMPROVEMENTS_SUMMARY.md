@@ -31,7 +31,7 @@ This document summarizes all improvements, fixes, and enhancements made to prepa
   ```
 
 ### 3. StoryConfig Safe Defaults
-**File**: `ServerScriptService/GameManager.lua:774-795`
+**File**: `ServerScriptService/GameManager.lua:785-806`
 - **Issue**: Missing or invalid credits time could cause NaN timers
 - **Fix**: Added safe defaults (20 seconds) with warning logs
 - **Impact**: Prevents state transition failures in victory screen
