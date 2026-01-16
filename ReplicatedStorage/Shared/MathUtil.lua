@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- MathUtil.lua
 -- Shared mathematical utility functions used across client and server
 -- Consolidates duplicate utility functions from multiple files

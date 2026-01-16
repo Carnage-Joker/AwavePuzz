@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- WeaponConfig.lua
 -- Defines the available weapons, upgrades, and shop items for AWavePuzz
 -- Weapons include damage, fire rate, range, and pricing information

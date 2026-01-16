@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- UIScaleConfig.lua
 -- Configuration for dynamic UI scaling based on device/screen size
 --[[

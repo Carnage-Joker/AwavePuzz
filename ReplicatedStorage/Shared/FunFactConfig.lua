@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- FunFactConfig.lua
 -- Configuration for randomized loading/downtime fun facts
 -- Facts are categorized and have unlock conditions for progressive revelation
