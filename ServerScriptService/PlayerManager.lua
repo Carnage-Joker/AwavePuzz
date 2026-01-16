@@ -116,10 +116,10 @@ end
 function PlayerManager:addCurrency(player, amount)
 	if type(amount) ~= "number" or amount < 0 then
 		warn("[PlayerManager] addCurrency called with negative or invalid amount: " .. tostring(amount))
-		return
+		return false
 	end
 	if amount == 0 then
-		return
+		return true
 	end
 
 	local playerData = self.players[player.UserId]
@@ -211,6 +211,11 @@ end
 ----------------------------------------------------------------
 
 function PlayerManager:damagePlayer(player, damage)
+	-- Validate player parameter
+	if not player or not player.UserId then
+		return false
+	end
+	
 	local playerData = self.players[player.UserId]
 	if not playerData or not playerData.isAlive then
 		return false
@@ -250,8 +255,11 @@ function PlayerManager:healPlayer(player, amount)
 		return false
 	end
 
-	if playerData.health <= 0 and amount > 0 then
-		playerData.isAlive = true
+	-- Healing cannot resurrect dead players
+	-- Note: Game design decision - no resurrection mechanic in this mode
+	-- Players remain dead until round reset or spectator mode
+	if playerData.health <= 0 then
+		return false
 	end
 
 	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)

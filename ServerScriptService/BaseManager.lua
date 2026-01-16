@@ -95,6 +95,10 @@ function BaseManager:getHealth()
 end
 
 function BaseManager:getHealthPercentage()
+	if self.maxHealth == 0 then
+		warn("[BaseManager] maxHealth is 0, preventing division by zero")
+		return 0
+	end
 	return (self.health / self.maxHealth) * 100
 end
 

@@ -167,9 +167,20 @@ function WeaponService:handleWeaponFire(player, payload)
 		return
 	end
 
+	-- Validate direction magnitude and handle edge cases
 	if direction.Magnitude < 0.001 then
 		return
 	end
+	
+	-- Normalize and validate for NaN (from normalization errors)
+	local unitDir = direction.Unit
+	-- Check for NaN from normalization errors (NaN is the only value that doesn't equal itself)
+	if unitDir.X ~= unitDir.X or unitDir.Y ~= unitDir.Y or unitDir.Z ~= unitDir.Z then
+		return
+	end
+	
+	-- Use the validated unit direction for all subsequent calculations
+	direction = unitDir
 
 	local equipped = self.playerManager:getEquippedWeapon(player)
 	if not equipped or equipped ~= weaponId then
@@ -293,33 +304,43 @@ function WeaponService:damagePlayer(characterModel, targetPlayer, attackingPlaye
 	print(string.format("[WeaponService] PvP: %s hit %s for %d damage", 
 		attackingPlayer.Name, targetPlayer.Name, stats.Damage))
 
-	-- Track last attacker for kill credit
-	-- Use an attribute to store the last attacker on the humanoid
+	-- Track last attacker for kill credit using attribute
 	if attackingPlayer and attackingPlayer.UserId then
 		humanoid:SetAttribute("LastAttackerUserId", attackingPlayer.UserId)
+		humanoid:SetAttribute("LastVictimUserId", targetPlayer.UserId)
 	end
 
-	-- Connect Died event for kill registration (only once)
+	-- Connect Died event for kill registration using :Once() to prevent leaks
 	if not humanoid:GetAttribute("WeaponServiceDiedConnected") then
 		humanoid:SetAttribute("WeaponServiceDiedConnected", true)
-		humanoid.Died:Connect(function()
+		humanoid.Died:Once(function()
 			local lastAttackerUserId = humanoid:GetAttribute("LastAttackerUserId")
+			local victimUserId = humanoid:GetAttribute("LastVictimUserId")
+			
+			-- Look up fresh player references (avoid stale closures)
 			local lastAttacker = nil
+			local victim = nil
 			if lastAttackerUserId then
 				for _, player in ipairs(Players:GetPlayers()) do
 					if player.UserId == lastAttackerUserId then
 						lastAttacker = player
-						break
+					end
+					if victimUserId and player.UserId == victimUserId then
+						victim = player
 					end
 				end
 			end
+			
+			-- Use fresh victim reference instead of closure variable
+			local victimName = victim and victim.Name or "Unknown"
+			
 			if lastAttacker then
 				print(string.format("[WeaponService] PvP Kill: %s eliminated %s", 
-					lastAttacker.Name, targetPlayer.Name))
+					lastAttacker.Name, victimName))
 				-- Notify AllianceService of the kill for betrayal mechanics
-				if self.allianceService and self.allianceService.onPlayerKilled then
+				if victim and self.allianceService and self.allianceService.onPlayerKilled then
 					local callSuccess, callErr = pcall(function()
-						self.allianceService:onPlayerKilled(targetPlayer, lastAttacker)
+						self.allianceService:onPlayerKilled(victim, lastAttacker)
 					end)
 					if not callSuccess then
 						warn("[WeaponService] Error notifying AllianceService of kill: " .. tostring(callErr))
@@ -400,12 +421,16 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 		return
 	end
 	-- -----------------------------------------------------------------
-	-- 2️⃣  Clean up any previously‑equipped visual
+	-- 2️⃣  Clean up any previously‑equipped visual (atomic swap)
 	-- -----------------------------------------------------------------
+	-- Find and remove old weapon BEFORE parenting new one to avoid race condition
 	local old = character:FindFirstChild("EquippedWeaponModel")
-	if old then old:Destroy() end
-
-	-- Parent the new model to the character
+	if old then
+		old:Destroy()
+	end
+	
+	-- Now parent and name the new weapon
+	gunModel.Name = "EquippedWeaponModel"
 	gunModel.Parent = character
 
 	-- -----------------------------------------------------------------
