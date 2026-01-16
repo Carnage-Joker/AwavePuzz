@@ -172,8 +172,8 @@ task.spawn(function()
 	print("Waiting for players...")
 
 	-- Simple "auto start when someone joins" behaviour
-	-- Minimum player count check for multiplayer safety
-	local minPlayers = 1 -- Can be increased for production
+	-- Minimum player count from GameConfig (recommended: 2 for alliance mechanics)
+	local minPlayers = GameConfig.MIN_PLAYERS_TO_START or 1
 	
 	repeat
 		task.wait(1)

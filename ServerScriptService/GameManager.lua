@@ -751,10 +751,8 @@ function GameManager:updateCureProgress(progress)
 	end
 end
 
-function GameManager:onVictory()
-	print("VICTORY! Cure completed!")
-	self:setState(GameManager.States.VICTORY)
-
+-- Helper method to clean up round resources (DRY principle)
+function GameManager:_cleanupRoundResources()
 	self.spawner:clearAllZombies()
 	self.spawner:cleanupGeneratedSpawnPoints()
 	self.spectatorManager:endRound()
@@ -766,6 +764,13 @@ function GameManager:onVictory()
 	if self.itemSpawner and self.itemSpawner.clearAllItems then
 		self.itemSpawner:clearAllItems()
 	end
+end
+
+function GameManager:onVictory()
+	print("VICTORY! Cure completed!")
+	self:setState(GameManager.States.VICTORY)
+
+	self:_cleanupRoundResources()
 
 	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -816,17 +821,7 @@ function GameManager:onDefeat(reason)
 	print("DEFEAT! " .. reason)
 	self:setState(GameManager.States.DEFEAT)
 
-	self.spawner:clearAllZombies()
-	self.spawner:cleanupGeneratedSpawnPoints()
-	self.spectatorManager:endRound()
-	
-	-- Clean up resources and items for next round
-	if self.resourceSpawner and self.resourceSpawner.clearAllResources then
-		self.resourceSpawner:clearAllResources()
-	end
-	if self.itemSpawner and self.itemSpawner.clearAllItems then
-		self.itemSpawner:clearAllItems()
-	end
+	self:_cleanupRoundResources()
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)

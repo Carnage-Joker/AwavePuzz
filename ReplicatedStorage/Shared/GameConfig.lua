@@ -123,6 +123,7 @@ GameConfig.ENABLE_MULTI_MAP = true
 -- Lobby & Round Settings
 GameConfig.LOBBY_VOTING_TIME = 5 -- Seconds for map voting
 GameConfig.LOBBY_MIN_PLAYERS = 1 -- Minimum players to start voting
+GameConfig.MIN_PLAYERS_TO_START = 1 -- Minimum players required before game can start (recommended: 2 for alliance mechanics)
 GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after round
 GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
 GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
