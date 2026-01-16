@@ -404,7 +404,13 @@ function GameManager:_hookPlayerDeath(player)
 		table.insert(self._deathConnections[player.UserId], connection)
 	end
 
-	player.CharacterAdded:Connect(hookCharacter)
+	local characterAddedConnection = player.CharacterAdded:Connect(hookCharacter)
+
+	-- Store CharacterAdded connection for cleanup to avoid leaks on respawn
+	if not self._deathConnections[player.UserId] then
+		self._deathConnections[player.UserId] = {}
+	end
+	table.insert(self._deathConnections[player.UserId], characterAddedConnection)
 	if player.Character then
 		hookCharacter(player.Character)
 	end
