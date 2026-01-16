@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- UIScaleManager.lua
 -- Utility module for responsive UI scaling and positioning
 --[[
