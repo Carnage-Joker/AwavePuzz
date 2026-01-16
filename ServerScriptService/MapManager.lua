@@ -90,7 +90,7 @@ function MapManager:load(mapId)
 		self.currentMapId = nil
 		self.currentMapModel = nil
 		self:extractPoints(true) -- silent
-		return
+		return false
 	end
 
 	self.currentMapId = id
@@ -102,7 +102,7 @@ function MapManager:load(mapId)
 		self.currentMapId = nil
 		self.currentMapModel = nil
 		self:extractPoints(true)
-		return
+		return false
 	end
 
 	local template = mapsFolder:FindFirstChild(data.Model)
@@ -121,7 +121,7 @@ function MapManager:load(mapId)
 		self.currentMapId = nil
 		self.currentMapModel = nil
 		self:extractPoints(true)
-		return
+		return false
 	end
 
 	-- Validate the map model before loading
@@ -139,7 +139,7 @@ function MapManager:load(mapId)
 		self.currentMapId = nil
 		self.currentMapModel = nil
 		self:extractPoints(true)
-		return
+		return false
 	end
 
 	-- Destroy previous active map
@@ -175,6 +175,8 @@ function MapManager:load(mapId)
 		self.baseCampSetup = BaseCampSetup.new(data)
 		self.baseCampSetup:setupForMap(self)
 	end
+	
+	return true
 end
 
 function MapManager:loadDefault()
