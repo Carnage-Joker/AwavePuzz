@@ -136,23 +136,29 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
+		-- Validate playerManager is available (required for all shop operations)
+		if not self.playerManager then
+			warn("[ShopService] playerManager is not initialized")
+			self:sendResult(player, false, "Shop service unavailable")
+			return
+		end
+
 		-- Check if player already owns the weapon
-		if self.playerManager and self.playerManager.ownsWeapon and 
-		   self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
+		if self.playerManager.ownsWeapon and self.playerManager:ownsWeapon(player, selectedItem.WeaponId) then
 			self:sendResult(player, false, "Weapon already unlocked")
 			return
 		end
 
-		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		if self.playerManager and self.playerManager.addWeapon then
+		if self.playerManager.addWeapon then
 			self.playerManager:addWeapon(player, selectedItem.WeaponId)
 		end
 
-		if self.playerManager and self.playerManager.equipWeapon then
+		if self.playerManager.equipWeapon then
 			self.playerManager:equipWeapon(player, selectedItem.WeaponId)
 		end
 

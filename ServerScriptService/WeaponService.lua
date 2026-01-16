@@ -172,11 +172,15 @@ function WeaponService:handleWeaponFire(player, payload)
 		return
 	end
 	
+	-- Normalize and validate for NaN (from normalization errors)
 	local unitDir = direction.Unit
 	-- Check for NaN from normalization errors (NaN is the only value that doesn't equal itself)
 	if unitDir.X ~= unitDir.X or unitDir.Y ~= unitDir.Y or unitDir.Z ~= unitDir.Z then
 		return
 	end
+	
+	-- Use the validated unit direction for all subsequent calculations
+	direction = unitDir
 
 	local equipped = self.playerManager:getEquippedWeapon(player)
 	if not equipped or equipped ~= weaponId then
@@ -419,15 +423,15 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 	-- -----------------------------------------------------------------
 	-- 2️⃣  Clean up any previously‑equipped visual (atomic swap)
 	-- -----------------------------------------------------------------
-	gunModel.Name = "EquippedWeaponModel"
-	
-	-- Parent new model first to ensure no frame without weapon
-	gunModel.Parent = character
-	
+	-- Find and remove old weapon BEFORE parenting new one to avoid race condition
 	local old = character:FindFirstChild("EquippedWeaponModel")
-	if old and old ~= gunModel then
+	if old then
 		old:Destroy()
 	end
+	
+	-- Now parent and name the new weapon
+	gunModel.Name = "EquippedWeaponModel"
+	gunModel.Parent = character
 
 	-- -----------------------------------------------------------------
 	-- 3️⃣  Determine the primary part for welding (handles Model or single Part)

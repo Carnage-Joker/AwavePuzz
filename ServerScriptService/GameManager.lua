@@ -375,6 +375,9 @@ end
 -- ✅ Hook Humanoid.Died -> onPlayerDied (authoritative)
 function GameManager:_hookPlayerDeath(player)
 	local function hookCharacter(char)
+		-- Clear death debounce on respawn to prevent race conditions
+		self._deathDebounce[player.UserId] = nil
+		
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if not humanoid then return end
 
@@ -382,11 +385,6 @@ function GameManager:_hookPlayerDeath(player)
 			if self._deathDebounce[player.UserId] then return end
 			self._deathDebounce[player.UserId] = true
 			self:onPlayerDied(player)
-			
-			-- Auto-clear debounce after 2 seconds to prevent permanent lock
-			task.delay(2, function()
-				self._deathDebounce[player.UserId] = nil
-			end)
 		end)
 	end
 

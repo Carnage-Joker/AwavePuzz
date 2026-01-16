@@ -311,9 +311,9 @@ function ZombieBrain:tryAttack()
 			if targetPlayer and targetPlayer.Character then
 				local targetHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 				if targetHumanoid and targetHumanoid.Health > 0 then
-					-- Apply player damage penalty if Breacher (with fallback)
-					if self.aiBehavior == "breacher" and self.stats.PlayerDamagePenalty then
-						damage = damage * (self.stats.PlayerDamagePenalty or 1)
+					-- Apply player damage penalty if Breacher (proper nil check to allow 0 multiplier)
+					if self.aiBehavior == "breacher" and self.stats.PlayerDamagePenalty ~= nil then
+						damage = damage * self.stats.PlayerDamagePenalty
 					end
 
 					if self.playerManager then
@@ -322,9 +322,9 @@ function ZombieBrain:tryAttack()
 				end
 			end
 		elseif targetType == "base" then
-			-- Apply base damage bonus if applicable (with fallback)
-			if (self.aiBehavior == "bruiser" or self.aiBehavior == "breacher") and self.stats.BaseDamageBonus then
-				damage = damage * (self.stats.BaseDamageBonus or 1)
+			-- Apply base damage bonus if applicable (proper nil check to allow 0 multiplier)
+			if (self.aiBehavior == "bruiser" or self.aiBehavior == "breacher") and self.stats.BaseDamageBonus ~= nil then
+				damage = damage * self.stats.BaseDamageBonus
 			end
 
 			if self.baseManager then

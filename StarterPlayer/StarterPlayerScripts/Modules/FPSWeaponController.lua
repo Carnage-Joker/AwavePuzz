@@ -221,7 +221,7 @@ end
 local function cancelReload()
 	if not isReloading then return end
 	
-	-- Cancel any active firing when reload starts
+	-- Cancel any active firing when reload is cancelled
 	if fireConnection then
 		fireConnection:Disconnect()
 		fireConnection = nil
@@ -346,9 +346,9 @@ end
 
 -- Ammo updates from server
 ammoUpdateEvent.OnClientEvent:Connect(function(data)
-	-- Validate data structure to prevent crashes
+	-- Validate data structure to prevent crashes (check for nil, not truthy, to allow 0 ammo)
 	if typeof(data) == "table" and data.weaponId == currentWeapon 
-		and data.current and data.reserve and data.max then
+		and data.current ~= nil and data.reserve ~= nil and data.max ~= nil then
 		ammoUpdateBindable:Fire({
 			current = data.current,
 			reserve = data.reserve,

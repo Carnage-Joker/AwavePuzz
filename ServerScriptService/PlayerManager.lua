@@ -255,9 +255,11 @@ function PlayerManager:healPlayer(player, amount)
 		return false
 	end
 
-	-- Only allow resurrection via explicit methods, not heal
+	-- Healing cannot resurrect dead players
+	-- Note: Game design decision - no resurrection mechanic in this mode
+	-- Players remain dead until round reset or spectator mode
 	if playerData.health <= 0 then
-		return false -- Dead players can't be healed
+		return false
 	end
 
 	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
