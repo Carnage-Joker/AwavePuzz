@@ -990,10 +990,13 @@ function GameManager:updateLobby(deltaTime)
 				self.lobbySetup:cleanup()
 			end
 
-			local mapLoaded = self.mapManager:load(selectedMapId)
-			if not mapLoaded then
-				warn("[GameManager] Failed to load map: " .. selectedMapId)
-				-- Reset flag to allow retry
+			-- Trigger map load; MapManager:load() does not return a success boolean
+			self.mapManager:load(selectedMapId)
+			
+			-- Validate that a map model is now active; if not, treat as a load failure
+			if not self.mapManager.currentMapModel then
+				warn("[GameManager] Failed to load map: " .. tostring(selectedMapId))
+				-- Reset flag to allow retry on next updateLobby cycle
 				self._lobbyResolved = false
 				return
 			end
