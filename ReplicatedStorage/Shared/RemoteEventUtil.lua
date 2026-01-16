@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- RemoteEventUtil.lua
 -- Shared utility for creating and managing remote events
 -- Consolidates the duplicate remote event setup pattern from multiple server services
