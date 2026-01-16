@@ -180,10 +180,8 @@ function ShopService:attemptPurchase(player, itemId)
 		-- Apply upgrade (weaponService already validated above)
 		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
 		if not success then
-			-- Refund on failure
-			if self.playerManager and self.playerManager.addCurrency then
-				self.playerManager:addCurrency(player, price)
-			end
+			-- Refund on failure (playerManager already validated earlier)
+			self.playerManager:addCurrency(player, price)
 			self:sendResult(player, false, "Upgrade failed")
 			return
 		end
