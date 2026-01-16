@@ -121,11 +121,16 @@ function GameManager.new(allianceService)
 
 	-- ✅ Debounce + broadcast control
 	self._deathDebounce = {}              -- userId -> true (for current round)
+	self._deathConnections = {}           -- userId -> array of connections for cleanup
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
 	-- ✅ FIX: prevents double map load / double base setup / double spawning
 	self._lobbyResolved = false
+	self._lastLobbyResolveAttempt = 0     -- Time-based debounce for lobby resolution
+	
+	-- Cleanup tracking
+	self._heartbeatConnection = nil       -- Will be set by MainServer
 
 	if GameConfig.ENABLE_MULTI_MAP then
 		self.mapManager:loadDefault()
@@ -379,16 +384,36 @@ function GameManager:_hookPlayerDeath(player)
 		self._deathDebounce[player.UserId] = nil
 		
 		local humanoid = char:WaitForChild("Humanoid", 5)
-		if not humanoid then return end
+		if not humanoid then
+			-- Critical error: Humanoid missing after 5 seconds
+			warn("[GameManager] CRITICAL: Humanoid not found for player " .. player.Name .. " after 5 seconds. Forcing death.")
+			-- Force player death to prevent game state desync
+			self:onPlayerDied(player)
+			return
+		end
 
-		humanoid.Died:Connect(function()
+		-- Store connection for cleanup
+		local connection = humanoid.Died:Connect(function()
 			if self._deathDebounce[player.UserId] then return end
 			self._deathDebounce[player.UserId] = true
 			self:onPlayerDied(player)
 		end)
+		
+		-- Store connection for cleanup on player removal
+		-- Initialize table on first use
+		if not self._deathConnections[player.UserId] then
+			self._deathConnections[player.UserId] = {}
+		end
+		table.insert(self._deathConnections[player.UserId], connection)
 	end
 
-	player.CharacterAdded:Connect(hookCharacter)
+	local characterAddedConnection = player.CharacterAdded:Connect(hookCharacter)
+
+	-- Store CharacterAdded connection for cleanup to avoid leaks on respawn
+	if not self._deathConnections[player.UserId] then
+		self._deathConnections[player.UserId] = {}
+	end
+	table.insert(self._deathConnections[player.UserId], characterAddedConnection)
 	if player.Character then
 		hookCharacter(player.Character)
 	end
@@ -454,6 +479,14 @@ function GameManager:onPlayerRemoving(player)
 	self.lobbyManager:onPlayerLeave(player)
 	self.spectatorManager:onPlayerLeave(player)
 	self.playerSpawnManager:onPlayerRemoving(player)
+
+	-- Cleanup death connections to prevent memory leaks
+	if self._deathConnections and self._deathConnections[player.UserId] then
+		for _, connection in ipairs(self._deathConnections[player.UserId]) do
+			connection:Disconnect()
+		end
+		self._deathConnections[player.UserId] = nil
+	end
 
 	self._deathDebounce[player.UserId] = nil
 	self._spectatorCycleCooldown[player.UserId] = nil
@@ -724,13 +757,26 @@ function GameManager:updateCureProgress(progress)
 	end
 end
 
+-- Helper method to clean up round resources (DRY principle)
+function GameManager:_cleanupRoundResources()
+	self.spawner:clearAllZombies()
+	self.spawner:cleanupGeneratedSpawnPoints()
+	self.spectatorManager:endRound()
+	
+	-- Clean up resources and items for next round
+	if self.resourceSpawner and self.resourceSpawner.clearAllResources then
+		self.resourceSpawner:clearAllResources()
+	end
+	if self.itemSpawner and self.itemSpawner.clearAllItems then
+		self.itemSpawner:clearAllItems()
+	end
+end
+
 function GameManager:onVictory()
 	print("VICTORY! Cure completed!")
 	self:setState(GameManager.States.VICTORY)
 
-	self.spawner:clearAllZombies()
-	self.spawner:cleanupGeneratedSpawnPoints()
-	self.spectatorManager:endRound()
+	self:_cleanupRoundResources()
 
 	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -753,7 +799,7 @@ function GameManager:onVictory()
 
 	self:showEndOfRoundScoreboard()
 
-	local creditsTime = 20
+	local creditsTime = 20 -- Safe default fallback
 	local storyConfigModule = SharedFolder:FindFirstChild("StoryConfig")
 	if storyConfigModule then
 		local ok, storyConfig = pcall(require, storyConfigModule)
@@ -762,19 +808,26 @@ function GameManager:onVictory()
 			local configuredDisplayTime = creditsConfig and creditsConfig.CreditsDisplayTime
 			if typeof(configuredDisplayTime) == "number" and configuredDisplayTime > 0 then
 				creditsTime = configuredDisplayTime
+			else
+				warn("[GameManager] StoryConfig.Credits.CreditsDisplayTime invalid, using default: " .. creditsTime)
 			end
+		else
+			warn("[GameManager] Failed to load StoryConfig, using default credits time: " .. creditsTime)
 		end
+	else
+		warn("[GameManager] StoryConfig module not found, using default credits time: " .. creditsTime)
 	end
-	self.stateTimer = GameConfig.SCOREBOARD_DISPLAY_TIME + creditsTime
+	
+	-- Ensure timer is valid (never NaN)
+	local scoreboardTime = GameConfig.SCOREBOARD_DISPLAY_TIME or 10
+	self.stateTimer = scoreboardTime + creditsTime
 end
 
 function GameManager:onDefeat(reason)
 	print("DEFEAT! " .. reason)
 	self:setState(GameManager.States.DEFEAT)
 
-	self.spawner:clearAllZombies()
-	self.spawner:cleanupGeneratedSpawnPoints()
-	self.spectatorManager:endRound()
+	self:_cleanupRoundResources()
 
 	for _, player in ipairs(Players:GetPlayers()) do
 		self:initializePlayerStats(player)
@@ -920,12 +973,23 @@ function GameManager:updateLobby(deltaTime)
 
 	local selectedMapId = self.lobbyManager:getSelectedMapId()
 
-	-- ✅ FIX: one-shot latch to stop double load/spawn
+	-- ✅ FIX: one-shot latch to stop double load/spawn with time-based debounce
 	if self._lobbyResolved then
 		return
 	end
+	
+	-- Time-based debounce to prevent race conditions
+	local now = tick()
+	local debounceTime = GameConfig.Security and GameConfig.Security.LOBBY_DEBOUNCE_TIME or 1.0
+	if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < debounceTime then
+		-- Too soon since last attempt, skip to prevent race
+		return
+	end
+	
+	self._lastLobbyResolveAttempt = now
 
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
+		-- Mark as resolved immediately to prevent double loading
 		self._lobbyResolved = true
 
 		if GameConfig.ENABLE_MULTI_MAP then
@@ -933,7 +997,17 @@ function GameManager:updateLobby(deltaTime)
 				self.lobbySetup:cleanup()
 			end
 
+			-- Trigger map load; MapManager:load() does not return a success boolean
 			self.mapManager:load(selectedMapId)
+			
+			-- Validate that a map model is now active; if not, treat as a load failure
+			if not self.mapManager.currentMapModel then
+				warn("[GameManager] Failed to load map: " .. tostring(selectedMapId))
+				-- Reset flag to allow retry on next updateLobby cycle
+				self._lobbyResolved = false
+				return
+			end
+			
 			self:configureSpawnersForMap()
 
 			-- Notify PlayerSpawnManager that map has loaded
