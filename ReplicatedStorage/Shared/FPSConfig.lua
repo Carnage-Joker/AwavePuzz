@@ -1,4 +1,6 @@
 -- @ScriptType: ModuleScript
+
+-- @ScriptType: ModuleScript
 -- FPSConfig.lua
 -- Configuration for First-Person Shooter mechanics
 -- Contains settings for camera, movement, weapons, recoil, and HUD
@@ -466,11 +468,11 @@ FPSConfig.Animations = {
 	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
 	WeaponAnimations = {
 		Pistol = {
-			idle = "rbxassetid://91849136252846",      -- Idle holding animation
-			fire = "rbxassetid://121818582669361",      -- Fire/shoot animation
+			idle = "rbxassetid://77700472496946",      -- Idle holding animation
+			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation
 			reload = "rbxassetid://136927034232244",    -- Reload animation
 			equip = "rbxassetid://106310870423679",     -- Draw/equip animation
-			sprint = "rbxassetid://74003080620998",    -- Sprint (lowered weapon) animation
+			sprint = "rbxassetid://102565289526730",    -- Sprint (lowered weapon) animation
 			ads = "rbxassetid://0",       -- Aim down sights animation
 		},
 		SMG = {
