@@ -291,18 +291,19 @@ end
 local function setupTouchInput()
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
-		if processed then return end
-
+		-- Don't check processed for joystick - we want to capture all touches in the area
 		local touchPos = touch.Position
 
 		-- Check if touch is on joystick
-		if joystickOuter then
+		if joystickOuter and not joystickTouch then
 			local outerPos = joystickOuter.AbsolutePosition
 			local outerSize = joystickOuter.AbsoluteSize
 			local relativePos = touchPos - outerPos
 
-			if relativePos.X >= 0 and relativePos.X <= outerSize.X and
-				relativePos.Y >= 0 and relativePos.Y <= outerSize.Y then
+			-- Expand hitbox slightly for easier control
+			local expandedMargin = 20
+			if relativePos.X >= -expandedMargin and relativePos.X <= outerSize.X + expandedMargin and
+				relativePos.Y >= -expandedMargin and relativePos.Y <= outerSize.Y + expandedMargin then
 				joystickTouch = touch
 				updateJoystick(touchPos)
 			end
@@ -310,6 +311,7 @@ local function setupTouchInput()
 	end)
 
 	UserInputService.TouchMoved:Connect(function(touch, processed)
+		-- Always process joystick movement regardless of processed state
 		if touch == joystickTouch then
 			updateJoystick(touch.Position)
 		end
