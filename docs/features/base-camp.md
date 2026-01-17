@@ -165,7 +165,7 @@ WALL_HEIGHT = 16, -- Taller walls
 
 - All parts are **anchored** (no physics calculations)
 - Created **once per map load** (not per wave)
-- **~20-30 parts total** (minimal memory impact)
+- **~24-34 parts total** (platform + 8 wall segments + 4 gates + 8-12 cover + hitbox)
 - **No frame rate impact** in testing
 
 ## Future Enhancements
