@@ -206,10 +206,18 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Wave Announce
 remoteEvents:WaitForChild("WaveAnnounce").OnClientEvent:Connect(function(waveData)
-	if typeof(waveData) ~= "table" then return end
+	local waveNumber = 0
+	local timeLimit = 0
 
-	local waveNumber = waveData.waveNumber or 0
-	local timeLimit = waveData.timeLimit or 0
+	if typeof(waveData) == "table" then
+		waveNumber = waveData.waveNumber or 0
+		timeLimit = waveData.timeLimit or 0
+	elseif waveData ~= nil then
+		waveNumber = waveData
+	end
+
+	waveNumber = tonumber(waveNumber) or 0
+	timeLimit = tonumber(timeLimit) or 0
 
 	waveLabel.Text = "Wave: " .. tostring(waveNumber)
 	timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
