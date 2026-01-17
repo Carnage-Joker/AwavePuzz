@@ -396,7 +396,11 @@ function ControlsTutorialUI.initialize()
 						ControlsTutorialUI.show()
 					end
 				end)
+			else
+				warn("[ControlsTutorialUI] Failed to find RemoteEvents.WaveAnnounce within 10 seconds; controls tutorial will not auto-show.")
 			end
+		else
+			warn("[ControlsTutorialUI] Failed to find ReplicatedStorage.RemoteEvents within 10 seconds; controls tutorial will not auto-show.")
 		end
 	end)
 	
