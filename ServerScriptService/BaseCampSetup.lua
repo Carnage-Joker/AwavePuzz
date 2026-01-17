@@ -128,14 +128,35 @@ function BaseCampSetup:createWalls(centerPos)
 	local halfSize = self.campConfig.BASE_SIZE / 2
 	local wallHeight = self.campConfig.WALL_HEIGHT
 	local thickness = self.campConfig.WALL_THICKNESS
+	local gateWidth = self.campConfig.GATE_WIDTH
+	
+	-- Calculate wall segment dimensions
+	-- Each wall is split into two segments with a gap for the gate in the center
+	local wallSegmentLength = (self.campConfig.BASE_SIZE - gateWidth) / 2
+	-- segmentOffset positions the segments correctly so the gap aligns with gates
+	local segmentOffset = (wallSegmentLength + gateWidth) / 2
 
+	-- All wall segment configurations
+	-- North/South walls split left/right, East/West walls split top/bottom
 	local wallConfigs = {
-		{name = "NorthWall", size = Vector3.new(self.campConfig.BASE_SIZE, wallHeight, thickness), offset = Vector3.new(0, wallHeight/2, halfSize)},
-		{name = "SouthWall", size = Vector3.new(self.campConfig.BASE_SIZE, wallHeight, thickness), offset = Vector3.new(0, wallHeight/2, -halfSize)},
-		{name = "EastWall",  size = Vector3.new(thickness, wallHeight, self.campConfig.BASE_SIZE), offset = Vector3.new(halfSize, wallHeight/2, 0)},
-		{name = "WestWall",  size = Vector3.new(thickness, wallHeight, self.campConfig.BASE_SIZE), offset = Vector3.new(-halfSize, wallHeight/2, 0)},
+		-- North wall segments (split left and right with gap in center)
+		{name = "NorthWallLeft", size = Vector3.new(wallSegmentLength, wallHeight, thickness), offset = Vector3.new(-segmentOffset, wallHeight/2, halfSize)},
+		{name = "NorthWallRight", size = Vector3.new(wallSegmentLength, wallHeight, thickness), offset = Vector3.new(segmentOffset, wallHeight/2, halfSize)},
+		
+		-- South wall segments (split left and right with gap in center)
+		{name = "SouthWallLeft", size = Vector3.new(wallSegmentLength, wallHeight, thickness), offset = Vector3.new(-segmentOffset, wallHeight/2, -halfSize)},
+		{name = "SouthWallRight", size = Vector3.new(wallSegmentLength, wallHeight, thickness), offset = Vector3.new(segmentOffset, wallHeight/2, -halfSize)},
+		
+		-- East wall segments (split top and bottom with gap in center)
+		{name = "EastWallTop", size = Vector3.new(thickness, wallHeight, wallSegmentLength), offset = Vector3.new(halfSize, wallHeight/2, segmentOffset)},
+		{name = "EastWallBottom", size = Vector3.new(thickness, wallHeight, wallSegmentLength), offset = Vector3.new(halfSize, wallHeight/2, -segmentOffset)},
+		
+		-- West wall segments (split top and bottom with gap in center)
+		{name = "WestWallTop", size = Vector3.new(thickness, wallHeight, wallSegmentLength), offset = Vector3.new(-halfSize, wallHeight/2, segmentOffset)},
+		{name = "WestWallBottom", size = Vector3.new(thickness, wallHeight, wallSegmentLength), offset = Vector3.new(-halfSize, wallHeight/2, -segmentOffset)},
 	}
 
+	-- Create all wall segments
 	for _, cfg in ipairs(wallConfigs) do
 		local wall = Instance.new("Part")
 		wall.Name = cfg.name
