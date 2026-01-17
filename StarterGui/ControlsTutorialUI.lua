@@ -18,7 +18,6 @@ local ControlsTutorialUI = {}
 
 -- State
 local screenGui = nil
-local hasShownTutorial = false
 local tutorialActive = false
 
 -- Check if player has seen tutorial (stored in player attribute)
@@ -31,7 +30,6 @@ end
 -- Mark tutorial as seen
 local function markTutorialSeen()
 	player:SetAttribute("HasSeenControlsTutorial", true)
-	hasShownTutorial = true
 end
 
 -- Get control info based on device type
@@ -380,16 +378,8 @@ end
 
 -- Initialize
 function ControlsTutorialUI.initialize()
-	-- Avoid re-initializing InputManager if it exposes an isInitialized check
-	local shouldInitializeInput = true
-	if typeof(InputManager.isInitialized) == "function" then
-		local ok, initialized = pcall(InputManager.isInitialized, InputManager)
-		if ok and initialized == true then
-			shouldInitializeInput = false
-		end
-	end
-
-	if shouldInitializeInput then
+	-- InputManager.initialize() is already idempotent but check explicitly for clarity
+	if not InputManager.getActiveDevice() then
 		InputManager.initialize()
 	end
 	createTutorialUI()

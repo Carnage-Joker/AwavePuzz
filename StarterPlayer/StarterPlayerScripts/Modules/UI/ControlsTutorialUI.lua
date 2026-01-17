@@ -18,7 +18,6 @@ local ControlsTutorialUI = {}
 
 -- State
 local screenGui = nil
-local hasShownTutorial = false
 local tutorialActive = false
 
 -- Check if player has seen tutorial (stored in player attribute)
@@ -31,7 +30,6 @@ end
 -- Mark tutorial as seen
 local function markTutorialSeen()
 	player:SetAttribute("HasSeenControlsTutorial", true)
-	hasShownTutorial = true
 end
 
 -- Get control info based on device type
@@ -380,7 +378,10 @@ end
 
 -- Initialize
 function ControlsTutorialUI.initialize()
-	InputManager.initialize()
+	-- InputManager.initialize() is already idempotent but check explicitly for clarity
+	if not InputManager.getActiveDevice() then
+		InputManager.initialize()
+	end
 	createTutorialUI()
 	
 	-- Listen for first wave to show tutorial
