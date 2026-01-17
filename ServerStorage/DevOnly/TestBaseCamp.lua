@@ -64,12 +64,19 @@ assert(platform ~= nil, "Base platform not found")
 print("✓ Base platform exists")
 
 local walls = {}
-for _, wallName in ipairs({"NorthWall", "SouthWall", "EastWall", "WestWall"}) do
+-- Walls are now split into segments to create gaps for gates
+local wallNames = {
+	"NorthWallLeft", "NorthWallRight",
+	"SouthWallLeft", "SouthWallRight",
+	"EastWallTop", "EastWallBottom",
+	"WestWallTop", "WestWallBottom"
+}
+for _, wallName in ipairs(wallNames) do
 	local wall = baseCamp:FindFirstChild(wallName)
 	assert(wall ~= nil, wallName .. " not found")
 	table.insert(walls, wall)
 end
-print("✓ All 4 walls exist")
+print("✓ All 8 wall segments exist (split to allow gate passage)")
 
 local gates = {}
 for _, gateName in ipairs({"NorthGate", "SouthGate", "EastGate", "WestGate"}) do
