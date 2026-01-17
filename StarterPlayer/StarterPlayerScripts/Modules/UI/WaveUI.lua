@@ -218,8 +218,6 @@ waveAnnounceEvent.OnClientEvent:Connect(function(waveData)
 	if typeof(waveData) == "table" then
 		waveNumber = waveData.waveNumber or 0
 		timeLimit = waveData.timeLimit or 0
-	elseif waveData ~= nil then
-		waveNumber = waveData
 	end
 
 	waveNumber = tonumber(waveNumber) or 0
