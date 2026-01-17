@@ -216,11 +216,11 @@ waveAnnounceEvent.OnClientEvent:Connect(function(waveData)
 	local waveNumber = 0
 	local timeLimit = 0
 
+	-- Server-side GameManager always sends a table payload:
+	-- { waveNumber = number, timeLimit = number, zombieCount = number }
 	if typeof(waveData) == "table" then
 		waveNumber = waveData.waveNumber or 0
 		timeLimit = waveData.timeLimit or 0
-	elseif waveData ~= nil then
-		waveNumber = waveData
 	end
 
 	waveNumber = tonumber(waveNumber) or 0
