@@ -18,7 +18,7 @@ A defensive fortress automatically created at the center of each map. Players de
 | Component | Count | Material | Function |
 |-----------|-------|----------|----------|
 | Platform | 1 | Concrete | Central base |
-| Wall Segments | 8 | Concrete | Defense (12 studs high, split to create gate openings) |
+| Walls | 4 | Concrete | Defense (12 studs high) |
 | Gates | 4 | Wood | Entry points (passable) |
 | Cover | 8 | Metal | Tactical positions |
 | HitBox | 1 | Invisible | Zombie targeting |
@@ -165,7 +165,7 @@ WALL_HEIGHT = 16, -- Taller walls
 
 - All parts are **anchored** (no physics calculations)
 - Created **once per map load** (not per wave)
-- **~24-34 parts total** (platform + 8 wall segments + 4 gates + 8-12 cover + hitbox)
+- **~20-30 parts total** (minimal memory impact)
 - **No frame rate impact** in testing
 
 ## Future Enhancements

@@ -110,19 +110,6 @@ To verify zombies target the base correctly:
 
 ## Troubleshooting
 
-### Players Cannot Exit Base Camp
-
-**Symptoms**: Players spawn in base camp but cannot leave through gates
-
-**Cause**: This was a bug where walls were solid and spanned the full perimeter, overlapping with gates
-
-**Solution**: Fixed in commit 713844e. Walls are now split into 8 segments (2 per side) with 8-stud gaps for gates. Each gate area now has a physical opening in the wall, allowing players to pass through.
-
-**Verification**: 
-1. Check that 8 wall segments exist (not 4 full walls)
-2. Walk through each gate - should be no collision
-3. Verify gaps are 8 studs wide at each cardinal direction
-
 ### Base Camp Not Appearing
 
 **Symptoms**: No base camp in workspace after map load
@@ -222,13 +209,11 @@ Use this checklist when testing the base camp system:
 
 - [ ] Base camp appears at map center
 - [ ] Platform is 30x30 studs
-- [ ] 8 wall segments exist (2 per side, split to create gate openings)
-- [ ] Wall segments are 12 studs high
-- [ ] Gaps of 8 studs exist at each cardinal direction for gates
+- [ ] 4 walls exist (North, South, East, West)
+- [ ] Walls are 12 studs high
 - [ ] 4 gates exist at cardinal directions
 - [ ] Gates are semi-transparent (0.3)
 - [ ] Gates are passable (CanCollide = false)
-- [ ] **Players can walk through gate openings and exit the base camp**
 - [ ] 8 cover positions arranged in circle
 - [ ] Cover objects face outward
 - [ ] BaseCaptureZone exists in workspace
