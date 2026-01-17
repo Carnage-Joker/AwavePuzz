@@ -282,14 +282,6 @@ local function setupButtonEvents(button)
 			InputManager.setActionState(action, false)
 		end
 	end)
-	
-	-- Touch tap handling for better responsiveness on mobile
-	button.TouchTap:Connect(function()
-		-- For instant actions like reload, this provides better feedback
-		if action == InputManager.Action.RELOAD then
-			-- Already handled by MouseButton1Down/Up
-		end
-	end)
 end
 
 --------------------------------------------------------------------------------
