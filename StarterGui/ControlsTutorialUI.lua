@@ -380,7 +380,18 @@ end
 
 -- Initialize
 function ControlsTutorialUI.initialize()
-	InputManager.initialize()
+	-- Avoid re-initializing InputManager if it exposes an isInitialized check
+	local shouldInitializeInput = true
+	if typeof(InputManager.isInitialized) == "function" then
+		local ok, initialized = pcall(InputManager.isInitialized, InputManager)
+		if ok and initialized == true then
+			shouldInitializeInput = false
+		end
+	end
+
+	if shouldInitializeInput then
+		InputManager.initialize()
+	end
 	createTutorialUI()
 	
 	-- Listen for first wave to show tutorial
