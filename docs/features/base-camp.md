@@ -18,7 +18,7 @@ A defensive fortress automatically created at the center of each map. Players de
 | Component | Count | Material | Function |
 |-----------|-------|----------|----------|
 | Platform | 1 | Concrete | Central base |
-| Walls | 4 | Concrete | Defense (12 studs high) |
+| Wall Segments | 8 | Concrete | Defense (12 studs high, split to create gate openings) |
 | Gates | 4 | Wood | Entry points (passable) |
 | Cover | 8 | Metal | Tactical positions |
 | HitBox | 1 | Invisible | Zombie targeting |
