@@ -156,6 +156,7 @@ local catalogCache = {}
 local debounce = false
 local selectedItemIndex = 1
 local shopItems = {} -- Track shop item buttons for keyboard navigation
+local shopItemHandlers = {} -- Track click handlers for keyboard navigation
 
 local function updateItemSelection()
 	-- Update visual indication of selected item
@@ -203,6 +204,7 @@ local function rebuildList(items)
 
 	-- Clear shop items array
 	shopItems = {}
+	shopItemHandlers = {}
 	selectedItemIndex = 1
 
 	for _, item in ipairs(items) do
@@ -224,8 +226,9 @@ local function rebuildList(items)
 
 		-- Store button and item data
 		table.insert(shopItems, button)
-
-		button.MouseButton1Click:Connect(function()
+		
+		-- Store the click handler function
+		local clickHandler = function()
 			if debounce then return end
 			debounce = true
 
@@ -236,7 +239,10 @@ local function rebuildList(items)
 			task.delay(0.25, function()
 				debounce = false
 			end)
-		end)
+		end
+		
+		table.insert(shopItemHandlers, clickHandler)
+		button.MouseButton1Click:Connect(clickHandler)
 	end
 
 	updateCanvasSize()
@@ -301,8 +307,8 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 			updateItemSelection()
 		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
 			-- Trigger purchase of selected item
-			if shopItems[selectedItemIndex] then
-				shopItems[selectedItemIndex].MouseButton1Click:Fire()
+			if shopItemHandlers[selectedItemIndex] then
+				shopItemHandlers[selectedItemIndex]()
 			end
 		end
 	end

@@ -200,7 +200,17 @@ function FPSAnimationController:loadAnimation(weaponId, animationType)
 		animator.Parent = humanoid
 	end
 
-	return animator:LoadAnimation(animation)
+	-- Wrap animation loading with error handling to prevent spam
+	local success, result = pcall(function()
+		return animator:LoadAnimation(animation)
+	end)
+	
+	if not success then
+		warn("[FPSAnimationController] Failed to load animation: " .. tostring(result))
+		return nil
+	end
+	
+	return result
 end
 
 --------------------------------------------------------------------------------

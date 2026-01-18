@@ -263,16 +263,25 @@ function ClientController.initializeUI()
 			end)
 			
 			if success then
-				UI[moduleName] = result
-				-- Call initialize if it exists
-				if result and typeof(result) == "table" and result.initialize then
-					pcall(result.initialize)
+				-- Verify result is exactly one value
+				if result ~= nil then
+					UI[moduleName] = result
+					-- Call initialize if it exists
+					if typeof(result) == "table" and result.initialize then
+						local initSuccess, initErr = pcall(result.initialize)
+						if not initSuccess then
+							warn(string.format("[ClientController] ✗ UI module %s initialize failed: %s", moduleName, tostring(initErr)))
+						end
+					end
+				else
+					warn(string.format("[ClientController] ✗ UI module %s returned nil", moduleName))
 				end
 			else
 				warn(string.format("[ClientController] ✗ UI module %s failed to load: %s", moduleName, tostring(result)))
 			end
 		else
-			warn(string.format("[ClientController] ✗ UI module %s not found", moduleName))
+			-- Don't warn for optional UI modules
+			-- warn(string.format("[ClientController] ✗ UI module %s not found", moduleName))
 		end
 	end
 	
