@@ -1,7 +1,5 @@
 -- @ScriptType: ModuleScript
-
--- @ScriptType: LocalScript
--- PuzzleMenuUI.client.lua
+-- PuzzleMenuUI.lua
 -- Client-side UI for selecting which puzzle to attempt at cure station
 -- Updated with dynamic UI scaling for mobile devices.
 
@@ -178,6 +176,7 @@ UIScaleManager.onScaleChanged(updateUIScaling)
 
 -- Keyboard navigation state
 local puzzleButtons = {}
+local puzzleButtonHandlers = {} -- Track click handlers for keyboard navigation
 local selectedPuzzleIndex = 1
 
 local function updatePuzzleSelection()
@@ -276,18 +275,20 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 	statusLabel.Parent = button
 
 	-- Click handler
+	local clickHandler = nil
 	if available then
-		button.MouseButton1Click:Connect(function()
+		clickHandler = function()
 			-- Request puzzle from server
 			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
 				remoteEvents.RequestPuzzle:FireServer(componentName)
 				menuFrame.Visible = false
 			end
-		end)
+		end
+		button.MouseButton1Click:Connect(clickHandler)
 	end
 
-	return button
+	return button, clickHandler
 end
 
 -- Function to populate puzzle menu
@@ -299,8 +300,9 @@ local function updatePuzzleMenu(progressData)
 		end
 	end
 
-	-- Clear button array
+	-- Clear button arrays
 	puzzleButtons = {}
+	puzzleButtonHandlers = {}
 	selectedPuzzleIndex = 1
 
 	progressData = progressData or {}
@@ -315,8 +317,9 @@ local function updatePuzzleMenu(progressData)
 			local componentCount = componentCounts[componentName] or 0
 			local available = componentCount >= GameConfig.CURE_COMPONENTS_REQUIRED and not puzzleProgress.solved
 
-			local button = createPuzzleButton(componentName, puzzleConfig, available, componentCount)
+			local button, clickHandler = createPuzzleButton(componentName, puzzleConfig, available, componentCount)
 			table.insert(puzzleButtons, button)
+			table.insert(puzzleButtonHandlers, clickHandler)
 		end
 	end
 
@@ -359,18 +362,21 @@ local function updatePuzzleMenu(progressData)
 	finalDesc.TextXAlignment = Enum.TextXAlignment.Left
 	finalDesc.Parent = finalButton
 
+	local finalClickHandler = nil
 	if finalAvailable then
-		finalButton.MouseButton1Click:Connect(function()
+		finalClickHandler = function()
 			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
 				remoteEvents.RequestPuzzle:FireServer("FinalSynthesis")
 				menuFrame.Visible = false
 			end
-		end)
+		end
+		finalButton.MouseButton1Click:Connect(finalClickHandler)
 	end
 
 	-- Add final button to tracked buttons
 	table.insert(puzzleButtons, finalButton)
+	table.insert(puzzleButtonHandlers, finalClickHandler)
 
 	-- Update selection visuals
 	if #puzzleButtons > 0 then
@@ -429,11 +435,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 			updatePuzzleSelection()
 		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
 			-- Trigger selected puzzle
-			if puzzleButtons[selectedPuzzleIndex] and puzzleButtons[selectedPuzzleIndex].BackgroundColor3 ~= Color3.fromRGB(60, 60, 60) then
-				puzzleButtons[selectedPuzzleIndex].MouseButton1Click:Fire()
+			if puzzleButtonHandlers[selectedPuzzleIndex] then
+				puzzleButtonHandlers[selectedPuzzleIndex]()
 			end
 		end
 	end
 end)
 
 print("PuzzleMenuUI initialized")
+
+-- Return module table (required for ModuleScript compatibility)
+local PuzzleMenuUI = {}
+return PuzzleMenuUI

@@ -8,7 +8,7 @@
 
 local WeaponConfig = {}
 
-WeaponConfig.DefaultWeapon = "Standard Issue Pistol"
+WeaponConfig.DefaultWeapon = "Pistol"
 
 WeaponConfig.Weapons = {
 	Pistol = {

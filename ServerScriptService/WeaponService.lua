@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 
@@ -155,6 +156,7 @@ end
 
 function WeaponService:handleWeaponFire(player, payload)
 	if typeof(payload) ~= "table" then
+		warn("[WeaponService] Invalid payload from " .. player.Name)
 		return
 	end
 
@@ -164,11 +166,13 @@ function WeaponService:handleWeaponFire(player, payload)
 	local timestamp = payload.timestamp
 
 	if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3" then
+		warn("[WeaponService] Invalid origin/direction from " .. player.Name)
 		return
 	end
 
 	-- Validate direction magnitude and handle edge cases
 	if direction.Magnitude < 0.001 then
+		warn("[WeaponService] Invalid direction magnitude from " .. player.Name)
 		return
 	end
 	
@@ -176,6 +180,7 @@ function WeaponService:handleWeaponFire(player, payload)
 	local unitDir = direction.Unit
 	-- Check for NaN from normalization errors (NaN is the only value that doesn't equal itself)
 	if unitDir.X ~= unitDir.X or unitDir.Y ~= unitDir.Y or unitDir.Z ~= unitDir.Z then
+		warn("[WeaponService] NaN direction from " .. player.Name)
 		return
 	end
 	
@@ -184,11 +189,13 @@ function WeaponService:handleWeaponFire(player, payload)
 
 	local equipped = self.playerManager:getEquippedWeapon(player)
 	if not equipped or equipped ~= weaponId then
+		warn("[WeaponService] Weapon mismatch for " .. player.Name .. " - equipped: " .. tostring(equipped) .. ", fired: " .. tostring(weaponId))
 		return
 	end
 
 	local stats = self:getModifiedStats(player, weaponId)
 	if not stats then
+		warn("[WeaponService] No weapon config for id: " .. tostring(weaponId) .. " (player: " .. player.Name .. ")")
 		return
 	end
 	
