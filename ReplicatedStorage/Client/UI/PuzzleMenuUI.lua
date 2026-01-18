@@ -1,7 +1,5 @@
 -- @ScriptType: ModuleScript
-
--- @ScriptType: LocalScript
--- PuzzleMenuUI.client.lua
+-- PuzzleMenuUI.lua
 -- Client-side UI for selecting which puzzle to attempt at cure station
 -- Updated with dynamic UI scaling for mobile devices.
 
