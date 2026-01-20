@@ -791,7 +791,7 @@ local function cleanup()
 end
 
 -- Handle respawn - cleanup connections
-player.CharacterRemoving:Connect(cleanup)
+connections.characterRemoving = player.CharacterRemoving:Connect(cleanup)
 
 print("PuzzleUI initialized")
 

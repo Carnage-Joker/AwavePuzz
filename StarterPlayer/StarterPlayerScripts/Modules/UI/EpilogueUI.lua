@@ -518,7 +518,7 @@ function epilogue:cleanup()
 end
 
 -- Handle respawn - cleanup connections
-Player.CharacterRemoving:Connect(function()
+connections.characterRemoving = Player.CharacterRemoving:Connect(function()
 	epilogue:cleanup()
 end)
 

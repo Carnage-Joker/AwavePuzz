@@ -102,22 +102,12 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 closeCorner.Parent = closeButton
 
-closeButton.MouseButton1Click:Connect(function()
+connections.closeButton = closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
 	ModalManager.remove("PuzzleMenuUI")
 end)
 
--- ESC/Backspace handled globally by ModalManager, but keep fallback
-connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	
-	-- Only process if this is the top modal
-	if menuFrame.Visible and not ModalManager.isTopModal("PuzzleMenuUI") then
-		return
-	end
-	
-	-- Keyboard navigation handled below
-end)
+-- ESC/Backspace handled globally by ModalManager
 
 -- Instructions
 local instructionLabel = Instance.new("TextLabel")
@@ -472,7 +462,7 @@ local function cleanup()
 end
 
 -- Handle respawn - cleanup connections
-player.CharacterRemoving:Connect(cleanup)
+connections.characterRemoving = player.CharacterRemoving:Connect(cleanup)
 
 print("PuzzleMenuUI initialized")
 

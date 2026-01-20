@@ -73,6 +73,9 @@ local joystickTouch = nil
 local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
 
+-- Connection tracking for cleanup
+local connections = {}
+
 --------------------------------------------------------------------------------
 -- UI CREATION
 --------------------------------------------------------------------------------
@@ -242,11 +245,11 @@ local function createUIToggleCluster()
 		"SCORE",
 		10,
 		function()
-			-- Toggle scoreboard via remote event or direct call
-			local scoreboardUI = player.PlayerGui:FindFirstChild("ScoreboardUI")
-			if scoreboardUI and scoreboardUI:FindFirstChild("ScoreboardFrame") then
-				scoreboardUI.Enabled = not scoreboardUI.Enabled
-			end
+			-- Simulate Tab keypress to use ScoreboardUI's proper toggle logic
+			local VirtualInputManager = game:GetService("VirtualInputManager")
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Tab, false, nil)
+			task.wait(0.05)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Tab, false, nil)
 		end
 	)
 	
@@ -271,12 +274,11 @@ local function createUIToggleCluster()
 		"ALLY",
 		10 + (UI_TOGGLE_BUTTON_SIZE + UI_TOGGLE_SPACING) * 2,
 		function()
-			-- Toggle alliance UI
-			local allianceUI = player.PlayerGui:FindFirstChild("AllianceUI")
-			if allianceUI and allianceUI:FindFirstChild("MainFrame") then
-				local mainFrame = allianceUI.MainFrame
-				mainFrame.Visible = not mainFrame.Visible
-			end
+			-- Simulate H keypress to use AllianceUI's proper toggle logic with ModalManager
+			local VirtualInputManager = game:GetService("VirtualInputManager")
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.H, false, nil)
+			task.wait(0.05)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.H, false, nil)
 		end
 	)
 end
@@ -345,12 +347,11 @@ local function createContextualControls()
 		"CONTINUE",
 		UDim2.new(0.5, 0, 0.85, 0),
 		function()
-			-- Trigger continue in epilogue
-			local epilogueUI = player.PlayerGui:FindFirstChild("EpilogueUI")
-			if epilogueUI then
-				-- Simulate space key or call nextPage directly
-				-- This requires accessing the epilogue module
-			end
+			-- Simulate Space keypress to trigger epilogue continue
+			local VirtualInputManager = game:GetService("VirtualInputManager")
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, nil)
+			task.wait(0.05)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, nil)
 		end
 	)
 	
@@ -573,6 +574,16 @@ function TouchControls.isEnabled()
 	return TouchControls.enabled
 end
 
+-- Cleanup function
+function TouchControls.cleanup()
+	for name, connection in pairs(connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+end
+
 -- Listen for spectator mode changes
 task.spawn(function()
 	local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
@@ -581,13 +592,13 @@ task.spawn(function()
 		local exitSpectator = remoteEvents:FindFirstChild("ExitSpectatorMode")
 		
 		if enterSpectator then
-			enterSpectator.OnClientEvent:Connect(function()
+			connections.enterSpectator = enterSpectator.OnClientEvent:Connect(function()
 				TouchControls.setSpectatorMode(true)
 			end)
 		end
 		
 		if exitSpectator then
-			exitSpectator.OnClientEvent:Connect(function()
+			connections.exitSpectator = exitSpectator.OnClientEvent:Connect(function()
 				TouchControls.setSpectatorMode(false)
 			end)
 		end
@@ -597,13 +608,13 @@ task.spawn(function()
 		local hideEpilogue = remoteEvents:FindFirstChild("HideEpilogue")
 		
 		if showEpilogue then
-			showEpilogue.OnClientEvent:Connect(function()
+			connections.showEpilogue = showEpilogue.OnClientEvent:Connect(function()
 				TouchControls.setEpilogueMode(true)
 			end)
 		end
 		
 		if hideEpilogue then
-			hideEpilogue.OnClientEvent:Connect(function()
+			connections.hideEpilogue = hideEpilogue.OnClientEvent:Connect(function()
 				TouchControls.setEpilogueMode(false)
 			end)
 		end

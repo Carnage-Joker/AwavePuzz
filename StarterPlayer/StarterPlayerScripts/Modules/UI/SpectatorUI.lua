@@ -293,7 +293,7 @@ local function cleanup()
 end
 
 -- Handle respawn - cleanup connections
-player.CharacterRemoving:Connect(cleanup)
+connections.characterRemoving = player.CharacterRemoving:Connect(cleanup)
 
 -- Return module table (required for ModuleScript compatibility)
 local SpectatorUI = {}
