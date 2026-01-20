@@ -30,6 +30,10 @@ local JOYSTICK_MAX_DISTANCE = 50
 local BUTTON_SIZE = 70
 local BUTTON_SPACING = 10
 
+-- UI Toggle button sizes (minimum 70x70 for touch targets)
+local UI_TOGGLE_BUTTON_SIZE = 70
+local UI_TOGGLE_SPACING = 10
+
 local JOYSTICK_POSITION = UDim2.new(0, 100, 1, -150) -- Bottom left
 local FIRE_BUTTON_POSITION = UDim2.new(1, -100, 1, -150) -- Bottom right
 local JUMP_BUTTON_POSITION = UDim2.new(1, -100, 1, -250) -- Above fire button
@@ -52,6 +56,17 @@ local crouchButton = nil
 local aimButton = nil
 local reloadButton = nil
 local sprintButton = nil
+
+-- UI Toggle buttons (top-right cluster)
+local scoreboardToggleButton = nil
+local shopToggleButton = nil
+local allianceToggleButton = nil
+
+-- Contextual buttons (only shown when needed)
+local spectatorPrevButton = nil
+local spectatorNextButton = nil
+local epilogueContinueButton = nil
+local epilogueSkipButton = nil
 
 -- Touch tracking
 local joystickTouch = nil
@@ -185,6 +200,191 @@ local function createAllButtons()
 		UIScaleManager.getPositionWithSafeArea("bottomLeft", 80, -240),
 		InputManager.Action.SPRINT
 	)
+end
+
+--------------------------------------------------------------------------------
+-- UI TOGGLE CLUSTER (Top Right)
+--------------------------------------------------------------------------------
+
+local function createUIToggleButton(name, text, yOffset, callback)
+	local button = Instance.new("TextButton")
+	button.Name = name
+	button.Size = UIScaleManager.scaleSize(UI_TOGGLE_BUTTON_SIZE, UI_TOGGLE_BUTTON_SIZE, "hudElements")
+	button.Position = UIScaleManager.getPositionWithSafeArea("topRight", -(UI_TOGGLE_BUTTON_SIZE / 2 + 10), yOffset)
+	button.AnchorPoint = Vector2.new(0.5, 0)
+	button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	button.BackgroundTransparency = 0.3
+	button.BorderSizePixel = 2
+	button.BorderColor3 = Color3.fromRGB(200, 200, 200)
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.TextSize = UIScaleManager.scaleTextSize(14)
+	button.Font = Enum.Font.GothamBold
+	button.TextWrapped = true
+	button.Visible = true
+	button.Parent = screenGui
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.2, 0)
+	corner.Parent = button
+	
+	if callback then
+		button.MouseButton1Click:Connect(callback)
+	end
+	
+	return button
+end
+
+local function createUIToggleCluster()
+	-- Scoreboard toggle (top)
+	scoreboardToggleButton = createUIToggleButton(
+		"ScoreboardToggle",
+		"SCORE",
+		10,
+		function()
+			-- Toggle scoreboard via remote event or direct call
+			local scoreboardUI = player.PlayerGui:FindFirstChild("ScoreboardUI")
+			if scoreboardUI and scoreboardUI:FindFirstChild("ScoreboardFrame") then
+				scoreboardUI.Enabled = not scoreboardUI.Enabled
+			end
+		end
+	)
+	
+	-- Shop toggle (below scoreboard)
+	shopToggleButton = createUIToggleButton(
+		"ShopToggle",
+		"SHOP",
+		10 + UI_TOGGLE_BUTTON_SIZE + UI_TOGGLE_SPACING,
+		function()
+			-- Toggle shop via keyboard simulation (B key)
+			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+			if remoteEvents and remoteEvents:FindFirstChild("ShopRequest") then
+				-- Request catalog to open shop
+				remoteEvents.ShopRequest:FireServer("catalog")
+			end
+		end
+	)
+	
+	-- Alliance toggle (below shop)
+	allianceToggleButton = createUIToggleButton(
+		"AllianceToggle",
+		"ALLY",
+		10 + (UI_TOGGLE_BUTTON_SIZE + UI_TOGGLE_SPACING) * 2,
+		function()
+			-- Toggle alliance UI
+			local allianceUI = player.PlayerGui:FindFirstChild("AllianceUI")
+			if allianceUI and allianceUI:FindFirstChild("MainFrame") then
+				local mainFrame = allianceUI.MainFrame
+				mainFrame.Visible = not mainFrame.Visible
+			end
+		end
+	)
+end
+
+--------------------------------------------------------------------------------
+-- CONTEXTUAL CONTROLS (Spectator & Epilogue)
+--------------------------------------------------------------------------------
+
+local function createContextualButton(name, text, position, callback)
+	local button = Instance.new("TextButton")
+	button.Name = name
+	button.Size = UIScaleManager.scaleSize(UI_TOGGLE_BUTTON_SIZE, UI_TOGGLE_BUTTON_SIZE, "hudElements")
+	button.Position = position
+	button.AnchorPoint = Vector2.new(0.5, 0.5)
+	button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+	button.BackgroundTransparency = 0.2
+	button.BorderSizePixel = 3
+	button.BorderColor3 = Color3.fromRGB(255, 200, 100)
+	button.Text = text
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.TextSize = UIScaleManager.scaleTextSize(16)
+	button.Font = Enum.Font.GothamBold
+	button.Visible = false -- Hidden by default, shown contextually
+	button.Parent = screenGui
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = button
+	
+	if callback then
+		button.MouseButton1Click:Connect(callback)
+	end
+	
+	return button
+end
+
+local function createContextualControls()
+	-- Spectator controls (only shown when spectating)
+	spectatorPrevButton = createContextualButton(
+		"SpectatorPrev",
+		"◀ PREV",
+		UDim2.new(0.3, 0, 0.5, 0),
+		function()
+			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+			if remoteEvents and remoteEvents:FindFirstChild("SpectatorCycleTarget") then
+				remoteEvents.SpectatorCycleTarget:FireServer("prev")
+			end
+		end
+	)
+	
+	spectatorNextButton = createContextualButton(
+		"SpectatorNext",
+		"NEXT ▶",
+		UDim2.new(0.7, 0, 0.5, 0),
+		function()
+			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+			if remoteEvents and remoteEvents:FindFirstChild("SpectatorCycleTarget") then
+				remoteEvents.SpectatorCycleTarget:FireServer("next")
+			end
+		end
+	)
+	
+	-- Epilogue controls (only shown during epilogue)
+	epilogueContinueButton = createContextualButton(
+		"EpilogueContinue",
+		"CONTINUE",
+		UDim2.new(0.5, 0, 0.85, 0),
+		function()
+			-- Trigger continue in epilogue
+			local epilogueUI = player.PlayerGui:FindFirstChild("EpilogueUI")
+			if epilogueUI then
+				-- Simulate space key or call nextPage directly
+				-- This requires accessing the epilogue module
+			end
+		end
+	)
+	
+	epilogueSkipButton = createContextualButton(
+		"EpilogueSkip",
+		"SKIP",
+		UDim2.new(0.9, 0, 0.1, 0),
+		function()
+			-- Skip epilogue
+			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+			if remoteEvents and remoteEvents:FindFirstChild("EpilogueComplete") then
+				remoteEvents.EpilogueComplete:FireServer()
+			end
+		end
+	)
+end
+
+-- State management for contextual controls
+function TouchControls.setSpectatorMode(active)
+	if spectatorPrevButton then
+		spectatorPrevButton.Visible = active
+	end
+	if spectatorNextButton then
+		spectatorNextButton.Visible = active
+	end
+end
+
+function TouchControls.setEpilogueMode(active)
+	if epilogueContinueButton then
+		epilogueContinueButton.Visible = active
+	end
+	if epilogueSkipButton then
+		epilogueSkipButton.Visible = active
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -339,6 +539,8 @@ function TouchControls.initialize()
 	createScreenGui()
 	createJoystick()
 	createAllButtons()
+	createUIToggleCluster()
+	createContextualControls()
 	
 	-- Setup button events
 	setupButtonEvents(fireButton)
@@ -370,6 +572,43 @@ end
 function TouchControls.isEnabled()
 	return TouchControls.enabled
 end
+
+-- Listen for spectator mode changes
+task.spawn(function()
+	local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
+	if remoteEvents then
+		local enterSpectator = remoteEvents:FindFirstChild("EnterSpectatorMode")
+		local exitSpectator = remoteEvents:FindFirstChild("ExitSpectatorMode")
+		
+		if enterSpectator then
+			enterSpectator.OnClientEvent:Connect(function()
+				TouchControls.setSpectatorMode(true)
+			end)
+		end
+		
+		if exitSpectator then
+			exitSpectator.OnClientEvent:Connect(function()
+				TouchControls.setSpectatorMode(false)
+			end)
+		end
+		
+		-- Epilogue events
+		local showEpilogue = remoteEvents:FindFirstChild("ShowEpilogue")
+		local hideEpilogue = remoteEvents:FindFirstChild("HideEpilogue")
+		
+		if showEpilogue then
+			showEpilogue.OnClientEvent:Connect(function()
+				TouchControls.setEpilogueMode(true)
+			end)
+		end
+		
+		if hideEpilogue then
+			hideEpilogue.OnClientEvent:Connect(function()
+				TouchControls.setEpilogueMode(false)
+			end)
+		end
+	end
+end)
 
 -- Auto-initialize on touch devices
 if InputManager.isTouch() then
