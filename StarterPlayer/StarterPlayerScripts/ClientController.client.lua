@@ -22,6 +22,10 @@ end
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 
+-- Load input management systems
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+
 print("[ClientController] Configuration loaded")
 
 --------------------------------------------------------------------------------
@@ -358,6 +362,11 @@ function ClientController.initialize()
 	
 	print("[ClientController] Starting initialization sequence...")
 	
+	-- Initialize input management systems FIRST
+	print("[ClientController] Initializing input management systems...")
+	ModalManager.initialize()
+	InputActionRegistry.initialize()
+	
 	-- Initialize systems in order
 	ClientController.initializeCamera()
 	ClientController.initializeMovement()
@@ -381,6 +390,11 @@ function ClientController.initialize()
 	
 	ClientController.initialized = true
 	print("[ClientController] ✓✓✓ Client initialization complete ✓✓✓")
+	
+	-- Run input action audit after all systems have initialized
+	task.spawn(function()
+		InputActionRegistry.runStartupAudit()
+	end)
 end
 
 -- Start the client

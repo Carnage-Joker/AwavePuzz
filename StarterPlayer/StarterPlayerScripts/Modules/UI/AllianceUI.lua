@@ -19,6 +19,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -425,18 +427,29 @@ local function updatePlayerList()
 	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + getScaledValue(10, "padding"))
 end
 
--- Toggle UI with key (default: Tab key)
+-- Toggle UI with H key (Team/Help) - Changed from LeftShift to avoid Sprint conflict
 local UserInputService = game:GetService("UserInputService")
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
 
-	if input.KeyCode == Enum.KeyCode.LeftShift then
+	if input.KeyCode == Enum.KeyCode.H then
 		mainFrame.Visible = not mainFrame.Visible
 		if mainFrame.Visible then
 			updatePlayerList()
+			-- Register with ModalManager when opened
+			ModalManager.push("AllianceUI", function()
+				mainFrame.Visible = false
+			end, ModalManager.Priority.MODAL)
+		else
+			-- Remove from ModalManager when closed
+			ModalManager.remove("AllianceUI")
 		end
 	end
 end)
+
+-- Register input action with InputActionRegistry
+InputActionRegistry.register("AllianceToggle", "AllianceUI", {Enum.KeyCode.H}, InputActionRegistry.Priority.TOGGLE_UI)
 
 -- Remote Event Handlers
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
@@ -562,8 +575,8 @@ end)
 -- Initial update
 updatePlayerList()
 
--- Show hint
-showNotification("Press LeftShift to open Alliance Menu", 5)
+-- Show hint with NEW keybinding
+showNotification("Press H to open Alliance Menu (Team)", 5)
 
 print("AllianceUI initialized")
 

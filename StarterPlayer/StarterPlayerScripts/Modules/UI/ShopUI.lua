@@ -12,6 +12,8 @@ local player = Players.LocalPlayer
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -82,6 +84,7 @@ closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
 	screenGui.Enabled = false
+	ModalManager.remove("ShopUI")
 end)
 
 local list = Instance.new("ScrollingFrame")
@@ -264,6 +267,7 @@ shopUpdate.OnClientEvent:Connect(function(payload)
 end)
 
 UserInputService.InputBegan:Connect(function(input, gpe)
+	-- ALWAYS check gameProcessedEvent first
 	if gpe then
 		return
 	end
@@ -275,17 +279,26 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 			statusLabel.Text = "Loading shop..."
 			shopRequest:FireServer("catalog")
+			
+			-- Register with ModalManager
+			ModalManager.push("ShopUI", function()
+				screenGui.Enabled = false
+				statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+				statusLabel.Text = "Press B to toggle shop"
+			end, ModalManager.Priority.MODAL)
 		else
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 			statusLabel.Text = "Press B to toggle shop"
+			ModalManager.remove("ShopUI")
 		end
-	elseif input.KeyCode == Enum.KeyCode.Backspace and screenGui.Enabled then
-		-- Allow Backspace key to close the shop
-		screenGui.Enabled = false
-		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-		statusLabel.Text = "Press B to toggle shop"
+	-- Backspace is now handled by ModalManager globally, but keep fallback
 	elseif screenGui.Enabled and #shopItems > 0 then
 		-- Keyboard navigation when shop is open
+		-- Only process if this shop is the top modal
+		if not ModalManager.isTopModal("ShopUI") then
+			return
+		end
+		
 		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
 			selectedItemIndex = selectedItemIndex - 1
 			if selectedItemIndex < 1 then
@@ -298,14 +311,20 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 				selectedItemIndex = 1
 			end
 			updateItemSelection()
-		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
-			-- Trigger purchase of selected item
+		elseif input.KeyCode == Enum.KeyCode.Return then
+			-- Prefer Enter for selection (Space conflicts with jump)
 			if shopItems[selectedItemIndex] then
 				shopItems[selectedItemIndex].MouseButton1Click:Fire()
 			end
 		end
 	end
 end)
+
+-- Register input actions with InputActionRegistry
+InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI)
+InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI)
+InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, InputActionRegistry.Priority.MODAL_UI)
 
 -- Return module table (required for ModuleScript compatibility)
 local ShopUI = {}

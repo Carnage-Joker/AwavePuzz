@@ -21,6 +21,8 @@ local isEndOfRoundDisplay = false
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -227,6 +229,7 @@ end
 
 -- Toggle scoreboard with TAB key
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
 
 	if input.KeyCode == Enum.KeyCode.Tab then
@@ -234,6 +237,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		-- Don't show TAB scoreboard if end of round display is active
 		if not isEndOfRoundDisplay then
 			screenGui.Enabled = true
+			-- ScoreboardUI is a panel overlay, not a blocking modal (lower priority)
+			ModalManager.push("ScoreboardUI", function()
+				screenGui.Enabled = false
+				tabHeld = false
+			end, ModalManager.Priority.PANEL)
 		end
 	end
 end)
@@ -244,9 +252,13 @@ UserInputService.InputEnded:Connect(function(input)
 		-- Don't hide if end of round display is active
 		if not isEndOfRoundDisplay then
 			screenGui.Enabled = false
+			ModalManager.remove("ScoreboardUI")
 		end
 	end
 end)
+
+-- Register input action with InputActionRegistry
+InputActionRegistry.register("ScoreboardToggle", "ScoreboardUI", {Enum.KeyCode.Tab}, InputActionRegistry.Priority.TOGGLE_UI)
 
 -- Listen for scoreboard updates from server
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
