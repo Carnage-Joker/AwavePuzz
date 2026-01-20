@@ -31,6 +31,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 
 --------------------------------------------------------------------------------
 -- STATE MANAGEMENT
@@ -45,6 +46,13 @@ local consecutiveShots = 0
 local lastShotTime = 0
 local currentSpread = 0
 local targetSpread = 0
+
+-- Helper: Check if gameplay input should be blocked by modal state
+local function shouldBlockGameplay()
+	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
+	-- PANEL priority (like Scoreboard) allows gameplay to continue
+	return ModalManager.shouldBlockGameplay()
+end
 
 -- Remote events
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
@@ -122,6 +130,11 @@ local function updateAmmoDisplay(weaponId)
 end
 
 local function canFire()
+	-- Check if gameplay should be blocked by modals
+	if shouldBlockGameplay() then
+		return false
+	end
+	
 	if not currentWeapon or not weaponStats then
 		return false
 	end
@@ -194,6 +207,11 @@ local function fireWeapon()
 end
 
 local function startReload()
+	-- Check if gameplay should be blocked by modals
+	if shouldBlockGameplay() then
+		return
+	end
+	
 	if not currentWeapon or isReloading then return end
 
 	weaponReloadEvent:FireServer({
@@ -239,6 +257,11 @@ local function cancelReload()
 end
 
 local function equipWeapon(weaponId)
+	-- Check if gameplay should be blocked by modals
+	if shouldBlockGameplay() then
+		return
+	end
+	
 	if currentWeapon == weaponId then return end
 
 	-- Cleanup any active fire connections on weapon switch
@@ -277,6 +300,18 @@ local function setupInputCallbacks()
 	-- Fire action (can be held for automatic weapons)
 	local isFiring = false
 	InputManager.bindAction(InputManager.Action.FIRE, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			if isFiring then
+				isFiring = false
+				if fireConnection then
+					fireConnection:Disconnect()
+					fireConnection = nil
+				end
+			end
+			return
+		end
+		
 		if active then
 			if not isFiring then
 				isFiring = true
@@ -297,6 +332,13 @@ local function setupInputCallbacks()
 
 	-- ADS action
 	InputManager.bindAction(InputManager.Action.AIM, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			isAiming = false
+			adsStateBindable:Fire(false)
+			return
+		end
+		
 		isAiming = active
 		adsStateBindable:Fire(active)
 		crosshairBindable:Fire({
@@ -307,6 +349,11 @@ local function setupInputCallbacks()
 
 	-- Reload action
 	InputManager.bindAction(InputManager.Action.RELOAD, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			return
+		end
+		
 		if active then
 			startReload()
 		end
@@ -321,7 +368,11 @@ end
 
 -- Legacy input handler (kept for compatibility)
 local function onInputBegan(input, gameProcessed)
+	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
+	
+	-- Check if gameplay should be blocked
+	if shouldBlockGameplay() then return end
 
 	-- Weapon switching with number keys (keyboard only)
 	if input.KeyCode == FPSConfig.Controls.WeaponSlot1 or input.KeyCode == Enum.KeyCode.One then
