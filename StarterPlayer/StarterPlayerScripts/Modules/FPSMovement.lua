@@ -18,6 +18,7 @@ local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 
 -- Wait for camera module (will be available after initialization)
 local FirstPersonCamera = nil
@@ -97,6 +98,13 @@ local originalHipHeight = nil
 -- Use shared utility functions
 local lerp = MathUtil.lerp
 local clamp = MathUtil.clamp
+
+-- Helper: Check if gameplay input should be blocked by modal state
+local function shouldBlockGameplay()
+	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
+	-- PANEL priority (like Scoreboard) allows gameplay to continue
+	return ModalManager.shouldBlockGameplay()
+end
 
 --------------------------------------------------------------------------------
 -- GROUND CHECK
@@ -227,6 +235,21 @@ local function updateMovement(deltaTime)
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
+	
+	-- Block movement if modal is active
+	if shouldBlockGameplay() then
+		-- Reset movement state when blocked
+		keysHeld.forward = false
+		keysHeld.backward = false
+		keysHeld.left = false
+		keysHeld.right = false
+		movementVector = Vector2.new(0, 0)
+		wantsToSprint = false
+		isSprinting = false
+		isMoving = false
+		humanoid.WalkSpeed = 0
+		return
+	end
 
 	-- Check if player is moving
 	isMoving = keysHeld.forward or keysHeld.backward or keysHeld.left or keysHeld.right
@@ -257,11 +280,20 @@ local function setupInputCallbacks()
 
 	-- Sprint action
 	InputManager.bindAction(InputManager.Action.SPRINT, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			wantsToSprint = false
+			return
+		end
 		wantsToSprint = active
 	end)
 
 	-- Crouch action (toggle)
 	InputManager.bindAction(InputManager.Action.CROUCH, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			return
+		end
 		if active then
 			wantsToCrouch = not wantsToCrouch
 		end
@@ -269,6 +301,10 @@ local function setupInputCallbacks()
 
 	-- Jump action
 	InputManager.bindAction(InputManager.Action.JUMP, function(active)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			return
+		end
 		if active then
 			local character = player.Character
 			if character then
@@ -282,6 +318,16 @@ local function setupInputCallbacks()
 
 	-- Movement axis (for gamepad/touch)
 	InputManager.bindAxis("Movement", function(vector)
+		-- Check if gameplay should be blocked
+		if shouldBlockGameplay() then
+			movementVector = Vector2.new(0, 0)
+			keysHeld.forward = false
+			keysHeld.backward = false
+			keysHeld.left = false
+			keysHeld.right = false
+			return
+		end
+		
 		movementVector = vector
 
 		-- Update key states based on analog input
@@ -295,7 +341,12 @@ end
 
 -- Legacy keyboard input handler (kept for compatibility)
 local function onInputBegan(input, gameProcessedEvent)
+	-- ALWAYS check gameProcessedEvent first
 	if gameProcessedEvent then return end
+	
+	-- Check if gameplay should be blocked
+	if shouldBlockGameplay() then return end
+	
 	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
 
 	-- Movement keys (only for keyboard, gamepad uses axis)
