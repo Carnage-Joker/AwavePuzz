@@ -16,9 +16,14 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
+
+-- Connection tracking for cleanup
+local connections = {}
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -218,6 +223,7 @@ end
 -- Close puzzle UI
 local function closePuzzle()
 	puzzleFrame.Visible = false
+	ModalManager.remove("PuzzleUI")
 	if timerConnection then
 		timerConnection:Disconnect()
 		timerConnection = nil
@@ -227,16 +233,9 @@ local function closePuzzle()
 	currentComponentName = nil
 end
 
-closeButton.MouseButton1Click:Connect(closePuzzle)
+connections.closeButton = closeButton.MouseButton1Click:Connect(closePuzzle)
 
--- Add Backspace key handler to close puzzle
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	
-	if input.KeyCode == Enum.KeyCode.Backspace and puzzleFrame.Visible then
-		closePuzzle()
-	end
-end)
+-- ESC/Backspace handled globally by ModalManager
 
 -- Update timer
 local function updateTimer()
@@ -642,6 +641,9 @@ local function openPuzzle(componentName, puzzle)
 
 	-- Show frame
 	puzzleFrame.Visible = true
+	
+	-- Register with ModalManager
+	ModalManager.push("PuzzleUI", closePuzzle, ModalManager.Priority.MODAL)
 
 	-- Start timer updates
 	if timerConnection then
@@ -651,7 +653,12 @@ local function openPuzzle(componentName, puzzle)
 end
 
 -- Submit answer
-submitButton.MouseButton1Click:Connect(function()
+connections.submitButton = submitButton.MouseButton1Click:Connect(function()
+	-- Only process if this is the top modal
+	if not ModalManager.isTopModal("PuzzleUI") then
+		return
+	end
+	
 	if not currentPuzzle or not currentComponentName then
 		return
 	end
@@ -760,4 +767,35 @@ puzzleFailedEvent.OnClientEvent:Connect(function(message)
 	notification:Destroy()
 end)
 
+-- Register input actions with InputActionRegistry
+InputActionRegistry.register("PuzzleSubmit", "PuzzleUI", {}, InputActionRegistry.Priority.MODAL_UI) -- Submit via button only
+
+-- Cleanup function
+local function cleanup()
+	for name, connection in pairs(connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+	
+	if timerConnection then
+		timerConnection:Disconnect()
+		timerConnection = nil
+	end
+	
+	-- Remove from ModalManager if still open
+	if puzzleFrame.Visible then
+		ModalManager.remove("PuzzleUI")
+	end
+end
+
+-- Handle respawn - cleanup connections
+player.CharacterRemoving:Connect(cleanup)
+
 print("PuzzleUI initialized")
+
+-- Return module table
+local PuzzleUIModule = {}
+PuzzleUIModule.cleanup = cleanup
+return PuzzleUIModule

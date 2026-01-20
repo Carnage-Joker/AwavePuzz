@@ -10,6 +10,14 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
+-- Shared modules
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+
+-- Connection tracking for cleanup
+local connections = {}
+
 -- Camera configuration
 local SPECTATOR_CAMERA_HEIGHT = 4 -- Studs above target
 local SPECTATOR_CAMERA_DISTANCE = 8 -- Studs behind target
@@ -181,18 +189,24 @@ local function requestCycle(dir)
 	SpectatorCycleTarget:FireServer(dir)
 end
 
-prevBtn.MouseButton1Click:Connect(function()
+connections.prevBtn = prevBtn.MouseButton1Click:Connect(function()
 	requestCycle("prev")
 end)
 
-nextBtn.MouseButton1Click:Connect(function()
+connections.nextBtn = nextBtn.MouseButton1Click:Connect(function()
 	requestCycle("next")
 end)
 
--- Keyboard/gamepad
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+-- Keyboard/gamepad input with modal check
+connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if not isSpectating then return end
+	
+	-- Check if spectator UI is allowed to receive input (PANEL priority allows other panels)
+	-- We only block input if a higher priority modal (MODAL/FULLSCREEN) is active
+	if ModalManager.shouldBlockGameplay() then
+		return
+	end
 
 	if input.KeyCode == Enum.KeyCode.Q or input.KeyCode == Enum.KeyCode.A then
 		requestCycle("prev")
@@ -206,7 +220,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 -- Server events
-EnterSpectatorMode.OnClientEvent:Connect(function(payload)
+connections.enterSpectator = EnterSpectatorMode.OnClientEvent:Connect(function(payload)
 	isSpectating = true
 	gui.Enabled = true
 
@@ -214,12 +228,21 @@ EnterSpectatorMode.OnClientEvent:Connect(function(payload)
 	aliveCount = 0
 
 	setCameraToTarget(payload and payload.targetUserId or nil)
+	
+	-- Register with ModalManager at PANEL priority (allows other panels to overlay)
+	ModalManager.push("SpectatorUI", function()
+		-- Don't auto-close spectator mode from ESC - let server control it
+		-- Just acknowledge modal presence for input blocking
+	end, ModalManager.Priority.PANEL)
 end)
 
-ExitSpectatorMode.OnClientEvent:Connect(function()
+connections.exitSpectator = ExitSpectatorMode.OnClientEvent:Connect(function()
 	isSpectating = false
 	gui.Enabled = false
 	targetUserId = nil
+	
+	-- Remove from ModalManager
+	ModalManager.remove("SpectatorUI")
 
 	-- Restore camera to local player
 	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -229,12 +252,12 @@ ExitSpectatorMode.OnClientEvent:Connect(function()
 	end
 end)
 
-SpectatorTargetUpdate.OnClientEvent:Connect(function(payload)
+connections.targetUpdate = SpectatorTargetUpdate.OnClientEvent:Connect(function(payload)
 	if not isSpectating then return end
 	setCameraToTarget(payload and payload.targetUserId or nil)
 end)
 
-SpectatorStateUpdate.OnClientEvent:Connect(function(payload)
+connections.stateUpdate = SpectatorStateUpdate.OnClientEvent:Connect(function(payload)
 	if not payload then return end
 	aliveList = payload.alivePlayers or {}
 	aliveCount = payload.aliveCount or 0
@@ -248,6 +271,31 @@ SpectatorStateUpdate.OnClientEvent:Connect(function(payload)
 	subtitle.Text = ("Target: %s | Alive: %d"):format(targetName, aliveCount or 0)
 end)
 
+-- Register input actions with InputActionRegistry
+InputActionRegistry.register("SpectatorPrev", "SpectatorUI", {Enum.KeyCode.Q, Enum.KeyCode.A}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("SpectatorNext", "SpectatorUI", {Enum.KeyCode.E, Enum.KeyCode.D}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("SpectatorPrevGamepad", "SpectatorUI", {Enum.KeyCode.DPadLeft}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("SpectatorNextGamepad", "SpectatorUI", {Enum.KeyCode.DPadRight}, InputActionRegistry.Priority.TOGGLE_UI)
+
+-- Cleanup function
+local function cleanup()
+	for name, connection in pairs(connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+	
+	-- Remove from ModalManager if still active
+	if isSpectating then
+		ModalManager.remove("SpectatorUI")
+	end
+end
+
+-- Handle respawn - cleanup connections
+player.CharacterRemoving:Connect(cleanup)
+
 -- Return module table (required for ModuleScript compatibility)
 local SpectatorUI = {}
+SpectatorUI.cleanup = cleanup
 return SpectatorUI

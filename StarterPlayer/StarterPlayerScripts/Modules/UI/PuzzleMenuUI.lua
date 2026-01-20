@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -14,9 +15,14 @@ local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
+
+-- Connection tracking for cleanup
+local connections = {}
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -98,15 +104,19 @@ closeCorner.Parent = closeButton
 
 closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
+	ModalManager.remove("PuzzleMenuUI")
 end)
 
--- Add Backspace key handler to close menu
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+-- ESC/Backspace handled globally by ModalManager, but keep fallback
+connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	
-	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
-		menuFrame.Visible = false
+	-- Only process if this is the top modal
+	if menuFrame.Visible and not ModalManager.isTopModal("PuzzleMenuUI") then
+		return
 	end
+	
+	-- Keyboard navigation handled below
 end)
 
 -- Instructions
@@ -377,6 +387,12 @@ end
 -- Show puzzle menu
 local function showPuzzleMenu()
 	menuFrame.Visible = true
+	
+	-- Register with ModalManager
+	ModalManager.push("PuzzleMenuUI", function()
+		menuFrame.Visible = false
+	end, ModalManager.Priority.MODAL)
+	
 	-- Request puzzle progress from server
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzleProgress") then
@@ -404,12 +420,15 @@ puzzleUpdateEvent.OnClientEvent:Connect(function(data)
 end)
 
 -- Keyboard navigation handler
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+connections.navigation = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	
-	if input.KeyCode == Enum.KeyCode.Backspace and menuFrame.Visible then
-		menuFrame.Visible = false
-	elseif menuFrame.Visible and #puzzleButtons > 0 then
+	-- Only process if menu is visible and is the top modal
+	if not menuFrame.Visible or not ModalManager.isTopModal("PuzzleMenuUI") then
+		return
+	end
+	
+	if #puzzleButtons > 0 then
 		-- Navigation when menu is open
 		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
 			selectedPuzzleIndex = selectedPuzzleIndex - 1
@@ -432,8 +451,32 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	end
 end)
 
+-- Register input actions with InputActionRegistry
+InputActionRegistry.register("PuzzleMenuNavigateUp", "PuzzleMenuUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI)
+InputActionRegistry.register("PuzzleMenuNavigateDown", "PuzzleMenuUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI)
+InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.Return, Enum.KeyCode.Space}, InputActionRegistry.Priority.MODAL_UI)
+
+-- Cleanup function
+local function cleanup()
+	for name, connection in pairs(connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+	
+	-- Remove from ModalManager if still open
+	if menuFrame.Visible then
+		ModalManager.remove("PuzzleMenuUI")
+	end
+end
+
+-- Handle respawn - cleanup connections
+player.CharacterRemoving:Connect(cleanup)
+
 print("PuzzleMenuUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
+PuzzleMenuUI.cleanup = cleanup
 return PuzzleMenuUI

@@ -13,9 +13,14 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 local EpilogueUI = {}
 EpilogueUI.__index = EpilogueUI
+
+-- Connection tracking for cleanup
+local connections = {}
 
 function EpilogueUI.new()
 	local self = setmetatable({}, EpilogueUI)
@@ -231,13 +236,25 @@ function EpilogueUI:show()
 	-- Display first page
 	self:displayPage(1)
 	
-	-- Listen for ESC key to skip
-	self.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	-- Register with ModalManager at FULLSCREEN priority
+	ModalManager.push("EpilogueUI", function()
+		-- Allow skipping via ESC if enabled
+		if StoryConfig.EpilogueSkippable then
+			self:skip()
+		end
+	end, ModalManager.Priority.FULLSCREEN)
+	
+	-- Listen for input (only if top modal)
+	connections.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		
-		if input.KeyCode == Enum.KeyCode.Escape and StoryConfig.EpilogueSkippable then
-			self:skip()
-		elseif input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.Return then
+		-- Only process if this is the top modal
+		if not ModalManager.isTopModal("EpilogueUI") then
+			return
+		end
+		
+		-- ESC handled by ModalManager global handler
+		if input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.Return then
 			self:nextPage()
 		elseif input.KeyCode == Enum.KeyCode.M then
 			-- Toggle mute
@@ -270,10 +287,13 @@ function EpilogueUI:hide()
 	end
 	
 	-- Disconnect input listener
-	if self.inputConnection then
-		self.inputConnection:Disconnect()
-		self.inputConnection = nil
+	if connections.inputConnection then
+		connections.inputConnection:Disconnect()
+		connections.inputConnection = nil
 	end
+	
+	-- Remove from ModalManager
+	ModalManager.remove("EpilogueUI")
 	
 	-- Fade out
 	self:fadeOut()
@@ -471,5 +491,35 @@ end
 
 -- Initialize
 local epilogue = EpilogueUI.new()
+
+-- Register input actions with InputActionRegistry
+InputActionRegistry.register("EpilogueContinue", "EpilogueUI", {Enum.KeyCode.Space, Enum.KeyCode.Return}, InputActionRegistry.Priority.FULLSCREEN_STATE)
+InputActionRegistry.register("EpilogueMute", "EpilogueUI", {Enum.KeyCode.M}, InputActionRegistry.Priority.FULLSCREEN_STATE)
+
+-- Cleanup function
+function epilogue:cleanup()
+	for name, connection in pairs(connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+	
+	-- Cancel timers
+	if self.autoAdvanceTimer then
+		task.cancel(self.autoAdvanceTimer)
+		self.autoAdvanceTimer = nil
+	end
+	
+	-- Remove from ModalManager if still active
+	if self.isActive then
+		ModalManager.remove("EpilogueUI")
+	end
+end
+
+-- Handle respawn - cleanup connections
+Player.CharacterRemoving:Connect(function()
+	epilogue:cleanup()
+end)
 
 return epilogue
