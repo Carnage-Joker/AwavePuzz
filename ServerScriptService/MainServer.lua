@@ -6,6 +6,11 @@
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Require shared configuration
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 
 -- Require managers / services
 local GameManager = require(script.Parent.GameManager)
@@ -178,7 +183,13 @@ task.spawn(function()
 
 	-- Simple "auto start when someone joins" behaviour
 	-- Minimum player count from GameConfig (recommended: 2 for alliance mechanics)
-	local minPlayers = GameConfig.MIN_PLAYERS_TO_START or 1
+	-- Safe fallback to 1 if GameConfig or field is missing
+	local minPlayers = 1
+	if GameConfig and GameConfig.MIN_PLAYERS_TO_START then
+		minPlayers = GameConfig.MIN_PLAYERS_TO_START
+	else
+		warn("[MainServer] GameConfig.MIN_PLAYERS_TO_START not found, using default: " .. minPlayers)
+	end
 	
 	repeat
 		task.wait(1)

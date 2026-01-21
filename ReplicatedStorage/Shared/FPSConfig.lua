@@ -468,19 +468,19 @@ FPSConfig.Animations = {
 	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
 	WeaponAnimations = {
 		Pistol = {
-			idle = "rbxassetid://77700472496946",      -- Idle holding animation
-			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation
-			reload = "rbxassetid://136927034232244",    -- Reload animation
-			equip = "rbxassetid://106310870423679",     -- Draw/equip animation
-			sprint = "rbxassetid://102565289526730",    -- Sprint (lowered weapon) animation
+			idle = "rbxassetid://0",      -- Idle holding animation (placeholder)
+			fire = "rbxassetid://0",      -- Fire/shoot animation (placeholder)
+			reload = "rbxassetid://0",    -- Reload animation (placeholder)
+			equip = "rbxassetid://0",     -- Draw/equip animation (placeholder)
+			sprint = "rbxassetid://0",    -- Sprint (lowered weapon) animation (placeholder)
 			ads = "rbxassetid://0",       -- Aim down sights animation
 		},
 		SMG = {
-			idle = "rbxassetid://91849136252846",      -- Idle holding animation
-			fire = "rbxassetid://121818582669361",      -- Fire/shoot animation
-			reload = "rbxassetid://136927034232244",    -- Reload animation
-			equip = "rbxassetid://106310870423679",     -- Draw/equip animation
-			sprint = "rbxassetid://74003080620998",
+			idle = "rbxassetid://0",      -- Idle holding animation (placeholder)
+			fire = "rbxassetid://0",      -- Fire/shoot animation (placeholder)
+			reload = "rbxassetid://0",    -- Reload animation (placeholder)
+			equip = "rbxassetid://0",     -- Draw/equip animation (placeholder)
+			sprint = "rbxassetid://0",
 			ads = "rbxassetid://0",
 		},
 		Shotgun = {
