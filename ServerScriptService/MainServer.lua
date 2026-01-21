@@ -118,7 +118,8 @@ Players.PlayerAdded:Connect(function(player)
 	cureService:initializePlayer(player)
 	puzzleService:initializePlayer(player)
 	sprintService:initializePlayer(player)
-	fpsWeaponService:initializePlayer(player)
+	-- ✅ REMOVED: fpsWeaponService:initializePlayer(player)
+	-- This is already called in GameManager:onPlayerAdded to prevent duplicate ammo initialization
 	achievementService:initializePlayer(player)
 
 	-- Character lifecycle
@@ -127,6 +128,10 @@ Players.PlayerAdded:Connect(function(player)
 
 		-- Initialize sprint service for new character
 		sprintService:onCharacterAdded(player, character)
+
+		-- ✅ REMOVED: Do NOT initialize FPSWeaponService here.
+		-- GameManager already calls fpsWeaponService:initializePlayer(player) in onPlayerAdded.
+		-- Duplicate calls can reset ammo incorrectly.
 
 		-- ✅ IMPORTANT:
 		-- Do NOT hook Humanoid.Died here.

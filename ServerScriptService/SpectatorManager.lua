@@ -40,6 +40,9 @@ function SpectatorManager.new()
 	self.deadPlayers = {}   -- userId -> true
 	self._cycleCooldown = {}-- userId -> lastCycleTime
 	self._roundActive = false
+	
+	-- ✅ FIX: Track CharacterAdded connections to prevent leaks
+	self._characterAddedConnections = {} -- userId -> RBXScriptConnection
 
 	self.remoteEvents = {}
 	self:_setupRemoteEvents()
@@ -108,6 +111,14 @@ function SpectatorManager:endRound()
 		end
 	end
 
+	-- ✅ FIX: Disconnect all CharacterAdded connections on round end to prevent leaks
+	for userId, connection in pairs(self._characterAddedConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	self._characterAddedConnections = {}
+
 	self.spectators = {}
 	self.deadPlayers = {}
 	self._cycleCooldown = {}
@@ -164,6 +175,12 @@ function SpectatorManager:onPlayerDied(player)
 
 	self.deadPlayers[player.UserId] = true
 
+	-- ✅ FIX: Disconnect previous CharacterAdded connection if it exists
+	if self._characterAddedConnections[player.UserId] then
+		self._characterAddedConnections[player.UserId]:Disconnect()
+		self._characterAddedConnections[player.UserId] = nil
+	end
+
 	-- Mark player as spectating with an attribute for zombie AI to ignore
 	-- Ensure that if the character respawns while the player is still dead,
 	-- the IsSpectating attribute is re-applied to the new character.
@@ -177,9 +194,11 @@ function SpectatorManager:onPlayerDied(player)
 		applySpectatorAttribute(player.Character)
 	end
 
-	player.CharacterAdded:Connect(function(newCharacter)
+	-- ✅ FIX: Store connection for cleanup
+	self._characterAddedConnections[player.UserId] = player.CharacterAdded:Connect(function(newCharacter)
 		applySpectatorAttribute(newCharacter)
 	end)
+	
 	local target = self:_findAlivePlayer(nil, player.UserId)
 	self.spectators[player.UserId] = {
 		targetUserId = target and target.UserId or nil,
@@ -200,6 +219,12 @@ function SpectatorManager:exitSpectatorMode(player)
 	local data = self.spectators[player.UserId]
 	if data then
 		data.spectatorActive = false
+	end
+
+	-- ✅ FIX: Disconnect CharacterAdded connection when exiting spectator mode
+	if self._characterAddedConnections[player.UserId] then
+		self._characterAddedConnections[player.UserId]:Disconnect()
+		self._characterAddedConnections[player.UserId] = nil
 	end
 
 	-- Remove spectating attribute
@@ -328,6 +353,12 @@ function SpectatorManager:onPlayerLeave(player)
 	-- If leaver was alive, spectators may be targeting them
 	self:onSpectatorTargetDied(player.UserId)
 
+	-- ✅ FIX: Disconnect CharacterAdded connection when player leaves
+	if self._characterAddedConnections[player.UserId] then
+		self._characterAddedConnections[player.UserId]:Disconnect()
+		self._characterAddedConnections[player.UserId] = nil
+	end
+
 	self.spectators[player.UserId] = nil
 	self.deadPlayers[player.UserId] = nil
 	self._cycleCooldown[player.UserId] = nil
@@ -357,6 +388,14 @@ end
 
 -- Reset method for GameManager to call when starting a new round
 function SpectatorManager:reset()
+	-- ✅ FIX: Disconnect all CharacterAdded connections on reset
+	for userId, connection in pairs(self._characterAddedConnections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	self._characterAddedConnections = {}
+
 	-- Clear all spectator and dead player data
 	self.spectators = {}
 	self.deadPlayers = {}
