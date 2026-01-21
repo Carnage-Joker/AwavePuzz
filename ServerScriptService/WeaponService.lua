@@ -172,7 +172,7 @@ function WeaponService:forceEquip(player, weaponId)
 		self.fpsWeaponService:onWeaponEquipped(player, weaponId)
 	end
 
-	-- Debug logging (can be removed in production or made conditional)
+	-- Debug logging, gated by GameConfig.DEBUG_MODE for development/diagnostics
 	if GameConfig.DEBUG then
 		print(string.format("[WeaponService] forceEquip: %s equipped with %s", player.Name, weaponId))
 	end
