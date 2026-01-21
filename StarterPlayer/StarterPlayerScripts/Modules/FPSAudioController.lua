@@ -96,6 +96,18 @@ local function calculateVolume(baseVolume, category)
 end
 
 local function createSound(soundId, parent, properties)
+	-- Validate sound ID format
+	if not soundId or soundId == "" or soundId == "rbxassetid://0" then
+		return nil
+	end
+	
+	-- Extract asset ID and validate it's not suspiciously long (typical IDs are 9-13 digits)
+	local assetIdStr = soundId:match("rbxassetid://(%d+)")
+	if assetIdStr and #assetIdStr > 13 then
+		warn("[FPSAudioController] Skipping invalid sound ID (too long): " .. soundId)
+		return nil
+	end
+	
 	local sound = Instance.new("Sound")
 	sound.SoundId = soundId
 	sound.Volume = properties.Volume or 0.5
@@ -119,9 +131,27 @@ local function playSound(soundId, properties, cleanup)
 	properties.Volume = volume
 
 	local parent = properties.Parent or SoundService
-	local sound = createSound(soundId, parent, properties)
+	
+	-- Wrap sound creation in pcall to catch invalid asset IDs
+	local success, sound = pcall(function()
+		return createSound(soundId, parent, properties)
+	end)
+	
+	if not success or not sound then
+		warn("[FPSAudioController] Failed to create sound: " .. tostring(soundId))
+		return nil
+	end
 
-	sound:Play()
+	-- Wrap Play in pcall to catch asset loading errors
+	local playSuccess = pcall(function()
+		sound:Play()
+	end)
+	
+	if not playSuccess then
+		warn("[FPSAudioController] Failed to play sound: " .. tostring(soundId))
+		sound:Destroy()
+		return nil
+	end
 
 	-- Auto cleanup
 	if cleanup ~= false then

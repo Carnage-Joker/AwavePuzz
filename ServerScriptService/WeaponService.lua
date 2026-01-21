@@ -270,22 +270,30 @@ function WeaponService:handleWeaponFire(player, payload)
 
 			-- ✅ SECURITY: Validate direction is roughly aligned with player look vector (dot-product threshold)
 			-- This reduces spoofing by ensuring shots come from roughly where player is facing
-			local head = character:FindFirstChild("Head")
-			if head then
-				local lookVector = head.CFrame.LookVector
-				local dotProduct = direction:Dot(lookVector)
-				-- Allow shots within a reasonable angle of look direction
-				-- Default 0.3 allows ~70 degree cone for gameplay flexibility while preventing backward shots
-				-- For stricter validation, configure MIN_WEAPON_FIRE_DOT_PRODUCT to 0.5 (45 degrees) or higher
-				local minDotProduct = 0.3  -- More reasonable default than 0.0
-				if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
-					minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
-				end
-				if dotProduct < minDotProduct then
-					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - direction not aligned with look vector (dot: %.2f)", 
-						player.Name, dotProduct))
-					return
-				end
+			-- NOTE: In first-person mode, we use HumanoidRootPart for more reliable validation
+			--       since the head may be rotated differently than the camera
+			local referenceVector = humanoidRootPart.CFrame.LookVector
+			local dotProduct = direction:Dot(referenceVector)
+			
+			-- Allow shots within a reasonable angle of look direction
+			-- Default -0.5 allows ~120 degree cone (shots roughly in front half of player)
+			-- This prevents backward shots while allowing FPS camera freedom
+			-- For stricter validation, configure MIN_WEAPON_FIRE_DOT_PRODUCT to 0.3 (70 degrees) or higher
+			local minDotProduct = -0.5  -- Allow wide arc for FPS gameplay
+			if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
+				minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
+			end
+			
+			if dotProduct < minDotProduct then
+				-- Temporary debug logging to diagnose direction issues
+				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - direction not aligned with look vector (dot: %.2f, threshold: %.2f)", 
+					player.Name, dotProduct, minDotProduct))
+				warn(string.format("  Origin: (%.1f, %.1f, %.1f), Direction: (%.2f, %.2f, %.2f)", 
+					origin.X, origin.Y, origin.Z, direction.X, direction.Y, direction.Z))
+				warn(string.format("  HRP Position: (%.1f, %.1f, %.1f), HRP LookVector: (%.2f, %.2f, %.2f)",
+					humanoidRootPart.Position.X, humanoidRootPart.Position.Y, humanoidRootPart.Position.Z,
+					referenceVector.X, referenceVector.Y, referenceVector.Z))
+				return
 			end
 		end
 	end
