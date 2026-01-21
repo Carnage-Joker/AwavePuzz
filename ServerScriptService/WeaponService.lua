@@ -173,7 +173,7 @@ function WeaponService:forceEquip(player, weaponId)
 	end
 
 	-- Debug logging (can be removed in production or made conditional)
-	if GameConfig.DEBUG_MODE then
+	if GameConfig.DEBUG then
 		print(string.format("[WeaponService] forceEquip: %s equipped with %s", player.Name, weaponId))
 	end
 	return true
