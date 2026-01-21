@@ -140,11 +140,16 @@ function GameManager.new(allianceService)
 		self.spawner:loadSpawnPoints()
 	end
 
-	-- ✅ Hook spectator cycle rate limit (only if the event exists)
-	self:_hookSpectatorRemotes()
+	-- ✅ REMOVED: Do NOT call _hookSpectatorRemotes()
+	-- SpectatorManager owns and handles SpectatorCycleTarget remote.
+	-- Duplicate handling caused confusion and potential race conditions.
 
 	return self
 end
+
+-- ✅ REMOVED: _hookSpectatorRemotes() method
+-- SpectatorManager owns and handles SpectatorCycleTarget remote.
+-- Duplicate handling caused confusion and potential race conditions.
 
 -- Helper method to configure spawners with map spawn points
 function GameManager:configureSpawnersForMap()
@@ -183,29 +188,9 @@ function GameManager:setupRemoteEvents()
 
 	-- Hook title screen and epilogue events
 	self:_hookIntroRemotes()
-end
-
-function GameManager:_hookSpectatorRemotes()
-	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteEventsFolder then return end
-
-	local cycle = remoteEventsFolder:FindFirstChild("SpectatorCycleTarget")
-	if cycle and cycle:IsA("RemoteEvent") then
-		cycle.OnServerEvent:Connect(function(player, direction)
-			if direction ~= "next" and direction ~= "prev" then return end
-
-			local now = os.clock()
-			local last = self._spectatorCycleCooldown[player.UserId] or 0
-			if (now - last) < 0.15 then
-				return
-			end
-			self._spectatorCycleCooldown[player.UserId] = now
-
-			if self.spectatorManager and self.spectatorManager.cycleTarget then
-				self.spectatorManager:cycleTarget(player, direction)
-			end
-		end)
-	end
+	
+	-- ✅ REMOVED: Do NOT hook SpectatorCycleTarget here
+	-- SpectatorManager is the single owner of this remote and handles it correctly
 end
 
 function GameManager:_hookIntroRemotes()

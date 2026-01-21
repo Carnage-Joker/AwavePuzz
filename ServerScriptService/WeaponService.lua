@@ -28,14 +28,14 @@ WeaponService.__index = WeaponService
 
 --[[
     cloneGunModel( gunId )
-    Safely clones a gun model from ServerStorage.Guns.
+    Safely clones a gun model from ServerStorage.Models.
     Returns the cloned Model (named "EquippedWeaponModel") or nil if anything is missing.
 --]]
 function WeaponService:cloneGunModel(gunId)
-	-- Grab the Guns folder (once per call – cheap)
-	local gunsFolder = ServerStorage:FindFirstChild("Guns")
-	if not gunsFolder then
-		warn("[WeaponService] Guns folder missing in ServerStorage")
+	-- Grab the Models folder (once per call – cheap)
+	local modelsFolder = ServerStorage:FindFirstChild("Models")
+	if not modelsFolder then
+		warn("[WeaponService] Models folder missing in ServerStorage")
 		return nil
 	end
 
@@ -45,10 +45,10 @@ function WeaponService:cloneGunModel(gunId)
 		and (weaponConfig.ModelName or weaponConfig.Name)
 		or gunId
 
-	local template = gunsFolder:FindFirstChild(modelName)
+	local template = modelsFolder:FindFirstChild(modelName)
 	if not template then
 		warn(string.format(
-			"[WeaponService] Gun model '%s' not found in ServerStorage.Guns",
+			"[WeaponService] Gun model '%s' not found in ServerStorage.Models",
 			modelName
 			))
 		return nil
@@ -92,7 +92,18 @@ function WeaponService:setupRemoteEvents()
 		self:handleWeaponFire(player, payload)
 	end)
 
-	self.remoteEvents.WeaponEquip.OnServerEvent:Connect(function(player, weaponId)
+	self.remoteEvents.WeaponEquip.OnServerEvent:Connect(function(player, payload)
+		-- ✅ FIX: Accept both string weaponId OR table {weaponId = "Pistol"}
+		local weaponId
+		if typeof(payload) == "string" then
+			weaponId = payload
+		elseif typeof(payload) == "table" and payload.weaponId then
+			weaponId = payload.weaponId
+		else
+			warn("[WeaponService] Invalid WeaponEquip payload from " .. player.Name)
+			return
+		end
+
 		self:handleEquipRequest(player, weaponId)
 	end)
 end
@@ -127,6 +138,45 @@ function WeaponService:handleEquipRequest(player, weaponId)
 
 	self.playerManager:equipWeapon(player, weaponId)
 	self:_equipVisualWeapon(player, weaponId)   -- NEW
+end
+
+-- ✅ NEW: forceEquip method called by PlayerSpawnManager
+-- Forces a weapon to be equipped for a player (used for spawning with default weapon)
+-- Idempotent: calling twice does not duplicate models, welds, or reset ammo incorrectly
+function WeaponService:forceEquip(player, weaponId)
+	if not player or not weaponId or typeof(weaponId) ~= "string" then
+		warn("[WeaponService] forceEquip: Invalid player or weaponId")
+		return false
+	end
+
+	-- Validate weaponId exists in config
+	local weaponConfig = WeaponConfig.getWeapon(weaponId)
+	if not weaponConfig then
+		warn("[WeaponService] forceEquip: Invalid weaponId:", weaponId)
+		return false
+	end
+
+	-- Ensure player owns the weapon (add if not already owned)
+	if not self.playerManager:ownsWeapon(player, weaponId) then
+		self.playerManager:addWeapon(player, weaponId)
+	end
+
+	-- Equip server-side (single source of truth)
+	self.playerManager:equipWeapon(player, weaponId)
+
+	-- Apply visual weapon model
+	self:_equipVisualWeapon(player, weaponId)
+
+	-- Notify FPSWeaponService for ammo tracking
+	if self.fpsWeaponService then
+		self.fpsWeaponService:onWeaponEquipped(player, weaponId)
+	end
+
+	-- Debug logging, gated by GameConfig.DEBUG_MODE for development/diagnostics
+	if GameConfig.DEBUG then
+		print(string.format("[WeaponService] forceEquip: %s equipped with %s", player.Name, weaponId))
+	end
+	return true
 end
 
 
@@ -216,6 +266,26 @@ function WeaponService:handleWeaponFire(player, payload)
 				warn("[WeaponService] SECURITY: Rejected shot from " .. player.Name .. 
 					" - origin too far from player (" .. string.format("%.1f", distanceFromPlayer) .. " studs)")
 				return
+			end
+
+			-- ✅ SECURITY: Validate direction is roughly aligned with player look vector (dot-product threshold)
+			-- This reduces spoofing by ensuring shots come from roughly where player is facing
+			local head = character:FindFirstChild("Head")
+			if head then
+				local lookVector = head.CFrame.LookVector
+				local dotProduct = direction:Dot(lookVector)
+				-- Allow shots within a reasonable angle of look direction
+				-- Default 0.3 allows ~70 degree cone for gameplay flexibility while preventing backward shots
+				-- For stricter validation, configure MIN_WEAPON_FIRE_DOT_PRODUCT to 0.5 (45 degrees) or higher
+				local minDotProduct = 0.3  -- More reasonable default than 0.0
+				if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
+					minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
+				end
+				if dotProduct < minDotProduct then
+					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - direction not aligned with look vector (dot: %.2f)", 
+						player.Name, dotProduct))
+					return
+				end
 			end
 		end
 	end
@@ -422,7 +492,6 @@ function WeaponService:applyUpgrade(player, upgradeId)
 	state.upgrades[upgradeId] = true
 	return true
 end
-local ServerStorage = game:GetService("ServerStorage")  -- at top of file if not already
 
 function WeaponService:_equipVisualWeapon(player, weaponId)
 	local character = player.Character
@@ -491,6 +560,28 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 	if not rightHand then
 		warn("[WeaponService] No RightHand / Right Arm to attach gun to for player:", player.Name)
 		return
+	end
+
+	-- ✅ FIX: Apply physics-safe settings to ALL parts in the weapon model
+	-- Prevents collision-based flinging and falling through map
+	local function applyPhysicsSafeSettings(part)
+		if part:IsA("BasePart") then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Massless = true
+		end
+	end
+
+	if gunModel:IsA("Model") then
+		-- Apply to all descendants in model
+		for _, descendant in ipairs(gunModel:GetDescendants()) do
+			applyPhysicsSafeSettings(descendant)
+		end
+	else
+		-- Single part
+		applyPhysicsSafeSettings(gunModel)
 	end
 
 	-- Position the model or part (tweak offsets/rotations if needed)
