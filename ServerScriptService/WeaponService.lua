@@ -168,11 +168,14 @@ function WeaponService:forceEquip(player, weaponId)
 	self:_equipVisualWeapon(player, weaponId)
 
 	-- Notify FPSWeaponService for ammo tracking
-	if self.fpsWeaponService and self.fpsWeaponService.onWeaponEquipped then
+	if self.fpsWeaponService then
 		self.fpsWeaponService:onWeaponEquipped(player, weaponId)
 	end
 
-	print(string.format("[WeaponService] forceEquip: %s equipped with %s", player.Name, weaponId))
+	-- Debug logging (can be removed in production or made conditional)
+	if GameConfig.DEBUG_MODE then
+		print(string.format("[WeaponService] forceEquip: %s equipped with %s", player.Name, weaponId))
+	end
 	return true
 end
 
@@ -271,9 +274,10 @@ function WeaponService:handleWeaponFire(player, payload)
 			if head then
 				local lookVector = head.CFrame.LookVector
 				local dotProduct = direction:Dot(lookVector)
-				-- Allow shots within ~90 degrees of look direction (dot > 0 means forward hemisphere)
-				-- For stricter validation, use a higher threshold like 0.5 (45 degrees)
-				local minDotProduct = 0.0  -- Allow wide angle for gameplay flexibility
+				-- Allow shots within a reasonable angle of look direction
+				-- Default 0.3 allows ~70 degree cone for gameplay flexibility while preventing backward shots
+				-- For stricter validation, configure MIN_WEAPON_FIRE_DOT_PRODUCT to 0.5 (45 degrees) or higher
+				local minDotProduct = 0.3  -- More reasonable default than 0.0
 				if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
 					minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
 				end
