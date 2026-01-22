@@ -277,6 +277,13 @@ function InputManager.bindAxis(axisName, callback)
 	axisCallbacks[axisName] = callback
 end
 
+function InputManager.sendAxisInput(axisName, value)
+	local callback = axisCallbacks[axisName]
+	if callback then
+		callback(value)
+	end
+end
+
 function InputManager.unbindAction(action, callback)
 	if not actionCallbacks[action] then return end
 

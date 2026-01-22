@@ -56,6 +56,7 @@ local crouchButton = nil
 local aimButton = nil
 local reloadButton = nil
 local sprintButton = nil
+local interactButton = nil
 
 -- UI Toggle buttons (top-right cluster)
 local scoreboardToggleButton = nil
@@ -202,6 +203,14 @@ local function createAllButtons()
 		"SPRINT",
 		UIScaleManager.getPositionWithSafeArea("bottomLeft", 80, -240),
 		InputManager.Action.SPRINT
+	)
+	
+	-- Interact button (center bottom, above joystick)
+	interactButton = createButton(
+		"InteractButton",
+		"INTERACT",
+		UIScaleManager.getPositionWithSafeArea("bottom", 0, -130),
+		InputManager.Action.INTERACT
 	)
 end
 
@@ -422,12 +431,9 @@ local function updateJoystick(touchPosition)
 	end
 	
 	-- Send to InputManager
-	if InputManager and InputManager.bindAxis then
-		local callback = InputManager.axisCallbacks and InputManager.axisCallbacks["Movement"]
-		if callback then
-			-- Invert Y for forward/backward
-			callback(Vector2.new(joystickPosition.X, -joystickPosition.Y))
-		end
+	if InputManager and InputManager.sendAxisInput then
+		-- Invert Y for forward/backward
+		InputManager.sendAxisInput("Movement", Vector2.new(joystickPosition.X, -joystickPosition.Y))
 	end
 end
 
@@ -439,11 +445,8 @@ local function resetJoystick()
 	joystickTouch = nil
 	
 	-- Notify InputManager
-	if InputManager and InputManager.bindAxis then
-		local callback = InputManager.axisCallbacks and InputManager.axisCallbacks["Movement"]
-		if callback then
-			callback(Vector2.new(0, 0))
-		end
+	if InputManager and InputManager.sendAxisInput then
+		InputManager.sendAxisInput("Movement", Vector2.new(0, 0))
 	end
 end
 
@@ -534,6 +537,12 @@ function TouchControls.initialize()
 		return
 	end
 	
+	-- Prevent double initialization
+	if TouchControls.enabled then
+		print("[TouchControls] Already initialized, skipping")
+		return
+	end
+	
 	print("[TouchControls] Initializing touch controls...")
 	
 	-- Create UI
@@ -550,6 +559,7 @@ function TouchControls.initialize()
 	setupButtonEvents(aimButton)
 	setupButtonEvents(reloadButton)
 	setupButtonEvents(sprintButton)
+	setupButtonEvents(interactButton)
 	
 	-- Setup touch input handling
 	setupTouchInput()
