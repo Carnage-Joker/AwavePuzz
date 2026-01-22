@@ -256,7 +256,8 @@ function ClientController.initializeUI()
 		"CreditsUI",
 		"FunFactUI",
 		"SynthesisUI",
-		"ControlsTutorialUI"
+		"ControlsTutorialUI",
+		"TouchControlsUI"
 	}
 	
 	for _, moduleName in ipairs(uiModules) do
