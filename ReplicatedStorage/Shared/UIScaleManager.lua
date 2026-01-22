@@ -205,6 +205,8 @@ function UIScaleManager.getPositionWithSafeArea(positionPreset, offsetX, offsetY
 		return UDim2.new(1, -(safeArea.right + scaledOffsetX), 0, safeArea.top + scaledOffsetY)
 	elseif positionPreset == "bottomLeft" then
 		return UDim2.new(0, safeArea.left + scaledOffsetX, 1, -(safeArea.bottom + scaledOffsetY))
+	elseif positionPreset == "bottomCenter" or positionPreset == "bottom" then
+		return UDim2.new(0.5, scaledOffsetX, 1, -(safeArea.bottom + scaledOffsetY))
 	elseif positionPreset == "bottomRight" then
 		return UDim2.new(1, -(safeArea.right + scaledOffsetX), 1, -(safeArea.bottom + scaledOffsetY))
 	elseif positionPreset == "center" then
