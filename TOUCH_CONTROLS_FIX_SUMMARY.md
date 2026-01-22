@@ -237,6 +237,7 @@ Reverting those commit(s) will undo:
 1. `InputManager.sendAxisInput(axisName, value)` public API addition and related axis input wiring
 2. TouchControlsUI fixes and INTERACT button addition
 3. `bottomCenter` position preset addition in UIScaleManager
+4. TouchControlsUI registration in ClientController lifecycle
 ---
 
 ## Future Improvements

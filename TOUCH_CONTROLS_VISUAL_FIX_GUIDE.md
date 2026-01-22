@@ -12,9 +12,11 @@ Touch Device User Experience:
 │    ↓                                │
 │  MouseButton1Down fires             │
 │    ↓                                │
-│  InputManager.setActionState() OK   │
+│  InputManager.setActionState()      │
 │    ↓                                │
-│  ✅ Fire works                      │
+│  ❌ Not initialized properly        │
+│  ❌ Action callbacks not registered │
+│  ❌ Fire doesn't work               │
 │                                     │
 │  User moves joystick                │
 │    ↓                                │
@@ -362,15 +364,12 @@ Look for these messages in Output:
 
 ## Files Changed Summary
 
-| File | Lines Changed | Purpose |
-|------|---------------|---------|
-| InputManager.lua | +7 | Added sendAxisInput() public method |
-| UIScaleManager.lua | +2 | Added bottomCenter position preset |
-| ClientController.client.lua | +1 | Added TouchControlsUI to init list |
-| TouchControlsUI.lua | +20, -12 | Fixed joystick, added interact button |
-| TOUCH_CONTROLS_FIX_SUMMARY.md | +268 | Comprehensive documentation |
+This fix primarily updates:
+- Input handling and action routing for touch devices
+- Touch UI layout and controls (joystick, buttons, interact behavior)
+- Supporting documentation for touch controls behavior and troubleshooting
 
-**Total Changes:** 4 files modified, 1 file created, 32 insertions, 12 deletions
+For exact files and line-level diffs, refer to the pull request's **Files changed** view.
 
 ## Success Criteria
 
