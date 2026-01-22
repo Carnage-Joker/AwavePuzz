@@ -228,15 +228,15 @@ Action stops
 
 ## Rollback Instructions (If Needed)
 
-If issues arise, revert with:
-```bash
-git revert HEAD~2..HEAD
-```
+If issues arise, revert the touch controls fix commit(s) that introduced these changes.
 
-This will undo:
-1. bottomCenter position preset addition
-2. TouchControlsUI fixes and interact button
+1. Use `git log` or your Git UI to locate the commit(s) associated with the "Touch Controls Fix" / `InputManager.sendAxisInput` / TouchControlsUI updates.
+2. Revert those commit(s) using `git revert <commit-hash>` (or your Git UI's revert functionality).
 
+Reverting those commit(s) will undo:
+1. `InputManager.sendAxisInput(axisName, value)` public API addition and related axis input wiring
+2. TouchControlsUI fixes and INTERACT button addition
+3. `bottomCenter` position preset addition in UIScaleManager
 ---
 
 ## Future Improvements
