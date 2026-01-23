@@ -440,13 +440,18 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	
 	-- Require at least current and reserve data (max can be derived if missing)
 	if data.current ~= nil and data.reserve ~= nil then
-		-- Use provided max, or derive from weapon stats, or fallback to current as max
+		-- Use provided max, or derive from weapon stats, or use sensible default
 		local maxAmmo = data.max
 		if not maxAmmo and weaponStats then
 			maxAmmo = weaponStats.MagSize
 		end
 		if not maxAmmo then
-			maxAmmo = data.current -- Fallback: assume current is the max
+			-- Fallback to default magazine size (30 is common for most weapons)
+			maxAmmo = 30
+			if DEBUG_AMMO then
+				print(string.format("[FPSWeaponController] ⚠ Using default max (30) for weapon %s", 
+					tostring(data.weaponId)))
+			end
 		end
 		
 		ammoUpdateBindable:Fire({
@@ -566,12 +571,12 @@ function FPSWeaponControllerModule.initialize()
 end
 
 function FPSWeaponControllerModule.onCharacterAdded(character)
-	-- FIX: Refresh weapon info and request ammo update on respawn
+	-- FIX: Refresh weapon info on respawn
 	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
 	-- This ensures the client UI is ready to receive those updates
 	if currentWeapon then
 		updateWeaponInfo(currentWeapon)
-		updateAmmoDisplay(currentWeapon)
+		-- Note: updateAmmoDisplay() takes no parameters - it's updated by server events
 	end
 	
 	if DEBUG_AMMO then
