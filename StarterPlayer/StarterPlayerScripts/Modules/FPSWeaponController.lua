@@ -442,6 +442,9 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		currentWeapon = data.weaponId
 		weaponStats = getWeaponStats(data.weaponId)
 		updateWeaponInfo(data.weaponId)
+		
+		-- Fire weapon equipped event to notify animation and other systems
+		weaponEquippedBindable:Fire(data.weaponId)
 	end
 	
 	-- Require at least current and reserve data (max can be derived if missing)
@@ -581,8 +584,8 @@ function FPSWeaponControllerModule.onCharacterAdded(character)
 	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
 	-- This ensures the client UI is ready to receive those updates
 	if currentWeapon then
-		updateWeaponInfo(currentWeapon)
-		-- Note: updateAmmoDisplay() takes no parameters - it's updated by server events
+		-- updateAmmoDisplay only updates weapon info, actual ammo comes from server events
+		updateAmmoDisplay(currentWeapon)
 	end
 	
 	if DEBUG_AMMO then
