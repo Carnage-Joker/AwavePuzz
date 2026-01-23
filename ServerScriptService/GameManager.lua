@@ -368,6 +368,19 @@ function GameManager:_hookPlayerDeath(player)
 		-- Clear death debounce on respawn to prevent race conditions
 		self._deathDebounce[player.UserId] = nil
 		
+		-- FIX: Re-send weapon loadout and ammo updates on character respawn
+		-- This ensures the client UI has the correct state after respawn/round start
+		if self.playerManager then
+			self.playerManager:sendWeaponLoadout(player)
+		end
+		
+		if self.fpsWeaponService then
+			local equippedWeapon = self.playerManager:getEquippedWeapon(player)
+			if equippedWeapon then
+				self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
+			end
+		end
+		
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if not humanoid then
 			-- Critical error: Humanoid missing after 5 seconds

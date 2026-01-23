@@ -17,7 +17,7 @@
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG = false
+local DEBUG_AMMO = true  -- Temporary debug flag for ammo UI issue
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -403,23 +403,69 @@ end
 
 -- Ammo updates from server
 ammoUpdateEvent.OnClientEvent:Connect(function(data)
+	-- Debug logging for all ammo updates
+	if DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] AmmoUpdate received - weaponId=%s, current=%s, reserve=%s, max=%s, currentWeapon=%s", 
+			tostring(data and data.weaponId), 
+			tostring(data and data.current), 
+			tostring(data and data.reserve), 
+			tostring(data and data.max),
+			tostring(currentWeapon)))
+	end
+	
 	-- Validate data structure to prevent crashes (check for nil, not truthy, to allow 0 ammo)
-	if typeof(data) == "table" and data.weaponId == currentWeapon 
-		and data.current ~= nil and data.reserve ~= nil and data.max ~= nil then
+	if typeof(data) ~= "table" or not data.weaponId then
+		if DEBUG_AMMO then
+			print("[FPSWeaponController] ✗ Dropped update: invalid data structure")
+		end
+		return
+	end
+	
+	-- FIX: Accept ammo updates even if currentWeapon is nil or mismatched
+	-- This handles cases where:
+	-- 1. Player just spawned and currentWeapon isn't set yet
+	-- 2. Server equipped a weapon before client received the equip event
+	-- 3. State transitions caused temporary desync
+	
+	-- If weaponId doesn't match currentWeapon, sync it from the server
+	if data.weaponId ~= currentWeapon then
+		if DEBUG_AMMO then
+			print(string.format("[FPSWeaponController] ⚠ Syncing currentWeapon from server: %s -> %s", 
+				tostring(currentWeapon), tostring(data.weaponId)))
+		end
+		currentWeapon = data.weaponId
+		weaponStats = getWeaponStats(data.weaponId)
+		updateWeaponInfo(data.weaponId)
+	end
+	
+	-- Require at least current and reserve data (max can be derived if missing)
+	if data.current ~= nil and data.reserve ~= nil then
+		-- Use provided max, or derive from weapon stats, or fallback to current as max
+		local maxAmmo = data.max
+		if not maxAmmo and weaponStats then
+			maxAmmo = weaponStats.MagSize
+		end
+		if not maxAmmo then
+			maxAmmo = data.current -- Fallback: assume current is the max
+		end
+		
 		ammoUpdateBindable:Fire({
 			current = data.current,
 			reserve = data.reserve,
-			max = data.max,
+			max = maxAmmo,
 			isReloading = false
 		})
 
 		-- Update reload state
 		isReloading = false
 		
-		if DEBUG then
-			print(string.format("[FPSWeaponController] Ammo update received: %s (%d/%d)", 
-				data.weaponId, data.current, data.reserve))
+		if DEBUG_AMMO then
+			print(string.format("[FPSWeaponController] ✓ Ammo update applied: %s (current=%d, reserve=%d, max=%d)", 
+				data.weaponId, data.current, data.reserve, maxAmmo))
 		end
+	elseif DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] ✗ Dropped update: missing required data (current=%s, reserve=%s)",
+			tostring(data.current), tostring(data.reserve)))
 	end
 end)
 

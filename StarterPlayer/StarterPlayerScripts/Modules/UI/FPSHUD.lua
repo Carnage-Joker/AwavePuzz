@@ -295,8 +295,9 @@ reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
-	-- Hide if no weapon / no max ammo information
-	if max == nil then
+	-- Show ammo UI as long as we have current/reserve data
+	-- FIX: Don't hide UI just because max is nil - we can derive or estimate it
+	if current == nil and reserve == nil then
 		ammoFrame.Visible = false
 		return
 	end
@@ -307,7 +308,8 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reserveAmmoLabel.Text = tostring(reserve or 0)
 
 	-- Color based on ammo level
-	local effectiveMax = math.max(max or 30, 1)
+	local effectiveMax = max or 30 -- Fallback to default mag size
+	if effectiveMax == 0 then effectiveMax = 1 end -- Prevent division by zero
 	local ammoRatio = (current or 0) / effectiveMax
 	if ammoRatio <= lowAmmoThreshold then
 		currentAmmoLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
