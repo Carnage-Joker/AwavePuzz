@@ -58,6 +58,8 @@ local function shouldBlockGameplay()
 end
 
 -- Remote events
+-- Note: Using :WaitForChild() is safe here as RemoteEvents folder is created by server at startup
+-- All required events are guaranteed to exist before clients load
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 local weaponFireEvent = remoteEvents:WaitForChild("WeaponFire")
 local weaponEquipEvent = remoteEvents:WaitForChild("WeaponEquip")

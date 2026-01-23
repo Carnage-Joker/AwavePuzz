@@ -2,6 +2,9 @@
 -- On-screen touch controls for mobile devices
 -- Provides virtual joystick for movement and buttons for actions
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -231,7 +234,9 @@ local function createAllButtons()
 		local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 		if remoteEvents and remoteEvents:FindFirstChild("WeaponEquip") then
 			remoteEvents.WeaponEquip:FireServer({weaponId = nextWeapon})
-			print("[TouchControls] Switching to weapon:", nextWeapon)
+			if DEBUG then
+				print("[TouchControls] Switching to weapon:", nextWeapon)
+			end
 		end
 	end)
 	
