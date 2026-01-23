@@ -77,6 +77,10 @@ local joystickTouch = nil
 local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
 
+-- Weapon tracking for weapon switch button
+local ownedWeapons = {"Pistol"} -- Start with default weapon
+local currentEquippedWeapon = "Pistol"
+
 -- Connection tracking for cleanup
 local connections = {}
 
@@ -201,16 +205,16 @@ local function createAllButtons()
 	)
 	
 	-- FIX: Add weapon switch button for touch/mobile users
-	-- This button cycles through owned weapons (Pistol -> SMG -> Shotgun -> Rifle)
+	-- Uses consistent styling with other buttons and tracks owned weapons
 	local weaponSwitchButton = Instance.new("TextButton")
 	weaponSwitchButton.Name = "WeaponSwitchButton"
 	weaponSwitchButton.Size = UIScaleManager.scaleSize(BUTTON_SIZE, BUTTON_SIZE, "hudElements")
 	weaponSwitchButton.Position = UIScaleManager.getPositionWithSafeArea("bottomRight", -260, -220)
 	weaponSwitchButton.AnchorPoint = Vector2.new(0.5, 0.5)
-	weaponSwitchButton.BackgroundColor3 = Color3.fromRGB(40, 120, 180)
-	weaponSwitchButton.BackgroundTransparency = 0.2
-	weaponSwitchButton.BorderSizePixel = 3
-	weaponSwitchButton.BorderColor3 = Color3.fromRGB(100, 200, 255)
+	-- Use consistent styling with other buttons
+	weaponSwitchButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	weaponSwitchButton.BackgroundTransparency = 0.7
+	weaponSwitchButton.BorderSizePixel = 0
 	weaponSwitchButton.Text = "⚔"  -- Weapon icon
 	weaponSwitchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	weaponSwitchButton.TextSize = UIScaleManager.scaleTextSize(28)
@@ -221,21 +225,31 @@ local function createAllButtons()
 	corner.CornerRadius = UDim.new(0.3, 0)
 	corner.Parent = weaponSwitchButton
 	
-	-- Weapon cycling logic
-	local weaponOrder = {"Pistol", "SMG", "Shotgun", "Rifle"}
-	local currentWeaponIndex = 1
-	
+	-- Weapon cycling logic - only cycles through owned weapons
 	weaponSwitchButton.MouseButton1Click:Connect(function()
-		-- Cycle to next weapon
-		currentWeaponIndex = (currentWeaponIndex % #weaponOrder) + 1
-		local nextWeapon = weaponOrder[currentWeaponIndex]
+		if #ownedWeapons == 0 then
+			return -- No weapons to cycle through
+		end
+		
+		-- Find current weapon index in owned weapons list
+		local currentIndex = 1
+		for i, weaponId in ipairs(ownedWeapons) do
+			if weaponId == currentEquippedWeapon then
+				currentIndex = i
+				break
+			end
+		end
+		
+		-- Cycle to next owned weapon
+		local nextIndex = (currentIndex % #ownedWeapons) + 1
+		local nextWeapon = ownedWeapons[nextIndex]
 		
 		-- Send weapon equip request to server
 		local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 		if remoteEvents and remoteEvents:FindFirstChild("WeaponEquip") then
 			remoteEvents.WeaponEquip:FireServer({weaponId = nextWeapon})
 			if DEBUG then
-				print("[TouchControls] Switching to weapon:", nextWeapon)
+				print(string.format("[TouchControls] Switching to weapon: %s (owned: %d)", nextWeapon, #ownedWeapons))
 			end
 		end
 	end)
@@ -669,6 +683,29 @@ task.spawn(function()
 		if hideEpilogue then
 			connections.hideEpilogue = hideEpilogue.OnClientEvent:Connect(function()
 				TouchControls.setEpilogueMode(false)
+			end)
+		end
+		
+		-- Listen for weapon loadout updates to track owned weapons
+		local weaponLoadoutUpdate = remoteEvents:FindFirstChild("WeaponLoadoutUpdate")
+		if weaponLoadoutUpdate then
+			connections.weaponLoadout = weaponLoadoutUpdate.OnClientEvent:Connect(function(data)
+				if typeof(data) == "table" then
+					-- Update owned weapons list
+					if data.weapons then
+						ownedWeapons = data.weapons
+						if DEBUG then
+							print(string.format("[TouchControls] Weapon loadout updated: %d weapons", #ownedWeapons))
+						end
+					end
+					-- Update current equipped weapon
+					if data.equipped then
+						currentEquippedWeapon = data.equipped
+						if DEBUG then
+							print(string.format("[TouchControls] Current weapon: %s", currentEquippedWeapon))
+						end
+					end
+				end
 			end)
 		end
 	end
