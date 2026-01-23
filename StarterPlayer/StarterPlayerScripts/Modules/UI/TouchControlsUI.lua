@@ -33,6 +33,9 @@ local JOYSTICK_MAX_DISTANCE = 50
 local BUTTON_SIZE = 70
 local BUTTON_SPACING = 10
 
+-- Default weapon constant
+local DEFAULT_WEAPON = "Pistol"
+
 -- UI Toggle button sizes (minimum 70x70 for touch targets)
 local UI_TOGGLE_BUTTON_SIZE = 70
 local UI_TOGGLE_SPACING = 10
@@ -78,8 +81,8 @@ local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
 
 -- Weapon tracking for weapon switch button
-local ownedWeapons = {"Pistol"} -- Start with default weapon
-local currentEquippedWeapon = "Pistol"
+local ownedWeapons = {DEFAULT_WEAPON} -- Start with default weapon
+local currentEquippedWeapon = DEFAULT_WEAPON
 
 -- Connection tracking for cleanup
 local connections = {}
@@ -691,15 +694,24 @@ task.spawn(function()
 		if weaponLoadoutUpdate then
 			connections.weaponLoadout = weaponLoadoutUpdate.OnClientEvent:Connect(function(data)
 				if typeof(data) == "table" then
-					-- Update owned weapons list
-					if data.weapons then
-						ownedWeapons = data.weapons
-						if DEBUG then
-							print(string.format("[TouchControls] Weapon loadout updated: %d weapons", #ownedWeapons))
+					-- Update owned weapons list with validation
+					if data.weapons and typeof(data.weapons) == "table" then
+						-- Validate that weapons list contains only strings
+						local validWeapons = {}
+						for _, weaponId in ipairs(data.weapons) do
+							if typeof(weaponId) == "string" then
+								table.insert(validWeapons, weaponId)
+							end
+						end
+						if #validWeapons > 0 then
+							ownedWeapons = validWeapons
+							if DEBUG then
+								print(string.format("[TouchControls] Weapon loadout updated: %d weapons", #ownedWeapons))
+							end
 						end
 					end
-					-- Update current equipped weapon
-					if data.equipped then
+					-- Update current equipped weapon with validation
+					if data.equipped and typeof(data.equipped) == "string" then
 						currentEquippedWeapon = data.equipped
 						if DEBUG then
 							print(string.format("[TouchControls] Current weapon: %s", currentEquippedWeapon))
