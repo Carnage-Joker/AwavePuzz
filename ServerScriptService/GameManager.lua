@@ -372,12 +372,12 @@ function GameManager:_hookPlayerDeath(player)
 		-- This ensures the client UI has the correct state after respawn/round start
 		if self.playerManager then
 			self.playerManager:sendWeaponLoadout(player)
-		end
-		
-		if self.fpsWeaponService then
-			local equippedWeapon = self.playerManager:getEquippedWeapon(player)
-			if equippedWeapon then
-				self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
+			
+			if self.fpsWeaponService then
+				local equippedWeapon = self.playerManager:getEquippedWeapon(player)
+				if equippedWeapon then
+					self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
+				end
 			end
 		end
 		

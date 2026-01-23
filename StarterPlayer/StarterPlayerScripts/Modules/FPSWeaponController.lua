@@ -434,6 +434,8 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	-- NOTE: The server is the authority for weapon state, so syncing from server
 	-- is always correct even if updates arrive out of order. The latest update
 	-- represents the current server state.
+	-- SECURITY: RemoteEvents.OnClientEvent can ONLY be fired by the server.
+	-- Clients cannot spoof these events, so this sync is always safe.
 	if data.weaponId ~= currentWeapon then
 		if DEBUG_AMMO then
 			print(string.format("[FPSWeaponController] ⚠ Syncing currentWeapon from server: %s -> %s", 
