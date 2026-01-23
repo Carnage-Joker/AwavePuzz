@@ -130,9 +130,9 @@ local function updateWeaponInfo(weaponId)
 	})
 end
 
-local function updateAmmoDisplay(weaponId)
-	-- This will be updated by server events
-	-- Just ensure the display is visible
+local function refreshWeaponDisplay(weaponId)
+	-- Refresh weapon info display (name, fire mode)
+	-- Actual ammo numbers are updated via bindable events from server
 	if weaponId then
 		updateWeaponInfo(weaponId)
 	end
@@ -286,7 +286,7 @@ local function equipWeapon(weaponId)
 	targetSpread = 0
 
 	updateWeaponInfo(weaponId)
-	updateAmmoDisplay(weaponId)
+	refreshWeaponDisplay(weaponId)
 
 	-- Request weapon equip on server
 	weaponEquipEvent:FireServer(weaponId)
@@ -497,7 +497,7 @@ weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
 			targetSpread = 0
 			
 			updateWeaponInfo(data.equipped)
-			updateAmmoDisplay(data.equipped)
+			refreshWeaponDisplay(data.equipped)
 			
 			-- Fire weapon equipped event for animations
 			weaponEquippedBindable:Fire(data.equipped)
@@ -584,8 +584,8 @@ function FPSWeaponControllerModule.onCharacterAdded(character)
 	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
 	-- This ensures the client UI is ready to receive those updates
 	if currentWeapon then
-		-- updateAmmoDisplay only updates weapon info, actual ammo comes from server events
-		updateAmmoDisplay(currentWeapon)
+		-- Refresh weapon display (name, fire mode), actual ammo comes from server events
+		refreshWeaponDisplay(currentWeapon)
 	end
 	
 	if DEBUG_AMMO then
