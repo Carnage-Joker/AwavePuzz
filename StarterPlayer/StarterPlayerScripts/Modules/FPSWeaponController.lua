@@ -17,7 +17,7 @@
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = true  -- Temporary debug flag for ammo UI issue
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -566,7 +566,17 @@ function FPSWeaponControllerModule.initialize()
 end
 
 function FPSWeaponControllerModule.onCharacterAdded(character)
-	-- Handle character added if needed
+	-- FIX: Refresh weapon info and request ammo update on respawn
+	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
+	-- This ensures the client UI is ready to receive those updates
+	if currentWeapon then
+		updateWeaponInfo(currentWeapon)
+		updateAmmoDisplay(currentWeapon)
+	end
+	
+	if DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] Character added, currentWeapon: %s", tostring(currentWeapon)))
+	end
 end
 
 function FPSWeaponControllerModule.onCharacterRemoving()
