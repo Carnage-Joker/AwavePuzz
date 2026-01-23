@@ -16,6 +16,9 @@
 --
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -55,12 +58,15 @@ local function shouldBlockGameplay()
 end
 
 -- Remote events
+-- Note: Using :WaitForChild() is safe here as RemoteEvents folder is created by server at startup
+-- All required events are guaranteed to exist before clients load
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 local weaponFireEvent = remoteEvents:WaitForChild("WeaponFire")
 local weaponEquipEvent = remoteEvents:WaitForChild("WeaponEquip")
 local weaponReloadEvent = remoteEvents:WaitForChild("WeaponReload")
 local ammoUpdateEvent = remoteEvents:WaitForChild("AmmoUpdate")
 local hitConfirmEvent = remoteEvents:WaitForChild("WeaponHitConfirm")
+local weaponLoadoutUpdateEvent = remoteEvents:WaitForChild("WeaponLoadoutUpdate")  -- FIX: Added for server sync
 
 -- Connection storage for cleanup
 local inputBeganConn = nil
@@ -409,6 +415,37 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 
 		-- Update reload state
 		isReloading = false
+		
+		if DEBUG then
+			print(string.format("[FPSWeaponController] Ammo update received: %s (%d/%d)", 
+				data.weaponId, data.current, data.reserve))
+		end
+	end
+end)
+
+-- FIX: Listen for server-authoritative weapon loadout updates
+-- This ensures client syncs with server when weapon is equipped (e.g., on spawn or server-forced equip)
+weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
+	if typeof(data) == "table" and data.equipped then
+		-- Only update if the equipped weapon differs from current
+		if data.equipped ~= currentWeapon then
+			-- Sync to server's equipped weapon without sending another equip request
+			currentWeapon = data.equipped
+			weaponStats = getWeaponStats(data.equipped)
+			isReloading = false
+			consecutiveShots = 0
+			targetSpread = 0
+			
+			updateWeaponInfo(data.equipped)
+			updateAmmoDisplay(data.equipped)
+			
+			-- Fire weapon equipped event for animations
+			weaponEquippedBindable:Fire(data.equipped)
+			
+			if DEBUG then
+				print(string.format("[FPSWeaponController] Synced to server weapon: %s", data.equipped))
+			end
+		end
 	end
 end)
 

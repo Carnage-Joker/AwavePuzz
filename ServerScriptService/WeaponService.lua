@@ -4,6 +4,8 @@
 -- Features proper gun cloning, positioning on hand, weapon switching with cleanup,
 -- and raycast firing in the direction the player is aiming
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -60,10 +62,11 @@ function WeaponService:cloneGunModel(gunId)
 	return clone
 end
 
-function WeaponService.new(playerManager, allianceService)
+function WeaponService.new(playerManager, allianceService, gameManager)
 	local self = setmetatable({}, WeaponService)
 	self.playerManager = playerManager
 	self.allianceService = allianceService
+	self.gameManager = gameManager  -- For kill tracking
 	self.fpsWeaponService = nil  -- Set via setFPSWeaponService
 	self.playerWeaponState = {} -- userId -> state
 	self.remoteEvents = {}
@@ -137,7 +140,12 @@ function WeaponService:handleEquipRequest(player, weaponId)
 	end
 
 	self.playerManager:equipWeapon(player, weaponId)
-	self:_equipVisualWeapon(player, weaponId)   -- NEW
+	self:_equipVisualWeapon(player, weaponId)
+	
+	-- FIX: Notify FPSWeaponService for ammo tracking (like forceEquip does)
+	if self.fpsWeaponService then
+		self.fpsWeaponService:onWeaponEquipped(player, weaponId)
+	end
 end
 
 -- ✅ NEW: forceEquip method called by PlayerSpawnManager
@@ -477,7 +485,16 @@ function WeaponService:onZombieKilled(zombieModel)
 	local weaponStats = weaponId and WeaponConfig.getWeapon(weaponId) or nil
 	local bonus = weaponStats and weaponStats.RewardBonus or 0
 
+	-- Award currency and increment kill count
 	self.playerManager:addCurrency(player, reward + bonus)
+	
+	-- FIX: Increment player kills for scoreboard tracking
+	if self.gameManager and self.gameManager.incrementPlayerKills then
+		self.gameManager:incrementPlayerKills(player, 1)
+		if DEBUG then
+			print(string.format("[WeaponService] Player %s kill count incremented", player.Name))
+		end
+	end
 end
 
 function WeaponService:applyUpgrade(player, upgradeId)

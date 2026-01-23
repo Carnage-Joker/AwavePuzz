@@ -2,6 +2,9 @@
 -- On-screen touch controls for mobile devices
 -- Provides virtual joystick for movement and buttons for actions
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -29,6 +32,9 @@ local JOYSTICK_INNER_SIZE = 60
 local JOYSTICK_MAX_DISTANCE = 50
 local BUTTON_SIZE = 70
 local BUTTON_SPACING = 10
+
+-- Default weapon constant
+local DEFAULT_WEAPON = "Pistol"
 
 -- UI Toggle button sizes (minimum 70x70 for touch targets)
 local UI_TOGGLE_BUTTON_SIZE = 70
@@ -73,6 +79,10 @@ local epilogueSkipButton = nil
 local joystickTouch = nil
 local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
+
+-- Weapon tracking for weapon switch button
+local ownedWeapons = {DEFAULT_WEAPON} -- Start with default weapon
+local currentEquippedWeapon = DEFAULT_WEAPON
 
 -- Connection tracking for cleanup
 local connections = {}
@@ -196,6 +206,56 @@ local function createAllButtons()
 		UIScaleManager.getPositionWithSafeArea("bottomRight", -260, -130),
 		InputManager.Action.RELOAD
 	)
+	
+	-- FIX: Add weapon switch button for touch/mobile users
+	-- Uses consistent styling with other buttons and tracks owned weapons
+	local weaponSwitchButton = Instance.new("TextButton")
+	weaponSwitchButton.Name = "WeaponSwitchButton"
+	weaponSwitchButton.Size = UIScaleManager.scaleSize(BUTTON_SIZE, BUTTON_SIZE, "hudElements")
+	weaponSwitchButton.Position = UIScaleManager.getPositionWithSafeArea("bottomRight", -260, -220)
+	weaponSwitchButton.AnchorPoint = Vector2.new(0.5, 0.5)
+	-- Use consistent styling with other buttons
+	weaponSwitchButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	weaponSwitchButton.BackgroundTransparency = 0.7
+	weaponSwitchButton.BorderSizePixel = 0
+	weaponSwitchButton.Text = "⚔"  -- Weapon icon
+	weaponSwitchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	weaponSwitchButton.TextSize = UIScaleManager.scaleTextSize(28)
+	weaponSwitchButton.Font = Enum.Font.GothamBold
+	weaponSwitchButton.Parent = screenGui
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = weaponSwitchButton
+	
+	-- Weapon cycling logic - only cycles through owned weapons
+	weaponSwitchButton.MouseButton1Click:Connect(function()
+		if #ownedWeapons == 0 then
+			return -- No weapons to cycle through
+		end
+		
+		-- Find current weapon index in owned weapons list
+		local currentIndex = 1
+		for i, weaponId in ipairs(ownedWeapons) do
+			if weaponId == currentEquippedWeapon then
+				currentIndex = i
+				break
+			end
+		end
+		
+		-- Cycle to next owned weapon
+		local nextIndex = (currentIndex % #ownedWeapons) + 1
+		local nextWeapon = ownedWeapons[nextIndex]
+		
+		-- Send weapon equip request to server
+		local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+		if remoteEvents and remoteEvents:FindFirstChild("WeaponEquip") then
+			remoteEvents.WeaponEquip:FireServer({weaponId = nextWeapon})
+			if DEBUG then
+				print(string.format("[TouchControls] Switching to weapon: %s (owned: %d)", nextWeapon, #ownedWeapons))
+			end
+		end
+	end)
 	
 	-- Sprint button (top right of joystick)
 	sprintButton = createButton(
@@ -626,6 +686,38 @@ task.spawn(function()
 		if hideEpilogue then
 			connections.hideEpilogue = hideEpilogue.OnClientEvent:Connect(function()
 				TouchControls.setEpilogueMode(false)
+			end)
+		end
+		
+		-- Listen for weapon loadout updates to track owned weapons
+		local weaponLoadoutUpdate = remoteEvents:FindFirstChild("WeaponLoadoutUpdate")
+		if weaponLoadoutUpdate then
+			connections.weaponLoadout = weaponLoadoutUpdate.OnClientEvent:Connect(function(data)
+				if typeof(data) == "table" then
+					-- Update owned weapons list with validation
+					if data.weapons and typeof(data.weapons) == "table" then
+						-- Validate that weapons list contains only strings
+						local validWeapons = {}
+						for _, weaponId in ipairs(data.weapons) do
+							if typeof(weaponId) == "string" then
+								table.insert(validWeapons, weaponId)
+							end
+						end
+						if #validWeapons > 0 then
+							ownedWeapons = validWeapons
+							if DEBUG then
+								print(string.format("[TouchControls] Weapon loadout updated: %d weapons", #ownedWeapons))
+							end
+						end
+					end
+					-- Update current equipped weapon with validation
+					if data.equipped and typeof(data.equipped) == "string" then
+						currentEquippedWeapon = data.equipped
+						if DEBUG then
+							print(string.format("[TouchControls] Current weapon: %s", currentEquippedWeapon))
+						end
+					end
+				end
 			end)
 		end
 	end
