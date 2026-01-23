@@ -262,7 +262,17 @@ function PlayerManager:healPlayer(player, amount)
 		return false
 	end
 
+	-- Update internal health state
 	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
+	
+	-- FIX: Also update the actual character's Humanoid health
+	if player.Character then
+		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + amount)
+		end
+	end
+	
 	self:sendHealthUpdate(player)
 
 	return true

@@ -60,7 +60,7 @@ function GameManager.new(allianceService)
 	self.playerManager = PlayerManager.getInstance()
 
 	-- ✅ Services (wire FPS ammo to WeaponService properly)
-	self.weaponService = WeaponService.new(self.playerManager, allianceService)
+	self.weaponService = WeaponService.new(self.playerManager, allianceService, self)
 	self.fpsWeaponService = FPSWeaponService.new(self.playerManager, self.weaponService)
 	self.weaponService:setFPSWeaponService(self.fpsWeaponService)
 
