@@ -4,6 +4,8 @@
 -- Features proper gun cloning, positioning on hand, weapon switching with cleanup,
 -- and raycast firing in the direction the player is aiming
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -489,6 +491,9 @@ function WeaponService:onZombieKilled(zombieModel)
 	-- FIX: Increment player kills for scoreboard tracking
 	if self.gameManager and self.gameManager.incrementPlayerKills then
 		self.gameManager:incrementPlayerKills(player, 1)
+		if DEBUG then
+			print(string.format("[WeaponService] Player %s kill count incremented", player.Name))
+		end
 	end
 end
 

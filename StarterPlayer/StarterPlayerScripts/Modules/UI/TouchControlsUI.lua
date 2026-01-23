@@ -197,6 +197,44 @@ local function createAllButtons()
 		InputManager.Action.RELOAD
 	)
 	
+	-- FIX: Add weapon switch button for touch/mobile users
+	-- This button cycles through owned weapons (Pistol -> SMG -> Shotgun -> Rifle)
+	local weaponSwitchButton = Instance.new("TextButton")
+	weaponSwitchButton.Name = "WeaponSwitchButton"
+	weaponSwitchButton.Size = UIScaleManager.scaleSize(BUTTON_SIZE, BUTTON_SIZE, "hudElements")
+	weaponSwitchButton.Position = UIScaleManager.getPositionWithSafeArea("bottomRight", -260, -220)
+	weaponSwitchButton.AnchorPoint = Vector2.new(0.5, 0.5)
+	weaponSwitchButton.BackgroundColor3 = Color3.fromRGB(40, 120, 180)
+	weaponSwitchButton.BackgroundTransparency = 0.2
+	weaponSwitchButton.BorderSizePixel = 3
+	weaponSwitchButton.BorderColor3 = Color3.fromRGB(100, 200, 255)
+	weaponSwitchButton.Text = "⚔"  -- Weapon icon
+	weaponSwitchButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	weaponSwitchButton.TextSize = UIScaleManager.scaleTextSize(28)
+	weaponSwitchButton.Font = Enum.Font.GothamBold
+	weaponSwitchButton.Parent = screenGui
+	
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = weaponSwitchButton
+	
+	-- Weapon cycling logic
+	local weaponOrder = {"Pistol", "SMG", "Shotgun", "Rifle"}
+	local currentWeaponIndex = 1
+	
+	weaponSwitchButton.MouseButton1Click:Connect(function()
+		-- Cycle to next weapon
+		currentWeaponIndex = (currentWeaponIndex % #weaponOrder) + 1
+		local nextWeapon = weaponOrder[currentWeaponIndex]
+		
+		-- Send weapon equip request to server
+		local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+		if remoteEvents and remoteEvents:FindFirstChild("WeaponEquip") then
+			remoteEvents.WeaponEquip:FireServer({weaponId = nextWeapon})
+			print("[TouchControls] Switching to weapon:", nextWeapon)
+		end
+	end)
+	
 	-- Sprint button (top right of joystick)
 	sprintButton = createButton(
 		"SprintButton",

@@ -4,6 +4,9 @@
 -- Server-side extension for FPS weapon mechanics
 -- Handles ammo tracking, reload validation, and (optional) hit multipliers
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -230,6 +233,11 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		reserve = ammo.reserve,
 		max = ammo.max,
 	})
+	
+	if DEBUG then
+		print(string.format("[FPSWeaponService] Sent ammo update to %s: %s (%d/%d)", 
+			player.Name, weaponId, ammo.current, ammo.reserve))
+	end
 end
 
 function FPSWeaponService:cancelReload(player)

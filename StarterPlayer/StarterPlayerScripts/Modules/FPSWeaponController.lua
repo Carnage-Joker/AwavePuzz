@@ -16,6 +16,9 @@
 --
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG = false
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -409,6 +412,11 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 
 		-- Update reload state
 		isReloading = false
+		
+		if DEBUG then
+			print(string.format("[FPSWeaponController] Ammo update received: %s (%d/%d)", 
+				data.weaponId, data.current, data.reserve))
+		end
 	end
 end)
 
