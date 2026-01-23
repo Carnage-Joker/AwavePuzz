@@ -453,7 +453,7 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	if data.current ~= nil and data.reserve ~= nil then
 		-- Use provided max, or derive from weapon stats, or use default
 		local maxAmmo = data.max
-		if not maxAmmo and weaponStats then
+		if not maxAmmo and weaponStats and weaponStats.MagSize then
 			maxAmmo = weaponStats.MagSize
 		end
 		if not maxAmmo then
