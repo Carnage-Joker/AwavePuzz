@@ -19,6 +19,9 @@
 -- Debug flag - set to true to enable detailed logging
 local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
+-- Constants
+local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -428,6 +431,9 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	-- 3. State transitions caused temporary desync
 	
 	-- If weaponId doesn't match currentWeapon, sync it from the server
+	-- NOTE: The server is the authority for weapon state, so syncing from server
+	-- is always correct even if updates arrive out of order. The latest update
+	-- represents the current server state.
 	if data.weaponId ~= currentWeapon then
 		if DEBUG_AMMO then
 			print(string.format("[FPSWeaponController] ⚠ Syncing currentWeapon from server: %s -> %s", 
@@ -440,17 +446,17 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	
 	-- Require at least current and reserve data (max can be derived if missing)
 	if data.current ~= nil and data.reserve ~= nil then
-		-- Use provided max, or derive from weapon stats, or use sensible default
+		-- Use provided max, or derive from weapon stats, or use default
 		local maxAmmo = data.max
 		if not maxAmmo and weaponStats then
 			maxAmmo = weaponStats.MagSize
 		end
 		if not maxAmmo then
-			-- Fallback to default magazine size (30 is common for most weapons)
-			maxAmmo = 30
+			-- Fallback to default magazine size
+			maxAmmo = DEFAULT_MAGAZINE_SIZE
 			if DEBUG_AMMO then
-				print(string.format("[FPSWeaponController] ⚠ Using default max (30) for weapon %s", 
-					tostring(data.weaponId)))
+				print(string.format("[FPSWeaponController] ⚠ Using default max (%d) for weapon %s", 
+					DEFAULT_MAGAZINE_SIZE, tostring(data.weaponId)))
 			end
 		end
 		

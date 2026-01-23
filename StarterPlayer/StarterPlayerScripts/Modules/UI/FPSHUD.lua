@@ -18,6 +18,9 @@ local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- Constants
+local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
+
 --------------------------------------------------------------------------------
 -- UI CREATION
 --------------------------------------------------------------------------------
@@ -308,7 +311,7 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reserveAmmoLabel.Text = tostring(reserve or 0)
 
 	-- Color based on ammo level
-	local effectiveMax = max or 30 -- Fallback to default mag size
+	local effectiveMax = max or DEFAULT_MAGAZINE_SIZE  -- Fallback to default mag size
 	if effectiveMax == 0 then effectiveMax = 1 end -- Prevent division by zero
 	local ammoRatio = (current or 0) / effectiveMax
 	if ammoRatio <= lowAmmoThreshold then
