@@ -9,10 +9,15 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local WaveConfig = require(SharedFolder:WaitForChild("WaveConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+print("[GameManager] Loading shared configuration...")
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[GameManager] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig", 5))
+local WaveConfig = require(SharedFolder:WaitForChild("WaveConfig", 5))
+local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil", 5))
 
 local BaseManager = require(script.Parent.BaseManager)
 local Spawner = require(script.Parent.Spawner)
