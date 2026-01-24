@@ -18,6 +18,9 @@ local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- Constants
+local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
+
 --------------------------------------------------------------------------------
 -- UI CREATION
 --------------------------------------------------------------------------------
@@ -295,8 +298,9 @@ reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
-	-- Hide if no weapon / no max ammo information
-	if max == nil then
+	-- Show ammo UI as long as we have current/reserve data
+	-- FIX: Don't hide UI just because max is nil - we can derive or estimate it
+	if current == nil and reserve == nil then
 		ammoFrame.Visible = false
 		return
 	end
@@ -307,7 +311,17 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reserveAmmoLabel.Text = tostring(reserve or 0)
 
 	-- Color based on ammo level
-	local effectiveMax = math.max(max or 30, 1)
+	-- If max is explicitly 0, treat this as a zero-ammo weapon (e.g., melee) and hide the ammo UI
+	if max == 0 then
+		ammoFrame.Visible = false
+		return
+	end
+
+	local effectiveMax = max or DEFAULT_MAGAZINE_SIZE  -- Fallback to default mag size for weapons that have mags
+	-- Final safeguard: ensure effectiveMax is positive to prevent division by zero or invalid ratios
+	if not effectiveMax or effectiveMax <= 0 then
+		effectiveMax = 1
+	end
 	local ammoRatio = (current or 0) / effectiveMax
 	if ammoRatio <= lowAmmoThreshold then
 		currentAmmoLabel.TextColor3 = Color3.fromRGB(255, 100, 100)

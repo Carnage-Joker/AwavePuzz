@@ -5,7 +5,7 @@
 -- Handles ammo tracking, reload validation, and (optional) hit multipliers
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG = false
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -225,7 +225,13 @@ end
 
 function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 	local ammo = self:getAmmo(player, weaponId)
-	if not ammo then return end
+	if not ammo then 
+		if DEBUG_AMMO then
+			print(string.format("[FPSWeaponService] ✗ Cannot send ammo update for %s: no ammo data for weapon %s", 
+				player.Name, tostring(weaponId)))
+		end
+		return 
+	end
 
 	self.remoteEvents.AmmoUpdate:FireClient(player, {
 		weaponId = weaponId,
@@ -234,9 +240,9 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		max = ammo.max,
 	})
 	
-	if DEBUG then
-		print(string.format("[FPSWeaponService] Sent ammo update to %s: %s (%d/%d)", 
-			player.Name, weaponId, ammo.current, ammo.reserve))
+	if DEBUG_AMMO then
+		print(string.format("[FPSWeaponService] ✓ Sent ammo update to %s: %s (current=%d, reserve=%d, max=%d)", 
+			player.Name, weaponId, ammo.current, ammo.reserve, ammo.max))
 	end
 end
 

@@ -17,7 +17,10 @@
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG = false
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
+
+-- Constants
+local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -127,9 +130,9 @@ local function updateWeaponInfo(weaponId)
 	})
 end
 
-local function updateAmmoDisplay(weaponId)
-	-- This will be updated by server events
-	-- Just ensure the display is visible
+local function refreshWeaponDisplay(weaponId)
+	-- Refresh weapon info display (name, fire mode)
+	-- Actual ammo numbers are updated via bindable events from server
 	if weaponId then
 		updateWeaponInfo(weaponId)
 	end
@@ -283,7 +286,7 @@ local function equipWeapon(weaponId)
 	targetSpread = 0
 
 	updateWeaponInfo(weaponId)
-	updateAmmoDisplay(weaponId)
+	refreshWeaponDisplay(weaponId)
 
 	-- Request weapon equip on server
 	weaponEquipEvent:FireServer(weaponId)
@@ -403,23 +406,92 @@ end
 
 -- Ammo updates from server
 ammoUpdateEvent.OnClientEvent:Connect(function(data)
+	-- Debug logging for all ammo updates
+	if DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] AmmoUpdate received - weaponId=%s, current=%s, reserve=%s, max=%s, currentWeapon=%s", 
+			tostring(data and data.weaponId), 
+			tostring(data and data.current), 
+			tostring(data and data.reserve), 
+			tostring(data and data.max),
+			tostring(currentWeapon)))
+	end
+	
 	-- Validate data structure to prevent crashes (check for nil, not truthy, to allow 0 ammo)
-	if typeof(data) == "table" and data.weaponId == currentWeapon 
-		and data.current ~= nil and data.reserve ~= nil and data.max ~= nil then
+	if typeof(data) ~= "table" or not data.weaponId then
+		if DEBUG_AMMO then
+			print("[FPSWeaponController] ✗ Dropped update: invalid data structure")
+		end
+		return
+	end
+	
+	-- FIX: Accept ammo updates even if currentWeapon is nil or mismatched
+	-- This handles cases where:
+	-- 1. Player just spawned and currentWeapon isn't set yet
+	-- 2. Server equipped a weapon before client received the equip event
+	-- 3. State transitions caused temporary desync
+	
+	-- If weaponId doesn't match currentWeapon, sync it from the server
+	-- NOTE: The server is the authority for weapon state, so syncing from server
+	-- is always correct even if updates arrive out of order. The latest update
+	-- represents the current server state.
+	-- SECURITY: RemoteEvents.OnClientEvent can ONLY be fired by the server.
+	-- Clients cannot spoof these events, so this sync is always safe.
+	if data.weaponId ~= currentWeapon then
+		if DEBUG_AMMO then
+			print(string.format("[FPSWeaponController] ⚠ Syncing currentWeapon from server: %s -> %s", 
+				tostring(currentWeapon), tostring(data.weaponId)))
+		end
+		currentWeapon = data.weaponId
+		weaponStats = getWeaponStats(data.weaponId)
+		
+		-- Validate weaponStats after fetching
+		if not weaponStats then
+			warn(string.format("[FPSWeaponController] Failed to get weapon stats for weaponId '%s' during ammo update sync", tostring(data.weaponId)))
+			-- Reset to nil to avoid stale data
+			currentWeapon = nil
+			return
+		end
+		
+		updateWeaponInfo(data.weaponId)
+		-- NOTE: Do not fire weaponEquippedBindable here.
+		-- Weapon equips (animations, state transitions) are handled by the
+		-- WeaponLoadoutUpdate handler to avoid duplicate equip events when
+		-- AmmoUpdate and WeaponLoadoutUpdate arrive out of order.
+	end
+	
+	-- Require at least current and reserve data (max can be derived if missing)
+	if data.current ~= nil and data.reserve ~= nil then
+		-- Use provided max, or derive from weapon stats, or use default
+		local maxAmmo = data.max
+		if not maxAmmo and weaponStats and weaponStats.MagSize then
+			maxAmmo = weaponStats.MagSize
+		end
+		if not maxAmmo then
+			-- Fallback to default magazine size
+			maxAmmo = DEFAULT_MAGAZINE_SIZE
+			if DEBUG_AMMO then
+				print(string.format("[FPSWeaponController] ⚠ Using default max (%d) for weapon %s", 
+					DEFAULT_MAGAZINE_SIZE, tostring(data.weaponId)))
+			end
+		end
+		
 		ammoUpdateBindable:Fire({
 			current = data.current,
 			reserve = data.reserve,
-			max = data.max,
+			max = maxAmmo,
 			isReloading = false
 		})
 
 		-- Update reload state
 		isReloading = false
 		
-		if DEBUG then
-			print(string.format("[FPSWeaponController] Ammo update received: %s (%d/%d)", 
-				data.weaponId, data.current, data.reserve))
+		if DEBUG_AMMO then
+			print(string.format("[FPSWeaponController] ✓ Ammo update applied: %s (current=%d, reserve=%d, max=%d)", 
+				data.weaponId, data.current, data.reserve, maxAmmo))
 		end
+	elseif DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] ✗ Dropped update: missing required data (current=%s, reserve=%s)",
+			tostring(data.current), tostring(data.reserve)))
 	end
 end)
 
@@ -437,7 +509,7 @@ weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
 			targetSpread = 0
 			
 			updateWeaponInfo(data.equipped)
-			updateAmmoDisplay(data.equipped)
+			refreshWeaponDisplay(data.equipped)
 			
 			-- Fire weapon equipped event for animations
 			weaponEquippedBindable:Fire(data.equipped)
@@ -520,7 +592,17 @@ function FPSWeaponControllerModule.initialize()
 end
 
 function FPSWeaponControllerModule.onCharacterAdded(character)
-	-- Handle character added if needed
+	-- FIX: Refresh weapon info on respawn
+	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
+	-- This ensures the client UI is ready to receive those updates
+	if currentWeapon then
+		-- Refresh weapon display (name, fire mode), actual ammo comes from server events
+		refreshWeaponDisplay(currentWeapon)
+	end
+	
+	if DEBUG_AMMO then
+		print(string.format("[FPSWeaponController] Character added, currentWeapon: %s", tostring(currentWeapon)))
+	end
 end
 
 function FPSWeaponControllerModule.onCharacterRemoving()
