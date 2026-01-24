@@ -195,6 +195,22 @@ function ZombieBrain:selectBestTarget()
 		self.rootPart.Position,
 		self.waveNumber
 	)
+	
+	-- If no target available (no players and no base), provide wander behavior
+	if not targetPos or not targetType then
+		warn("[ZombieBrain] No valid targets available. Zombie will wander.")
+		
+		-- Create a wander point near last known position
+		local lastPos = self.currentTarget or self.rootPart.Position
+		local randomOffset = Vector3.new(
+			math.random(-30, 30),
+			0,
+			math.random(-30, 30)
+		)
+		local wanderPos = lastPos + randomOffset
+		
+		return wanderPos, "wander", nil
+	end
 
 	return targetPos, targetType, targetPlayer
 end
@@ -307,8 +323,8 @@ function ZombieBrain:tryAttack()
 
 		-- Deal damage to appropriate target
 		if targetType == "player" and targetPlayer then
-			-- Validate player still exists and has character
-			if targetPlayer and targetPlayer.Character then
+			-- Validate player still exists and character is parented (not disconnecting)
+			if targetPlayer.Character and targetPlayer.Character.Parent then
 				local targetHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 				if targetHumanoid and targetHumanoid.Health > 0 then
 					-- Apply player damage penalty if Breacher (proper nil check to allow 0 multiplier)
@@ -317,7 +333,13 @@ function ZombieBrain:tryAttack()
 					end
 
 					if self.playerManager then
-						self.playerManager:damagePlayer(targetPlayer, damage)
+						-- Wrap in pcall for extra safety against disconnect race conditions
+						local success, err = pcall(function()
+							self.playerManager:damagePlayer(targetPlayer, damage)
+						end)
+						if not success then
+							warn("[ZombieBrain] Failed to damage player (likely disconnected):", err)
+						end
 					end
 				end
 			end

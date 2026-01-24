@@ -9,11 +9,15 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local MapConfig = require(SharedFolder:WaitForChild("MapConfig"))
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local BaseCampSetup = require(script.Parent:WaitForChild("BaseCampSetup"))
-local MapValidator = require(script.Parent:WaitForChild("MapValidator"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[MapManager] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local MapConfig = require(SharedFolder:WaitForChild("MapConfig", 5))
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig", 5))
+local BaseCampSetup = require(script.Parent:WaitForChild("BaseCampSetup", 5))
+local MapValidator = require(script.Parent:WaitForChild("MapValidator", 5))
 
 local MapManager = {}
 MapManager.__index = MapManager

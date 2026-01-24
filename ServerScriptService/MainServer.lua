@@ -8,9 +8,19 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Require shared configuration
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+-- Require shared configuration with timeout
+print("[MainServer] Loading shared configuration...")
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[MainServer] CRITICAL: Failed to load Shared folder after 10 seconds. Check ReplicatedStorage structure.")
+end
+
+local GameConfigModule = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfigModule then
+	error("[MainServer] CRITICAL: Failed to load GameConfig module after 5 seconds. Check Shared folder structure.")
+end
+local GameConfig = require(GameConfigModule)
+print("[MainServer] Configuration loaded successfully")
 
 -- Require managers / services
 local GameManager = require(script.Parent.GameManager)
@@ -147,11 +157,17 @@ end)
 Players.PlayerRemoving:Connect(function(player)
 	print(player.Name .. " left the game")
 
-	-- Clean up player from services
+	-- Clean up player from services with nil guards
 	gameManager:onPlayerRemoving(player)
 	allianceService:removePlayer(player)
 	sprintService:removePlayer(player)
-	fpsWeaponService:removePlayer(player)
+	
+	if fpsWeaponService then
+		fpsWeaponService:removePlayer(player)
+	else
+		warn("[MainServer] fpsWeaponService not initialized, skipping cleanup for " .. player.Name)
+	end
+	
 	achievementService:removePlayer(player)
 end)
 

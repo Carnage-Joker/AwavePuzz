@@ -9,8 +9,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local sharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(sharedFolder:WaitForChild("GameConfig"))
+local sharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not sharedFolder then
+	error("[ItemSpawner] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = require(sharedFolder:WaitForChild("GameConfig", 5))
 
 local ItemSpawner = {}
 ItemSpawner.__index = ItemSpawner
