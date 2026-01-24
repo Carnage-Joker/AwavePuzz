@@ -188,8 +188,8 @@ end
 
 function Spawner:getStrategicSpawnPoint(zombieType)
 	if #self.allSpawnPoints == 0 then
-		warn("[Spawner] No spawn points available! Using default position.")
-		return Vector3.new(0, 10, 0)
+		error("[Spawner] CRITICAL: No spawn points configured! Cannot spawn zombies. Check map validation and spawn point setup.")
+		return nil
 	end
 
 	local playerPositions = {}

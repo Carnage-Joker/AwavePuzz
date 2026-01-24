@@ -6,8 +6,16 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local WeaponValues = require(SharedFolder:WaitForChild("WeaponValues"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[PoolCalculator] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local WeaponValues = SharedFolder:WaitForChild("WeaponValues", 5)
+if not WeaponValues then
+	error("[PoolCalculator] CRITICAL: Failed to load WeaponValues after 5 seconds")
+end
+WeaponValues = require(WeaponValues)
 
 local PoolCalculator = {}
 PoolCalculator.__index = PoolCalculator

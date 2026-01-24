@@ -8,10 +8,28 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[CureSynthesisService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[CureSynthesisService] CRITICAL: Failed to load GameConfig after 5 seconds")
+end
+GameConfig = require(GameConfig)
+
+local PuzzleConfig = SharedFolder:WaitForChild("PuzzleConfig", 5)
+if not PuzzleConfig then
+	error("[CureSynthesisService] CRITICAL: Failed to load PuzzleConfig after 5 seconds")
+end
+PuzzleConfig = require(PuzzleConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[CureSynthesisService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local CureSynthesisService = {}
 CureSynthesisService.__index = CureSynthesisService
