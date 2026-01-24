@@ -444,9 +444,10 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		currentWeapon = data.weaponId
 		weaponStats = getWeaponStats(data.weaponId)
 		updateWeaponInfo(data.weaponId)
-		
-		-- Fire weapon equipped event to notify animation and other systems
-		weaponEquippedBindable:Fire(data.weaponId)
+		-- NOTE: Do not fire weaponEquippedBindable here.
+		-- Weapon equips (animations, state transitions) are handled by the
+		-- WeaponLoadoutUpdate handler to avoid duplicate equip events when
+		-- AmmoUpdate and WeaponLoadoutUpdate arrive out of order.
 	end
 	
 	-- Require at least current and reserve data (max can be derived if missing)
