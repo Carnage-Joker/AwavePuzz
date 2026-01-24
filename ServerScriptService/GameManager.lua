@@ -47,6 +47,9 @@ GameManager.States = {
 	SCOREBOARD = "Scoreboard"
 }
 
+-- Constants
+local WEAPON_SYNC_DELAY = 0.1  -- Delay in seconds before sending weapon updates on character respawn to ensure client is ready
+
 function GameManager.new(allianceService)
 	local self = setmetatable({}, GameManager)
 
@@ -379,7 +382,7 @@ function GameManager:_hookPlayerDeath(player)
 		
 		-- FIX: Re-send weapon loadout and ammo updates on character respawn
 		-- Wait briefly to ensure client's character controller is ready to receive updates
-		task.wait(0.1)
+		task.wait(WEAPON_SYNC_DELAY)
 		
 		if self.playerManager then
 			self.playerManager:sendWeaponLoadout(player)

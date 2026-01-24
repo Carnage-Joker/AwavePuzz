@@ -446,7 +446,7 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		
 		-- Validate weaponStats after fetching
 		if not weaponStats then
-			warn(string.format("[FPSWeaponController] Invalid weaponId from server: %s", tostring(data.weaponId)))
+			warn(string.format("[FPSWeaponController] Failed to get weapon stats for weaponId '%s' during ammo update sync", tostring(data.weaponId)))
 			-- Reset to nil to avoid stale data
 			currentWeapon = nil
 			return
