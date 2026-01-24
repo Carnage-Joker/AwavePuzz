@@ -3,10 +3,28 @@
 -- Manages player data, inventory, currency, alliances, and health
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[PlayerManager] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[PlayerManager] CRITICAL: Failed to load GameConfig after 5 seconds")
+end
+GameConfig = require(GameConfig)
+
+local WeaponConfig = SharedFolder:WaitForChild("WeaponConfig", 5)
+if not WeaponConfig then
+	error("[PlayerManager] CRITICAL: Failed to load WeaponConfig after 5 seconds")
+end
+WeaponConfig = require(WeaponConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[PlayerManager] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local PlayerManager = {}
 PlayerManager.__index = PlayerManager

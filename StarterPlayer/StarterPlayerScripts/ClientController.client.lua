@@ -19,12 +19,30 @@ if not SharedFolder then
 end
 
 -- Load configuration
-local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+local FPSConfig = SharedFolder:WaitForChild("FPSConfig", 5)
+if not FPSConfig then
+	error("[ClientController] Failed to load FPSConfig")
+end
+FPSConfig = require(FPSConfig)
+
+local GameConfig = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[ClientController] Failed to load GameConfig")
+end
+GameConfig = require(GameConfig)
 
 -- Load input management systems
-local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
-local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local ModalManager = SharedFolder:WaitForChild("ModalManager", 5)
+if not ModalManager then
+	error("[ClientController] Failed to load ModalManager")
+end
+ModalManager = require(ModalManager)
+
+local InputActionRegistry = SharedFolder:WaitForChild("InputActionRegistry", 5)
+if not InputActionRegistry then
+	error("[ClientController] Failed to load InputActionRegistry")
+end
+InputActionRegistry = require(InputActionRegistry)
 
 print("[ClientController] Configuration loaded")
 

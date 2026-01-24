@@ -6,9 +6,22 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local FunFactConfig = require(SharedFolder:WaitForChild("FunFactConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[FunFactService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local FunFactConfig = SharedFolder:WaitForChild("FunFactConfig", 5)
+if not FunFactConfig then
+	error("[FunFactService] CRITICAL: Failed to load FunFactConfig after 5 seconds")
+end
+FunFactConfig = require(FunFactConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[FunFactService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local FunFactService = {}
 FunFactService.__index = FunFactService

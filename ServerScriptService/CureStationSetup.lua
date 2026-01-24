@@ -26,7 +26,15 @@ local function setupCureStation(station)
 		-- Check what component puzzles the player can attempt
 		-- This will be handled by sending a request to the server
 		local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-		if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
+		if not remoteEvents then
+			remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
+			if not remoteEvents then
+				warn("[CureStationSetup] RemoteEvents folder not found after 10 seconds. Cure interactions may not work.")
+				return
+			end
+		end
+		
+		if remoteEvents:FindFirstChild("RequestPuzzle") then
 			-- For now, let player choose which puzzle to attempt
 			-- In a full implementation, we'd show a UI to select component
 			-- For MVP, we'll just attempt the first available component puzzle
