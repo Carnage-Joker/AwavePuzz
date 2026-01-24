@@ -82,7 +82,7 @@ function MapValidator.validateMapModel(mapModel)
 		table.insert(errors, string.format("CRITICAL: Only %d zombie spawns found (minimum: %d). Map rejected.", zombieCount, MIN_ZOMBIE_SPAWNS))
 		table.insert(errors, "Add more spawn points to the ZombieSpawnPoints folder.")
 	elseif zombieCount < RECOMMENDED_ZOMBIE_SPAWNS then
-		table.insert(warnings, string.format("WARNING: Only %d zombie spawns found (recommended: %d)", zombieCount, RECOMMENDED_ZOMBIE_SPAWNS))
+		table.insert(warnings, string.format("Only %d zombie spawns found (recommended: %d)", zombieCount, RECOMMENDED_ZOMBIE_SPAWNS))
 		table.insert(warnings, "Game may have spawn distribution issues. Consider adding more points.")
 	end
 
