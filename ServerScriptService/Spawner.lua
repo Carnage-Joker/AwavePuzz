@@ -166,8 +166,8 @@ end
 
 function Spawner:getNextSpawnPoint()
 	if #self.spawnPoints == 0 then
-		warn("No spawn points available! Using default position.")
-		return Vector3.new(0, 10, 0)
+		error("[Spawner] CRITICAL: No spawn points configured! Cannot spawn zombies. Check map validation and spawn point setup.")
+		return nil
 	end
 
 	self.lastUsedSpawnIndex = self.lastUsedSpawnIndex + 1
@@ -180,8 +180,8 @@ end
 
 function Spawner:getRandomSpawnPoint()
 	if #self.spawnPoints == 0 then
-		warn("No spawn points available! Using default position.")
-		return Vector3.new(0, 10, 0)
+		error("[Spawner] CRITICAL: No spawn points configured! Cannot spawn zombies. Check map validation and spawn point setup.")
+		return nil
 	end
 	return self.spawnPoints[math.random(1, #self.spawnPoints)]
 end
@@ -335,7 +335,16 @@ function Spawner:createBasicZombieModel(zombieType)
 end
 
 function Spawner:queueSpawn(zombieType)
+	local MAX_QUEUE_SIZE = 500
+	
+	if #self.spawnQueue >= MAX_QUEUE_SIZE then
+		warn(string.format("[Spawner] Spawn queue full (%d zombies queued). Dropping %s spawn to prevent memory leak.", 
+			MAX_QUEUE_SIZE, zombieType or "unknown"))
+		return false
+	end
+	
 	table.insert(self.spawnQueue, zombieType)
+	return true
 end
 
 function Spawner:processSpawnQueue(deltaTime)

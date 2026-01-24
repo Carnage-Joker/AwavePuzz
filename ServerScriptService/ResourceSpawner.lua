@@ -9,8 +9,12 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
-local sharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(sharedFolder:WaitForChild("GameConfig"))
+local sharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not sharedFolder then
+	error("[ResourceSpawner] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = require(sharedFolder:WaitForChild("GameConfig", 5))
 
 local ResourceSpawner = {}
 ResourceSpawner.__index = ResourceSpawner
@@ -290,9 +294,9 @@ function ResourceSpawner:pickSmartSpawnPoint()
 	local zombieRing = self:getZombieRingDistance(basePos, zombieSpawns)
 	local minOuter = zombieRing and (zombieRing * CONFIG.OUTER_RING_MULTIPLIER) or nil
 
-	-- If we have no spawn points, warn and return nil
+	-- If we have no spawn points, error loudly
 	if #self.spawnPoints == 0 then
-		warn("[ResourceSpawner] Cannot pick spawn point - no spawn points configured. Call setSpawnPoints() first.")
+		error("[ResourceSpawner] No spawn points configured! Resources cannot spawn. Call setSpawnPoints() first or check map validation.")
 		return nil
 	end
 
