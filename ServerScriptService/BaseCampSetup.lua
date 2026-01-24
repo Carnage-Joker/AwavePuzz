@@ -9,6 +9,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
+-- Map configuration constants
+local MAP_OFFSET = Vector3.new(5000, 0, 0)  -- Standard map placement offset
+local EMERGENCY_SPAWN_HEIGHT = 5  -- Height above ground for emergency spawn
+
 local BaseCampSetup = {}
 BaseCampSetup.__index = BaseCampSetup
 
@@ -33,6 +37,7 @@ function BaseCampSetup.new(mapConfig)
 	local self = setmetatable({}, BaseCampSetup)
 	self.baseCampModel = nil
 	self.baseCaptureZoneModel = nil
+	self.emergencySpawnModel = nil  -- Track emergency spawn for cleanup
 	self.campConfig = getCampConfig(mapConfig)
 	return self
 end
@@ -308,10 +313,42 @@ function BaseCampSetup:setupForMap(mapManager)
 	local centerPos = self:calculateMapCenterFromMap(activeMap)
 
 	local baseCamp, baseCaptureZone = self:buildBaseCamp(centerPos)
+	
+	-- If base camp failed to build, create emergency spawn
+	if not baseCamp or not baseCaptureZone then
+		warn("[BaseCampSetup] Base camp setup failed. Creating emergency spawn point.")
+		self:ensureFallbackSpawn(centerPos)
+	end
 
 	print("[BaseCampSetup] Base camp setup complete for map:", mapManager and mapManager:getCurrentMapId() or "Unknown")
 
 	return baseCamp, baseCaptureZone
+end
+
+-- Create emergency spawn point if base camp setup fails
+function BaseCampSetup:ensureFallbackSpawn(centerPos)
+	-- Check if there's already a spawn location
+	local existingSpawn = Workspace:FindFirstChild("EmergencySpawn")
+	if existingSpawn then
+		self.emergencySpawnModel = existingSpawn
+		return existingSpawn
+	end
+	
+	warn("[BaseCampSetup] No base camp exists. Creating emergency spawn point at map center.")
+	local emergencySpawn = Instance.new("SpawnLocation")
+	emergencySpawn.Name = "EmergencySpawn"
+	-- Use provided centerPos or default to map offset + emergency height
+	local spawnPos = centerPos or (MAP_OFFSET + Vector3.new(0, EMERGENCY_SPAWN_HEIGHT, 0))
+	emergencySpawn.Position = spawnPos
+	emergencySpawn.Anchored = true
+	emergencySpawn.Size = Vector3.new(10, 1, 10)
+	emergencySpawn.BrickColor = BrickColor.new("Bright yellow")
+	emergencySpawn.Material = Enum.Material.SmoothPlastic
+	emergencySpawn.Parent = Workspace
+	
+	self.emergencySpawnModel = emergencySpawn
+	print("[BaseCampSetup] Emergency spawn created at", spawnPos)
+	return emergencySpawn
 end
 
 function BaseCampSetup:cleanup()
@@ -324,6 +361,12 @@ function BaseCampSetup:cleanup()
 		self.baseCaptureZoneModel:Destroy()
 	end
 	self.baseCaptureZoneModel = nil
+	
+	-- Clean up emergency spawn if it was created
+	if self.emergencySpawnModel and self.emergencySpawnModel.Parent then
+		self.emergencySpawnModel:Destroy()
+	end
+	self.emergencySpawnModel = nil
 end
 
 return BaseCampSetup

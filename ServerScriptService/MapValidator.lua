@@ -10,6 +10,7 @@ local REQUIRED_FOLDERS = {
 }
 
 local MIN_ZOMBIE_SPAWNS = 8
+local RECOMMENDED_ZOMBIE_SPAWNS = 16
 local MIN_RESOURCE_SPAWNS = 4
 local MIN_ITEM_SPAWNS = 4
 
@@ -78,7 +79,11 @@ function MapValidator.validateMapModel(mapModel)
 
 	-- Validate counts
 	if zombieCount < MIN_ZOMBIE_SPAWNS then
-		table.insert(errors, string.format("Insufficient zombie spawn points: %d (minimum: %d)", zombieCount, MIN_ZOMBIE_SPAWNS))
+		table.insert(errors, string.format("CRITICAL: Only %d zombie spawns found (minimum: %d). Map rejected.", zombieCount, MIN_ZOMBIE_SPAWNS))
+		table.insert(errors, "Add more spawn points to the ZombieSpawnPoints folder.")
+	elseif zombieCount < RECOMMENDED_ZOMBIE_SPAWNS then
+		table.insert(warnings, string.format("Only %d zombie spawns found (recommended: %d)", zombieCount, RECOMMENDED_ZOMBIE_SPAWNS))
+		table.insert(warnings, "Game may have spawn distribution issues. Consider adding more points.")
 	end
 
 	if resourceCount < MIN_RESOURCE_SPAWNS then

@@ -5,9 +5,22 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[AchievementService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local StoryConfig = SharedFolder:WaitForChild("StoryConfig", 5)
+if not StoryConfig then
+	error("[AchievementService] CRITICAL: Failed to load StoryConfig after 5 seconds")
+end
+StoryConfig = require(StoryConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[AchievementService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local AchievementService = {}
 AchievementService.__index = AchievementService

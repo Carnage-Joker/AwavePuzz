@@ -12,10 +12,28 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[WeaponService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local GameConfig = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[WeaponService] CRITICAL: Failed to load GameConfig after 5 seconds")
+end
+GameConfig = require(GameConfig)
+
+local WeaponConfig = SharedFolder:WaitForChild("WeaponConfig", 5)
+if not WeaponConfig then
+	error("[WeaponService] CRITICAL: Failed to load WeaponConfig after 5 seconds")
+end
+WeaponConfig = require(WeaponConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[WeaponService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local function cloneTable(t)
 	local copy = {}

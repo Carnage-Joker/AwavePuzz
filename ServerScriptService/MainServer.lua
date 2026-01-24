@@ -8,6 +8,11 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Initialize RemoteEvents first to ensure deterministic execution order
+print("[MainServer] Initializing RemoteEvents...")
+require(script.Parent.RemoteEventsBootstrap)
+print("[MainServer] RemoteEvents initialized")
+
 -- Require shared configuration with timeout
 print("[MainServer] Loading shared configuration...")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)

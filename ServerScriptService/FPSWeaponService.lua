@@ -10,9 +10,22 @@ local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[FPSWeaponService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local FPSConfig = SharedFolder:WaitForChild("FPSConfig", 5)
+if not FPSConfig then
+	error("[FPSWeaponService] CRITICAL: Failed to load FPSConfig after 5 seconds")
+end
+FPSConfig = require(FPSConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[FPSWeaponService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local FPSWeaponService = {}
 FPSWeaponService.__index = FPSWeaponService

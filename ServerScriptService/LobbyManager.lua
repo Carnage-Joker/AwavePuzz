@@ -12,9 +12,22 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local MapConfig = require(Shared:WaitForChild("MapConfig"))
-local GameConfig = require(Shared:WaitForChild("GameConfig"))
+local Shared = ReplicatedStorage:WaitForChild("Shared", 10)
+if not Shared then
+	error("[LobbyManager] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local MapConfig = Shared:WaitForChild("MapConfig", 5)
+if not MapConfig then
+	error("[LobbyManager] CRITICAL: Failed to load MapConfig after 5 seconds")
+end
+MapConfig = require(MapConfig)
+
+local GameConfig = Shared:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[LobbyManager] CRITICAL: Failed to load GameConfig after 5 seconds")
+end
+GameConfig = require(GameConfig)
 
 local LobbyManager = {}
 LobbyManager.__index = LobbyManager

@@ -6,8 +6,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[FPSAnimationService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[FPSAnimationService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local FPSAnimationService = {}
 FPSAnimationService.__index = FPSAnimationService

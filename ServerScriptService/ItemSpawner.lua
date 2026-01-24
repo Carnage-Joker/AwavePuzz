@@ -117,7 +117,11 @@ function ItemSpawner:findItemSpawnPoints()
 	end
 	
 	-- No configured spawn points found
-	warn("[ItemSpawner] No item spawn points found in map. Items will spawn using fallback base position.")
+	if #spawnParts == 0 then
+		warn("[ItemSpawner] No item spawn points found in map.")
+		return nil
+	end
+	
 	return spawnParts
 end
 

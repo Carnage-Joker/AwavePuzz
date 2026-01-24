@@ -6,10 +6,28 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+if not SharedFolder then
+	error("[PuzzleService] CRITICAL: Failed to load Shared folder after 10 seconds")
+end
+
+local PuzzleConfig = SharedFolder:WaitForChild("PuzzleConfig", 5)
+if not PuzzleConfig then
+	error("[PuzzleService] CRITICAL: Failed to load PuzzleConfig after 5 seconds")
+end
+PuzzleConfig = require(PuzzleConfig)
+
+local GameConfig = SharedFolder:WaitForChild("GameConfig", 5)
+if not GameConfig then
+	error("[PuzzleService] CRITICAL: Failed to load GameConfig after 5 seconds")
+end
+GameConfig = require(GameConfig)
+
+local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
+if not RemoteEventUtil then
+	error("[PuzzleService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+end
+RemoteEventUtil = require(RemoteEventUtil)
 
 local PuzzleService = {}
 PuzzleService.__index = PuzzleService
