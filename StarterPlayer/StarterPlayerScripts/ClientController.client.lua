@@ -75,8 +75,25 @@ local UI = {}
 local ClientController = {}
 ClientController.initialized = false
 
+-- Track which systems have been initialized to prevent duplicates
+local systemsInitialized = {
+	camera = false,
+	movement = false,
+	weapon = false,
+	animation = false,
+	audio = false,
+	music = false,
+	menu = false,
+	ui = false
+}
+
 -- Initialize Camera System
 function ClientController.initializeCamera()
+	if systemsInitialized.camera then
+		warn("[ClientController] Camera already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Camera...")
 	
 	local cameraModule = clientModules:FindFirstChild("FirstPersonCamera")
@@ -90,6 +107,7 @@ function ClientController.initializeCamera()
 			if Camera.initialize then
 				Camera.initialize()
 			end
+			systemsInitialized.camera = true
 			print("[ClientController] ✓ Camera initialized")
 		else
 			warn("[ClientController] ✗ Camera failed to load:", result)
@@ -101,6 +119,11 @@ end
 
 -- Initialize Movement System
 function ClientController.initializeMovement()
+	if systemsInitialized.movement then
+		warn("[ClientController] Movement already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Movement...")
 	
 	local movementModule = clientModules:FindFirstChild("FPSMovement")
@@ -114,6 +137,7 @@ function ClientController.initializeMovement()
 			if Movement.initialize then
 				Movement.initialize()
 			end
+			systemsInitialized.movement = true
 			print("[ClientController] ✓ Movement initialized")
 		else
 			warn("[ClientController] ✗ Movement failed to load:", result)
@@ -125,6 +149,11 @@ end
 
 -- Initialize Weapon System
 function ClientController.initializeWeapon()
+	if systemsInitialized.weapon then
+		warn("[ClientController] Weapon already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Weapon System...")
 	
 	local weaponModule = clientModules:FindFirstChild("FPSWeaponController")
@@ -138,6 +167,7 @@ function ClientController.initializeWeapon()
 			if WeaponController.initialize then
 				WeaponController.initialize()
 			end
+			systemsInitialized.weapon = true
 			print("[ClientController] ✓ Weapon system initialized")
 		else
 			warn("[ClientController] ✗ Weapon system failed to load:", result)
@@ -149,6 +179,11 @@ end
 
 -- Initialize Animation System
 function ClientController.initializeAnimation()
+	if systemsInitialized.animation then
+		warn("[ClientController] Animation already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Animations...")
 	
 	local animModule = clientModules:FindFirstChild("FPSAnimationController")
@@ -162,6 +197,7 @@ function ClientController.initializeAnimation()
 			if AnimationController.initialize then
 				AnimationController.initialize()
 			end
+			systemsInitialized.animation = true
 			print("[ClientController] ✓ Animations initialized")
 		else
 			warn("[ClientController] ✗ Animations failed to load:", result)
@@ -173,6 +209,11 @@ end
 
 -- Initialize Audio System
 function ClientController.initializeAudio()
+	if systemsInitialized.audio then
+		warn("[ClientController] Audio already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Audio...")
 	
 	local audioModule = clientModules:FindFirstChild("FPSAudioController")
@@ -186,6 +227,7 @@ function ClientController.initializeAudio()
 			if AudioController.initialize then
 				AudioController.initialize()
 			end
+			systemsInitialized.audio = true
 			print("[ClientController] ✓ Audio initialized")
 		else
 			warn("[ClientController] ✗ Audio failed to load:", result)
@@ -197,6 +239,11 @@ end
 
 -- Initialize Music System
 function ClientController.initializeMusic()
+	if systemsInitialized.music then
+		warn("[ClientController] Music already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Music...")
 	
 	local musicModule = clientModules:FindFirstChild("MusicController")
@@ -210,6 +257,7 @@ function ClientController.initializeMusic()
 			if MusicController.initialize then
 				MusicController.initialize()
 			end
+			systemsInitialized.music = true
 			print("[ClientController] ✓ Music initialized")
 		else
 			warn("[ClientController] ✗ Music failed to load:", result)
@@ -221,6 +269,11 @@ end
 
 -- Initialize Menu System
 function ClientController.initializeMenu()
+	if systemsInitialized.menu then
+		warn("[ClientController] Menu already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing Menu...")
 	
 	local menuModule = clientModules:FindFirstChild("FPSMenuController")
@@ -234,6 +287,7 @@ function ClientController.initializeMenu()
 			if MenuController.initialize then
 				MenuController.initialize()
 			end
+			systemsInitialized.menu = true
 			print("[ClientController] ✓ Menu initialized")
 		else
 			warn("[ClientController] ✗ Menu failed to load:", result)
@@ -245,6 +299,11 @@ end
 
 -- Initialize UI Systems
 function ClientController.initializeUI()
+	if systemsInitialized.ui then
+		warn("[ClientController] UI already initialized, skipping")
+		return
+	end
+	
 	print("[ClientController] Initializing UI Systems...")
 	
 	local uiFolder = clientModules:FindFirstChild("UI")
@@ -308,6 +367,7 @@ function ClientController.initializeUI()
 		end
 	end
 	
+	systemsInitialized.ui = true
 	print("[ClientController] ✓ UI systems initialized")
 end
 

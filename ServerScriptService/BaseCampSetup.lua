@@ -308,10 +308,40 @@ function BaseCampSetup:setupForMap(mapManager)
 	local centerPos = self:calculateMapCenterFromMap(activeMap)
 
 	local baseCamp, baseCaptureZone = self:buildBaseCamp(centerPos)
+	
+	-- If base camp failed to build, create emergency spawn
+	if not baseCamp or not baseCaptureZone then
+		warn("[BaseCampSetup] Base camp setup failed. Creating emergency spawn point.")
+		self:ensureFallbackSpawn(centerPos)
+	end
 
 	print("[BaseCampSetup] Base camp setup complete for map:", mapManager and mapManager:getCurrentMapId() or "Unknown")
 
 	return baseCamp, baseCaptureZone
+end
+
+-- Create emergency spawn point if base camp setup fails
+function BaseCampSetup:ensureFallbackSpawn(centerPos)
+	-- Check if there's already a spawn location
+	local existingSpawn = Workspace:FindFirstChild("EmergencySpawn")
+	if existingSpawn then
+		return existingSpawn
+	end
+	
+	warn("[BaseCampSetup] No base camp exists. Creating emergency spawn point at map center.")
+	local emergencySpawn = Instance.new("SpawnLocation")
+	emergencySpawn.Name = "EmergencySpawn"
+	-- Use provided centerPos or default to map offset
+	local spawnPos = centerPos or Vector3.new(5000, 5, 0)
+	emergencySpawn.Position = spawnPos
+	emergencySpawn.Anchored = true
+	emergencySpawn.Size = Vector3.new(10, 1, 10)
+	emergencySpawn.BrickColor = BrickColor.new("Bright yellow")
+	emergencySpawn.Material = Enum.Material.SmoothPlastic
+	emergencySpawn.Parent = Workspace
+	
+	print("[BaseCampSetup] Emergency spawn created at", spawnPos)
+	return emergencySpawn
 end
 
 function BaseCampSetup:cleanup()
