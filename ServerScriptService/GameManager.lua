@@ -368,8 +368,19 @@ function GameManager:_hookPlayerDeath(player)
 		-- Clear death debounce on respawn to prevent race conditions
 		self._deathDebounce[player.UserId] = nil
 		
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if not humanoid then
+			-- Critical error: Humanoid missing after 5 seconds
+			warn("[GameManager] CRITICAL: Humanoid not found for player " .. player.Name .. " after 5 seconds. Forcing death.")
+			-- Force player death to prevent game state desync
+			self:onPlayerDied(player)
+			return
+		end
+		
 		-- FIX: Re-send weapon loadout and ammo updates on character respawn
-		-- This ensures the client UI has the correct state after respawn/round start
+		-- Wait briefly to ensure client's character controller is ready to receive updates
+		task.wait(0.1)
+		
 		if self.playerManager then
 			self.playerManager:sendWeaponLoadout(player)
 			
@@ -379,15 +390,6 @@ function GameManager:_hookPlayerDeath(player)
 					self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
 				end
 			end
-		end
-		
-		local humanoid = char:WaitForChild("Humanoid", 5)
-		if not humanoid then
-			-- Critical error: Humanoid missing after 5 seconds
-			warn("[GameManager] CRITICAL: Humanoid not found for player " .. player.Name .. " after 5 seconds. Forcing death.")
-			-- Force player death to prevent game state desync
-			self:onPlayerDied(player)
-			return
 		end
 
 		-- Store connection for cleanup

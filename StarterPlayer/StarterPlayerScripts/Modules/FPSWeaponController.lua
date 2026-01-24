@@ -443,6 +443,15 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		end
 		currentWeapon = data.weaponId
 		weaponStats = getWeaponStats(data.weaponId)
+		
+		-- Validate weaponStats after fetching
+		if not weaponStats then
+			warn(string.format("[FPSWeaponController] Invalid weaponId from server: %s", tostring(data.weaponId)))
+			-- Reset to nil to avoid stale data
+			currentWeapon = nil
+			return
+		end
+		
 		updateWeaponInfo(data.weaponId)
 		-- NOTE: Do not fire weaponEquippedBindable here.
 		-- Weapon equips (animations, state transitions) are handled by the
