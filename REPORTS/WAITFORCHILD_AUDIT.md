@@ -17,7 +17,7 @@ These files block server initialization if dependencies are missing:
 |------|------|------|--------|---------|----------------|
 | MainServer.lua | 13 | `ReplicatedStorage:WaitForChild("Shared")` | ✅ Fixed | 10s | error() |
 | MainServer.lua | 18 | `SharedFolder:WaitForChild("GameConfig")` | ✅ Fixed | 5s | error() |
-| FPSWeaponService.lua | 13-15 | Multiple SharedFolder children | ✅ Fixed | 10s/5s | error() |
+| FPSWeaponService.lua | n/a | Multiple SharedFolder children | ✅ Fixed | 10s/5s | error() |
 | SprintService.lua | 11-14 | Multiple SharedFolder children | ✅ Fixed | 10s/5s | error() |
 | ShopService.lua | 7-9 | Multiple SharedFolder children | ✅ Fixed | 10s/5s | error() |
 | WeaponService.lua | 15-18 | Multiple SharedFolder children | ✅ Fixed | 10s/5s | error() |
