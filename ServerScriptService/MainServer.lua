@@ -10,7 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Initialize RemoteEvents first to ensure deterministic execution order
 print("[MainServer] Initializing RemoteEvents...")
-local RemoteEventsBootstrap = require(script.Parent.RemoteEventsBootstrap)
+require(script.Parent.RemoteEventsBootstrap)
 print("[MainServer] RemoteEvents initialized")
 
 -- Require shared configuration with timeout
