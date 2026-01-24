@@ -113,13 +113,14 @@ ConfigModule = require(ConfigModule)
 ```
 
 ```lua
--- Client-side (Warn but don't crash)
+-- Client-side (Error on critical failures)
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
 if not SharedFolder then
-    warn("[ClientModule] Failed to load Shared folder after 10 seconds")
-    return
+    error("[ClientModule] Failed to load Shared folder after 10 seconds")
 end
 ```
+
+**Note:** ClientController uses `error()` for critical initialization failures (Shared folder, config modules) to prevent undefined behavior. Non-critical client modules may use `warn()` and graceful degradation.
 
 ## Statistics
 

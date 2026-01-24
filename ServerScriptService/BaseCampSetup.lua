@@ -37,6 +37,7 @@ function BaseCampSetup.new(mapConfig)
 	local self = setmetatable({}, BaseCampSetup)
 	self.baseCampModel = nil
 	self.baseCaptureZoneModel = nil
+	self.emergencySpawnModel = nil  -- Track emergency spawn for cleanup
 	self.campConfig = getCampConfig(mapConfig)
 	return self
 end
@@ -329,6 +330,7 @@ function BaseCampSetup:ensureFallbackSpawn(centerPos)
 	-- Check if there's already a spawn location
 	local existingSpawn = Workspace:FindFirstChild("EmergencySpawn")
 	if existingSpawn then
+		self.emergencySpawnModel = existingSpawn
 		return existingSpawn
 	end
 	
@@ -344,6 +346,7 @@ function BaseCampSetup:ensureFallbackSpawn(centerPos)
 	emergencySpawn.Material = Enum.Material.SmoothPlastic
 	emergencySpawn.Parent = Workspace
 	
+	self.emergencySpawnModel = emergencySpawn
 	print("[BaseCampSetup] Emergency spawn created at", spawnPos)
 	return emergencySpawn
 end
@@ -358,6 +361,12 @@ function BaseCampSetup:cleanup()
 		self.baseCaptureZoneModel:Destroy()
 	end
 	self.baseCaptureZoneModel = nil
+	
+	-- Clean up emergency spawn if it was created
+	if self.emergencySpawnModel and self.emergencySpawnModel.Parent then
+		self.emergencySpawnModel:Destroy()
+	end
+	self.emergencySpawnModel = nil
 end
 
 return BaseCampSetup
