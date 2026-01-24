@@ -353,30 +353,22 @@ end
 ### BUG #10: BaseCampSetup No Fallback Spawn ⚠️
 
 **Severity:** MEDIUM  
-**Status:** ⚠️ PENDING  
-**Commit:** Not yet implemented
+**Status:** ✅ FIXED  
+**Commit:** This PR (BaseCampSetup.ensureFallbackSpawn wired into setupForMap)
 
-**File:** ServerScriptService/BaseCampSetup.lua (needs new method)
+**File:** ServerScriptService/BaseCampSetup.lua
 
 **Root Cause:**  
 If base camp setup fails, players have no guaranteed spawn location.
 
-**Proposed Fix:**
-```lua
-function BaseCampSetup:ensureFallbackSpawn()
-    if not self.baseCampModel then
-        warn("[BaseCampSetup] No base camp exists. Creating emergency spawn point.")
-        local emergencySpawn = Instance.new("SpawnLocation")
-        emergencySpawn.Name = "EmergencySpawn"
-        emergencySpawn.Position = Vector3.new(5000, 5, 0)  -- Map center
-        emergencySpawn.Anchored = true
-        emergencySpawn.Size = Vector3.new(10, 1, 10)
-        emergencySpawn.Parent = workspace
-        return emergencySpawn
-    end
-    return nil
-end
-```
+**Implementation Summary:**
+- Added `BaseCampSetup:ensureFallbackSpawn()` in `ServerScriptService/BaseCampSetup.lua`.
+- `setupForMap()` now calls `ensureFallbackSpawn()` to guarantee a safe spawn point if the base camp model is missing or fails to initialize.
+
+**Verification Steps:**
+1. ⚠️ Manual test: Start a server with a map configuration that prevents base camp creation.
+2. ⚠️ Confirm players still spawn at the emergency fallback spawn location.
+3. ⚠️ Check server logs for `[BaseCampSetup] No base camp exists. Creating emergency spawn point.` when the fallback is used.
 
 **Verification Steps:**
 - [ ] Implement ensureFallbackSpawn method
