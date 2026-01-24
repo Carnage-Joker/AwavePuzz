@@ -2,8 +2,8 @@
 
 **Report Generated:** 2026-01-24  
 **Total Bugs in Report:** 17  
-**Bugs Fixed:** 15  
-**Bugs Remaining:** 2  
+**Bugs Fixed:** See per-bug status sections below  
+**Bugs Remaining:** See per-bug status sections below  
 
 ---
 
