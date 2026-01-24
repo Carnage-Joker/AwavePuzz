@@ -311,8 +311,17 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reserveAmmoLabel.Text = tostring(reserve or 0)
 
 	-- Color based on ammo level
-	local effectiveMax = max or DEFAULT_MAGAZINE_SIZE  -- Fallback to default mag size
-	if effectiveMax == 0 then effectiveMax = 1 end -- Prevent division by zero
+	-- If max is explicitly 0, treat this as a zero-ammo weapon (e.g., melee) and hide the ammo UI
+	if max == 0 then
+		ammoFrame.Visible = false
+		return
+	end
+
+	local effectiveMax = max or DEFAULT_MAGAZINE_SIZE  -- Fallback to default mag size for weapons that have mags
+	-- Final safeguard: ensure effectiveMax is positive to prevent division by zero or invalid ratios
+	if not effectiveMax or effectiveMax <= 0 then
+		effectiveMax = 1
+	end
 	local ammoRatio = (current or 0) / effectiveMax
 	if ammoRatio <= lowAmmoThreshold then
 		currentAmmoLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
