@@ -9,6 +9,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 
+-- Map configuration constants
+local MAP_OFFSET = Vector3.new(5000, 0, 0)  -- Standard map placement offset
+local EMERGENCY_SPAWN_HEIGHT = 5  -- Height above ground for emergency spawn
+
 local BaseCampSetup = {}
 BaseCampSetup.__index = BaseCampSetup
 
@@ -331,8 +335,8 @@ function BaseCampSetup:ensureFallbackSpawn(centerPos)
 	warn("[BaseCampSetup] No base camp exists. Creating emergency spawn point at map center.")
 	local emergencySpawn = Instance.new("SpawnLocation")
 	emergencySpawn.Name = "EmergencySpawn"
-	-- Use provided centerPos or default to map offset
-	local spawnPos = centerPos or Vector3.new(5000, 5, 0)
+	-- Use provided centerPos or default to map offset + emergency height
+	local spawnPos = centerPos or (MAP_OFFSET + Vector3.new(0, EMERGENCY_SPAWN_HEIGHT, 0))
 	emergencySpawn.Position = spawnPos
 	emergencySpawn.Anchored = true
 	emergencySpawn.Size = Vector3.new(10, 1, 10)

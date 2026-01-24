@@ -291,7 +291,6 @@ end
 function IntelligentSpawnGenerator:getStrategicSpawnPoint(zombieType, allSpawnPoints, playerPositions)
 	if not allSpawnPoints or #allSpawnPoints == 0 then
 		error("[IntelligentSpawnGenerator] CRITICAL: No spawn points provided! Cannot generate strategic spawn.")
-		return nil
 	end
 
 	local pref = SPAWN_PREFERENCES[zombieType] or SPAWN_PREFERENCES.Walker

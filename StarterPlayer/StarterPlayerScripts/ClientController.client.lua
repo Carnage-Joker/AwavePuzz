@@ -75,21 +75,33 @@ local UI = {}
 local ClientController = {}
 ClientController.initialized = false
 
+-- System names constant to prevent typos
+local SYSTEM_NAMES = {
+	CAMERA = "camera",
+	MOVEMENT = "movement",
+	WEAPON = "weapon",
+	ANIMATION = "animation",
+	AUDIO = "audio",
+	MUSIC = "music",
+	MENU = "menu",
+	UI = "ui"
+}
+
 -- Track which systems have been initialized to prevent duplicates
 local systemsInitialized = {
-	camera = false,
-	movement = false,
-	weapon = false,
-	animation = false,
-	audio = false,
-	music = false,
-	menu = false,
-	ui = false
+	[SYSTEM_NAMES.CAMERA] = false,
+	[SYSTEM_NAMES.MOVEMENT] = false,
+	[SYSTEM_NAMES.WEAPON] = false,
+	[SYSTEM_NAMES.ANIMATION] = false,
+	[SYSTEM_NAMES.AUDIO] = false,
+	[SYSTEM_NAMES.MUSIC] = false,
+	[SYSTEM_NAMES.MENU] = false,
+	[SYSTEM_NAMES.UI] = false
 }
 
 -- Initialize Camera System
 function ClientController.initializeCamera()
-	if systemsInitialized.camera then
+	if systemsInitialized[SYSTEM_NAMES.CAMERA] then
 		warn("[ClientController] Camera already initialized, skipping")
 		return
 	end
@@ -107,7 +119,7 @@ function ClientController.initializeCamera()
 			if Camera.initialize then
 				Camera.initialize()
 			end
-			systemsInitialized.camera = true
+			systemsInitialized[SYSTEM_NAMES.CAMERA] = true
 			print("[ClientController] ✓ Camera initialized")
 		else
 			warn("[ClientController] ✗ Camera failed to load:", result)
@@ -119,7 +131,7 @@ end
 
 -- Initialize Movement System
 function ClientController.initializeMovement()
-	if systemsInitialized.movement then
+	if systemsInitialized[SYSTEM_NAMES.MOVEMENT] then
 		warn("[ClientController] Movement already initialized, skipping")
 		return
 	end
@@ -137,7 +149,7 @@ function ClientController.initializeMovement()
 			if Movement.initialize then
 				Movement.initialize()
 			end
-			systemsInitialized.movement = true
+			systemsInitialized[SYSTEM_NAMES.MOVEMENT] = true
 			print("[ClientController] ✓ Movement initialized")
 		else
 			warn("[ClientController] ✗ Movement failed to load:", result)
@@ -149,7 +161,7 @@ end
 
 -- Initialize Weapon System
 function ClientController.initializeWeapon()
-	if systemsInitialized.weapon then
+	if systemsInitialized[SYSTEM_NAMES.WEAPON] then
 		warn("[ClientController] Weapon already initialized, skipping")
 		return
 	end
@@ -167,7 +179,7 @@ function ClientController.initializeWeapon()
 			if WeaponController.initialize then
 				WeaponController.initialize()
 			end
-			systemsInitialized.weapon = true
+			systemsInitialized[SYSTEM_NAMES.WEAPON] = true
 			print("[ClientController] ✓ Weapon system initialized")
 		else
 			warn("[ClientController] ✗ Weapon system failed to load:", result)
@@ -179,7 +191,7 @@ end
 
 -- Initialize Animation System
 function ClientController.initializeAnimation()
-	if systemsInitialized.animation then
+	if systemsInitialized[SYSTEM_NAMES.ANIMATION] then
 		warn("[ClientController] Animation already initialized, skipping")
 		return
 	end
@@ -197,7 +209,7 @@ function ClientController.initializeAnimation()
 			if AnimationController.initialize then
 				AnimationController.initialize()
 			end
-			systemsInitialized.animation = true
+			systemsInitialized[SYSTEM_NAMES.ANIMATION] = true
 			print("[ClientController] ✓ Animations initialized")
 		else
 			warn("[ClientController] ✗ Animations failed to load:", result)
@@ -209,7 +221,7 @@ end
 
 -- Initialize Audio System
 function ClientController.initializeAudio()
-	if systemsInitialized.audio then
+	if systemsInitialized[SYSTEM_NAMES.AUDIO] then
 		warn("[ClientController] Audio already initialized, skipping")
 		return
 	end
@@ -227,7 +239,7 @@ function ClientController.initializeAudio()
 			if AudioController.initialize then
 				AudioController.initialize()
 			end
-			systemsInitialized.audio = true
+			systemsInitialized[SYSTEM_NAMES.AUDIO] = true
 			print("[ClientController] ✓ Audio initialized")
 		else
 			warn("[ClientController] ✗ Audio failed to load:", result)
@@ -239,7 +251,7 @@ end
 
 -- Initialize Music System
 function ClientController.initializeMusic()
-	if systemsInitialized.music then
+	if systemsInitialized[SYSTEM_NAMES.MUSIC] then
 		warn("[ClientController] Music already initialized, skipping")
 		return
 	end
@@ -257,7 +269,7 @@ function ClientController.initializeMusic()
 			if MusicController.initialize then
 				MusicController.initialize()
 			end
-			systemsInitialized.music = true
+			systemsInitialized[SYSTEM_NAMES.MUSIC] = true
 			print("[ClientController] ✓ Music initialized")
 		else
 			warn("[ClientController] ✗ Music failed to load:", result)
@@ -269,7 +281,7 @@ end
 
 -- Initialize Menu System
 function ClientController.initializeMenu()
-	if systemsInitialized.menu then
+	if systemsInitialized[SYSTEM_NAMES.MENU] then
 		warn("[ClientController] Menu already initialized, skipping")
 		return
 	end
@@ -287,7 +299,7 @@ function ClientController.initializeMenu()
 			if MenuController.initialize then
 				MenuController.initialize()
 			end
-			systemsInitialized.menu = true
+			systemsInitialized[SYSTEM_NAMES.MENU] = true
 			print("[ClientController] ✓ Menu initialized")
 		else
 			warn("[ClientController] ✗ Menu failed to load:", result)
@@ -299,7 +311,7 @@ end
 
 -- Initialize UI Systems
 function ClientController.initializeUI()
-	if systemsInitialized.ui then
+	if systemsInitialized[SYSTEM_NAMES.UI] then
 		warn("[ClientController] UI already initialized, skipping")
 		return
 	end
@@ -367,7 +379,7 @@ function ClientController.initializeUI()
 		end
 	end
 	
-	systemsInitialized.ui = true
+	systemsInitialized[SYSTEM_NAMES.UI] = true
 	print("[ClientController] ✓ UI systems initialized")
 end
 
