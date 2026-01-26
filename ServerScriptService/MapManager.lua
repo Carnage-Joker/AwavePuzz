@@ -71,6 +71,10 @@ function MapManager.new()
 	self.itemSpawnPoints = {}
 
 	self.baseCampSetup = nil
+	
+	-- Spawn point cache: mapId -> {zombie, resource, item}
+	-- Reduces redundant folder traversal on map transitions
+	self.spawnPointCache = {}
 
 	-- IMPORTANT: do NOT extract from workspace here.
 	-- That’s what was causing the noisy "Workspace has no spawn points" warnings on server boot.
@@ -190,6 +194,24 @@ end
 
 -- silent=true prevents warnings/log spam (used only for fallback/no-map situations)
 function MapManager:extractPoints(silent)
+function MapManager:extractPoints(silent)
+	-- Check cache first
+	if self.currentMapId and self.spawnPointCache[self.currentMapId] then
+		local cached = self.spawnPointCache[self.currentMapId]
+		self.zombieSpawnPoints = cached.zombie
+		self.resourceSpawnPoints = cached.resource
+		self.itemSpawnPoints = cached.item
+		
+		if not silent then
+			print(string.format("[MapManager] Loaded cached spawn points for '%s'", self.currentMapId))
+			print(string.format("  - Zombie spawn points: %d", #self.zombieSpawnPoints))
+			print(string.format("  - Resource spawn points: %d", #self.resourceSpawnPoints))
+			print(string.format("  - Item spawn points: %d", #self.itemSpawnPoints))
+		end
+		return
+	end
+	
+	-- Not in cache, extract from map
 	self.zombieSpawnPoints = {}
 	self.resourceSpawnPoints = {}
 	self.itemSpawnPoints = {}
@@ -198,8 +220,8 @@ function MapManager:extractPoints(silent)
 	local root = self.currentMapModel
 	local mapName = self.currentMapId or "None"
 
-	-- If no ActiveMap, do nothing (don’t fall back to workspace by default).
-	-- This stops the “Workspace has no spawn points” spam at startup.
+	-- If no ActiveMap, do nothing (don't fall back to workspace by default).
+	-- This stops the "Workspace has no spawn points" spam at startup.
 	if not usingActiveMap then
 		if not silent then
 			print("[MapManager] No ActiveMap loaded; spawn points remain empty.")
@@ -231,6 +253,18 @@ function MapManager:extractPoints(silent)
 		local itemSpawns = spawnPointsFolder:FindFirstChild("ItemSpawns")
 		if itemSpawns then
 			collectPointsFromFolder(self.itemSpawnPoints, itemSpawns)
+		end
+	end
+	
+	-- Cache the spawn points for this map
+	if self.currentMapId then
+		self.spawnPointCache[self.currentMapId] = {
+			zombie = self.zombieSpawnPoints,
+			resource = self.resourceSpawnPoints,
+			item = self.itemSpawnPoints
+		}
+		if not silent then
+			print(string.format("[MapManager] Cached spawn points for '%s'", self.currentMapId))
 		end
 	end
 
