@@ -42,7 +42,8 @@ local LOD_CONFIG = {
 	DISTANCE_LOW = 100,    -- > 100 studs: LOW detail (simple movement)
 	DISTANCE_MEDIUM = 50,  -- 50-100 studs: MEDIUM detail (basic pathfinding)
 	-- < 50 studs: HIGH detail (full AI with surround system)
-	LOW_COOLDOWN_MULTIPLIER = 3  -- LOW LOD updates 3x slower
+	LOW_COOLDOWN_MULTIPLIER = 3,  -- LOW LOD updates 3x slower
+	LOW_BASE_NEAR_DISTANCE = 20  -- Distance at which LOW LOD zombies can still attack base
 }
 
 function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targetingService, surroundService, bossAuraService, waveNumber)
@@ -223,6 +224,28 @@ function ZombieBrain:getNearbyZombies()
 	end
 
 	return nearby
+end
+
+-- Get base position for LOW LOD zombies
+-- Uses same logic as TargetingService for consistency
+function ZombieBrain:getBasePosition()
+	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
+	if not baseModel then
+		return nil
+	end
+
+	local hitbox = baseModel:FindFirstChild("HitBox", true)
+	if hitbox and hitbox:IsA("BasePart") then
+		return hitbox.Position
+	end
+
+	if baseModel:IsA("Model") then
+		return baseModel:GetPivot().Position
+	elseif baseModel:IsA("BasePart") then
+		return baseModel.Position
+	end
+
+	return nil
 end
 
 -- Get target using tactical targeting service
@@ -433,19 +456,32 @@ function ZombieBrain:update(deltaTime)
 	
 	-- LOW LOD: Skip most AI updates for distant zombies
 	if lod == "LOW" then
-		-- Only do basic movement toward base every few seconds
-		if self.moveCooldown <= 0 then
-			-- Update less frequently using config multiplier
-			self.moveCooldown = self.repathInterval * LOD_CONFIG.LOW_COOLDOWN_MULTIPLIER
-			local basePos = self:getBasePosition()
-			if basePos then
-				self.humanoid:MoveTo(basePos)
-				self.lastMoveTarget = basePos
+		-- Check if zombie is close to base - allow full AI in that case
+		local basePos = self:getBasePosition()
+		local isNearBase = false
+		if basePos and self.rootPart then
+			local distanceToBase = (self.rootPart.Position - basePos).Magnitude
+			if distanceToBase <= LOD_CONFIG.LOW_BASE_NEAR_DISTANCE then
+				isNearBase = true
 			end
-		else
-			self.moveCooldown = self.moveCooldown - deltaTime
 		end
-		return -- Skip rest of AI processing
+		
+		-- Only use simplified LOW LOD behavior when far from base
+		if not isNearBase then
+			-- Only do basic movement toward base every few seconds
+			if self.moveCooldown <= 0 then
+				-- Update less frequently using config multiplier
+				self.moveCooldown = self.repathInterval * LOD_CONFIG.LOW_COOLDOWN_MULTIPLIER
+				if basePos then
+					self.humanoid:MoveTo(basePos)
+					self.lastMoveTarget = basePos
+				end
+			else
+				self.moveCooldown = self.moveCooldown - deltaTime
+			end
+			return -- Skip rest of AI processing while far from base
+		end
+		-- If near base, continue with full AI to allow attacks
 	end
 	
 	-- MEDIUM LOD: Basic pathfinding only, no advanced behaviors
@@ -518,22 +554,28 @@ function ZombieBrain:update(deltaTime)
 					-- Get slot position with surround system
 					local slotPos = self:getSlotPosition(targetPos, targetId)
 
-					-- Apply separation steering if service available
-					finalTarget = slotPos
-					if self.surroundService then
-						local nearbyZombies = self:getNearbyZombies()
-						finalTarget = self.surroundService:getSteeringTarget(
-							self.zombieModel,
-							self.rootPart.Position,
-							slotPos,
-							nearbyZombies
-						)
+					-- Validate slotPos before using (could be nil if target destroyed)
+					if slotPos then
+						finalTarget = slotPos
+						-- Apply separation steering if service available
+						if self.surroundService then
+							local nearbyZombies = self:getNearbyZombies()
+							finalTarget = self.surroundService:getSteeringTarget(
+								self.zombieModel,
+								self.rootPart.Position,
+								slotPos,
+								nearbyZombies
+							)
+						end
 					end
+					-- If slotPos is nil, finalTarget remains targetPos (fallback)
 				end
 
 				-- FIX: Issue new move command
-				self.humanoid:MoveTo(finalTarget)
-				self.lastMoveTarget = finalTarget
+				if finalTarget then
+					self.humanoid:MoveTo(finalTarget)
+					self.lastMoveTarget = finalTarget
+				end
 			end
 		end
 	else

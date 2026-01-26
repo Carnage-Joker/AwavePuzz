@@ -150,9 +150,14 @@ function MapManager:load(mapId)
 		return false
 	end
 
-	-- Destroy previous active map
+	-- Destroy previous active map and invalidate cache
 	if self.currentMapModel and self.currentMapModel.Parent then
 		self.currentMapModel:Destroy()
+	end
+	
+	-- Clear cache for the previous map to ensure fresh spawn points on reload
+	if self.currentMapId then
+		self.spawnPointCache[self.currentMapId] = nil
 	end
 
 	-- Clone and place the new map

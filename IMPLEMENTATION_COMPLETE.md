@@ -115,13 +115,15 @@ local LOD_CONFIG = {
 
 #### Performance Impact
 
-With 50 zombies:
+With 50 zombies (projected):
 - **Before:** 50 zombies × full AI update = high CPU
 - **After:** 
   - ~20 zombies HIGH LOD (close to players)
   - ~15 zombies MEDIUM LOD (medium distance)
   - ~15 zombies LOW LOD (far away)
-  - **Result:** ~30-50% CPU reduction
+  - **Projected Result:** ~30-50% CPU reduction
+
+**Note:** These are estimated improvements based on the LOD design. Actual performance gains will vary based on zombie distribution, player movement patterns, and server conditions. Real-world testing with 50+ zombies is recommended to measure actual CPU savings.
 
 #### Code Quality
 
@@ -325,9 +327,11 @@ self.spawnPointCache[self.currentMapId] = {
 ### Code Quality
 - [x] No duplicate code
 - [x] Magic numbers extracted to constants
-- [x] Proper nil checks and validation
+- [x] Nil checks added for critical paths (slotPos, finalTarget, basePos)
 - [x] Uses table.clone() to prevent mutations
 - [x] Clear comments and documentation
+
+**Note:** Additional nil validation may be needed in edge cases. Core paths are protected.
 
 ### Testing
 - [ ] Manual testing in Roblox Studio (recommended)
@@ -342,7 +346,7 @@ self.spawnPointCache[self.currentMapId] = {
 
 ### Performance
 - [ ] Performance testing with 50+ zombies (recommended)
-- [ ] Expected 30-50% CPU reduction measured
+- [ ] Projected 30-50% CPU reduction to be measured in actual gameplay
 - [ ] No memory leaks introduced
 
 ---
