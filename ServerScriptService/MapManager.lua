@@ -194,7 +194,6 @@ end
 
 -- silent=true prevents warnings/log spam (used only for fallback/no-map situations)
 function MapManager:extractPoints(silent)
-function MapManager:extractPoints(silent)
 	-- Check cache first
 	if self.currentMapId and self.spawnPointCache[self.currentMapId] then
 		local cached = self.spawnPointCache[self.currentMapId]
@@ -258,10 +257,11 @@ function MapManager:extractPoints(silent)
 	
 	-- Cache the spawn points for this map
 	if self.currentMapId then
+		-- Use table.clone to avoid unintended mutations
 		self.spawnPointCache[self.currentMapId] = {
-			zombie = self.zombieSpawnPoints,
-			resource = self.resourceSpawnPoints,
-			item = self.itemSpawnPoints
+			zombie = table.clone(self.zombieSpawnPoints),
+			resource = table.clone(self.resourceSpawnPoints),
+			item = table.clone(self.itemSpawnPoints)
 		}
 		if not silent then
 			print(string.format("[MapManager] Cached spawn points for '%s'", self.currentMapId))

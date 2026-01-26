@@ -37,6 +37,14 @@ local SpitterController = require(script.Parent.SpitterController)
 local ZombieBrain = {}
 ZombieBrain.__index = ZombieBrain
 
+-- LOD (Level of Detail) Configuration
+local LOD_CONFIG = {
+	DISTANCE_LOW = 100,    -- > 100 studs: LOW detail (simple movement)
+	DISTANCE_MEDIUM = 50,  -- 50-100 studs: MEDIUM detail (basic pathfinding)
+	-- < 50 studs: HIGH detail (full AI with surround system)
+	LOW_COOLDOWN_MULTIPLIER = 3  -- LOW LOD updates 3x slower
+}
+
 function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targetingService, surroundService, bossAuraService, waveNumber)
 	if not zombieModel or not zombieModel:IsA("Model") then
 		return nil
@@ -177,14 +185,10 @@ function ZombieBrain:determineLOD()
 		end
 	end
 	
-	-- LOD thresholds from IMPROVEMENTS.md
-	local LOD_DISTANCE_LOW = 100  -- > 100 studs: LOW detail (simple movement)
-	local LOD_DISTANCE_MEDIUM = 50  -- 50-100 studs: MEDIUM detail (basic pathfinding)
-	-- < 50 studs: HIGH detail (full AI with surround system)
-	
-	if closestPlayerDistance > LOD_DISTANCE_LOW then
+	-- Use module-level LOD configuration constants
+	if closestPlayerDistance > LOD_CONFIG.DISTANCE_LOW then
 		return "LOW" -- Simple movement toward base
-	elseif closestPlayerDistance > LOD_DISTANCE_MEDIUM then
+	elseif closestPlayerDistance > LOD_CONFIG.DISTANCE_MEDIUM then
 		return "MEDIUM" -- Basic pathfinding
 	else
 		return "HIGH" -- Full AI with surround system
@@ -420,7 +424,8 @@ function ZombieBrain:update(deltaTime)
 	if lod == "LOW" then
 		-- Only do basic movement toward base every few seconds
 		if self.moveCooldown <= 0 then
-			self.moveCooldown = self.repathInterval * 3 -- Update less frequently
+			-- Update less frequently using config multiplier
+			self.moveCooldown = self.repathInterval * LOD_CONFIG.LOW_COOLDOWN_MULTIPLIER
 			local basePos = self:getBasePosition()
 			if basePos then
 				self.humanoid:MoveTo(basePos)
