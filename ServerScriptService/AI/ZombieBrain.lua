@@ -175,6 +175,11 @@ end
 -- Determine Level of Detail based on distance to nearest player
 -- Returns: "HIGH", "MEDIUM", or "LOW"
 function ZombieBrain:determineLOD()
+	-- Validate rootPart exists
+	if not self.rootPart then
+		return "HIGH" -- Default to full AI if we can't calculate distance
+	end
+	
 	local closestPlayerDistance = math.huge
 	
 	-- Check distance to all players
@@ -183,6 +188,12 @@ function ZombieBrain:determineLOD()
 			local distance = (player.Character.HumanoidRootPart.Position - self.rootPart.Position).Magnitude
 			closestPlayerDistance = math.min(closestPlayerDistance, distance)
 		end
+	end
+	
+	-- If no valid players found, use HIGH LOD to ensure zombies remain active
+	-- (they'll target base via fallback mechanisms)
+	if closestPlayerDistance == math.huge then
+		return "HIGH"
 	end
 	
 	-- Use module-level LOD configuration constants
