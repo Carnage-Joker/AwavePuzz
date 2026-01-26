@@ -560,12 +560,17 @@ function ZombieBrain:update(deltaTime)
 						-- Apply separation steering if service available
 						if self.surroundService then
 							local nearbyZombies = self:getNearbyZombies()
-							finalTarget = self.surroundService:getSteeringTarget(
+							local steeringTarget = self.surroundService:getSteeringTarget(
 								self.zombieModel,
 								self.rootPart.Position,
 								slotPos,
 								nearbyZombies
 							)
+							-- Validate steering target before using
+							if steeringTarget then
+								finalTarget = steeringTarget
+							end
+							-- If steering target is nil, finalTarget remains slotPos
 						end
 					end
 					-- If slotPos is nil, finalTarget remains targetPos (fallback)
