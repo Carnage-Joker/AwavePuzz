@@ -59,7 +59,10 @@ GameManager.States = {
 }
 
 -- Constants
-local WEAPON_SYNC_DELAY = 0.1  -- Delay in seconds before sending weapon updates on character respawn to ensure client is ready
+local DEFAULT_WEAPON_SYNC_DELAY = 0.5  -- Fallback delay in seconds before sending weapon updates on character respawn
+local WEAPON_SYNC_DELAY = (type(GameConfig) == "table" and type(GameConfig.WEAPON_SYNC_DELAY) == "number")
+	and GameConfig.WEAPON_SYNC_DELAY
+	or DEFAULT_WEAPON_SYNC_DELAY
 
 function GameManager.new(allianceService)
 	local self = setmetatable({}, GameManager)
@@ -411,16 +414,38 @@ function GameManager:_hookPlayerDeath(player)
 			task.wait(WEAPON_SYNC_DELAY)
 			
 			-- Verify player is still valid
-			if not player or not player.Parent then return end
+			if not player or not player.Parent then 
+				warn(string.format("[GameManager] Player %s left before weapon sync could complete", tostring(player)))
+				return 
+			end
+			
+			-- Verify character is still valid
+			if not player.Character or player.Character ~= char then
+				warn(string.format("[GameManager] Character changed for %s before weapon sync could complete", player.Name))
+				return
+			end
 			
 			if self.playerManager then
-				self.playerManager:sendWeaponLoadout(player)
-				
-				if self.fpsWeaponService then
-					local equippedWeapon = self.playerManager:getEquippedWeapon(player)
-					if equippedWeapon then
-						self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
+				-- Send weapon loadout update
+				local equippedWeapon = self.playerManager:getEquippedWeapon(player)
+				if equippedWeapon then
+					print(string.format("[GameManager] Syncing weapons for %s on respawn - equipped: %s", player.Name, equippedWeapon))
+					self.playerManager:sendWeaponLoadout(player)
+					
+					-- Send ammo update for equipped weapon
+					if self.fpsWeaponService then
+						-- Ensure ammo is initialized for this weapon
+						local ammo = self.fpsWeaponService:getAmmo(player, equippedWeapon)
+						if not ammo then
+							print(string.format("[GameManager] Initializing ammo for %s weapon %s on respawn", player.Name, equippedWeapon))
+							self.fpsWeaponService:initializeWeaponAmmo(player, equippedWeapon)
+						else
+							-- Ammo already initialized; just send an update to sync client state
+							self.fpsWeaponService:sendAmmoUpdate(player, equippedWeapon)
+						end
 					end
+				else
+					warn(string.format("[GameManager] No equipped weapon found for %s on respawn", player.Name))
 				end
 			end
 		end)

@@ -2,6 +2,9 @@
 -- First-person shooter HUD with dynamic crosshair, ammo counter, hitmarkers, and weapon info
 -- Integrates with FPSWeaponController for real-time feedback
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -20,6 +23,10 @@ UIScaleManager.initialize()
 
 -- Constants
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
+
+-- Track last ammo update for debugging
+local lastAmmoUpdate = tick()  -- Initialize to current time to avoid false stale warnings on startup
+local lastAmmoData = nil
 
 --------------------------------------------------------------------------------
 -- UI CREATION
@@ -298,9 +305,21 @@ reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
+	-- Track update time for debugging
+	lastAmmoUpdate = tick()
+	lastAmmoData = {current = current, reserve = reserve, max = max, isReloading = isReloading}
+	
+	if DEBUG_AMMO then
+		print(string.format("[FPSHUD] updateAmmoDisplay called - current=%s, reserve=%s, max=%s, isReloading=%s", 
+			tostring(current), tostring(reserve), tostring(max), tostring(isReloading)))
+	end
+	
 	-- Show ammo UI as long as we have current/reserve data
 	-- FIX: Don't hide UI just because max is nil - we can derive or estimate it
 	if current == nil and reserve == nil then
+		if DEBUG_AMMO then
+			print("[FPSHUD] ✗ Hiding ammo frame - no current or reserve data")
+		end
 		ammoFrame.Visible = false
 		return
 	end
@@ -313,6 +332,9 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	-- Color based on ammo level
 	-- If max is explicitly 0, treat this as a zero-ammo weapon (e.g., melee) and hide the ammo UI
 	if max == 0 then
+		if DEBUG_AMMO then
+			print("[FPSHUD] ✗ Hiding ammo frame - weapon has max=0 (melee weapon)")
+		end
 		ammoFrame.Visible = false
 		return
 	end
@@ -333,6 +355,11 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reloadLabel.Visible = isReloading and true or false
 	if isReloading then
 		reloadLabel.Text = "RELOADING..."
+	end
+	
+	if DEBUG_AMMO then
+		print(string.format("[FPSHUD] ✓ Ammo display updated - showing %s/%s (max=%s)", 
+			tostring(current or 0), tostring(reserve or 0), tostring(effectiveMax)))
 	end
 end
 
@@ -507,8 +534,18 @@ local function setupBindableConnections()
 		ammoEvent.Parent = bindableFolder
 	end
 	ammoEvent.Event:Connect(function(data)
+		if DEBUG_AMMO then
+			print(string.format("[FPSHUD] AmmoUpdate bindable event received - data type=%s", typeof(data)))
+			if typeof(data) == "table" then
+				print(string.format("[FPSHUD] AmmoUpdate data - current=%s, reserve=%s, max=%s, isReloading=%s",
+					tostring(data.current), tostring(data.reserve), tostring(data.max), tostring(data.isReloading)))
+			end
+		end
+		
 		if typeof(data) == "table" then
 			updateAmmoDisplay(data.current, data.reserve, data.max, data.isReloading)
+		elseif DEBUG_AMMO then
+			print("[FPSHUD] ✗ AmmoUpdate received invalid data type")
 		end
 	end)
 
@@ -590,11 +627,31 @@ end
 -- UPDATE LOOP
 --------------------------------------------------------------------------------
 
+-- Watchdog to detect stale ammo data
+local AMMO_STALE_THRESHOLD = 5.0  -- Seconds before ammo data is considered stale
+local lastStaleWarning = 0
+
 RunService.RenderStepped:Connect(function(deltaTime)
 	-- Smooth crosshair spread animation
 	if crosshairConfig.DynamicCrosshair ~= false then
 		currentCrosshairGap = currentCrosshairGap + (targetCrosshairGap - currentCrosshairGap) * 0.2
 		updateCrosshairPositions()
+	end
+	
+	-- Watchdog: Check if ammo data is stale (only warn once every 10 seconds)
+	-- Only check if ammo frame is actually visible (meaning we have a weapon equipped)
+	if DEBUG_AMMO and ammoFrame.Visible then
+		local now = tick()
+		local timeSinceUpdate = now - lastAmmoUpdate
+		-- Only warn if we have previously received valid ammo data and it's now stale
+		if lastAmmoData and timeSinceUpdate > AMMO_STALE_THRESHOLD and now - lastStaleWarning > 10 then
+			lastStaleWarning = now
+			warn(string.format("[FPSHUD] ⚠ Ammo data is stale (%.1fs since last update). Last data: current=%s, reserve=%s, max=%s",
+				timeSinceUpdate,
+				tostring(lastAmmoData.current),
+				tostring(lastAmmoData.reserve),
+				tostring(lastAmmoData.max)))
+		end
 	end
 end)
 
