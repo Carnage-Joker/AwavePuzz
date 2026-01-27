@@ -81,6 +81,8 @@ function PortalMatchmakingService:setupRemoteEvents()
 	
 	self.remotes.PortalQueueStatus = getOrCreateRemote("PortalQueueStatus")
 	self.remotes.PortalLeaveQueue = getOrCreateRemote("PortalLeaveQueue")
+	self.remotes.PortalQueueJoined = getOrCreateRemote("PortalQueueJoined")
+	self.remotes.PortalQueueLeft = getOrCreateRemote("PortalQueueLeft")
 	
 	-- Hook client requests to leave queue
 	self.remotes.PortalLeaveQueue.OnServerEvent:Connect(function(player)
@@ -303,6 +305,14 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 	print(string.format("[PortalMatchmakingService] Player %s joined portal %s queue (%d/%d)", 
 		player.Name, portalId, #portal.queue, self.maxPlayersPerMatch))
 	
+	-- Send join confirmation to player
+	self.remotes.PortalQueueJoined:FireClient(player, {
+		portalId = portalId,
+		mapId = portal.config.mapId,
+		queueCount = #portal.queue,
+		maxPlayers = self.maxPlayersPerMatch
+	})
+	
 	-- Broadcast queue update
 	self:broadcastQueueStatus(portalId)
 	
@@ -339,6 +349,13 @@ function PortalMatchmakingService:removePlayerFromQueue(player, portalId)
 	
 	-- Remove player queue mapping
 	self.playerQueues[player.UserId] = nil
+	
+	-- Send leave notification to player
+	if player and player.Parent then
+		self.remotes.PortalQueueLeft:FireClient(player, {
+			portalId = portalId
+		})
+	end
 	
 	-- Broadcast update
 	self:broadcastQueueStatus(portalId)
