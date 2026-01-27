@@ -36,6 +36,12 @@ local SpectatorManager = require(script.Parent.SpectatorManager)
 local PlayerSpawnManager = require(script.Parent.PlayerSpawnManager)
 local LobbySetup = require(script.Parent.LobbySetup)
 
+-- Portal matchmaking (conditional load based on feature flag)
+local PortalMatchmakingService
+if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
+	PortalMatchmakingService = require(script.Parent.PortalMatchmakingService)
+end
+
 local GameManager = {}
 GameManager.__index = GameManager
 
@@ -101,6 +107,14 @@ function GameManager.new(allianceService)
 	self.lobbySetup = LobbySetup.new()
 	self.lobbySetup:createLobby()
 
+	-- Portal matchmaking service (if enabled)
+	if GameConfig.USE_PORTAL_MATCHMAKING and PortalMatchmakingService then
+		self.portalMatchmakingService = PortalMatchmakingService.new(self)
+		print("[GameManager] Portal matchmaking service initialized")
+	else
+		self.portalMatchmakingService = nil
+	end
+
 	self.playerManager:setWeaponService(self.weaponService)
 
 	-- Achievement tracking (will be initialized later to avoid circular dependency)
@@ -149,6 +163,11 @@ function GameManager.new(allianceService)
 		self.playerSpawnManager:onMapLoaded()
 	else
 		self.spawner:loadSpawnPoints()
+	end
+
+	-- Discover portals if portal matchmaking is enabled
+	if self.portalMatchmakingService then
+		self.portalMatchmakingService:discoverPortals()
 	end
 
 	-- ✅ REMOVED: Do NOT call _hookSpectatorRemotes()
@@ -519,6 +538,11 @@ function GameManager:onPlayerRemoving(player)
 	self.spectatorManager:onPlayerLeave(player)
 	self.playerSpawnManager:onPlayerRemoving(player)
 
+	-- Portal matchmaking cleanup
+	if self.portalMatchmakingService then
+		self.portalMatchmakingService:onPlayerDisconnect(player)
+	end
+
 	-- Cleanup death connections to prevent memory leaks
 	if self._deathConnections and self._deathConnections[player.UserId] then
 		for _, connection in ipairs(self._deathConnections[player.UserId]) do
@@ -661,6 +685,81 @@ function GameManager:startLobby()
 
 	self.lobbyManager:startVoting()
 
+	return true
+end
+
+-- Portal matchmaking: Start a match for a specific set of players on a specific map
+-- Called by PortalMatchmakingService when a portal queue is ready
+function GameManager:startMatch(players, mapId, matchId)
+	if not players or #players == 0 then
+		warn("[GameManager] startMatch: No players provided")
+		return false
+	end
+	
+	if not mapId then
+		warn("[GameManager] startMatch: No mapId provided")
+		return false
+	end
+	
+	if not self.serverEnabled then
+		print("[GameManager] startMatch: Cannot start match - server is disabled")
+		return false
+	end
+	
+	print(string.format("[GameManager] Starting match for %d players on map %s (matchId: %s)", 
+		#players, mapId, tostring(matchId)))
+	
+	-- Store matchId for cleanup
+	self._currentMatchId = matchId
+	
+	-- Store match participants for round logic to avoid non-participants affecting victory/defeat
+	self._matchParticipants = {}
+	for _, player in ipairs(players) do
+		if player and player.UserId then
+			self._matchParticipants[player.UserId] = true
+		end
+	end
+	
+	-- Initialize match state BEFORE spawning players to avoid resetting their spawn
+	self:resetForNewRound()
+	
+	-- Load the map
+	if GameConfig.ENABLE_MULTI_MAP then
+		-- Only clean up the lobby when portal matchmaking is not in use.
+		-- With portal matchmaking enabled, the lobby portals are the primary join mechanism
+		-- for late joiners/overflow players, so destroying them here would break queueing.
+		if self.lobbySetup and not (GameConfig.USE_PORTAL_MATCHMAKING) then
+			self.lobbySetup:cleanup()
+		end
+		
+		local mapLoaded = self.mapManager:load(mapId)
+		if not mapLoaded then
+			warn(string.format("[GameManager] startMatch: Failed to load map %s", tostring(mapId)))
+			return false
+		end
+		
+		self:configureSpawnersForMap()
+		self.playerSpawnManager:onMapLoaded()
+		
+		-- Spawn only the match players on the map
+		for _, player in ipairs(players) do
+			if player and player.Parent then
+				self.playerSpawnManager:spawnPlayerOnMap(player)
+			end
+		end
+		
+		print(string.format("[GameManager] Spawned %d players on map for match", #players))
+	end
+	
+	-- Start game countdown
+	self:setState(GameManager.States.COUNTDOWN)
+	self.stateTimer = GameConfig.ROUND_COUNTDOWN_TIME or 5
+	
+	if GameConfig.ENABLE_MULTI_MAP then
+		self:broadcastMap()
+	end
+	
+	print("[GameManager] Match started successfully")
 	return true
 end
 
@@ -808,6 +907,12 @@ function GameManager:_cleanupRoundResources()
 	end
 	if self.itemSpawner and self.itemSpawner.clearAllItems then
 		self.itemSpawner:clearAllItems()
+	end
+	
+	-- Clean up portal matches if using portal matchmaking
+	if self.portalMatchmakingService and self._currentMatchId then
+		self.portalMatchmakingService:endMatch(self._currentMatchId)
+		self._currentMatchId = nil
 	end
 end
 
@@ -1125,7 +1230,8 @@ function GameManager:update(deltaTime)
 
 	elseif self.currentState == GameManager.States.WAITING then
 		local playerCount = #Players:GetPlayers()
-		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+		-- Only auto-start lobby if not using portal matchmaking
+		if not GameConfig.USE_PORTAL_MATCHMAKING and playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
 			self:startLobby()
 		end
 		self.resourceSpawner:update(deltaTime)
@@ -1139,6 +1245,11 @@ function GameManager:update(deltaTime)
 
 	else
 		self.resourceSpawner:update(deltaTime)
+	end
+	
+	-- Update portal matchmaking service (if enabled)
+	if self.portalMatchmakingService then
+		self.portalMatchmakingService:update(deltaTime)
 	end
 end
 

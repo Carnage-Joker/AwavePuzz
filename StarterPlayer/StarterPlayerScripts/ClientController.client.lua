@@ -349,6 +349,11 @@ function ClientController.initializeUI()
 		"TouchControlsUI"
 	}
 	
+	-- Only load PortalQueueUI if portal matchmaking is enabled
+	if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
+		table.insert(uiModules, "PortalQueueUI")
+	end
+	
 	for _, moduleName in ipairs(uiModules) do
 		local uiModule = uiFolder:FindFirstChild(moduleName)
 		if uiModule then
