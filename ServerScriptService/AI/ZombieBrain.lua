@@ -37,6 +37,15 @@ local SpitterController = require(script.Parent.SpitterController)
 local ZombieBrain = {}
 ZombieBrain.__index = ZombieBrain
 
+-- LOD (Level of Detail) Configuration
+local LOD_CONFIG = {
+	DISTANCE_LOW = 100,    -- > 100 studs: LOW detail (simple movement)
+	DISTANCE_MEDIUM = 50,  -- 50-100 studs: MEDIUM detail (basic pathfinding)
+	-- < 50 studs: HIGH detail (full AI with surround system)
+	LOW_COOLDOWN_MULTIPLIER = 3,  -- LOW LOD updates 3x slower
+	LOW_BASE_NEAR_DISTANCE = 20  -- Distance at which LOW LOD zombies can still attack base
+}
+
 function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targetingService, surroundService, bossAuraService, waveNumber)
 	if not zombieModel or not zombieModel:IsA("Model") then
 		return nil
@@ -164,6 +173,40 @@ function ZombieBrain:playAttackAnimation()
 	end
 end
 
+-- Determine Level of Detail based on distance to nearest player
+-- Returns: "HIGH", "MEDIUM", or "LOW"
+function ZombieBrain:determineLOD()
+	-- Validate rootPart exists
+	if not self.rootPart then
+		return "HIGH" -- Default to full AI if we can't calculate distance
+	end
+	
+	local closestPlayerDistance = math.huge
+	
+	-- Check distance to all players
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+			local distance = (player.Character.HumanoidRootPart.Position - self.rootPart.Position).Magnitude
+			closestPlayerDistance = math.min(closestPlayerDistance, distance)
+		end
+	end
+	
+	-- If no valid players found, use HIGH LOD to ensure zombies remain active
+	-- (they'll target base via fallback mechanisms)
+	if closestPlayerDistance == math.huge then
+		return "HIGH"
+	end
+	
+	-- Use module-level LOD configuration constants
+	if closestPlayerDistance > LOD_CONFIG.DISTANCE_LOW then
+		return "LOW" -- Simple movement toward base
+	elseif closestPlayerDistance > LOD_CONFIG.DISTANCE_MEDIUM then
+		return "MEDIUM" -- Basic pathfinding
+	else
+		return "HIGH" -- Full AI with surround system
+	end
+end
+
 -- Get all nearby zombies for separation steering
 function ZombieBrain:getNearbyZombies()
 	local nearby = {}
@@ -181,6 +224,28 @@ function ZombieBrain:getNearbyZombies()
 	end
 
 	return nearby
+end
+
+-- Get base position for LOW LOD zombies
+-- Uses same logic as TargetingService for consistency
+function ZombieBrain:getBasePosition()
+	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
+	if not baseModel then
+		return nil
+	end
+
+	local hitbox = baseModel:FindFirstChild("HitBox", true)
+	if hitbox and hitbox:IsA("BasePart") then
+		return hitbox.Position
+	end
+
+	if baseModel:IsA("Model") then
+		return baseModel:GetPivot().Position
+	elseif baseModel:IsA("BasePart") then
+		return baseModel.Position
+	end
+
+	return nil
 end
 
 -- Get target using tactical targeting service
@@ -386,6 +451,42 @@ function ZombieBrain:update(deltaTime)
 		end
 	end
 
+	-- Determine Level of Detail based on distance to players
+	local lod = self:determineLOD()
+	
+	-- LOW LOD: Skip most AI updates for distant zombies
+	if lod == "LOW" then
+		-- Check if zombie is close to base - allow full AI in that case
+		local basePos = self:getBasePosition()
+		local isNearBase = false
+		if basePos and self.rootPart then
+			local distanceToBase = (self.rootPart.Position - basePos).Magnitude
+			if distanceToBase <= LOD_CONFIG.LOW_BASE_NEAR_DISTANCE then
+				isNearBase = true
+			end
+		end
+		
+		-- Only use simplified LOW LOD behavior when far from base
+		if not isNearBase then
+			-- Only do basic movement toward base every few seconds
+			if self.moveCooldown <= 0 then
+				-- Update less frequently using config multiplier
+				self.moveCooldown = self.repathInterval * LOD_CONFIG.LOW_COOLDOWN_MULTIPLIER
+				if basePos then
+					self.humanoid:MoveTo(basePos)
+					self.lastMoveTarget = basePos
+				end
+			else
+				self.moveCooldown = self.moveCooldown - deltaTime
+			end
+			return -- Skip rest of AI processing while far from base
+		end
+		-- If near base, continue with full AI to allow attacks
+	end
+	
+	-- MEDIUM LOD: Basic pathfinding only, no advanced behaviors
+	local useMediumLOD = (lod == "MEDIUM")
+	
 	-- Periodic LOS cache cleanup to prevent memory leak
 	if tick() - self.losCacheTime > self.losCacheLifetime then
 		self.losCache = {}
@@ -397,11 +498,14 @@ function ZombieBrain:update(deltaTime)
 		self.attackCooldown = math.max(0, self.attackCooldown - deltaTime)
 	end
 
-	-- Handle Screamer behavior
-	self:handleScreamerBehavior()
+	-- Skip advanced behaviors for MEDIUM LOD
+	if not useMediumLOD then
+		-- Handle Screamer behavior (HIGH LOD only)
+		self:handleScreamerBehavior()
+	end
 
-	-- Handle Spitter behavior (ranged)
-	if self.spitterController then
+	-- Handle Spitter behavior (ranged) - skip for MEDIUM LOD
+	if self.spitterController and not useMediumLOD then
 		local targetPos, targetType, targetPlayer = self:selectBestTarget()
 		if targetPos then
 			local desiredPos = self.spitterController:update(deltaTime, targetPos, targetType, targetPlayer)
@@ -440,27 +544,43 @@ function ZombieBrain:update(deltaTime)
 				self.currentTargetType = targetType
 				self.currentTargetPlayer = targetPlayer
 
-				-- Get target ID for slot assignment
-				local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
+				local finalTarget = targetPos
+				
+				-- Only use surround system for HIGH LOD
+				if not useMediumLOD then
+					-- Get target ID for slot assignment
+					local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
 
-				-- Get slot position with surround system
-				local slotPos = self:getSlotPosition(targetPos, targetId)
+					-- Get slot position with surround system
+					local slotPos = self:getSlotPosition(targetPos, targetId)
 
-				-- Apply separation steering if service available
-				local finalTarget = slotPos
-				if self.surroundService then
-					local nearbyZombies = self:getNearbyZombies()
-					finalTarget = self.surroundService:getSteeringTarget(
-						self.zombieModel,
-						self.rootPart.Position,
-						slotPos,
-						nearbyZombies
-					)
+					-- Validate slotPos before using (could be nil if target destroyed)
+					if slotPos then
+						finalTarget = slotPos
+						-- Apply separation steering if service available
+						if self.surroundService then
+							local nearbyZombies = self:getNearbyZombies()
+							local steeringTarget = self.surroundService:getSteeringTarget(
+								self.zombieModel,
+								self.rootPart.Position,
+								slotPos,
+								nearbyZombies
+							)
+							-- Validate steering target before using
+							if steeringTarget then
+								finalTarget = steeringTarget
+							end
+							-- If steering target is nil, finalTarget remains slotPos
+						end
+					end
+					-- If slotPos is nil, finalTarget remains targetPos (fallback)
 				end
 
 				-- FIX: Issue new move command
-				self.humanoid:MoveTo(finalTarget)
-				self.lastMoveTarget = finalTarget
+				if finalTarget then
+					self.humanoid:MoveTo(finalTarget)
+					self.lastMoveTarget = finalTarget
+				end
 			end
 		end
 	else

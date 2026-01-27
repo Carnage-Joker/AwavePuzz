@@ -37,6 +37,12 @@ end
 
 -- Calculate slot position around a target
 local function calculateSlotPosition(targetPos, ringIndex, slotIndex, totalSlots)
+	-- Validate target position exists (map/base may have been destroyed)
+	if not targetPos then
+		warn("[SurroundService] Invalid target position (target may have been destroyed)")
+		return nil
+	end
+	
 	local radius
 	if ringIndex == 1 then
 		radius = CONFIG.INNER_RING_RADIUS
@@ -128,7 +134,9 @@ function SurroundService:findAvailableSlot(targetPos, targetId, preferRing, pref
 
 			if self:isSlotAvailable(slotKey, currentTime) then
 				local slotPos = calculateSlotPosition(targetPos, ringIndex, slotIndex, totalSlots)
-				return slotPos, slotKey, ringIndex, slotIndex
+				if slotPos then
+					return slotPos, slotKey, ringIndex, slotIndex
+				end
 			end
 		end
 	end
@@ -136,6 +144,10 @@ function SurroundService:findAvailableSlot(targetPos, targetId, preferRing, pref
 	-- No slots available, return outer ring random position
 	local randomSlot = math.random(1, CONFIG.SLOTS_PER_RING)
 	local fallbackPos = calculateSlotPosition(targetPos, 3, randomSlot, CONFIG.SLOTS_PER_RING)
+	if not fallbackPos then
+		-- Target position invalid, cannot calculate slots
+		return nil, nil, nil, nil
+	end
 	local fallbackKey = generateSlotKey(targetId, 3, randomSlot)
 	return fallbackPos, fallbackKey, 3, randomSlot
 end
