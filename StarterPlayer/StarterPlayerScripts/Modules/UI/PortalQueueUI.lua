@@ -154,7 +154,8 @@ function PortalQueueUI.hide()
 	})
 	tween:Play()
 	
-	tween.Completed:Connect(function()
+	task.spawn(function()
+		tween.Completed:Wait()
 		screenGui.Enabled = false
 	end)
 end
@@ -196,17 +197,29 @@ end
 -- Handle portal queue status updates from server
 if portalQueueStatus then
 	portalQueueStatus.OnClientEvent:Connect(function(status)
+		if not status then
+			return
+		end
+
+		-- Determine if this status applies to the portal we're currently queued for
+		local isForCurrentQueuedPortal = isInQueue and status.portalId == currentPortalId
+
 		-- Check if this is a status update for all portals or a specific message for us
 		if status.status == "full" or status.status == "locked" then
-			-- These are specific to the player trying to join
-			if status.message then
+			-- For players already in the queue for this portal, still update the UI
+			if isForCurrentQueuedPortal then
+				PortalQueueUI.updateStatus(status)
+			end
+
+			-- For join-rejection style messages (not currently queued), show the one-off message
+			if status.message and not isForCurrentQueuedPortal then
 				-- Show temporary message (could enhance with a separate notification system)
 				print("[PortalQueue]", status.message)
 			end
 		else
 			-- This is a general status update
 			-- If we're in queue for this portal, update UI
-			if isInQueue and status.portalId == currentPortalId then
+			if isForCurrentQueuedPortal then
 				PortalQueueUI.updateStatus(status)
 			end
 		end
@@ -243,8 +256,5 @@ end
 function PortalQueueUI.initialize()
 	print("[PortalQueueUI] Initialized")
 end
-
--- Call initialize
-PortalQueueUI.initialize()
 
 return PortalQueueUI

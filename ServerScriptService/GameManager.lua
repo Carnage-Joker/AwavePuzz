@@ -712,9 +712,23 @@ function GameManager:startMatch(players, mapId, matchId)
 	-- Store matchId for cleanup
 	self._currentMatchId = matchId
 	
+	-- Store match participants for round logic to avoid non-participants affecting victory/defeat
+	self._matchParticipants = {}
+	for _, player in ipairs(players) do
+		if player and player.UserId then
+			self._matchParticipants[player.UserId] = true
+		end
+	end
+	
+	-- Initialize match state BEFORE spawning players to avoid resetting their spawn
+	self:resetForNewRound()
+	
 	-- Load the map
 	if GameConfig.ENABLE_MULTI_MAP then
-		if self.lobbySetup then
+		-- Only clean up the lobby when portal matchmaking is not in use.
+		-- With portal matchmaking enabled, the lobby portals are the primary join mechanism
+		-- for late joiners/overflow players, so destroying them here would break queueing.
+		if self.lobbySetup and not (GameConfig.USE_PORTAL_MATCHMAKING) then
 			self.lobbySetup:cleanup()
 		end
 		
@@ -736,9 +750,6 @@ function GameManager:startMatch(players, mapId, matchId)
 		
 		print(string.format("[GameManager] Spawned %d players on map for match", #players))
 	end
-	
-	-- Initialize match state
-	self:resetForNewRound()
 	
 	-- Start game countdown
 	self:setState(GameManager.States.COUNTDOWN)

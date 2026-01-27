@@ -138,11 +138,23 @@ function LobbySetup:createPortals()
 	}
 	
 	-- Create portals for each map
-	local portalTypes = {
-		{ id = "ResearchOutpost", mapId = "ResearchOutpost", name = "Research Outpost" },
-		{ id = "Random", mapId = "Random", name = "Random Map" },
-		{ id = "Village", mapId = "Village", name = "Village" },
-	}
+	local portalTypes
+	
+	-- Prefer portal definitions from PortalConfig if available
+	if PortalConfig then
+		if type(PortalConfig.getAllPortalTypes) == "function" then
+			portalTypes = PortalConfig.getAllPortalTypes()
+		end
+	end
+	
+	-- Fallback to built-in defaults if config does not provide a usable list
+	if type(portalTypes) ~= "table" or #portalTypes == 0 then
+		portalTypes = {
+			{ id = "ResearchOutpost", mapId = "ResearchOutpost", name = "Research Outpost" },
+			{ id = "Random", mapId = "Random", name = "Random Map" },
+			{ id = "Village", mapId = "Village", name = "Village" },
+		}
+	end
 	
 	for i, portalInfo in ipairs(portalTypes) do
 		if portalPositions[i] then
@@ -190,8 +202,14 @@ function LobbySetup:createPortal(portalId, mapId, displayName, position)
 	-- Set portal attributes
 	portal:SetAttribute("PortalId", portalId)
 	portal:SetAttribute("MapId", mapId)
-	portal:SetAttribute("MinPlayers", 1)
-	portal:SetAttribute("CountdownSeconds", 10)
+	
+	-- Use shared matchmaking defaults from GameConfig, with safe fallbacks
+	local matchmakingConfig = GameConfig and GameConfig.PORTAL_MATCHMAKING
+	local minPlayers = (matchmakingConfig and matchmakingConfig.DEFAULT_MIN_PLAYERS) or 1
+	local countdownSeconds = (matchmakingConfig and matchmakingConfig.DEFAULT_COUNTDOWN_TIME) or 10
+	
+	portal:SetAttribute("MinPlayers", minPlayers)
+	portal:SetAttribute("CountdownSeconds", countdownSeconds)
 	
 	-- Add billboard GUI for queue status
 	local billboard = Instance.new("BillboardGui")

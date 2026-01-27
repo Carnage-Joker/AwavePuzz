@@ -13,7 +13,6 @@ end
 
 local GameConfig = require(Shared:WaitForChild("GameConfig", 5))
 local MapConfig = require(Shared:WaitForChild("MapConfig", 5))
-local PortalConfig = require(Shared:WaitForChild("PortalConfig", 5))
 
 local MatchRegistry = require(script.Parent:WaitForChild("MatchRegistry", 5))
 
@@ -50,10 +49,9 @@ function PortalMatchmakingService.new(gameManager)
 	self.countdownCancelThreshold = pmConfig.COUNTDOWN_CANCEL_THRESHOLD
 	self.postLaunchCooldown = pmConfig.POST_LAUNCH_COOLDOWN
 	self.touchDebounceTime = pmConfig.TOUCH_DEBOUNCE_TIME
-	self.queueUpdateInterval = pmConfig.QUEUE_UPDATE_INTERVAL
 	
-	-- Last queue broadcast time per portal
-	self.lastQueueBroadcast = {}
+	-- Cleanup accumulator for throttled cleanup
+	self._cleanupAccumulator = 0
 	
 	print("[PortalMatchmakingService] Initialized")
 	
@@ -61,28 +59,15 @@ function PortalMatchmakingService.new(gameManager)
 end
 
 function PortalMatchmakingService:setupRemoteEvents()
-	local remoteFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not remoteFolder then
-		remoteFolder = Instance.new("Folder")
-		remoteFolder.Name = "RemoteEvents"
-		remoteFolder.Parent = ReplicatedStorage
-	end
+	-- Use RemoteEventUtil for consistency with the rest of the codebase
+	local RemoteEventUtil = require(Shared:WaitForChild("RemoteEventUtil", 5))
 	
-	-- Create or get remote events
-	local function getOrCreateRemote(name)
-		local remote = remoteFolder:FindFirstChild(name)
-		if not remote then
-			remote = Instance.new("RemoteEvent")
-			remote.Name = name
-			remote.Parent = remoteFolder
-		end
-		return remote
-	end
-	
-	self.remotes.PortalQueueStatus = getOrCreateRemote("PortalQueueStatus")
-	self.remotes.PortalLeaveQueue = getOrCreateRemote("PortalLeaveQueue")
-	self.remotes.PortalQueueJoined = getOrCreateRemote("PortalQueueJoined")
-	self.remotes.PortalQueueLeft = getOrCreateRemote("PortalQueueLeft")
+	self.remotes = RemoteEventUtil.getOrCreateEvents({
+		"PortalQueueStatus",
+		"PortalLeaveQueue",
+		"PortalQueueJoined",
+		"PortalQueueLeft"
+	})
 	
 	-- Hook client requests to leave queue
 	self.remotes.PortalLeaveQueue.OnServerEvent:Connect(function(player)
@@ -184,7 +169,7 @@ function PortalMatchmakingService:setupPortalTouch(portalPart, portalId)
 		return
 	end
 	
-	-- Connect touch event
+	-- Connect touch event for joining
 	touchPart.Touched:Connect(function(hit)
 		local player = Players:GetPlayerFromCharacter(hit.Parent)
 		if player then
@@ -192,16 +177,45 @@ function PortalMatchmakingService:setupPortalTouch(portalPart, portalId)
 		end
 	end)
 	
+	-- Connect touch ended event for leaving portal region
+	touchPart.TouchEnded:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		if player then
+			self:onPortalTouchEnded(portalId, player)
+		end
+	end)
+	
 	print(string.format("[PortalMatchmakingService] Touch detection setup for portal %s", portalId))
+end
+
+-- Handle portal touch ended (player leaving portal region)
+function PortalMatchmakingService:onPortalTouchEnded(portalId, player)
+	if not player or not player.Parent then return end
+	
+	-- Check if player is in this portal's queue
+	local queueInfo = self.playerQueues[player.UserId]
+	if queueInfo and queueInfo.portalId == portalId then
+		-- Check if portal countdown/lock allows leaving
+		local portal = self.portals[portalId]
+		if portal and not portal.locked and portal.countdown <= 0 then
+			-- Allow leaving if not in countdown or locked
+			self:removePlayerFromQueue(player, portalId)
+		end
+	end
 end
 
 -- Setup visual indicator for portal (BillboardGui)
 function PortalMatchmakingService:setupPortalIndicator(portalPart, portalId)
-	-- Find or create BillboardGui
-	local billboard = portalPart:FindFirstChild("QueueIndicator")
+	-- Find existing BillboardGui (search descendants for Model-based portals)
+	local billboard = portalPart:FindFirstChild("QueueIndicator", true)
 	if billboard and billboard:IsA("BillboardGui") then
 		-- Already exists, store reference
 		self.portals[portalId].indicator = billboard
+		-- Find the StatusLabel within
+		local statusLabel = billboard:FindFirstChild("StatusLabel", true)
+		if statusLabel and statusLabel:IsA("TextLabel") then
+			self.portals[portalId].indicatorLabel = statusLabel
+		end
 		return
 	end
 	
@@ -284,16 +298,8 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		return false
 	end
 	
-	-- Check if queue is full
-	if #portal.queue >= self.maxPlayersPerMatch then
-		print(string.format("[PortalMatchmakingService] Portal %s queue is full", portalId))
-		self.remotes.PortalQueueStatus:FireClient(player, {
-			portalId = portalId,
-			status = "full",
-			message = "Portal is full!"
-		})
-		return false
-	end
+	-- Allow queue to exceed maxPlayersPerMatch for overflow handling
+	-- Extra players will form subsequent matches after the first 8 launch
 	
 	-- Add to queue
 	table.insert(portal.queue, player)
@@ -408,10 +414,11 @@ function PortalMatchmakingService:checkCancelCountdown(portalId)
 	-- Only cancel if countdown is active
 	if portal.countdown <= 0 then return end
 	
-	-- Cancel if queue drops below threshold
-	if #portal.queue < self.countdownCancelThreshold then
-		print(string.format("[PortalMatchmakingService] Cancelling countdown for portal %s (insufficient players)", 
-			portalId))
+	-- Cancel if queue drops below the portal's minimum players requirement
+	local minRequired = math.max(portal.config.minPlayers, self.countdownCancelThreshold)
+	if #portal.queue < minRequired then
+		print(string.format("[PortalMatchmakingService] Cancelling countdown for portal %s (queue %d < required %d)", 
+			portalId, #portal.queue, minRequired))
 		
 		portal.countdown = 0
 		
@@ -476,15 +483,6 @@ function PortalMatchmakingService:launchMatch(portalId)
 		end
 	end
 	
-	-- Remove these players from queue
-	for i = numToTake, 1, -1 do
-		local player = portal.queue[i]
-		if player then
-			self.playerQueues[player.UserId] = nil
-		end
-		table.remove(portal.queue, i)
-	end
-	
 	-- Determine map
 	local mapId = portal.config.mapId
 	if mapId == "Random" then
@@ -522,15 +520,36 @@ function PortalMatchmakingService:launchMatch(portalId)
 	end
 	
 	-- Start match via GameManager
+	local success = false
 	if self.gameManager and self.gameManager.startMatch then
-		local success = self.gameManager:startMatch(matchPlayers, mapId, matchId)
+		success = self.gameManager:startMatch(matchPlayers, mapId, matchId)
 		if not success then
 			warn("[PortalMatchmakingService] Failed to start match")
 			self.matchRegistry:endMatch(matchId)
+			portal.locked = false
+			return
 		end
 	else
 		warn("[PortalMatchmakingService] GameManager does not have startMatch method")
 		self.matchRegistry:endMatch(matchId)
+		portal.locked = false
+		return
+	end
+	
+	-- Only dequeue players after successful match start
+	-- Remove these players from queue and notify them
+	for i = numToTake, 1, -1 do
+		local player = portal.queue[i]
+		if player then
+			self.playerQueues[player.UserId] = nil
+			-- Notify player they've left the queue (match is starting)
+			if player.Parent then
+				self.remotes.PortalQueueLeft:FireClient(player, {
+					portalId = portalId
+				})
+			end
+		end
+		table.remove(portal.queue, i)
 	end
 	
 	-- Broadcast portal status
@@ -598,11 +617,15 @@ end
 
 -- Update function (call from game loop if needed)
 function PortalMatchmakingService:update(dt)
-	-- Currently countdown runs in separate tasks
-	-- This could be used for periodic cleanup or status broadcasts
-	
-	-- Periodic match cleanup
-	self.matchRegistry:cleanupInactiveMatches()
+	-- Throttled periodic match cleanup to avoid per-frame O(n) scans
+	-- Accumulate elapsed time and only run cleanup every few seconds
+	self._cleanupAccumulator = self._cleanupAccumulator + (dt or 0)
+
+	local CLEANUP_INTERVAL = 5 -- seconds between cleanup passes
+	if self._cleanupAccumulator >= CLEANUP_INTERVAL then
+		self._cleanupAccumulator = 0
+		self.matchRegistry:cleanupInactiveMatches()
+	end
 end
 
 -- Handle player disconnect
