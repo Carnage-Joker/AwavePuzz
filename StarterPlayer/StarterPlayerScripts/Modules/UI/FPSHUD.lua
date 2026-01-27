@@ -24,6 +24,10 @@ UIScaleManager.initialize()
 -- Constants
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
 
+-- Track last ammo update for debugging
+local lastAmmoUpdate = 0
+local lastAmmoData = nil
+
 --------------------------------------------------------------------------------
 -- UI CREATION
 --------------------------------------------------------------------------------
@@ -301,6 +305,10 @@ reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
+	-- Track update time for debugging
+	lastAmmoUpdate = tick()
+	lastAmmoData = {current = current, reserve = reserve, max = max, isReloading = isReloading}
+	
 	if DEBUG_AMMO then
 		print(string.format("[FPSHUD] updateAmmoDisplay called - current=%s, reserve=%s, max=%s, isReloading=%s", 
 			tostring(current), tostring(reserve), tostring(max), tostring(isReloading)))
@@ -619,11 +627,28 @@ end
 -- UPDATE LOOP
 --------------------------------------------------------------------------------
 
+-- Watchdog to detect stale ammo data
+local AMMO_STALE_THRESHOLD = 5.0  -- Seconds before ammo data is considered stale
+local lastStaleWarning = 0
+
 RunService.RenderStepped:Connect(function(deltaTime)
 	-- Smooth crosshair spread animation
 	if crosshairConfig.DynamicCrosshair ~= false then
 		currentCrosshairGap = currentCrosshairGap + (targetCrosshairGap - currentCrosshairGap) * 0.2
 		updateCrosshairPositions()
+	end
+	
+	-- Watchdog: Check if ammo data is stale (only warn once every 10 seconds)
+	if DEBUG_AMMO then
+		local timeSinceUpdate = tick() - lastAmmoUpdate
+		if timeSinceUpdate > AMMO_STALE_THRESHOLD and tick() - lastStaleWarning > 10 then
+			lastStaleWarning = tick()
+			warn(string.format("[FPSHUD] ⚠ Ammo data is stale (%.1fs since last update). Last data: current=%s, reserve=%s, max=%s",
+				timeSinceUpdate,
+				tostring(lastAmmoData and lastAmmoData.current),
+				tostring(lastAmmoData and lastAmmoData.reserve),
+				tostring(lastAmmoData and lastAmmoData.max)))
+		end
 	end
 end)
 
