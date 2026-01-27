@@ -684,6 +684,9 @@ function GameManager:startMatch(players, mapId, matchId)
 	print(string.format("[GameManager] Starting match for %d players on map %s (matchId: %s)", 
 		#players, mapId, tostring(matchId)))
 	
+	-- Store matchId for cleanup
+	self._currentMatchId = matchId
+	
 	-- Load the map
 	if GameConfig.ENABLE_MULTI_MAP then
 		if self.lobbySetup then
@@ -868,6 +871,12 @@ function GameManager:_cleanupRoundResources()
 	end
 	if self.itemSpawner and self.itemSpawner.clearAllItems then
 		self.itemSpawner:clearAllItems()
+	end
+	
+	-- Clean up portal matches if using portal matchmaking
+	if self.portalMatchmakingService and self._currentMatchId then
+		self.portalMatchmakingService:endMatch(self._currentMatchId)
+		self._currentMatchId = nil
 	end
 end
 

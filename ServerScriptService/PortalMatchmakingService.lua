@@ -631,4 +631,38 @@ function PortalMatchmakingService:getAllPortalsInfo()
 	return info
 end
 
+-- End a match and return players to lobby
+-- This should be called by GameManager when a match ends
+function PortalMatchmakingService:endMatch(matchId)
+	if not matchId then
+		warn("[PortalMatchmakingService] endMatch: No matchId provided")
+		return
+	end
+	
+	-- Get match data before ending
+	local match = self.matchRegistry:getMatch(matchId)
+	if not match then
+		warn(string.format("[PortalMatchmakingService] endMatch: Match %s not found", tostring(matchId)))
+		return
+	end
+	
+	local players = self.matchRegistry:getMatchPlayers(matchId)
+	
+	print(string.format("[PortalMatchmakingService] Ending match %s with %d players", matchId, #players))
+	
+	-- Return players to lobby
+	if self.gameManager and self.gameManager.playerSpawnManager then
+		for _, player in ipairs(players) do
+			if player and player.Parent then
+				self.gameManager.playerSpawnManager:keepPlayerInLobby(player)
+			end
+		end
+	end
+	
+	-- End match in registry
+	self.matchRegistry:endMatch(matchId)
+	
+	print(string.format("[PortalMatchmakingService] Match %s ended successfully", matchId))
+end
+
 return PortalMatchmakingService
