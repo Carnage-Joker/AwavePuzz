@@ -410,7 +410,7 @@ function GameManager:_hookPlayerDeath(player)
 				-- Send weapon loadout update
 				local equippedWeapon = self.playerManager:getEquippedWeapon(player)
 				if equippedWeapon then
-					warn(string.format("[GameManager] Syncing weapons for %s on respawn - equipped: %s", player.Name, equippedWeapon))
+					print(string.format("[GameManager] Syncing weapons for %s on respawn - equipped: %s", player.Name, equippedWeapon))
 					self.playerManager:sendWeaponLoadout(player)
 					
 					-- Send ammo update for equipped weapon
@@ -418,7 +418,7 @@ function GameManager:_hookPlayerDeath(player)
 						-- Ensure ammo is initialized for this weapon
 						local ammo = self.fpsWeaponService:getAmmo(player, equippedWeapon)
 						if not ammo then
-							warn(string.format("[GameManager] Initializing ammo for %s weapon %s on respawn", player.Name, equippedWeapon))
+							print(string.format("[GameManager] Initializing ammo for %s weapon %s on respawn", player.Name, equippedWeapon))
 							self.fpsWeaponService:initializeWeaponAmmo(player, equippedWeapon)
 						else
 							-- Ammo already initialized; just send an update to sync client state
