@@ -5,7 +5,7 @@
 -- Handles ammo tracking, reload validation, and (optional) hit multipliers
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -86,6 +86,14 @@ function FPSWeaponService:removePlayer(player)
 end
 
 function FPSWeaponService:initializeWeaponAmmo(player, weaponId)
+	-- Validate player is still connected
+	if not player or not player.Parent then
+		if DEBUG_AMMO then
+			warn("[FPSWeaponService] Cannot initialize ammo: player is disconnected")
+		end
+		return
+	end
+	
 	local userId = player.UserId
 	self.playerAmmo[userId] = self.playerAmmo[userId] or {}
 
@@ -237,6 +245,14 @@ function FPSWeaponService:handleReload(player, payload)
 end
 
 function FPSWeaponService:sendAmmoUpdate(player, weaponId)
+	-- Validate player is still connected
+	if not player or not player.Parent then
+		if DEBUG_AMMO then
+			warn("[FPSWeaponService] Cannot send ammo update: player is disconnected")
+		end
+		return
+	end
+	
 	local ammo = self:getAmmo(player, weaponId)
 	if not ammo then 
 		if DEBUG_AMMO then

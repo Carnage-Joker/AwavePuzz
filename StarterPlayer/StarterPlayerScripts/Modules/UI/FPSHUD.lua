@@ -3,7 +3,7 @@
 -- Integrates with FPSWeaponController for real-time feedback
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -639,16 +639,18 @@ RunService.RenderStepped:Connect(function(deltaTime)
 	end
 	
 	-- Watchdog: Check if ammo data is stale (only warn once every 10 seconds)
-	if DEBUG_AMMO then
+	-- Only check if ammo frame is actually visible (meaning we have a weapon equipped)
+	if DEBUG_AMMO and ammoFrame.Visible then
 		local now = tick()
 		local timeSinceUpdate = now - lastAmmoUpdate
-		if timeSinceUpdate > AMMO_STALE_THRESHOLD and now - lastStaleWarning > 10 then
+		-- Only warn if we have previously received valid ammo data and it's now stale
+		if lastAmmoData and timeSinceUpdate > AMMO_STALE_THRESHOLD and now - lastStaleWarning > 10 then
 			lastStaleWarning = now
 			warn(string.format("[FPSHUD] ⚠ Ammo data is stale (%.1fs since last update). Last data: current=%s, reserve=%s, max=%s",
 				timeSinceUpdate,
-				tostring(lastAmmoData and lastAmmoData.current),
-				tostring(lastAmmoData and lastAmmoData.reserve),
-				tostring(lastAmmoData and lastAmmoData.max)))
+				tostring(lastAmmoData.current),
+				tostring(lastAmmoData.reserve),
+				tostring(lastAmmoData.max)))
 		end
 	end
 end)
