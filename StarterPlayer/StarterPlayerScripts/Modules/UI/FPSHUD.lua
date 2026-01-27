@@ -2,6 +2,9 @@
 -- First-person shooter HUD with dynamic crosshair, ammo counter, hitmarkers, and weapon info
 -- Integrates with FPSWeaponController for real-time feedback
 
+-- Debug flag - set to true to enable detailed logging
+local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -298,9 +301,17 @@ reloadLabel.ZIndex = 11
 reloadLabel.Parent = ammoFrame
 
 local function updateAmmoDisplay(current, reserve, max, isReloading)
+	if DEBUG_AMMO then
+		print(string.format("[FPSHUD] updateAmmoDisplay called - current=%s, reserve=%s, max=%s, isReloading=%s", 
+			tostring(current), tostring(reserve), tostring(max), tostring(isReloading)))
+	end
+	
 	-- Show ammo UI as long as we have current/reserve data
 	-- FIX: Don't hide UI just because max is nil - we can derive or estimate it
 	if current == nil and reserve == nil then
+		if DEBUG_AMMO then
+			print("[FPSHUD] ✗ Hiding ammo frame - no current or reserve data")
+		end
 		ammoFrame.Visible = false
 		return
 	end
@@ -313,6 +324,9 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	-- Color based on ammo level
 	-- If max is explicitly 0, treat this as a zero-ammo weapon (e.g., melee) and hide the ammo UI
 	if max == 0 then
+		if DEBUG_AMMO then
+			print("[FPSHUD] ✗ Hiding ammo frame - weapon has max=0 (melee weapon)")
+		end
 		ammoFrame.Visible = false
 		return
 	end
@@ -333,6 +347,11 @@ local function updateAmmoDisplay(current, reserve, max, isReloading)
 	reloadLabel.Visible = isReloading and true or false
 	if isReloading then
 		reloadLabel.Text = "RELOADING..."
+	end
+	
+	if DEBUG_AMMO then
+		print(string.format("[FPSHUD] ✓ Ammo display updated - showing %s/%s (max=%s)", 
+			tostring(current or 0), tostring(reserve or 0), tostring(effectiveMax)))
 	end
 end
 
@@ -507,8 +526,18 @@ local function setupBindableConnections()
 		ammoEvent.Parent = bindableFolder
 	end
 	ammoEvent.Event:Connect(function(data)
+		if DEBUG_AMMO then
+			print(string.format("[FPSHUD] AmmoUpdate bindable event received - data type=%s", typeof(data)))
+			if typeof(data) == "table" then
+				print(string.format("[FPSHUD] AmmoUpdate data - current=%s, reserve=%s, max=%s, isReloading=%s",
+					tostring(data.current), tostring(data.reserve), tostring(data.max), tostring(data.isReloading)))
+			end
+		end
+		
 		if typeof(data) == "table" then
 			updateAmmoDisplay(data.current, data.reserve, data.max, data.isReloading)
+		elseif DEBUG_AMMO then
+			print("[FPSHUD] ✗ AmmoUpdate received invalid data type")
 		end
 	end)
 

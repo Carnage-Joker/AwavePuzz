@@ -17,7 +17,7 @@
 -- See CODE_ARCHITECTURE.md for details on the dual weapon controller setup.
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
+local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
 
 -- Constants
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable

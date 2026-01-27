@@ -5,7 +5,7 @@
 -- Handles ammo tracking, reload validation, and (optional) hit multipliers
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
+local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
