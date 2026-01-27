@@ -128,6 +128,18 @@ GameConfig.SCOREBOARD_DISPLAY_TIME = 10 -- Seconds to show scoreboard after roun
 GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after voting
 GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
 
+-- Portal Matchmaking Settings (New System)
+GameConfig.USE_PORTAL_MATCHMAKING = false -- Feature flag: enable portal-based matchmaking instead of voting
+GameConfig.PORTAL_MATCHMAKING = {
+	MAX_PLAYERS_PER_MATCH = 8, -- Maximum players per match instance
+	DEFAULT_MIN_PLAYERS = 1, -- Default minimum players to start countdown (can be overridden per-portal)
+	DEFAULT_COUNTDOWN_TIME = 10, -- Default countdown seconds before match starts (can be overridden per-portal)
+	COUNTDOWN_CANCEL_THRESHOLD = 1, -- If queue drops below this during countdown, cancel countdown
+	POST_LAUNCH_COOLDOWN = 3, -- Seconds to wait after launching a match before portal accepts new players
+	TOUCH_DEBOUNCE_TIME = 0.5, -- Seconds between processing touches from same player
+	QUEUE_UPDATE_INTERVAL = 1, -- Seconds between queue status broadcasts
+}
+
 -- Title Screen & Epilogue Settings
 GameConfig.SHOW_TITLE_SCREEN = true -- Show title screen on game start
 GameConfig.SHOW_EPILOGUE = true -- Show epilogue/intro cinematic
