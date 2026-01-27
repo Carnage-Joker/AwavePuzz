@@ -25,7 +25,7 @@ UIScaleManager.initialize()
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
 
 -- Track last ammo update for debugging
-local lastAmmoUpdate = 0
+local lastAmmoUpdate = tick()  -- Initialize to current time to avoid false stale warnings on startup
 local lastAmmoData = nil
 
 --------------------------------------------------------------------------------
@@ -640,9 +640,10 @@ RunService.RenderStepped:Connect(function(deltaTime)
 	
 	-- Watchdog: Check if ammo data is stale (only warn once every 10 seconds)
 	if DEBUG_AMMO then
-		local timeSinceUpdate = tick() - lastAmmoUpdate
-		if timeSinceUpdate > AMMO_STALE_THRESHOLD and tick() - lastStaleWarning > 10 then
-			lastStaleWarning = tick()
+		local now = tick()
+		local timeSinceUpdate = now - lastAmmoUpdate
+		if timeSinceUpdate > AMMO_STALE_THRESHOLD and now - lastStaleWarning > 10 then
+			lastStaleWarning = now
 			warn(string.format("[FPSHUD] ⚠ Ammo data is stale (%.1fs since last update). Last data: current=%s, reserve=%s, max=%s",
 				timeSinceUpdate,
 				tostring(lastAmmoData and lastAmmoData.current),
