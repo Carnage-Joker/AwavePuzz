@@ -112,6 +112,12 @@ local portalLeaveQueue = remoteEvents:WaitForChild("PortalLeaveQueue", REMOTE_EV
 local portalQueueJoined = remoteEvents:WaitForChild("PortalQueueJoined", REMOTE_EVENT_WAIT_TIMEOUT)
 local portalQueueLeft = remoteEvents:WaitForChild("PortalQueueLeft", REMOTE_EVENT_WAIT_TIMEOUT)
 
+-- Validate all remote events loaded
+if not portalQueueStatus or not portalLeaveQueue or not portalQueueJoined or not portalQueueLeft then
+	warn("[PortalQueueUI] Failed to load one or more RemoteEvents")
+	return PortalQueueUI
+end
+
 -- Show queue UI
 function PortalQueueUI.show(portalId, mapId)
 	currentPortalId = portalId

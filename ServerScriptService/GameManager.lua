@@ -38,7 +38,7 @@ local LobbySetup = require(script.Parent.LobbySetup)
 
 -- Portal matchmaking (conditional load based on feature flag)
 local PortalMatchmakingService
-if GameConfig.USE_PORTAL_MATCHMAKING then
+if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
 	PortalMatchmakingService = require(script.Parent.PortalMatchmakingService)
 end
 

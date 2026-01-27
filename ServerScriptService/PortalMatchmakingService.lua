@@ -488,14 +488,28 @@ function PortalMatchmakingService:launchMatch(portalId)
 	-- Determine map
 	local mapId = portal.config.mapId
 	if mapId == "Random" then
-		mapId = MapConfig.getRandom()
-		print(string.format("[PortalMatchmakingService] Random map selected: %s", mapId))
+		-- MapConfig.getRandom() returns (mapId, mapData) or (defaultId, defaultData)
+		local randomMapId, randomMapData = MapConfig.getRandom()
+		if randomMapId then
+			mapId = randomMapId
+			print(string.format("[PortalMatchmakingService] Random map selected: %s", mapId))
+		else
+			warn("[PortalMatchmakingService] Failed to get random map, using default")
+			mapId = select(1, MapConfig.getDefault())
+		end
 	end
 	
 	-- Validate map exists
 	if not MapConfig.get(mapId) then
 		warn(string.format("[PortalMatchmakingService] Invalid map %s, using default", tostring(mapId)))
-		mapId = select(1, MapConfig.getDefault())
+		local defaultMapId = select(1, MapConfig.getDefault())
+		if defaultMapId then
+			mapId = defaultMapId
+		else
+			warn("[PortalMatchmakingService] No default map available, aborting match launch")
+			portal.locked = false
+			return
+		end
 	end
 	
 	-- Create match in registry
