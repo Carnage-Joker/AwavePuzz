@@ -33,17 +33,40 @@ function LobbySetup.new()
 	return self
 end
 
+-- Get or create lobby (idempotent)
+-- Reuses existing lobby if found, or creates a new one if needed
+function LobbySetup:getOrCreateLobby()
+	-- Check if we already have a valid lobby
+	if self.lobbyModel and self.lobbyModel.Parent then
+		print("[LobbySetup] Reusing existing lobby")
+		return self.lobbyModel
+	end
+	
+	-- Check for existing lobby in Workspace
+	local existing = Workspace:FindFirstChild(LOBBY_MODEL_NAME)
+	if existing then
+		print("[LobbySetup] Reusing existing lobby from Workspace")
+		self.lobbyModel = existing
+		return self.lobbyModel
+	end
+	
+	-- No existing lobby, create a new one
+	return self:createLobby()
+end
+
 function LobbySetup:createLobby()
 	print("[LobbySetup] Creating lobby area")
 
 	-- Destroy old lobby if present
 	if self.lobbyModel and self.lobbyModel.Parent then
+		print("[LobbySetup] Destroying stale lobby")
 		self.lobbyModel:Destroy()
 	end
 
 	-- Also clear stray lobby models (defensive)
 	local existing = Workspace:FindFirstChild(LOBBY_MODEL_NAME)
 	if existing then
+		print("[LobbySetup] Destroying stale lobby from Workspace")
 		existing:Destroy()
 	end
 

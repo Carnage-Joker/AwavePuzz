@@ -35,6 +35,10 @@ GameConfig.BASE_HEALTH = 1000
 GameConfig.BASE_REGEN_RATE = 0 -- No regeneration by default
 GameConfig.AUTO_CREATE_BASE_CAMP = true -- Automatically create base camp in map center
 
+-- Development Settings
+-- WARNING: These should only be true in Studio during development
+GameConfig.DEV_AUTO_CREATE_CURE_STATIONS = false -- Auto-create cure stations when missing (Studio only)
+
 -- Base Camp Configuration
 -- These values can be overridden per-map in MapConfig
 GameConfig.BASE_CAMP = {

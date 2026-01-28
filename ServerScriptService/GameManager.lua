@@ -105,7 +105,7 @@ function GameManager.new(allianceService)
 
 	-- Lobby setup (creates lobby area for players before map loads)
 	self.lobbySetup = LobbySetup.new()
-	self.lobbySetup:createLobby()
+	self.lobbySetup:getOrCreateLobby()
 
 	-- Portal matchmaking service (if enabled)
 	if GameConfig.USE_PORTAL_MATCHMAKING and PortalMatchmakingService then
@@ -680,7 +680,7 @@ function GameManager:startLobby()
 	self:resetForNewRound()
 
 	if self.lobbySetup then
-		self.lobbySetup:createLobby()
+		self.lobbySetup:getOrCreateLobby()
 	end
 
 	self.lobbyManager:startVoting()
