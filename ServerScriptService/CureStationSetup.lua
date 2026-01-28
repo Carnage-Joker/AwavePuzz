@@ -11,6 +11,11 @@ local workspace = game:GetService("Workspace")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
 local GameConfig = SharedFolder and require(SharedFolder:WaitForChild("GameConfig", 5))
 
+if not SharedFolder then
+	warn("[CureStationSetup] ReplicatedStorage.Shared not found within 10 seconds. GameConfig unavailable; cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
+elseif not GameConfig then
+	warn("[CureStationSetup] GameConfig module failed to load. Cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
+end
 -- Function to setup a cure station
 local function setupCureStation(station)
 	-- Ensure station has a ProximityPrompt
