@@ -24,11 +24,15 @@ local function isValidSoundId(soundId)
 	
 	-- Must be a number or rbxassetid:// format
 	-- Ensure numeric IDs are greater than 0
-	if idStr:match("^rbxassetid://(%d+)$") then
-		local numId = tonumber(idStr:match("^rbxassetid://(%d+)$"))
-		return numId and numId > 0
-	elseif tonumber(idStr) then
-		return tonumber(idStr) > 0
+	local numIdStr = idStr:match("^rbxassetid://(%d+)$")
+	if numIdStr then
+		local numId = tonumber(numIdStr)
+		return numId ~= nil and numId > 0
+	end
+	
+	local numericId = tonumber(idStr)
+	if numericId then
+		return numericId > 0
 	end
 	
 	return false
