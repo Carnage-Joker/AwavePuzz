@@ -280,16 +280,23 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 			statusLabel.Text = "Loading shop..."
 			shopRequest:FireServer("catalog")
 			
-			-- Register with ModalManager
+			-- Register with ModalManager and enable shop input actions
 			ModalManager.push("ShopUI", function()
 				screenGui.Enabled = false
 				statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 				statusLabel.Text = "Press B to toggle shop"
+				-- Disable shop input actions when closing
+				InputActionRegistry.disableOwner("ShopUI")
 			end, ModalManager.Priority.MODAL)
+			
+			-- Enable shop input actions when opening
+			InputActionRegistry.enableOwner("ShopUI")
 		else
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 			statusLabel.Text = "Press B to toggle shop"
 			ModalManager.remove("ShopUI")
+			-- Disable shop input actions when closing
+			InputActionRegistry.disableOwner("ShopUI")
 		end
 	-- Backspace is now handled by ModalManager globally, but keep fallback
 	elseif screenGui.Enabled and #shopItems > 0 then
@@ -321,10 +328,12 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 end)
 
 -- Register input actions with InputActionRegistry
-InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI)
-InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI)
-InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI)
-InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, InputActionRegistry.Priority.MODAL_UI)
+-- ShopToggle remains enabled to allow opening the shop
+-- Navigation actions disabled by default until shop opens to avoid conflicts
+InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI, true)
+InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
+InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
+InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, InputActionRegistry.Priority.MODAL_UI, false)
 
 -- Return module table (required for ModuleScript compatibility)
 local ShopUI = {}

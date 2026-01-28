@@ -4,8 +4,18 @@
 -- Place in ServerScriptService or run once to setup stations
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 
+-- Load GameConfig to check dev settings
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+local GameConfig = SharedFolder and require(SharedFolder:WaitForChild("GameConfig", 5))
+
+if not SharedFolder then
+	warn("[CureStationSetup] ReplicatedStorage.Shared not found within 10 seconds. GameConfig unavailable; cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
+elseif not GameConfig then
+	warn("[CureStationSetup] GameConfig module failed to load. Cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
+end
 -- Function to setup a cure station
 local function setupCureStation(station)
 	-- Ensure station has a ProximityPrompt
@@ -58,40 +68,53 @@ local function initializeCureStations()
 	local cureStationsFolder = workspace:FindFirstChild("CureStations")
 	
 	if not cureStationsFolder then
-		warn("No CureStations folder found in Workspace. Creating example station...")
+		-- Check if we should auto-create in Studio
+		local isStudio = RunService:IsStudio()
+		local allowAutoCreate = GameConfig and GameConfig.DEV_AUTO_CREATE_CURE_STATIONS
 		
-		-- Create a folder for cure stations
-		cureStationsFolder = Instance.new("Folder")
-		cureStationsFolder.Name = "CureStations"
-		cureStationsFolder.Parent = workspace
-		
-		-- Create a basic cure station
-		local station = Instance.new("Part")
-		station.Name = "CureStation1"
-		station.Size = Vector3.new(6, 8, 6)
-		station.Position = Vector3.new(0, 4, 0)
-		station.Anchored = true
-		station.Color = Color3.fromRGB(100, 255, 100)
-		station.Material = Enum.Material.Neon
-		station.Parent = cureStationsFolder
-		
-		-- Add a label
-		local billboard = Instance.new("BillboardGui")
-		billboard.Size = UDim2.new(0, 200, 0, 50)
-		billboard.AlwaysOnTop = true
-		billboard.StudsOffset = Vector3.new(0, 5, 0)
-		billboard.Parent = station
-		
-		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, 0, 1, 0)
-		label.BackgroundTransparency = 1
-		label.Text = "CURE STATION"
-		label.TextColor3 = Color3.fromRGB(255, 255, 255)
-		label.TextScaled = true
-		label.Font = Enum.Font.GothamBold
-		label.Parent = billboard
-		
-		print("Created example cure station at origin")
+		if isStudio and allowAutoCreate then
+			warn("[CureStationSetup] No CureStations folder found in Workspace. Creating example station (Studio mode)...")
+			
+			-- Create a folder for cure stations
+			cureStationsFolder = Instance.new("Folder")
+			cureStationsFolder.Name = "CureStations"
+			cureStationsFolder.Parent = workspace
+			
+			-- Create a basic cure station
+			local station = Instance.new("Part")
+			station.Name = "CureStation1"
+			station.Size = Vector3.new(6, 8, 6)
+			station.Position = Vector3.new(0, 4, 0)
+			station.Anchored = true
+			station.Color = Color3.fromRGB(100, 255, 100)
+			station.Material = Enum.Material.Neon
+			station.Parent = cureStationsFolder
+			
+			-- Add a label
+			local billboard = Instance.new("BillboardGui")
+			billboard.Size = UDim2.new(0, 200, 0, 50)
+			billboard.AlwaysOnTop = true
+			billboard.StudsOffset = Vector3.new(0, 5, 0)
+			billboard.Parent = station
+			
+			local label = Instance.new("TextLabel")
+			label.Size = UDim2.new(1, 0, 1, 0)
+			label.BackgroundTransparency = 1
+			label.Text = "CURE STATION"
+			label.TextColor3 = Color3.fromRGB(255, 255, 255)
+			label.TextScaled = true
+			label.Font = Enum.Font.GothamBold
+			label.Parent = billboard
+			
+			print("[CureStationSetup] Created example cure station at origin (Studio mode)")
+		else
+			if not isStudio then
+				warn("[CureStationSetup] WARNING: No CureStations folder found in Workspace. This is required for gameplay. Auto-creation is disabled in non-Studio environments.")
+			else
+				warn("[CureStationSetup] WARNING: No CureStations folder found in Workspace. Set GameConfig.DEV_AUTO_CREATE_CURE_STATIONS = true to auto-create in Studio.")
+			end
+			return
+		end
 	end
 	
 	-- Setup all stations
@@ -101,7 +124,7 @@ local function initializeCureStations()
 		end
 	end
 	
-	print("Cure stations initialized:", #cureStationsFolder:GetChildren())
+	print("[CureStationSetup] Cure stations initialized:", #cureStationsFolder:GetChildren())
 end
 
 -- Initialize cure stations

@@ -105,6 +105,8 @@ closeCorner.Parent = closeButton
 connections.closeButton = closeButton.MouseButton1Click:Connect(function()
 	menuFrame.Visible = false
 	ModalManager.remove("PuzzleMenuUI")
+	-- Disable puzzle menu input actions when closing via close button
+	InputActionRegistry.disableOwner("PuzzleMenuUI")
 end)
 
 -- ESC/Backspace handled globally by ModalManager
@@ -378,10 +380,15 @@ end
 local function showPuzzleMenu()
 	menuFrame.Visible = true
 	
-	-- Register with ModalManager
+	-- Register with ModalManager and enable puzzle menu input actions
 	ModalManager.push("PuzzleMenuUI", function()
 		menuFrame.Visible = false
+		-- Disable puzzle menu input actions when closing
+		InputActionRegistry.disableOwner("PuzzleMenuUI")
 	end, ModalManager.Priority.MODAL)
+	
+	-- Enable puzzle menu input actions when opening
+	InputActionRegistry.enableOwner("PuzzleMenuUI")
 	
 	-- Request puzzle progress from server
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
@@ -442,9 +449,10 @@ connections.navigation = UserInputService.InputBegan:Connect(function(input, gam
 end)
 
 -- Register input actions with InputActionRegistry
-InputActionRegistry.register("PuzzleMenuNavigateUp", "PuzzleMenuUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI)
-InputActionRegistry.register("PuzzleMenuNavigateDown", "PuzzleMenuUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI)
-InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.Return, Enum.KeyCode.Space}, InputActionRegistry.Priority.MODAL_UI)
+-- Navigation and selection actions disabled by default until menu opens to avoid conflicts
+InputActionRegistry.register("PuzzleMenuNavigateUp", "PuzzleMenuUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
+InputActionRegistry.register("PuzzleMenuNavigateDown", "PuzzleMenuUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
+InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.Return, Enum.KeyCode.Space}, InputActionRegistry.Priority.MODAL_UI, false)
 
 -- Cleanup function
 local function cleanup()

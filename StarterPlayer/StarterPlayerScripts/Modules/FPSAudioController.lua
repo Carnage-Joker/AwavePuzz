@@ -14,6 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local AssetValidation = require(SharedFolder:WaitForChild("AssetValidation"))
 
 --------------------------------------------------------------------------------
 -- SOUND CONFIGURATION
@@ -524,6 +525,10 @@ end)
 --------------------------------------------------------------------------------
 
 local function initialize()
+	-- Validate sound assets at boot time
+	print("[FPSAudioController] Validating sound assets...")
+	AssetValidation.validateSoundAssets(SoundAssets, "FPSAudio")
+	
 	-- Wait for BindableEvents folder to be created by other scripts
 	task.spawn(function()
 		task.wait(1)

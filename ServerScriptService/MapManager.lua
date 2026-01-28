@@ -23,7 +23,31 @@ local MapManager = {}
 MapManager.__index = MapManager
 
 -- Desired world pivot position for ActiveMap
+-- IMPORTANT: This is the single authoritative position for all maps.
+-- All systems that read spawn points, place base camp, or reference map position
+-- MUST use this exact pivot position for consistency across rounds.
 local MAP_PIVOT_POSITION = Vector3.new(5000, 0, 0)
+
+-- Validates that the active map is at the correct pivot position
+local function validateMapPivot(model)
+	if not model then return false end
+	
+	local currentPivot = model:GetPivot()
+	local currentPos = currentPivot.Position
+	local distance = (currentPos - MAP_PIVOT_POSITION).Magnitude
+	
+	-- Allow 0.01 studs tolerance for floating point precision
+	if distance > 0.01 then
+		warn(string.format(
+			"[MapManager] WARNING: Map pivot position drift detected! Expected (%.1f, %.1f, %.1f), got (%.1f, %.1f, %.1f)",
+			MAP_PIVOT_POSITION.X, MAP_PIVOT_POSITION.Y, MAP_PIVOT_POSITION.Z,
+			currentPos.X, currentPos.Y, currentPos.Z
+		))
+		return false
+	end
+	
+	return true
+end
 
 -- Helper to check if we should attempt to load default map as fallback
 local function shouldLoadDefaultMap(currentMapId, defaultMapId)
@@ -166,6 +190,16 @@ function MapManager:load(mapId)
 
 	-- Reposition map so its pivot is exactly at (5000,0,0)
 	pivotMapModelTo(self.currentMapModel, MAP_PIVOT_POSITION)
+	
+	-- Validate pivot position was set correctly
+	if not validateMapPivot(self.currentMapModel) then
+		-- Attempt to correct the pivot position
+		warn("[MapManager] Attempting to correct map pivot position...")
+		pivotMapModelTo(self.currentMapModel, MAP_PIVOT_POSITION)
+	else
+		print(string.format("[MapManager] Map pivot confirmed at (%.1f, %.1f, %.1f)", 
+			MAP_PIVOT_POSITION.X, MAP_PIVOT_POSITION.Y, MAP_PIVOT_POSITION.Z))
+	end
 
 	-- Helpful attribute for debugging other systems (BaseCampSetup etc.)
 	self.currentMapModel:SetAttribute("MapPivot", MAP_PIVOT_POSITION)
@@ -303,6 +337,12 @@ end
 
 function MapManager:getCurrentMapId()
 	return self.currentMapId
+end
+
+-- Get the authoritative map pivot position
+-- All systems should use this constant position for consistency
+function MapManager:getMapPivotPosition()
+	return MAP_PIVOT_POSITION
 end
 
 return MapManager

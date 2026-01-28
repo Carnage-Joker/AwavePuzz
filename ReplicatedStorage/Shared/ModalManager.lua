@@ -55,6 +55,7 @@ function ModalManager.push(modalName, closeCallback, priority)
 end
 
 -- Remove a specific modal from the stack
+-- Returns true if modal was found and removed, false otherwise
 function ModalManager.remove(modalName)
 	for i, entry in ipairs(ModalManager._stack) do
 		if entry.name == modalName then
@@ -65,7 +66,7 @@ function ModalManager.remove(modalName)
 		end
 	end
 	
-	warn(string.format("[ModalManager] Modal '%s' not found in stack", modalName))
+	-- Modal not found - return false without warning to prevent spam
 	return false
 end
 
@@ -131,6 +132,11 @@ function ModalManager.isModalOpen(modalName)
 		end
 	end
 	return false
+end
+
+-- Alias for isModalOpen (for consistency with API naming)
+function ModalManager.isActive(modalName)
+	return ModalManager.isModalOpen(modalName)
 end
 
 -- Check if gameplay should be blocked (modal priority >= MODAL)

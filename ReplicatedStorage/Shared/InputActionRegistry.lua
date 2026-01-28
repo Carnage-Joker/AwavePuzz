@@ -24,11 +24,13 @@ InputActionRegistry.Priority = {
 -- @param owner: Name of the module/system that owns this action
 -- @param keys: Table of KeyCode or UserInputType enums
 -- @param priority: Priority level (see Priority enum above)
-function InputActionRegistry.register(actionName, owner, keys, priority)
+-- @param enabled: Optional boolean, defaults to true
+function InputActionRegistry.register(actionName, owner, keys, priority, enabled)
 	assert(type(actionName) == "string", "actionName must be a string")
 	assert(type(owner) == "string", "owner must be a string")
 	assert(type(keys) == "table", "keys must be a table")
 	priority = priority or InputActionRegistry.Priority.CORE_GAMEPLAY
+	if enabled == nil then enabled = true end
 	
 	-- Check if already registered
 	if InputActionRegistry._registeredActions[actionName] then
@@ -44,12 +46,13 @@ function InputActionRegistry.register(actionName, owner, keys, priority)
 	InputActionRegistry._registeredActions[actionName] = {
 		owner = owner,
 		keys = keys,
-		priority = priority
+		priority = priority,
+		enabled = enabled,
 	}
 	
 	print(string.format(
-		"[InputActionRegistry] Registered: %s (owner: %s, priority: %d, keys: %d)",
-		actionName, owner, priority, #keys
+		"[InputActionRegistry] Registered: %s (owner: %s, priority: %d, keys: %d, enabled: %s)",
+		actionName, owner, priority, #keys, tostring(enabled)
 	))
 end
 
@@ -63,29 +66,83 @@ function InputActionRegistry.unregister(actionName)
 	return false
 end
 
+-- Enable an action (makes it active for conflict detection and usage)
+function InputActionRegistry.enable(actionName)
+	local action = InputActionRegistry._registeredActions[actionName]
+	if action then
+		action.enabled = true
+		return true
+	end
+	return false
+end
+
+-- Disable an action (makes it inactive, resolves conflicts)
+function InputActionRegistry.disable(actionName)
+	local action = InputActionRegistry._registeredActions[actionName]
+	if action then
+		action.enabled = false
+		return true
+	end
+	return false
+end
+
+-- Enable all actions owned by a specific owner
+function InputActionRegistry.enableOwner(owner)
+	local count = 0
+	for actionName, data in pairs(InputActionRegistry._registeredActions) do
+		if data.owner == owner then
+			data.enabled = true
+			count = count + 1
+		end
+	end
+	if count > 0 then
+		print(string.format("[InputActionRegistry] Enabled %d action(s) for owner: %s", count, owner))
+	end
+	return count
+end
+
+-- Disable all actions owned by a specific owner
+function InputActionRegistry.disableOwner(owner)
+	local count = 0
+	for actionName, data in pairs(InputActionRegistry._registeredActions) do
+		if data.owner == owner then
+			data.enabled = false
+			count = count + 1
+		end
+	end
+	if count > 0 then
+		print(string.format("[InputActionRegistry] Disabled %d action(s) for owner: %s", count, owner))
+	end
+	return count
+end
+
 --------------------------------------------------------------------------------
 -- CONFLICT DETECTION
 --------------------------------------------------------------------------------
 
 -- Check for conflicts between actions at the same priority level
+-- Only checks enabled actions to avoid false positives
 local function detectConflicts()
 	local conflicts = {}
 	local keyUsage = {}  -- Maps keyCode -> list of {action, priority, owner}
 	
-	-- Build key usage map
+	-- Build key usage map (only for enabled actions)
 	for actionName, data in pairs(InputActionRegistry._registeredActions) do
-		for _, keyCode in ipairs(data.keys) do
-			local keyStr = tostring(keyCode)
-			
-			if not keyUsage[keyStr] then
-				keyUsage[keyStr] = {}
+		-- Skip disabled actions
+		if data.enabled ~= false then
+			for _, keyCode in ipairs(data.keys) do
+				local keyStr = tostring(keyCode)
+				
+				if not keyUsage[keyStr] then
+					keyUsage[keyStr] = {}
+				end
+				
+				table.insert(keyUsage[keyStr], {
+					action = actionName,
+					priority = data.priority,
+					owner = data.owner
+				})
 			end
-			
-			table.insert(keyUsage[keyStr], {
-				action = actionName,
-				priority = data.priority,
-				owner = data.owner
-			})
 		end
 	end
 	
