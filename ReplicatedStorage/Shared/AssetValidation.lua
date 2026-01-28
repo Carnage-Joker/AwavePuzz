@@ -23,8 +23,12 @@ local function isValidSoundId(soundId)
 	end
 	
 	-- Must be a number or rbxassetid:// format
-	if idStr:match("^rbxassetid://(%d+)$") or tonumber(idStr) then
-		return true
+	-- Ensure numeric IDs are greater than 0
+	if idStr:match("^rbxassetid://(%d+)$") then
+		local numId = tonumber(idStr:match("^rbxassetid://(%d+)$"))
+		return numId and numId > 0
+	elseif tonumber(idStr) then
+		return tonumber(idStr) > 0
 	end
 	
 	return false
@@ -47,6 +51,11 @@ end
 -- @param prefix: String prefix for logging (e.g., "WeaponFire")
 -- @return invalidKeys: Table of invalid asset keys for reference
 function AssetValidation.validateSoundAssets(assetTable, prefix)
+	if not assetTable or type(assetTable) ~= "table" then
+		warn("[AssetValidation] validateSoundAssets: assetTable must be a table")
+		return {}
+	end
+	
 	prefix = prefix or "SoundAsset"
 	local invalidKeys = {}
 	
@@ -91,6 +100,11 @@ end
 -- @param prefix: String prefix for logging (e.g., "WeaponAnims")
 -- @return invalidKeys: Table of invalid asset keys for reference
 function AssetValidation.validateAnimationAssets(assetTable, prefix)
+	if not assetTable or type(assetTable) ~= "table" then
+		warn("[AssetValidation] validateAnimationAssets: assetTable must be a table")
+		return {}
+	end
+	
 	prefix = prefix or "AnimationAsset"
 	local invalidKeys = {}
 	

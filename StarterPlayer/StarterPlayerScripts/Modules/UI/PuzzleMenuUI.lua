@@ -448,7 +448,8 @@ connections.navigation = UserInputService.InputBegan:Connect(function(input, gam
 	end
 end)
 
--- Register input actions with InputActionRegistry (disabled by default until menu opens)
+-- Register input actions with InputActionRegistry
+-- Navigation and selection actions disabled by default until menu opens to avoid conflicts
 InputActionRegistry.register("PuzzleMenuNavigateUp", "PuzzleMenuUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
 InputActionRegistry.register("PuzzleMenuNavigateDown", "PuzzleMenuUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
 InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.Return, Enum.KeyCode.Space}, InputActionRegistry.Priority.MODAL_UI, false)

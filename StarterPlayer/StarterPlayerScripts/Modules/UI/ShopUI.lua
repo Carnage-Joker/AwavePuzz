@@ -327,7 +327,9 @@ UserInputService.InputBegan:Connect(function(input, gpe)
 	end
 end)
 
--- Register input actions with InputActionRegistry (disabled by default until shop opens)
+-- Register input actions with InputActionRegistry
+-- ShopToggle remains enabled to allow opening the shop
+-- Navigation actions disabled by default until shop opens to avoid conflicts
 InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI, true)
 InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
 InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
