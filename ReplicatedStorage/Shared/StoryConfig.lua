@@ -475,32 +475,32 @@ StoryConfig.Music = {
 	-- Sound IDs would be set here if you have custom music
 	-- For now, we'll use placeholders that can be replaced
 	TitleTheme = {
-		SoundId = "", -- Set to "rbxassetid://XXXXXX" when you have music
+		SoundId = "rbxassetid://134645167323648", -- Set to "rbxassetid://XXXXXX" when you have music
 		Volume = 0.5,
 		Looped = true
 	},
 	GameplayAmbient = {
-		SoundId = "",
+		SoundId = "rbxassetid://83451793513373",
 		Volume = 0.3,
 		Looped = true
 	},
 	CombatIntense = {
-		SoundId = "",
+		SoundId = "rbxassetid://1131937949",
 		Volume = 0.6,
 		Looped = true
 	},
 	Victory = {
-		SoundId = "",
+		SoundId = "rbxassetid://135116298613253",
 		Volume = 0.7,
 		Looped = false
 	},
 	Defeat = {
-		SoundId = "",
+		SoundId = "rbxassetid://1839772694",
 		Volume = 0.5,
 		Looped = false
 	},
 	Credits = {
-		SoundId = "",
+		SoundId = "rbxassetid://81857578704617",
 		Volume = 0.4,
 		Looped = true
 	}

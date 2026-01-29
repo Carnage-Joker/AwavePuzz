@@ -468,35 +468,35 @@ FPSConfig.Animations = {
 	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
 	WeaponAnimations = {
 		Pistol = {
-			idle = "rbxassetid://0",      -- Idle holding animation (placeholder)
-			fire = "rbxassetid://0",      -- Fire/shoot animation (placeholder)
-			reload = "rbxassetid://0",    -- Reload animation (placeholder)
-			equip = "rbxassetid://0",     -- Draw/equip animation (placeholder)
-			sprint = "rbxassetid://0",    -- Sprint (lowered weapon) animation (placeholder)
+			idle = "rbxassetid://77700472496946",      -- Idle holding animation (placeholder)
+			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation (placeholder)
+			reload = "rbxassetid://136927034232244",    -- Reload animation (placeholder)
+			equip = "rbxassetid://106310870423679",     -- Draw/equip animation (placeholder)
+			sprint = "rbxassetid://102565289526730",    -- Sprint (lowered weapon) animation (placeholder)
 			ads = "rbxassetid://0",       -- Aim down sights animation
 		},
 		SMG = {
-			idle = "rbxassetid://0",      -- Idle holding animation (placeholder)
-			fire = "rbxassetid://0",      -- Fire/shoot animation (placeholder)
-			reload = "rbxassetid://0",    -- Reload animation (placeholder)
-			equip = "rbxassetid://0",     -- Draw/equip animation (placeholder)
-			sprint = "rbxassetid://0",
+			idle = "rbxassetid://77700472496946",      -- Idle holding animation (placeholder)
+			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation (placeholder)
+			reload = "rbxassetid://136927034232244",    -- Reload animation (placeholder)
+			equip = "rbxassetid://106310870423679",     -- Draw/equip animation (placeholder)
+			sprint = "rbxassetid://102565289526730",
 			ads = "rbxassetid://0",
 		},
 		Shotgun = {
-			idle = "rbxassetid://0",
-			fire = "rbxassetid://0",
-			reload = "rbxassetid://0",    -- Shell-by-shell reload
-			equip = "rbxassetid://0",
-			sprint = "rbxassetid://0",
+			idle = "rbxassetid://77700472496946",
+			fire = "rbxassetid://107261819756829",
+			reload = "rbxassetid://136927034232244",    -- Shell-by-shell reload
+			equip = "rbxassetid://106310870423679",
+			sprint = "rbxassetid://102565289526730",
 			ads = "rbxassetid://0",
 		},
 		Rifle = {
-			idle = "rbxassetid://0",
-			fire = "rbxassetid://0",
-			reload = "rbxassetid://0",
-			equip = "rbxassetid://0",
-			sprint = "rbxassetid://0",
+			idle = "rbxassetid://77700472496946",
+			fire = "rbxassetid://107261819756829",
+			reload = "rbxassetid://136927034232244",
+			equip = "rbxassetid://106310870423679",
+			sprint = "rbxassetid://102565289526730",
 			ads = "rbxassetid://0",
 		},
 	},
