@@ -179,14 +179,15 @@ Complete testing guide for the alliance and betrayal system.
 
 Testing guide for map positioning and lobby improvements.
 
-### Historical Summaries
+### Historical Documentation
 
-See [docs/summaries/](docs/summaries/) for:
-- CONSOLIDATION_SUMMARY.md - Documentation consolidation history
-- CONVERGENCE_UPGRADE_SUMMARY.md - Game systems upgrade summary
-- GUI_IMPROVEMENTS_SUMMARY.md - GUI cleanup summary
-- MAP_POSITION_AND_LOBBY_IMPROVEMENTS.md - Map system improvements
-- MULTI_MAP_IMPLEMENTATION.md - Multi-map system implementation
+Historical documentation has been archived for reference. See [docs/archive/README.md](docs/archive/README.md) for:
+- **docs/archive/fixes/** - Bug fix and stabilization reports (15 files)
+- **docs/archive/summaries/** - Implementation summaries and milestones (13 files)
+- **docs/archive/reviews/** - Code reviews and project assessments (3 files)
+- **docs/archive/reports/** - General project reports and audits (11 files)
+
+These documents track the evolution of the codebase but are no longer actively maintained.
 
 ### Communication and Data Flow
 
@@ -258,14 +259,15 @@ Project structure and organization guide:
 
 ## 📊 Documentation Statistics
 
-- **Core Documentation**: 15 files in root directory
+- **Core Documentation**: 14 essential files in root directory
+- **Technical References**: 4 additional reference files (CODE_ARCHITECTURE, MODULE_DEPENDENCIES, INPUT_ACTION_MAP, UI_INVENTORY_AND_ARCHITECTURE)
 - **Implementation Docs**: 4 files in docs/implementation/
-- **Feature Docs**: 4 files in docs/features/
+- **Feature Docs**: 6 files in docs/features/
 - **Testing Guides**: 2 files in docs/testing/
-- **Historical Summaries**: 5 files in docs/summaries/
-- **Technical Docs**: 5 files in docs/
-- **Total**: ~35 organized documentation files
-- **Most Comprehensive**: API_DOCUMENTATION.md (45KB)
+- **Archived Docs**: 42 files in docs/archive/ (organized by category)
+- **Total Active**: ~30 actively maintained documentation files
+- **Total Including Archive**: ~72 documentation files
+- **Most Comprehensive**: API_DOCUMENTATION.md (55KB)
 
 ## 🔍 Quick Search Guide
 

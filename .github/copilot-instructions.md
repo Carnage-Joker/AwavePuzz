@@ -25,15 +25,25 @@ AwavePuzz is a multiplayer Roblox zombie survival game featuring wave-based comb
 
 ```
 AwavePuzz/
-├── src/
-│   ├── server/          # Server-side game logic (ServerScriptService)
-│   ├── client/          # Client-side UI and controls (StarterPlayerScripts)
-│   └── shared/          # Shared modules (ReplicatedStorage)
-├── ReplicatedStorage/   # Roblox shared resources
-├── ServerScriptService/ # Roblox server scripts
-├── StarterGui/          # Roblox UI elements
-└── ServerStorage/       # Roblox server-only assets (zombie models, maps)
+├── ServerScriptService/  # Server-side game logic
+│   ├── AI/               # Zombie AI and controllers
+│   └── *.lua             # Server services and managers
+├── ReplicatedStorage/    # Roblox shared resources
+│   └── Shared/           # Configuration and utility modules
+├── StarterPlayer/        # Player initialization
+│   └── StarterPlayerScripts/  # Client-side controllers
+│       ├── Modules/      # Client modules
+│       └── FPS/          # FPS camera system
+├── StarterGui/           # UI LocalScripts
+├── ServerStorage/        # Server-only assets
+│   ├── Maps/             # Map models
+│   ├── Models/           # Weapon/object models
+│   └── ZombieModels/     # Zombie models
+├── Archive/Legacy/Code/  # Archived legacy code (old src/ structure)
+└── docs/                 # Project documentation
 ```
+
+> **Note**: The repository structure matches Roblox Studio exactly. The old `src/` structure has been archived in `Archive/Legacy/Code/`.
 
 ## Coding Standards
 
