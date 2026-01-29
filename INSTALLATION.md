@@ -26,10 +26,11 @@ For experienced Roblox developers:
 
 1. Open Roblox Studio
 2. Create new place or open existing project
-3. Import scripts from `src/` to appropriate locations:
-   - `src/server/*` → ServerScriptService
-   - `src/client/*` → StarterPlayer.StarterPlayerScripts and StarterGui
-   - `src/shared/*` → ReplicatedStorage.Shared
+3. Copy directories directly from repository to Roblox Studio:
+   - `ServerScriptService/*` → game.ServerScriptService
+   - `ReplicatedStorage/Shared/*` → game.ReplicatedStorage.Shared
+   - `StarterPlayer/StarterPlayerScripts/*` → game.StarterPlayer.StarterPlayerScripts
+   - `StarterGui/*` scripts → game.StarterGui (as LocalScript instances)
 4. Configure spawn points and workspace elements
 5. Test in multiplayer
 
@@ -189,68 +190,51 @@ game
 
 ---
 
-### Source File to Roblox Location Mapping
+### Repository to Roblox Location Mapping
 
-| Source File | Roblox Location | Script Type |
-|-------------|-----------------|-------------|
+| Repository File | Roblox Location | Script Type |
+|-----------------|-----------------|-------------|
 | **Server Scripts** |||
-| `src/server/MainServer.lua` | ServerScriptService.MainServer | Script |
-| `src/server/GameManager.lua` | ServerScriptService.GameManager | ModuleScript |
-| `src/server/GameServer.lua` | ServerScriptService.GameServer | ModuleScript |
-| `src/server/PlayerManager.lua` | ServerScriptService.PlayerManager | ModuleScript |
-| `src/server/WaveManager.lua` | ServerScriptService.WaveManager | ModuleScript |
-| `src/server/BaseManager.lua` | ServerScriptService.BaseManager | ModuleScript |
-| `src/server/Spawner.lua` | ServerScriptService.Spawner | ModuleScript |
-| `src/server/CureService.lua` | ServerScriptService.CureService | ModuleScript |
-| `src/server/CureCraftingManager.lua` | ServerScriptService.CureCraftingManager | ModuleScript |
-| `src/server/PuzzleService.lua` | ServerScriptService.PuzzleService | ModuleScript |
-| `src/server/AllianceService.lua` | ServerScriptService.AllianceService | ModuleScript |
-| `src/server/WeaponService.lua` | ServerScriptService.WeaponService | ModuleScript |
-| `src/server/FPSWeaponService.lua` | ServerScriptService.FPSWeaponService | ModuleScript |
-| `src/server/ShopService.lua` | ServerScriptService.ShopService | ModuleScript |
-| `src/server/MapManager.lua` | ServerScriptService.MapManager | ModuleScript |
-| `src/server/LobbyManager.lua` | ServerScriptService.LobbyManager | ModuleScript |
-| `src/server/SpectatorManager.lua` | ServerScriptService.SpectatorManager | ModuleScript |
-| `src/server/ResourceSpawner.lua` | ServerScriptService.ResourceSpawner | ModuleScript |
-| `src/server/SprintService.lua` | ServerScriptService.SprintService | ModuleScript |
-| `src/server/CureStationSetup.lua` | ReplicatedStorage.Shared.CureStationSetup | ModuleScript |
-| `src/server/AIScripts/ZombieBrain.lua` | ServerScriptService.AIScripts.ZombieBrain | ModuleScript |
+| `ServerScriptService/MainServer.lua` | ServerScriptService.MainServer | Script |
+| `ServerScriptService/GameManager.lua` | ServerScriptService.GameManager | ModuleScript |
+| `ServerScriptService/GameServer.lua` | ServerScriptService.GameServer | ModuleScript |
+| `ServerScriptService/PlayerManager.lua` | ServerScriptService.PlayerManager | ModuleScript |
+| `ServerScriptService/WaveManager.lua` | ServerScriptService.WaveManager | ModuleScript |
+| `ServerScriptService/BaseManager.lua` | ServerScriptService.BaseManager | ModuleScript |
+| `ServerScriptService/Spawner.lua` | ServerScriptService.Spawner | ModuleScript |
+| `ServerScriptService/CureService.lua` | ServerScriptService.CureService | ModuleScript |
+| `ServerScriptService/CureCraftingManager.lua` | ServerScriptService.CureCraftingManager | ModuleScript |
+| `ServerScriptService/PuzzleService.lua` | ServerScriptService.PuzzleService | ModuleScript |
+| `ServerScriptService/AllianceServiceV2.lua` | ServerScriptService.AllianceServiceV2 | ModuleScript |
+| `ServerScriptService/WeaponService.lua` | ServerScriptService.WeaponService | ModuleScript |
+| `ServerScriptService/FPSWeaponService.lua` | ServerScriptService.FPSWeaponService | ModuleScript |
+| `ServerScriptService/ShopService.lua` | ServerScriptService.ShopService | ModuleScript |
+| `ServerScriptService/MapManager.lua` | ServerScriptService.MapManager | ModuleScript |
+| `ServerScriptService/LobbyManager.lua` | ServerScriptService.LobbyManager | ModuleScript |
+| `ServerScriptService/SpectatorManager.lua` | ServerScriptService.SpectatorManager | ModuleScript |
+| `ServerScriptService/ResourceSpawner.lua` | ServerScriptService.ResourceSpawner | ModuleScript |
+| `ServerScriptService/SprintService.lua` | ServerScriptService.SprintService | ModuleScript |
+| `ServerScriptService/AI/ZombieBrain.lua` | ServerScriptService.AI.ZombieBrain | ModuleScript |
 | **Shared Scripts** |||
-| `src/shared/GameConfig.lua` | ReplicatedStorage.Shared.GameConfig | ModuleScript |
-| `src/shared/GameState.lua` | ReplicatedStorage.Shared.GameState | ModuleScript |
-| `src/shared/WaveConfig.lua` | ReplicatedStorage.Shared.WaveConfig | ModuleScript |
-| `src/shared/ZombieTypes.lua` | ReplicatedStorage.Shared.ZombieTypes | ModuleScript |
-| `src/shared/WeaponConfig.lua` | ReplicatedStorage.Shared.WeaponConfig | ModuleScript |
-| `src/shared/FPSConfig.lua` | ReplicatedStorage.Shared.FPSConfig | ModuleScript |
-| `src/shared/MapConfig.lua` | ReplicatedStorage.Shared.MapConfig | ModuleScript |
-| `src/shared/PuzzleConfig.lua` | ReplicatedStorage.Shared.PuzzleConfig | ModuleScript |
-| `src/shared/UIScaleConfig.lua` | ReplicatedStorage.Shared.UIScaleConfig | ModuleScript |
-| `src/shared/UIScaleManager.lua` | ReplicatedStorage.Shared.UIScaleManager | ModuleScript |
+| `ReplicatedStorage/Shared/GameConfig.lua` | ReplicatedStorage.Shared.GameConfig | ModuleScript |
+| `ReplicatedStorage/Shared/GameState.lua` | ReplicatedStorage.Shared.GameState | ModuleScript |
+| `ReplicatedStorage/Shared/WaveConfig.lua` | ReplicatedStorage.Shared.WaveConfig | ModuleScript |
+| `ReplicatedStorage/Shared/ZombieTypes.lua` | ReplicatedStorage.Shared.ZombieTypes | ModuleScript |
+| `ReplicatedStorage/Shared/WeaponConfig.lua` | ReplicatedStorage.Shared.WeaponConfig | ModuleScript |
+| `ReplicatedStorage/Shared/FPSConfig.lua` | ReplicatedStorage.Shared.FPSConfig | ModuleScript |
+| `ReplicatedStorage/Shared/MapConfig.lua` | ReplicatedStorage.Shared.MapConfig | ModuleScript |
+| `ReplicatedStorage/Shared/PuzzleConfig.lua` | ReplicatedStorage.Shared.PuzzleConfig | ModuleScript |
+| `ReplicatedStorage/Shared/UIScaleConfig.lua` | ReplicatedStorage.Shared.UIScaleConfig | ModuleScript |
+| `ReplicatedStorage/Shared/UIScaleManager.lua` | ReplicatedStorage.Shared.UIScaleManager | ModuleScript |
 | **Client Scripts** |||
-| `src/client/ClientController.lua` | StarterPlayerScripts.ClientController | ModuleScript |
-| `src/client/WeaponController.client.lua` | StarterPlayerScripts.WeaponController | LocalScript |
-| `src/client/FPSWeaponController.client.lua` | StarterPlayerScripts.FPSWeaponController | LocalScript |
-| `src/client/FirstPersonCamera.client.lua` | StarterPlayerScripts.FirstPersonCamera | LocalScript |
-| `src/client/FPSMovementController.client.lua` | StarterPlayerScripts.FPSMovementController | LocalScript |
-| `src/client/FPSAudioController.client.lua` | StarterPlayerScripts.FPSAudioController | LocalScript |
-| `src/client/FPSMenuController.client.lua` | StarterPlayerScripts.FPSMenuController | LocalScript |
-| `src/client/SprintController.client.lua` | StarterPlayerScripts.SprintController | LocalScript |
-| `src/client/FPS/FirstPersonCamera.lua` | StarterPlayerScripts.FPS.FirstPersonCamera | ModuleScript |
-| `src/client/FPS/FirstPersonController.client.lua` | StarterPlayerScripts.FPS.FirstPersonController | LocalScript |
+| `StarterPlayer/StarterPlayerScripts/Modules/ClientController.lua` | StarterPlayerScripts.Modules.ClientController | ModuleScript |
+| `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` | StarterPlayerScripts.Modules.FPSWeaponController | ModuleScript |
+| `StarterPlayer/StarterPlayerScripts/Modules/FPSMovement.lua` | StarterPlayerScripts.Modules.FPSMovement | ModuleScript |
+| `StarterPlayer/StarterPlayerScripts/FPS/FirstPersonCamera.lua` | StarterPlayerScripts.FPS.FirstPersonCamera | ModuleScript |
 | **UI Scripts** |||
-| `src/client/UI/WaveUI.client.lua` | StarterGui.WaveUI | LocalScript |
-| `src/client/UI/BaseHealthUI.client.lua` | StarterGui.BaseHealthUI | LocalScript |
-| `src/client/UI/CureUI.client.lua` | StarterGui.CureUI | LocalScript |
-| `src/client/UI/AllianceUI.client.lua` | StarterGui.AllianceUI | LocalScript |
-| `src/client/UI/ShopUI.client.lua` | StarterGui.ShopUI | LocalScript |
-| `src/client/UI/InventoryUI.client.lua` | StarterGui.InventoryUI | LocalScript |
-| `src/client/UI/PlayerHUD.client.lua` | StarterGui.PlayerHUD | LocalScript |
-| `src/client/UI/FPSHUD.client.lua` | StarterGui.FPSHUD | LocalScript |
-| `src/client/UI/PuzzleUI.client.lua` | StarterGui.PuzzleUI | LocalScript |
-| `src/client/UI/PuzzleMenuUI.client.lua` | StarterGui.PuzzleMenuUI | LocalScript |
-| `src/client/UI/MapVotingUI.client.lua` | StarterGui.MapVotingUI | LocalScript |
-| `src/client/UI/SpectatorUI.client.lua` | StarterGui.SpectatorUI | LocalScript |
-| `src/client/UI/ScoreboardUI.client.lua` | StarterGui.ScoreboardUI | LocalScript |
+| `StarterGui/*` (LocalScript files) | StarterGui (create as LocalScripts) | LocalScript |
+
+> **Note**: The repository structure now matches Roblox Studio exactly. Simply copy folders directly without reorganization.
 
 ---
 
@@ -292,96 +276,76 @@ Before importing scripts, set up the required Workspace elements:
 
 Create the following scripts in **ServerScriptService**:
 
-| Script Name | Type | Source File |
-|-------------|------|-------------|
-| MainServer | **Script** | `src/server/MainServer.lua` |
-| GameManager | ModuleScript | `src/server/GameManager.lua` |
-| GameServer | ModuleScript | `src/server/GameServer.lua` |
-| PlayerManager | ModuleScript | `src/server/PlayerManager.lua` |
-| WaveManager | ModuleScript | `src/server/WaveManager.lua` |
-| BaseManager | ModuleScript | `src/server/BaseManager.lua` |
-| Spawner | ModuleScript | `src/server/Spawner.lua` |
-| CureService | ModuleScript | `src/server/CureService.lua` |
-| CureCraftingManager | ModuleScript | `src/server/CureCraftingManager.lua` |
-| PuzzleService | ModuleScript | `src/server/PuzzleService.lua` |
-| AllianceService | ModuleScript | `src/server/AllianceService.lua` |
-| WeaponService | ModuleScript | `src/server/WeaponService.lua` |
-| FPSWeaponService | ModuleScript | `src/server/FPSWeaponService.lua` |
-| ShopService | ModuleScript | `src/server/ShopService.lua` |
-| MapManager | ModuleScript | `src/server/MapManager.lua` |
-| LobbyManager | ModuleScript | `src/server/LobbyManager.lua` |
-| SpectatorManager | ModuleScript | `src/server/SpectatorManager.lua` |
-| ResourceSpawner | ModuleScript | `src/server/ResourceSpawner.lua` |
-| SprintService | ModuleScript | `src/server/SprintService.lua` |
+| Script Name | Type | Repository File |
+|-------------|------|-----------------|
+| MainServer | **Script** | `ServerScriptService/MainServer.lua` |
+| GameManager | ModuleScript | `ServerScriptService/GameManager.lua` |
+| GameServer | ModuleScript | `ServerScriptService/GameServer.lua` |
+| PlayerManager | ModuleScript | `ServerScriptService/PlayerManager.lua` |
+| WaveManager | ModuleScript | `ServerScriptService/WaveManager.lua` |
+| BaseManager | ModuleScript | `ServerScriptService/BaseManager.lua` |
+| Spawner | ModuleScript | `ServerScriptService/Spawner.lua` |
+| CureService | ModuleScript | `ServerScriptService/CureService.lua` |
+| CureCraftingManager | ModuleScript | `ServerScriptService/CureCraftingManager.lua` |
+| PuzzleService | ModuleScript | `ServerScriptService/PuzzleService.lua` |
+| AllianceServiceV2 | ModuleScript | `ServerScriptService/AllianceServiceV2.lua` |
+| WeaponService | ModuleScript | `ServerScriptService/WeaponService.lua` |
+| FPSWeaponService | ModuleScript | `ServerScriptService/FPSWeaponService.lua` |
+| ShopService | ModuleScript | `ServerScriptService/ShopService.lua` |
+| MapManager | ModuleScript | `ServerScriptService/MapManager.lua` |
+| LobbyManager | ModuleScript | `ServerScriptService/LobbyManager.lua` |
+| SpectatorManager | ModuleScript | `ServerScriptService/SpectatorManager.lua` |
+| ResourceSpawner | ModuleScript | `ServerScriptService/ResourceSpawner.lua` |
+| SprintService | ModuleScript | `ServerScriptService/SprintService.lua` |
 
-**AIScripts Folder:**
-1. Create a Folder named `AIScripts` in ServerScriptService
-2. Inside AIScripts, create:
-   - `ZombieBrain` (ModuleScript) → `src/server/AIScripts/ZombieBrain.lua`
+**AI Folder:**
+1. Copy the `AI` folder from `ServerScriptService/AI/` to game.ServerScriptService
+2. Contains: `ZombieBrain` (ModuleScript) and other AI modules
 
 > **⚠️ Important**: Only `MainServer` should be a **Script**. All others are **ModuleScripts**.
 
 ### Step 4: Import Shared Scripts to ReplicatedStorage
 
-1. In **ReplicatedStorage**, create a Folder named `Shared`
-2. Create ModuleScripts inside the Shared folder:
+1. Copy the `ReplicatedStorage/Shared/` folder from the repository to game.ReplicatedStorage
+2. This includes all configuration ModuleScripts:
 
-| Script Name | Type | Source File |
-|-------------|------|-------------|
-| GameConfig | ModuleScript | `src/shared/GameConfig.lua` |
-| GameState | ModuleScript | `src/shared/GameState.lua` |
-| WaveConfig | ModuleScript | `src/shared/WaveConfig.lua` |
-| ZombieTypes | ModuleScript | `src/shared/ZombieTypes.lua` |
-| WeaponConfig | ModuleScript | `src/shared/WeaponConfig.lua` |
-| FPSConfig | ModuleScript | `src/shared/FPSConfig.lua` |
-| MapConfig | ModuleScript | `src/shared/MapConfig.lua` |
-| PuzzleConfig | ModuleScript | `src/shared/PuzzleConfig.lua` |
-| UIScaleConfig | ModuleScript | `src/shared/UIScaleConfig.lua` |
-| UIScaleManager | ModuleScript | `src/shared/UIScaleManager.lua` |
-| CureStationSetup | ModuleScript | `src/server/CureStationSetup.lua` |
-
-> **Note**: `CureStationSetup.lua` is in the `src/server/` folder but must be placed in `ReplicatedStorage.Shared` for proper require paths.
+| Script Name | Type | Repository File |
+|-------------|------|-----------------|
+| GameConfig | ModuleScript | `ReplicatedStorage/Shared/GameConfig.lua` |
+| GameState | ModuleScript | `ReplicatedStorage/Shared/GameState.lua` |
+| WaveConfig | ModuleScript | `ReplicatedStorage/Shared/WaveConfig.lua` |
+| ZombieTypes | ModuleScript | `ReplicatedStorage/Shared/ZombieTypes.lua` |
+| WeaponConfig | ModuleScript | `ReplicatedStorage/Shared/WeaponConfig.lua` |
+| FPSConfig | ModuleScript | `ReplicatedStorage/Shared/FPSConfig.lua` |
+| MapConfig | ModuleScript | `ReplicatedStorage/Shared/MapConfig.lua` |
+| PuzzleConfig | ModuleScript | `ReplicatedStorage/Shared/PuzzleConfig.lua` |
+| UIScaleConfig | ModuleScript | `ReplicatedStorage/Shared/UIScaleConfig.lua` |
+| UIScaleManager | ModuleScript | `ReplicatedStorage/Shared/UIScaleManager.lua` |
 
 ### Step 5: Import Client Scripts to StarterPlayerScripts
 
-In **StarterPlayer** → **StarterPlayerScripts**, create:
+Copy the `StarterPlayer/StarterPlayerScripts/` folders from the repository to game.StarterPlayer.StarterPlayerScripts:
 
-| Script Name | Type | Source File |
-|-------------|------|-------------|
-| ClientController | ModuleScript | `src/client/ClientController.lua` |
-| WeaponController | LocalScript | `src/client/WeaponController.client.lua` |
-| FPSWeaponController | LocalScript | `src/client/FPSWeaponController.client.lua` |
-| FirstPersonCamera | LocalScript | `src/client/FirstPersonCamera.client.lua` |
-| FPSMovementController | LocalScript | `src/client/FPSMovementController.client.lua` |
-| FPSAudioController | LocalScript | `src/client/FPSAudioController.client.lua` |
-| FPSMenuController | LocalScript | `src/client/FPSMenuController.client.lua` |
-| SprintController | LocalScript | `src/client/SprintController.client.lua` |
+| Folder/Script Name | Type | Repository Path |
+|--------------------|------|-----------------|
+| Modules/ | Folder | `StarterPlayer/StarterPlayerScripts/Modules/` |
+| FPS/ | Folder | `StarterPlayer/StarterPlayerScripts/FPS/` |
 
-**FPS Folder:**
-1. Create a Folder named `FPS` in StarterPlayerScripts
-2. Inside FPS, create:
-   - `FirstPersonCamera` (ModuleScript) → `src/client/FPS/FirstPersonCamera.lua`
-   - `FirstPersonController` (LocalScript) → `src/client/FPS/FirstPersonController.client.lua`
+Key files include:
+- `Modules/ClientController.lua` (ModuleScript)
+- `Modules/FPSWeaponController.lua` (ModuleScript)
+- `Modules/FPSMovement.lua` (ModuleScript)
+- `FPS/FirstPersonCamera.lua` (ModuleScript)
 
 ### Step 6: Import UI Scripts to StarterGui
 
-In **StarterGui**, create LocalScripts:
+Copy LocalScripts from `StarterGui/` in the repository to game.StarterGui. Each `.lua` file should be created as a **LocalScript** instance:
 
-| Script Name | Type | Source File |
-|-------------|------|-------------|
-| WaveUI | LocalScript | `src/client/UI/WaveUI.client.lua` |
-| BaseHealthUI | LocalScript | `src/client/UI/BaseHealthUI.client.lua` |
-| CureUI | LocalScript | `src/client/UI/CureUI.client.lua` |
-| AllianceUI | LocalScript | `src/client/UI/AllianceUI.client.lua` |
-| ShopUI | LocalScript | `src/client/UI/ShopUI.client.lua` |
-| InventoryUI | LocalScript | `src/client/UI/InventoryUI.client.lua` |
-| PlayerHUD | LocalScript | `src/client/UI/PlayerHUD.client.lua` |
-| FPSHUD | LocalScript | `src/client/UI/FPSHUD.client.lua` |
-| PuzzleUI | LocalScript | `src/client/UI/PuzzleUI.client.lua` |
-| PuzzleMenuUI | LocalScript | `src/client/UI/PuzzleMenuUI.client.lua` |
-| MapVotingUI | LocalScript | `src/client/UI/MapVotingUI.client.lua` |
-| SpectatorUI | LocalScript | `src/client/UI/SpectatorUI.client.lua` |
-| ScoreboardUI | LocalScript | `src/client/UI/ScoreboardUI.client.lua` |
+| Script Name | Type | Repository File |
+|-------------|------|-----------------|
+| (All UI scripts) | LocalScript | `StarterGui/*.lua` |
+
+The repository contains ready-to-use UI scripts. Simply copy them as LocalScript instances in StarterGui.
 
 ### Step 7: Create ServerStorage Structure
 
@@ -436,7 +400,7 @@ The RemoteEvents folder in ReplicatedStorage is created automatically by the ser
 
 ### Step 9: Verify Script Import Patterns
 
-All scripts use proper Roblox service imports. The scripts in `src/` already use correct patterns:
+All scripts use proper Roblox service imports and are ready to use:
 
 ```lua
 local Players = game:GetService("Players")
@@ -450,7 +414,7 @@ local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local PlayerManager = require(script.Parent.PlayerManager)
 ```
 
-No changes needed - just copy the files as-is from `src/` to Roblox Studio.
+No changes needed - the repository structure matches Roblox Studio exactly. Simply copy folders as-is.
 
 ---
 
@@ -605,7 +569,7 @@ end)
 
 ## Configuration
 
-To adjust game balance, edit `src/shared/GameConfig.lua`:
+To adjust game balance, edit `ReplicatedStorage/Shared/GameConfig.lua` in Roblox Studio:
 
 ```lua
 -- Make game easier
