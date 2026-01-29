@@ -292,9 +292,18 @@ function TestFramework:runSuite(suite)
 		end
 	end
 	
-	-- Run all tests
-	for testName, testFunc in pairs(suite.tests) do
-		self:runTest(suite, testName, testFunc)
+	-- Run all tests in a deterministic order
+	local testNames = {}
+	for testName in pairs(suite.tests) do
+		table.insert(testNames, testName)
+	end
+	table.sort(testNames)
+	
+	for _, testName in ipairs(testNames) do
+		local testFunc = suite.tests[testName]
+		if typeof(testFunc) == "function" then
+			self:runTest(suite, testName, testFunc)
+		end
 	end
 	
 	-- Run afterAll hook
@@ -412,14 +421,15 @@ function TestFramework:createMock(className)
 		__returnValues = {}
 	}
 	
-	function mock:__index(key)
+	local metatable = {}
+	function metatable.__index(t, key)
 		return function(...)
-			table.insert(self.__calls, {method = key, args = {...}})
-			return self.__returnValues[key]
+			table.insert(t.__calls, {method = key, args = {...}})
+			return t.__returnValues[key]
 		end
 	end
 	
-	setmetatable(mock, mock)
+	setmetatable(mock, metatable)
 	return mock
 end
 

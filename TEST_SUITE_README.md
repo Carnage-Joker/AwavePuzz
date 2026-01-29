@@ -195,9 +195,10 @@ end
 
 ## 📊 Statistics
 
-- **Total Files:** 17 (15 test files + 2 framework files)
-- **Total Lines:** 5,000+ lines of test code
-- **Documentation:** 32KB+ of comprehensive docs
+- **Total Files:** 19 (15 test/framework files + 4 documentation files)
+- **Total Lines:** 4,269 lines (2,879 test code + 1,390 documentation)
+- **Test Suites:** 13
+- **Framework Files:** 2
 - **Coverage:** All major game systems
 - **Execution Time:** ~10-15 seconds (full suite)
 

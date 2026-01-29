@@ -234,7 +234,10 @@ suite.tests["Memory_NoGlobalLeaks"] = function()
 		"print", "warn", "error", "assert", "pcall", "xpcall",
 		"type", "typeof", "next", "pairs", "ipairs", "select",
 		"tonumber", "tostring", "getmetatable", "setmetatable",
-		"require", "tick", "time", "wait", "delay", "spawn"
+		"require", "tick", "time", "wait", "delay", "spawn",
+		-- Roblox / Lua standard globals
+		"task", "debug", "math", "string", "table", "coroutine",
+		"os", "utf8", "bit32", "buffer"
 	}
 	
 	local globalLeaks = {}

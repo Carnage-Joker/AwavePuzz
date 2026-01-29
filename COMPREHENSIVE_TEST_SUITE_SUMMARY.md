@@ -25,7 +25,7 @@ Implemented a comprehensive test suite with verbose logging capabilities for the
 
 ### Core Components
 
-#### 1. TestFramework.lua (475 lines)
+#### 1. TestFramework.lua (454 lines)
 **Location:** `ServerStorage/DevOnly/TestFramework.lua`
 
 **Features:**
@@ -43,7 +43,7 @@ Implemented a comprehensive test suite with verbose logging capabilities for the
 - `generateReport()` - Create detailed test report
 - `assert*()` - 15+ assertion methods for validation
 
-#### 2. TestRunner.lua (145 lines)
+#### 2. TestRunner.lua (180 lines)
 **Location:** `ServerStorage/DevOnly/TestRunner.lua`
 
 **Features:**
@@ -400,24 +400,26 @@ The test suite is ready for immediate use and will help maintain code quality an
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| TestFramework.lua | 475 | Core testing engine |
-| TestRunner.lua | 145 | Test orchestrator |
-| CoreSystemsTests.lua | 362 | Core system tests |
-| SpawningSystemTests.lua | 412 | Spawning system tests |
-| WeaponSystemTests.lua | 275 | Weapon system tests |
-| CureAndPuzzleTests.lua | 315 | Cure/puzzle tests |
-| AllianceSystemTests.lua | 276 | Alliance system tests |
-| ShopSystemTests.lua | 37 | Shop system tests |
-| MapSystemTests.lua | 33 | Map system tests |
-| LobbySystemTests.lua | 34 | Lobby system tests |
-| UISystemTests.lua | 38 | UI system tests |
-| MovementSystemTests.lua | 22 | Movement tests |
-| SpectatorSystemTests.lua | 23 | Spectator tests |
-| ConfigurationTests.lua | 219 | Configuration tests |
-| IntegrationTests.lua | 300 | Integration tests |
-| TEST_SUITE_GUIDE.md | 665 | Complete documentation |
-| TEST_SUITE_QUICK_REFERENCE.md | 180 | Quick reference |
-| **Total** | **3,811 lines** | **17 files** |
+| TestFramework.lua | 454 | Core testing engine |
+| TestRunner.lua | 180 | Test orchestrator |
+| CoreSystemsTests.lua | 353 | Core system tests |
+| SpawningSystemTests.lua | 407 | Spawning system tests |
+| WeaponSystemTests.lua | 240 | Weapon system tests |
+| CureAndPuzzleTests.lua | 294 | Cure/puzzle tests |
+| AllianceSystemTests.lua | 286 | Alliance system tests |
+| ShopSystemTests.lua | 31 | Shop system tests |
+| MapSystemTests.lua | 29 | Map system tests |
+| LobbySystemTests.lua | 29 | Lobby system tests |
+| UISystemTests.lua | 35 | UI system tests |
+| MovementSystemTests.lua | 19 | Movement tests |
+| SpectatorSystemTests.lua | 19 | Spectator tests |
+| ConfigurationTests.lua | 205 | Configuration tests |
+| IntegrationTests.lua | 298 | Integration tests |
+| TEST_SUITE_GUIDE.md | 565 | Complete documentation |
+| TEST_SUITE_QUICK_REFERENCE.md | 146 | Quick reference |
+| COMPREHENSIVE_TEST_SUITE_SUMMARY.md | 424 | Implementation summary |
+| TEST_SUITE_README.md | 255 | Overview and quick start |
+| **Total** | **4,269 lines** | **19 files** |
 
 ---
 
