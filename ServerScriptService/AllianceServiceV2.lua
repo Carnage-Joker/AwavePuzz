@@ -424,8 +424,20 @@ function AllianceServiceV2:acceptAlliance(responder, requester)
 		return false, "No pending alliance request"
 	end
 	
+	-- Check if responder is locked before delegating
+	if self.betrayalService and self.betrayalService:isPlayerLocked(responder) then
+		return false, "Cannot accept alliance while in betrayal window"
+	end
+	
+	-- Delegate to main handler
 	self:handleAllianceResponse(responder, requester, true)
-	return true
+	
+	-- Verify the alliance was actually formed
+	if self:areAllied(responder, requester) then
+		return true
+	end
+	
+	return false, "Alliance could not be formed"
 end
 
 -- Adapter for denying an alliance (test-compatible)

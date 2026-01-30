@@ -258,8 +258,12 @@ end
 --------------------------------------------------------------------------------
 -- Adapter methods for test compatibility
 --------------------------------------------------------------------------------
+-- Note: These inventory adapter methods require players to be online (connected to the server)
+-- because they rely on playerManager which only maintains data for active players.
+-- For offline player support, direct userId-based storage would be needed.
 
 -- Add item to player inventory (test-compatible, safe defaults)
+-- Requires: Player must be online (connected to server)
 function InventoryLedger:addItem(playerOrId, itemName, amount, source)
 	-- Validate inputs - don't throw, return false
 	if not playerOrId then
