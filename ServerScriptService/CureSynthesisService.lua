@@ -49,6 +49,7 @@ function CureSynthesisService.new(cureService, waveManager, gameManager)
 	self.waveManager = waveManager
 	self.gameManager = gameManager
 	self.puzzleService = nil -- Will be set later
+	self._initialized = false
 
 	-- Synthesis state
 	self.synthesisState = CureSynthesisService.States.IDLE
@@ -67,6 +68,20 @@ function CureSynthesisService.new(cureService, waveManager, gameManager)
 	print("[CureSynthesisService] Initialized")
 
 	return self
+end
+
+-- Initialize method (idempotent, safe to call multiple times)
+function CureSynthesisService:initialize()
+	if self._initialized then 
+		return true 
+	end
+	self._initialized = true
+	
+	-- Initialize any required state or connections
+	-- Currently all initialization happens in new(), so this is a no-op
+	-- But it provides the interface expected by tests
+	
+	return true
 end
 
 function CureSynthesisService:setPuzzleService(puzzleService)

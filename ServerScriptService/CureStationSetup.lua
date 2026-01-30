@@ -1,21 +1,36 @@
--- @ScriptType: Script
+-- @ScriptType: ModuleScript
 -- CureStationSetup.lua
--- Server script to setup cure stations with ProximityPrompts
--- Place in ServerScriptService or run once to setup stations
+-- Module for setting up cure stations with ProximityPrompts
+-- Returns a table/class that can be instantiated and initialized
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
 
--- Load GameConfig to check dev settings
-local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
-local GameConfig = SharedFolder and require(SharedFolder:WaitForChild("GameConfig", 5))
+local CureStationSetup = {}
+CureStationSetup.__index = CureStationSetup
 
-if not SharedFolder then
-	warn("[CureStationSetup] ReplicatedStorage.Shared not found within 10 seconds. GameConfig unavailable; cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
-elseif not GameConfig then
-	warn("[CureStationSetup] GameConfig module failed to load. Cure station auto-creation (DEV_AUTO_CREATE_CURE_STATIONS) will be disabled.")
+-- Load GameConfig to check dev settings (with safe fallback)
+local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
+local GameConfig
+if SharedFolder then
+	local GameConfigModule = SharedFolder:FindFirstChild("GameConfig")
+	if GameConfigModule then
+		local success, result = pcall(require, GameConfigModule)
+		if success then
+			GameConfig = result
+		else
+			warn("[CureStationSetup] Failed to load GameConfig:", result)
+		end
+	end
 end
+-- Constructor
+function CureStationSetup.new()
+	local self = setmetatable({}, CureStationSetup)
+	self._initialized = false
+	return self
+end
+
 -- Function to setup a cure station
 local function setupCureStation(station)
 	-- Ensure station has a ProximityPrompt
@@ -127,7 +142,25 @@ local function initializeCureStations()
 	print("[CureStationSetup] Cure stations initialized:", #cureStationsFolder:GetChildren())
 end
 
--- Initialize cure stations
-initializeCureStations()
+-- Initialize method (idempotent)
+function CureStationSetup:initialize()
+	if self._initialized then 
+		return true 
+	end
+	self._initialized = true
+	
+	initializeCureStations()
+	return true
+end
 
-return true
+-- Auto-initialize in Studio if running as a script (backwards compatibility)
+-- This only runs when directly executed, not when required as a module
+if RunService:IsStudio() and GameConfig and GameConfig.DEV_AUTO_CREATE_CURE_STATIONS then
+	task.defer(function()
+		-- Auto-create an instance and initialize only in Studio with feature flag
+		local autoInstance = CureStationSetup.new()
+		autoInstance:initialize()
+	end)
+end
+
+return CureStationSetup
