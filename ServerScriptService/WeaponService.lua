@@ -648,7 +648,22 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 end
 
 -- Deal damage to a target (Humanoid, Model, or Player)
--- Safe baseline implementation that delegates to existing damage flow
+-- 
+-- ⚠️ TEST INFRASTRUCTURE ONLY ⚠️
+-- This method is a simplified damage adapter required by WeaponSystemTests.
+-- It bypasses important game logic including:
+--   - Kill tracking and reward bonuses (onZombieKilled)
+--   - Alliance system checks (damagePlayer checks areAllied before PvP damage)
+--   - Player kill credit tracking via attributes (LastAttackerUserId, LastVictimUserId)
+--   - GameManager kill count incrementing
+--
+-- For production game logic, use the specialized methods instead:
+--   - damageZombie(zombieModel, player, stats, weaponId) for zombie damage
+--   - damagePlayer(characterModel, targetPlayer, attackingPlayer, stats, weaponId) for PvP damage
+--
+-- This method exists solely to satisfy test requirements and should NOT be used
+-- in gameplay code paths where proper context (player, weapon stats, etc.) is available.
+--
 -- Returns boolean success
 function WeaponService:dealDamage(target, amount, meta)
 	-- Validate amount
