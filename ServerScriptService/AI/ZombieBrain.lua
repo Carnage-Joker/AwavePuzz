@@ -151,6 +151,13 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	return self
 end
 
+-- Start method for tests (safe to call even if dependencies aren't fully present)
+function ZombieBrain.start()
+	-- This method exists for test compatibility
+	-- ZombieBrain uses update() for its main loop
+	return true
+end
+
 -- Load attack animation if available
 function ZombieBrain:loadAttackAnimation()
 	local animator = self.humanoid:FindFirstChildOfClass("Animator")

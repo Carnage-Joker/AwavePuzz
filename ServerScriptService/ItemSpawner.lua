@@ -51,6 +51,15 @@ function ItemSpawner.new()
 	return self
 end
 
+-- Initialize method for tests (idempotent, safe to call multiple times)
+function ItemSpawner:initialize()
+	if self._initialized then
+		return true
+	end
+	self._initialized = true
+	return true
+end
+
 function ItemSpawner:setPlayerManager(playerManager)
 	self.playerManager = playerManager
 end

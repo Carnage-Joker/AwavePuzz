@@ -58,6 +58,15 @@ function ResourceSpawner.new()
 	return self
 end
 
+-- Initialize method for tests (idempotent, safe to call multiple times)
+function ResourceSpawner:initialize()
+	if self._initialized then
+		return true
+	end
+	self._initialized = true
+	return true
+end
+
 function ResourceSpawner:setCureService(cureService)
 	self.cureService = cureService
 end

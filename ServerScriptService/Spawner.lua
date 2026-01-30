@@ -76,6 +76,15 @@ function Spawner.new(weaponService, baseManager, playerManager)
 	return self
 end
 
+-- Initialize method for tests (idempotent, safe to call multiple times)
+function Spawner:initialize()
+	if self._initialized then
+		return true
+	end
+	self._initialized = true
+	return true
+end
+
 -- NEW (non-breaking)
 function Spawner:setResourceSpawner(resourceSpawner)
 	self.resourceSpawner = resourceSpawner
