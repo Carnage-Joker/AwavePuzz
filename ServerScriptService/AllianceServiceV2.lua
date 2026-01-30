@@ -393,8 +393,21 @@ function AllianceServiceV2:proposeAlliance(requester, target)
 		return false, "Player is on betrayal cooldown"
 	end
 	
+	-- Delegate to main handler
 	self:handleAllianceRequest(requester, target)
-	return true
+	
+	-- Determine if the request actually resulted in an alliance or a pending request
+	if self:areAllied(requester, target) then
+		return true
+	end
+	
+	local responderId = target.UserId
+	local requesterId = requester.UserId
+	if self.pendingRequests[responderId] and self.pendingRequests[responderId][requesterId] then
+		return true
+	end
+	
+	return false, "Alliance request could not be created"
 end
 
 -- Adapter for accepting an alliance (test-compatible)
