@@ -103,11 +103,15 @@ function PlayerManager:addPlayer(player)
 	-- Setup character respawn tracking for health sync
 	local characterAddedConnection = player.CharacterAdded:Connect(function(character)
 		self:_syncHumanoidHealth(player)
+		self:_setupHealthListener(player, character)
 	end)
 	self.players[player.UserId].connections.characterAdded = characterAddedConnection
 
 	-- Sync health for current character if it exists
 	self:_syncHumanoidHealth(player)
+	if player.Character then
+		self:_setupHealthListener(player, player.Character)
+	end
 
 	self:sendCurrencyUpdate(player)
 	self:sendInventoryUpdate(player)
@@ -247,6 +251,66 @@ end
 ----------------------------------------------------------------
 -- Health (game health + Humanoid sync)
 ----------------------------------------------------------------
+
+function PlayerManager:_setupHealthListener(player, character)
+	-- Internal helper: Setup listener for external Humanoid health changes
+	-- This prevents desyncs from external damage sources (e.g., WeaponService)
+	if not player or not player.UserId then
+		return
+	end
+
+	local playerData = self.players[player.UserId]
+	if not playerData then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+
+	-- Disconnect existing health listener if any
+	if playerData.connections.healthChanged then
+		playerData.connections.healthChanged:Disconnect()
+		playerData.connections.healthChanged = nil
+	end
+
+	-- Track Humanoid health changes and sync back to internal state
+	local healthChangedConnection = humanoid.HealthChanged:Connect(function(newHealth)
+		if not playerData or not player.Parent then
+			-- Player left or data cleared
+			return
+		end
+
+		-- Calculate damage taken
+		local oldHealth = playerData.health
+		local healthDelta = newHealth - oldHealth
+
+		if healthDelta < 0 then
+			-- Health decreased (damage taken)
+			-- Update internal state to match
+			playerData.health = math.max(0, newHealth)
+			
+			if playerData.health <= 0 then
+				playerData.isAlive = false
+			end
+
+			self:sendHealthUpdate(player)
+		elseif healthDelta > 0 then
+			-- Health increased (healing)
+			-- Only allow if player is alive
+			if playerData.isAlive then
+				playerData.health = math.min(GameConfig.STARTING_HEALTH, newHealth)
+				self:sendHealthUpdate(player)
+			else
+				-- Dead players cannot be healed via Humanoid
+				humanoid.Health = 0
+			end
+		end
+	end)
+
+	playerData.connections.healthChanged = healthChangedConnection
+end
 
 function PlayerManager:_syncHumanoidHealth(player)
 	-- Internal helper: Sync Humanoid health from internal state
