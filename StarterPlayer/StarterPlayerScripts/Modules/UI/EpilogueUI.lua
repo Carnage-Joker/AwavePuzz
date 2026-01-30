@@ -278,6 +278,7 @@ end
 function EpilogueUI:hide()
 	if not self.isActive then return end
 	
+	print("[EpilogueUI] ✓ Hide() called - hiding UI")
 	self.isActive = false
 	
 	-- Cancel any auto-advance timer
@@ -345,14 +346,20 @@ function EpilogueUI:displayPage(pageNumber)
 end
 
 function EpilogueUI:nextPage()
-	if self.isTransitioning then return end
+	-- Cancel any pending auto-advance timer to avoid double-trigger
+	if self.autoAdvanceTimer then
+		task.cancel(self.autoAdvanceTimer)
+		self.autoAdvanceTimer = nil
+	end
 	
 	self.currentPage = self.currentPage + 1
 	
 	if self.currentPage > StoryConfig.TotalEpiloguePages then
-		-- Epilogue complete
+		-- Epilogue complete - bypass transition gating on final page
 		self:complete()
 	else
+		-- Only block navigation if transitioning between pages
+		if self.isTransitioning then return end
 		-- Display next page
 		self:displayPage(self.currentPage)
 	end
@@ -364,7 +371,7 @@ function EpilogueUI:skip()
 end
 
 function EpilogueUI:complete()
-	print("[EpilogueUI] Epilogue complete, notifying server")
+	print("[EpilogueUI] ✓ Complete() called - closing epilogue UI")
 	-- Notify server that epilogue is complete
 	if self.remoteEvents.EpilogueComplete then
 		self.remoteEvents.EpilogueComplete:FireServer()
@@ -398,8 +405,8 @@ function EpilogueUI:fadeOut()
 	
 	self:fadeOutContent()
 	
-	-- Disable after fade completes
-	bgTween.Completed:Connect(function()
+	-- Use :Once() to avoid accumulating connections
+	bgTween.Completed:Once(function()
 		self.screenGui.Enabled = false
 	end)
 end
@@ -450,7 +457,8 @@ function EpilogueUI:fadeInContent()
 	btnBgTween:Play()
 	btnTextTween:Play()
 	
-	textTween.Completed:Connect(function()
+	-- Use :Once() to avoid accumulating connections, reset isTransitioning when fade completes
+	textTween.Completed:Once(function()
 		self.isTransitioning = false
 	end)
 end
@@ -487,6 +495,11 @@ function EpilogueUI:fadeOutContent()
 		{ BackgroundTransparency = 1, TextTransparency = 1 }
 	)
 	btnTween:Play()
+	
+	-- Use :Once() to avoid accumulating connections, reset isTransitioning when fade completes
+	btnTween.Completed:Once(function()
+		self.isTransitioning = false
+	end)
 end
 
 -- Initialize

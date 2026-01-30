@@ -8,6 +8,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 print("[GameManager] Loading shared configuration...")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
@@ -224,6 +225,12 @@ function GameManager:setupRemoteEvents()
 end
 
 function GameManager:_hookIntroRemotes()
+	-- Only bind OnServerEvent connections when running on the server
+	-- This prevents errors in test/edit contexts where RunService:IsServer() is false
+	if not RunService:IsServer() then
+		return
+	end
+	
 	-- Hook title screen continue event
 	if self.remoteEvents.TitleScreenContinue then
 		self.remoteEvents.TitleScreenContinue.OnServerEvent:Connect(function(player)
