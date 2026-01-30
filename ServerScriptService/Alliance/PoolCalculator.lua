@@ -138,4 +138,81 @@ function PoolCalculator:snapshotPool(targetPlayer)
 	return snapshot
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+
+-- Calculate total pooled currency from members and ledger/balances (test-compatible)
+-- Can accept:
+-- 1. list of players/userIds + a ledger with balance methods
+-- 2. plain table of {userId = balance}
+function PoolCalculator.calculatePooledCurrency(members, ledgerOrBalances)
+	-- Safe defaults - return 0 if invalid inputs
+	if not members and not ledgerOrBalances then
+		return 0
+	end
+	
+	local total = 0
+	
+	-- Case 1: ledgerOrBalances is a plain table of balances
+	if type(ledgerOrBalances) == "table" and not ledgerOrBalances.playerManager then
+		-- It's a plain balance table
+		for userId, balance in pairs(ledgerOrBalances) do
+			if type(balance) == "number" then
+				total = total + balance
+			end
+		end
+		return total
+	end
+	
+	-- Case 2: members list + ledger with methods
+	if type(members) ~= "table" then
+		return 0
+	end
+	
+	-- Try to get balances from ledger
+	if type(ledgerOrBalances) == "table" then
+		-- Check if it has balance methods
+		if ledgerOrBalances.getCurrency then
+			-- Has getCurrency method
+			for _, member in ipairs(members) do
+				local userId = type(member) == "number" and member or (member.UserId or 0)
+				local success, balance = pcall(ledgerOrBalances.getCurrency, ledgerOrBalances, userId)
+				if success and type(balance) == "number" then
+					total = total + balance
+				end
+			end
+		elseif ledgerOrBalances.getBalance then
+			-- Has getBalance method
+			for _, member in ipairs(members) do
+				local userId = type(member) == "number" and member or (member.UserId or 0)
+				local success, balance = pcall(ledgerOrBalances.getBalance, ledgerOrBalances, userId)
+				if success and type(balance) == "number" then
+					total = total + balance
+				end
+			end
+		elseif ledgerOrBalances.playerManager then
+			-- It's an InventoryLedger or similar with playerManager
+			-- Use getInventory or access player data
+			for _, member in ipairs(members) do
+				local player
+				if type(member) == "number" then
+					player = Players:GetPlayerByUserId(member)
+				else
+					player = member
+				end
+				
+				if player and ledgerOrBalances.playerManager then
+					local playerData = ledgerOrBalances.playerManager:getPlayerData(player)
+					if playerData and playerData.currency then
+						total = total + playerData.currency
+					end
+				end
+			end
+		end
+	end
+	
+	return total
+end
+
 return PoolCalculator

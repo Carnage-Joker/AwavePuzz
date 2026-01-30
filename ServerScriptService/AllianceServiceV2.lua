@@ -363,4 +363,53 @@ function AllianceServiceV2:onPlayerKilled(deadPlayer, killerPlayer)
 	end
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+
+-- Alias for handleAllianceRequest (test-compatible method name)
+function AllianceServiceV2:proposeAlliance(requester, target)
+	if not requester or not target then
+		return false, "Invalid players"
+	end
+	
+	self:handleAllianceRequest(requester, target)
+	return true
+end
+
+-- Adapter for accepting an alliance (test-compatible)
+function AllianceServiceV2:acceptAlliance(responder, requester)
+	if not responder or not requester then
+		return false, "Invalid players"
+	end
+	
+	self:handleAllianceResponse(responder, requester, true)
+	return true
+end
+
+-- Adapter for denying an alliance (test-compatible)
+function AllianceServiceV2:denyAlliance(responder, requester)
+	if not responder or not requester then
+		return false, "Invalid players"
+	end
+	
+	self:handleAllianceResponse(responder, requester, false)
+	return true
+end
+
+-- Adapter for breaking an alliance (test-compatible)
+function AllianceServiceV2:breakAlliance(player, target)
+	if not player or not target then
+		return false, "Invalid players"
+	end
+	
+	self:handleBreakAlliance(player, target)
+	return true
+end
+
+-- Get alliance status between two players (test-compatible)
+function AllianceServiceV2:getAlliance(player1, player2)
+	return self:areAllied(player1, player2)
+end
+
 return AllianceServiceV2

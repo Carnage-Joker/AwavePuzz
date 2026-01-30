@@ -58,11 +58,28 @@ function BetrayalService.new(allianceGraph, poolCalculator, inventoryLedger, pla
 
 	-- Track traitors (players who failed stalemate)
 	self.traitors = {} -- userId -> true
+	
+	-- Initialization flag for idempotent initialize()
+	self._initialized = false
 
 	-- Setup remote events
 	self:setupRemoteEvents()
 
 	return self
+end
+
+-- Idempotent initialization method (test-compatible)
+function BetrayalService:initialize()
+	if self._initialized then
+		return true
+	end
+	
+	-- Perform any additional initialization if needed
+	-- Currently setupRemoteEvents is already called in .new()
+	-- This method is provided for test compatibility and future extensibility
+	
+	self._initialized = true
+	return true
 end
 
 function BetrayalService:setupRemoteEvents()

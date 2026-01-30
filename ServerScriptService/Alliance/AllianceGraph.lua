@@ -172,4 +172,30 @@ function AllianceGraph:cleanupPlayer(player)
 	self.edges[userId] = nil
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+
+-- Alias for addEdge (test-compatible method name)
+function AllianceGraph:addAlliance(playerA, playerB, meta)
+	-- meta parameter is optional (timestamp, trust, etc.) - currently not used
+	-- but included for future extensibility
+	return self:addEdge(playerA, playerB)
+end
+
+-- Alias for removeEdge (test-compatible method name)
+function AllianceGraph:removeAlliance(playerA, playerB)
+	return self:removeEdge(playerA, playerB)
+end
+
+-- Alias for getDirectAllies (test-compatible method name)
+function AllianceGraph:getAllies(player)
+	return self:getDirectAllies(player)
+end
+
+-- Alias for areDirectAllies (test-compatible method name)
+function AllianceGraph:isAllied(player1, player2)
+	return self:areDirectAllies(player1, player2)
+end
+
 return AllianceGraph
