@@ -101,10 +101,63 @@ end
 function CureService:addComponentProgress(player, componentName, amount)
 	-- This is an adapter method that the tests may expect
 	-- It delegates to the existing handleDepositComponent
+	-- Optimized to batch additions and update progress only once
 	amount = amount or 1
 	
+	if amount <= 0 then
+		return true
+	end
+	
+	-- Initialize player if needed
+	self:initializePlayer(player)
+	
+	local userId = player.UserId
+	local playerData = self.playerManager:GetPlayerData(player)
+	
+	if not playerData then
+		warn("[CureService] No player data found for", player.Name)
+		return false
+	end
+	
+	-- Initialize CureComponents if not exists
+	if not playerData.CureComponents then
+		playerData.CureComponents = {}
+	end
+	
+	-- Batch add components to player's inventory
 	for i = 1, amount do
-		self:handleDepositComponent(player, componentName)
+		table.insert(playerData.CureComponents, componentName)
+	end
+	
+	-- Update component counter once
+	self.playerComponents[userId][componentName] = (self.playerComponents[userId][componentName] or 0) + amount
+	
+	local componentCount = self.playerComponents[userId][componentName]
+	print("[CureService]", player.Name, "now has", componentCount, "of", componentName)
+	
+	-- Get the effective component count (pooled if in alliance)
+	local effectiveCount = self:getEffectiveComponentCount(player, componentName)
+	
+	-- Check if player (or alliance) has collected 5 of this component
+	if effectiveCount >= GameConfig.CURE_COMPONENTS_REQUIRED then
+		if not self.puzzlePromptShown[userId][componentName] then
+			self:notifyPuzzleAvailable(player, componentName)
+			self.puzzlePromptShown[userId][componentName] = true
+		end
+	end
+	
+	-- Update cure progress for this player and their allies (only once)
+	self:updatePlayerCureProgress(player)
+	
+	-- Fire event to update UI (only once)
+	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
+		remoteEvents.CureUpdate:FireClient(player, {
+			type = "component_collected",
+			componentName = componentName,
+			count = effectiveCount,
+			total = GameConfig.CURE_COMPONENTS_REQUIRED
+		})
 	end
 	
 	return true

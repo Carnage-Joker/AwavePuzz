@@ -708,15 +708,40 @@ function PuzzleService:requestPuzzle(player, componentNameOrType, difficulty)
 	-- Initialize player if needed
 	self:initializePlayer(player)
 	
-	-- If componentNameOrType is nil, return a generic puzzle
+	-- If componentNameOrType is nil, use a predictable default
 	local componentName = componentNameOrType
 	if not componentName then
-		-- Default to first component
-		componentName = next(PuzzleConfig.ComponentPuzzles)
+		-- Default to first component name from GameConfig for predictable behavior
+		componentName = GameConfig.CURE_COMPONENT_NAMES[1]
+	end
+	
+	-- Handle FinalSynthesis separately
+	if componentName == "FinalSynthesis" then
+		-- Generate final synthesis puzzle using existing method
+		local success, puzzle = pcall(function()
+			return self:generatePuzzle(componentName)
+		end)
+		
+		if not success then
+			warn("[PuzzleService] requestPuzzle: Failed to generate final synthesis puzzle:", puzzle)
+			-- Return appropriate multi-stage puzzle structure for final synthesis
+			return {
+				type = PuzzleConfig.PuzzleTypes.SYNTHESIS,
+				name = "Final Synthesis",
+				description = "Complete all stages to synthesize the cure",
+				data = {
+					stages = {},
+					currentStage = 1
+				},
+				componentName = componentName
+			}, "Generation failed, using fallback"
+		end
+		
+		return puzzle, nil
 	end
 	
 	-- Validate component name
-	if componentName ~= "FinalSynthesis" and not PuzzleConfig.ComponentPuzzles[componentName] then
+	if not PuzzleConfig.ComponentPuzzles[componentName] then
 		-- Invalid component, try to generate a generic puzzle
 		warn("[PuzzleService] requestPuzzle: Invalid component '" .. tostring(componentName) .. "', generating generic puzzle")
 		
