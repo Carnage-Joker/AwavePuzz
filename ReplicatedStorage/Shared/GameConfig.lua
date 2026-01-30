@@ -70,6 +70,7 @@ GameConfig.BASE_CAMP = {
 -- Wave Settings
 GameConfig.STARTING_WAVE = 1
 GameConfig.WAVE_DELAY = 30 -- Seconds between waves
+GameConfig.WAVE_INTERMISSION = GameConfig.WAVE_DELAY -- Alias for WAVE_DELAY (used by tests)
 GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER = 1.5 -- How much zombies increase per wave
 GameConfig.BASE_ZOMBIES_PER_WAVE = 5
 
