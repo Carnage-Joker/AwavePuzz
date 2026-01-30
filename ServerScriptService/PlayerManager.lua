@@ -295,6 +295,10 @@ function PlayerManager:_setupHealthListener(player, character)
 		playerData.connections.healthChanged = nil
 	end
 
+	-- Track the last known Humanoid health to detect external changes
+	-- This prevents circular updates when _syncHumanoidHealth modifies Humanoid.Health
+	playerData.lastHumanoidHealth = humanoid.Health
+
 	-- Track Humanoid health changes and sync back to internal state
 	local healthChangedConnection = humanoid.HealthChanged:Connect(function(newHealth)
 		if not playerData or not player.Parent then
@@ -302,12 +306,18 @@ function PlayerManager:_setupHealthListener(player, character)
 			return
 		end
 
-		-- Calculate damage taken
-		local oldHealth = playerData.health
-		local healthDelta = newHealth - oldHealth
+		-- Calculate delta from last known Humanoid health (not internal state)
+		-- This way we can distinguish external changes from our own _syncHumanoidHealth calls
+		local healthDelta = newHealth - (playerData.lastHumanoidHealth or newHealth)
+		playerData.lastHumanoidHealth = newHealth
+
+		-- Ignore negligible changes (rounding differences)
+		if math.abs(healthDelta) < 0.01 then
+			return
+		end
 
 		if healthDelta < 0 then
-			-- Health decreased (damage taken)
+			-- Health decreased (external damage taken)
 			-- Update internal state to match
 			playerData.health = math.max(0, newHealth)
 			
@@ -317,7 +327,7 @@ function PlayerManager:_setupHealthListener(player, character)
 
 			self:sendHealthUpdate(player)
 		elseif healthDelta > 0 then
-			-- Health increased (healing)
+			-- Health increased (external healing)
 			-- Only allow if player is alive
 			if playerData.isAlive then
 				playerData.health = math.min(GameConfig.STARTING_HEALTH, newHealth)
@@ -325,6 +335,7 @@ function PlayerManager:_setupHealthListener(player, character)
 			else
 				-- Dead players cannot be healed via Humanoid
 				humanoid.Health = 0
+				playerData.lastHumanoidHealth = 0
 			end
 		end
 	end)
@@ -358,12 +369,19 @@ function PlayerManager:_syncHumanoidHealth(player)
 	humanoid.MaxHealth = GameConfig.STARTING_HEALTH
 
 	-- Sync current health from internal state
+	local newHumanoidHealth
 	if playerData.isAlive then
-		humanoid.Health = math.clamp(playerData.health, 0, GameConfig.STARTING_HEALTH)
+		newHumanoidHealth = math.clamp(playerData.health, 0, GameConfig.STARTING_HEALTH)
 	else
 		-- Dead players stay dead
-		humanoid.Health = 0
+		newHumanoidHealth = 0
 	end
+	
+	humanoid.Health = newHumanoidHealth
+	
+	-- Update last known Humanoid health to prevent circular updates
+	-- This tells the HealthChanged listener that WE made this change
+	playerData.lastHumanoidHealth = newHumanoidHealth
 end
 
 function PlayerManager:damagePlayer(player, damage)
