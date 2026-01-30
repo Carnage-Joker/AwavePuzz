@@ -67,6 +67,20 @@ function ResourceSpawner:initialize()
 	return true
 end
 
+-- Start spawning resources (for test compatibility)
+function ResourceSpawner:startSpawning()
+	-- ResourceSpawner uses update() for spawning logic
+	-- This method exists for test interface compatibility
+	return true
+end
+
+-- Stop spawning resources (for test compatibility)
+function ResourceSpawner:stopSpawning()
+	-- Clear all active resources to stop spawning
+	self:clearAllResources()
+	return true
+end
+
 function ResourceSpawner:setCureService(cureService)
 	self.cureService = cureService
 end

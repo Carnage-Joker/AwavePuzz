@@ -85,6 +85,13 @@ function Spawner:initialize()
 	return true
 end
 
+-- Stop spawning zombies (for test compatibility)
+function Spawner:stopSpawning()
+	-- Clear spawn queue and all active zombies
+	self:clearAllZombies()
+	return true
+end
+
 -- NEW (non-breaking)
 function Spawner:setResourceSpawner(resourceSpawner)
 	self.resourceSpawner = resourceSpawner

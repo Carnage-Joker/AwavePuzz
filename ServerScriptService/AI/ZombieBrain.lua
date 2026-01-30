@@ -158,6 +158,11 @@ function ZombieBrain.start()
 	return true
 end
 
+-- Stop method for tests (alias for destroy)
+function ZombieBrain:stop()
+	self:destroy()
+end
+
 -- Load attack animation if available
 function ZombieBrain:loadAttackAnimation()
 	local animator = self.humanoid:FindFirstChildOfClass("Animator")
