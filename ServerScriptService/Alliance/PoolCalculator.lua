@@ -138,4 +138,132 @@ function PoolCalculator:snapshotPool(targetPlayer)
 	return snapshot
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+
+-- Calculate total pooled currency from members and ledger/balances (test-compatible)
+-- Can accept:
+-- 1. Single argument: plain table of {userId = balance}
+-- 2. Two arguments: list of players/userIds + a ledger with balance methods
+function PoolCalculator.calculatePooledCurrency(members, ledgerOrBalances)
+	-- Safe defaults - return 0 if invalid inputs
+	if not members and not ledgerOrBalances then
+		return 0
+	end
+	
+	local total = 0
+	
+	-- Case: Single argument - check if members is a plain balance table
+	if type(members) == "table" and ledgerOrBalances == nil then
+		local isPlainBalanceTable = true
+		local hasNumericValues = false
+		
+		-- Check if it has any method-like properties (functions) or array-like structure
+		if members.getCurrency or members.getBalance or members.playerManager or #members > 0 then
+			isPlainBalanceTable = false
+		else
+			-- Verify all values are numbers
+			for key, value in pairs(members) do
+				if type(value) ~= "number" then
+					isPlainBalanceTable = false
+					break
+				else
+					hasNumericValues = true
+				end
+			end
+		end
+		
+		-- If it's a plain balance table, sum and return
+		if isPlainBalanceTable and hasNumericValues then
+			for userId, balance in pairs(members) do
+				if type(balance) == "number" then
+					total = total + balance
+				end
+			end
+			return total
+		end
+	end
+	
+	-- Detect if ledgerOrBalances is a plain balance table by checking if all values are numbers
+	if type(ledgerOrBalances) == "table" then
+		local isPlainBalanceTable = true
+		local hasNumericValues = false
+		
+		-- Check if it has any method-like properties (functions)
+		if ledgerOrBalances.getCurrency or ledgerOrBalances.getBalance or ledgerOrBalances.playerManager then
+			isPlainBalanceTable = false
+		else
+			-- Verify all values are numbers
+			for key, value in pairs(ledgerOrBalances) do
+				if type(value) ~= "number" then
+					isPlainBalanceTable = false
+					break
+				else
+					hasNumericValues = true
+				end
+			end
+		end
+		
+		-- Case 1: It's a plain balance table
+		if isPlainBalanceTable and hasNumericValues then
+			for userId, balance in pairs(ledgerOrBalances) do
+				if type(balance) == "number" then
+					total = total + balance
+				end
+			end
+			return total
+		end
+	end
+	
+	-- Case 2: members list + ledger with methods
+	if type(members) ~= "table" then
+		return 0
+	end
+	
+	-- Try to get balances from ledger
+	if type(ledgerOrBalances) == "table" then
+		-- Check if it has balance methods
+		if ledgerOrBalances.getCurrency then
+			-- Has getCurrency method
+			for _, member in ipairs(members) do
+				local userId = type(member) == "number" and member or (member.UserId or 0)
+				local success, balance = pcall(ledgerOrBalances.getCurrency, ledgerOrBalances, userId)
+				if success and type(balance) == "number" then
+					total = total + balance
+				end
+			end
+		elseif ledgerOrBalances.getBalance then
+			-- Has getBalance method
+			for _, member in ipairs(members) do
+				local userId = type(member) == "number" and member or (member.UserId or 0)
+				local success, balance = pcall(ledgerOrBalances.getBalance, ledgerOrBalances, userId)
+				if success and type(balance) == "number" then
+					total = total + balance
+				end
+			end
+		elseif ledgerOrBalances.playerManager then
+			-- It's an InventoryLedger or similar with playerManager
+			-- Use getInventory or access player data
+			for _, member in ipairs(members) do
+				local player
+				if type(member) == "number" then
+					player = Players:GetPlayerByUserId(member)
+				else
+					player = member
+				end
+				
+				if player and ledgerOrBalances.playerManager then
+					local playerData = ledgerOrBalances.playerManager:getPlayerData(player)
+					if playerData and playerData.currency then
+						total = total + playerData.currency
+					end
+				end
+			end
+		end
+	end
+	
+	return total
+end
+
 return PoolCalculator

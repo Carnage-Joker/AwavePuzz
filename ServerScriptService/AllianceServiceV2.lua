@@ -363,4 +363,126 @@ function AllianceServiceV2:onPlayerKilled(deadPlayer, killerPlayer)
 	end
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+
+-- Alias for handleAllianceRequest (test-compatible method name)
+function AllianceServiceV2:proposeAlliance(requester, target)
+	if not requester or not target then
+		return false, "Invalid players"
+	end
+	
+	-- Check if already allied
+	if self:areAllied(requester, target) then
+		return false, "Already allied"
+	end
+	
+	-- Check if requester is locked
+	if self.betrayalService and self.betrayalService:isPlayerLocked(requester) then
+		return false, "Player is locked in betrayal window"
+	end
+	
+	-- Check if requester is a traitor
+	if self.betrayalService and self.betrayalService:isTraitor(requester) then
+		return false, "Traitors cannot form alliances"
+	end
+	
+	-- Check betrayal cooldown
+	if self:isOnBetrayalCooldown(requester) then
+		return false, "Player is on betrayal cooldown"
+	end
+	
+	-- Delegate to main handler
+	self:handleAllianceRequest(requester, target)
+	
+	-- Determine if the request actually resulted in an alliance or a pending request
+	if self:areAllied(requester, target) then
+		return true
+	end
+	
+	local responderId = target.UserId
+	local requesterId = requester.UserId
+	if self.pendingRequests[responderId] and self.pendingRequests[responderId][requesterId] then
+		return true
+	end
+	
+	return false, "Alliance request could not be created"
+end
+
+-- Adapter for accepting an alliance (test-compatible)
+function AllianceServiceV2:acceptAlliance(responder, requester)
+	if not responder or not requester then
+		return false, "Invalid players"
+	end
+	
+	-- Check if there's a pending request
+	local responderId = responder.UserId
+	local requesterId = requester.UserId
+	
+	if not self.pendingRequests[responderId] or not self.pendingRequests[responderId][requesterId] then
+		return false, "No pending alliance request"
+	end
+	
+	-- Check if responder is locked before delegating
+	if self.betrayalService and self.betrayalService:isPlayerLocked(responder) then
+		return false, "Cannot accept alliance while in betrayal window"
+	end
+	
+	-- Delegate to main handler
+	self:handleAllianceResponse(responder, requester, true)
+	
+	-- Verify the alliance was actually formed
+	if self:areAllied(responder, requester) then
+		return true
+	end
+	
+	return false, "Alliance could not be formed"
+end
+
+-- Adapter for denying an alliance (test-compatible)
+function AllianceServiceV2:denyAlliance(responder, requester)
+	if not responder or not requester then
+		return false, "Invalid players"
+	end
+	
+	-- Check if there's a pending request
+	local responderId = responder.UserId
+	local requesterId = requester.UserId
+	
+	if not self.pendingRequests[responderId] or not self.pendingRequests[responderId][requesterId] then
+		return false, "No pending alliance request"
+	end
+	
+	self:handleAllianceResponse(responder, requester, false)
+	return true
+end
+
+-- Adapter for breaking an alliance (test-compatible)
+function AllianceServiceV2:breakAlliance(player, target)
+	if not player or not target then
+		return false, "Invalid players"
+	end
+	
+	-- Check if allied
+	if not self:areAllied(player, target) then
+		return false, "Players are not allied"
+	end
+	
+	local success, err = self:handleBreakAlliance(player, target)
+	
+	-- Backwards compatibility: if handleBreakAlliance does not return
+	-- an explicit success flag yet, assume success as before
+	if success == nil then
+		return true
+	end
+	
+	return success, err
+end
+
+-- Get alliance status between two players (test-compatible)
+function AllianceServiceV2:getAlliance(player1, player2)
+	return self:areAllied(player1, player2)
+end
+
 return AllianceServiceV2

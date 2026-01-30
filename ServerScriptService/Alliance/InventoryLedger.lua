@@ -255,4 +255,213 @@ function InventoryLedger:rollback()
 	return true
 end
 
+--------------------------------------------------------------------------------
+-- Adapter methods for test compatibility
+--------------------------------------------------------------------------------
+-- Note: These inventory adapter methods require players to be online (connected to the server)
+-- because they rely on playerManager which only maintains data for active players.
+-- For offline player support, direct userId-based storage would be needed.
+
+-- Add item to player inventory (test-compatible, safe defaults)
+-- Requires: Player must be online (connected to server)
+function InventoryLedger:addItem(playerOrId, itemName, amount, source)
+	-- Validate inputs - don't throw, return false
+	if not playerOrId then
+		return false, "Invalid player/userId"
+	end
+	
+	if not itemName or type(itemName) ~= "string" then
+		return false, "Invalid item name"
+	end
+	
+	-- Default amount to 1 if not provided or invalid
+	amount = (type(amount) == "number" and amount > 0) and amount or 1
+	
+	-- Get userId from Player instance or use directly if it's a number
+	local userId
+	if type(playerOrId) == "number" then
+		userId = playerOrId
+	elseif typeof(playerOrId) == "Instance" and playerOrId:IsA("Player") then
+		userId = playerOrId.UserId
+	else
+		return false, "Invalid player type"
+	end
+	
+	-- Get player instance for playerManager
+	local player = Players:GetPlayerByUserId(userId)
+	if not player then
+		return false, "Player not found"
+	end
+	
+	-- Get player data
+	local playerData = self.playerManager:getPlayerData(player)
+	if not playerData then
+		return false, "Player data not found"
+	end
+	
+	-- Add item to inventory
+	if not playerData.inventory then
+		playerData.inventory = {}
+	end
+	
+	playerData.inventory[itemName] = (playerData.inventory[itemName] or 0) + amount
+	
+	-- Update client (safe - check if method exists)
+	if self.playerManager.sendInventoryUpdate then
+		self.playerManager:sendInventoryUpdate(player)
+	end
+	
+	return true
+end
+
+-- Remove item from player inventory (test-compatible)
+function InventoryLedger:removeItem(playerOrId, itemName, amount)
+	if not playerOrId or not itemName then
+		return false, "Invalid parameters"
+	end
+	
+	amount = (type(amount) == "number" and amount > 0) and amount or 1
+	
+	local userId
+	if type(playerOrId) == "number" then
+		userId = playerOrId
+	elseif typeof(playerOrId) == "Instance" and playerOrId:IsA("Player") then
+		userId = playerOrId.UserId
+	else
+		return false, "Invalid player type"
+	end
+	
+	local player = Players:GetPlayerByUserId(userId)
+	if not player then
+		return false, "Player not found"
+	end
+	
+	local playerData = self.playerManager:getPlayerData(player)
+	if not playerData or not playerData.inventory then
+		return false, "No inventory"
+	end
+	
+	local current = playerData.inventory[itemName] or 0
+	if current < amount then
+		return false, "Insufficient items"
+	end
+	
+	playerData.inventory[itemName] = current - amount
+	if playerData.inventory[itemName] == 0 then
+		playerData.inventory[itemName] = nil
+	end
+	
+	if self.playerManager.sendInventoryUpdate then
+		self.playerManager:sendInventoryUpdate(player)
+	end
+	
+	return true
+end
+
+-- Get player inventory (test-compatible)
+function InventoryLedger:getInventory(playerOrId)
+	if not playerOrId then
+		return {}
+	end
+	
+	local userId
+	if type(playerOrId) == "number" then
+		userId = playerOrId
+	elseif typeof(playerOrId) == "Instance" and playerOrId:IsA("Player") then
+		userId = playerOrId.UserId
+	else
+		return {}
+	end
+	
+	local player = Players:GetPlayerByUserId(userId)
+	if not player then
+		return {}
+	end
+	
+	local playerData = self.playerManager:getPlayerData(player)
+	if not playerData then
+		return {}
+	end
+	
+	-- Return a copy to prevent external modification
+	local inventory = {}
+	if playerData.inventory then
+		for itemName, count in pairs(playerData.inventory) do
+			inventory[itemName] = count
+		end
+	end
+	
+	return inventory
+end
+
+-- Transfer inventory between players (test-compatible)
+function InventoryLedger:transferInventory(fromPlayerOrId, toPlayerOrId, itemName, amount)
+	if not fromPlayerOrId or not toPlayerOrId or not itemName then
+		return false, "Invalid parameters"
+	end
+	
+	amount = (type(amount) == "number" and amount > 0) and amount or 1
+	
+	-- Get both players
+	local fromUserId = type(fromPlayerOrId) == "number" and fromPlayerOrId 
+		or (typeof(fromPlayerOrId) == "Instance" and fromPlayerOrId:IsA("Player") and fromPlayerOrId.UserId)
+	local toUserId = type(toPlayerOrId) == "number" and toPlayerOrId
+		or (typeof(toPlayerOrId) == "Instance" and toPlayerOrId:IsA("Player") and toPlayerOrId.UserId)
+	
+	if not fromUserId or not toUserId then
+		return false, "Invalid player types"
+	end
+	
+	local fromPlayer = Players:GetPlayerByUserId(fromUserId)
+	local toPlayer = Players:GetPlayerByUserId(toUserId)
+	
+	if not fromPlayer or not toPlayer then
+		return false, "Players not found"
+	end
+	
+	local fromData = self.playerManager:getPlayerData(fromPlayer)
+	local toData = self.playerManager:getPlayerData(toPlayer)
+	
+	if not fromData or not toData then
+		return false, "Player data not found"
+	end
+	
+	-- Validate source has enough items
+	local currentAmount = fromData.inventory and fromData.inventory[itemName] or 0
+	if currentAmount < amount then
+		return false, "Insufficient items in source inventory"
+	end
+	
+	-- Perform atomic transfer using transaction system
+	if not self:begin() then
+		return false, "Failed to begin transaction"
+	end
+	
+	-- Create deduction and grant structures
+	local deduction = {
+		currency = 0,
+		resources = {[itemName] = amount},
+		components = {},
+		weapons = {}
+	}
+	
+	local grant = {
+		currency = 0,
+		resources = {[itemName] = amount},
+		components = {},
+		weapons = {}
+	}
+	
+	self:applyDeduction(fromUserId, deduction)
+	self:applyGrant(toUserId, grant)
+	
+	-- Commit transaction
+	local success = self:commit()
+	if not success then
+		return false, "Transaction commit failed"
+	end
+	
+	return true
+end
+
 return InventoryLedger
