@@ -5,6 +5,10 @@
 -- Configuration for First-Person Shooter mechanics
 -- Contains settings for camera, movement, weapons, recoil, and HUD
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local AssetConfig = require(SharedFolder:WaitForChild("AssetConfig"))
+
 local FPSConfig = {}
 
 --------------------------------------------------------------------------------
@@ -464,42 +468,10 @@ FPSConfig.Animations = {
 	ViewmodelFOV = 70,           -- FOV for viewmodel (separate from camera)
 	ViewmodelOffset = Vector3.new(0, -0.5, -1), -- Base offset from camera
 
-	-- Animation IDs (Replace with actual Roblox animation asset IDs)
-	-- Format: "rbxassetid://0" (placeholder; replace 0 with your animation asset ID)
-	WeaponAnimations = {
-		Pistol = {
-			idle = "rbxassetid://77700472496946",      -- Idle holding animation (placeholder)
-			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation (placeholder)
-			reload = "rbxassetid://136927034232244",    -- Reload animation (placeholder)
-			equip = "rbxassetid://106310870423679",     -- Draw/equip animation (placeholder)
-			sprint = "rbxassetid://102565289526730",    -- Sprint (lowered weapon) animation (placeholder)
-			ads = "rbxassetid://0",       -- Aim down sights animation
-		},
-		SMG = {
-			idle = "rbxassetid://77700472496946",      -- Idle holding animation (placeholder)
-			fire = "rbxassetid://107261819756829",      -- Fire/shoot animation (placeholder)
-			reload = "rbxassetid://136927034232244",    -- Reload animation (placeholder)
-			equip = "rbxassetid://106310870423679",     -- Draw/equip animation (placeholder)
-			sprint = "rbxassetid://102565289526730",
-			ads = "rbxassetid://0",
-		},
-		Shotgun = {
-			idle = "rbxassetid://77700472496946",
-			fire = "rbxassetid://107261819756829",
-			reload = "rbxassetid://136927034232244",    -- Shell-by-shell reload
-			equip = "rbxassetid://106310870423679",
-			sprint = "rbxassetid://102565289526730",
-			ads = "rbxassetid://0",
-		},
-		Rifle = {
-			idle = "rbxassetid://77700472496946",
-			fire = "rbxassetid://107261819756829",
-			reload = "rbxassetid://136927034232244",
-			equip = "rbxassetid://106310870423679",
-			sprint = "rbxassetid://102565289526730",
-			ads = "rbxassetid://0",
-		},
-	},
+	-- Animation IDs - Now centralized in AssetConfig.lua
+	-- All weapon animation IDs are defined in ReplicatedStorage/Shared/AssetConfig.lua
+	-- This reference allows FPSConfig to access them without duplication
+	WeaponAnimations = AssetConfig.Animations.WeaponAnimations,
 
 	-- Weapon-specific offsets for proper positioning in viewmodel
 	WeaponOffsets = {

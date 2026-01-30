@@ -2,6 +2,76 @@
 
 This document details all placeholder files in the repository and what assets need to be created in Roblox Studio to replace them.
 
+## ⚠️ IMPORTANT: AssetConfig.lua - Centralized Asset ID Management
+
+**As of the latest update, all animation asset IDs, sound IDs, and music IDs are now centralized in a single configuration file.**
+
+**Location**: `ReplicatedStorage/Shared/AssetConfig.lua`
+
+### Why AssetConfig.lua?
+
+This file acts like a `.env` configuration file, allowing you to manage all asset IDs in one place:
+- ✅ **Single source of truth** for all asset IDs
+- ✅ **No more scattered IDs** across multiple files
+- ✅ **Easy updates** during refactors or asset changes
+- ✅ **Clear documentation** for each asset ID
+- ✅ **Helper functions** for accessing assets programmatically
+
+### What's Included in AssetConfig.lua?
+
+1. **Animation Asset IDs**
+   - Weapon animations (Pistol, SMG, Shotgun, Rifle)
+   - Zombie animations (idle, walk, run, etc.)
+
+2. **Sound Asset IDs**
+   - Weapon fire sounds (per weapon type)
+   - Weapon reload sounds (per weapon type)
+   - UI/Feedback sounds (hitmarkers, empty click, kill confirm)
+   - Movement sounds (footsteps on different surfaces)
+   - Damage feedback sounds
+   - Menu/UI navigation sounds
+
+3. **Music Asset IDs**
+   - Title theme
+   - Gameplay ambient
+   - Combat intense
+   - Victory/Defeat music
+   - Credits music
+
+### How to Update Asset IDs
+
+Instead of searching through multiple files during refactors, simply:
+
+1. Open `ReplicatedStorage/Shared/AssetConfig.lua`
+2. Find the asset you want to update (e.g., `Pistol fire sound`)
+3. Replace the placeholder ID with your actual Roblox asset ID
+4. Format: `"rbxassetid://XXXXXXXX"` where `XXXXXXXX` is your asset ID
+5. Save the file - changes propagate throughout the entire game!
+
+### Example: Updating a Weapon Fire Sound
+
+```lua
+-- In AssetConfig.lua
+AssetConfig.Sounds = {
+    WeaponFire = {
+        Pistol = "rbxassetid://1905367471", -- <-- Update this ID
+        SMG = "rbxassetid://77130830495173",
+        -- ...
+    },
+}
+```
+
+### Files That Reference AssetConfig.lua
+
+The following files automatically use asset IDs from AssetConfig.lua:
+- `ReplicatedStorage/Shared/FPSConfig.lua` (weapon animations)
+- `StarterPlayer/StarterPlayerScripts/Modules/FPSAudioController.lua` (sounds)
+- `ReplicatedStorage/Shared/StoryConfig.lua` (music)
+
+You no longer need to update these files individually when asset IDs change!
+
+---
+
 ## Overview
 
 The repository includes placeholder `.txt` files to represent required RemoteEvents, Animations, and Models. In Roblox Studio, these should be replaced with actual Roblox instances.
@@ -416,10 +486,46 @@ If you're creating assets incrementally, follow this priority order:
 
 ## Additional Resources
 
+- **[AssetConfig.lua](ReplicatedStorage/Shared/AssetConfig.lua)** - **NEW!** Centralized asset ID configuration
 - [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md) - Step-by-step animation tutorial
 - [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) - Weapon animation system documentation
 - [INSTALLATION.md](INSTALLATION.md) - Complete setup guide
 - [docs/STRUCTURE.md](docs/STRUCTURE.md) - Project structure reference
+
+---
+
+## Quick Reference: AssetConfig.lua Usage
+
+### For Developers
+
+**Reading asset IDs in your code:**
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AssetConfig = require(ReplicatedStorage.Shared.AssetConfig)
+
+-- Get a weapon animation
+local pistolIdleAnim = AssetConfig:GetWeaponAnimation("Pistol", "idle")
+
+-- Get a sound
+local pistolFireSound = AssetConfig:GetSound("WeaponFire", "Pistol")
+
+-- Get music configuration
+local titleMusic = AssetConfig:GetMusic("TitleTheme")
+```
+
+**Direct access:**
+```lua
+local AssetConfig = require(ReplicatedStorage.Shared.AssetConfig)
+
+-- Access weapon animations directly
+local animations = AssetConfig.Animations.WeaponAnimations.Pistol
+
+-- Access sounds directly
+local fireSound = AssetConfig.Sounds.WeaponFire.Pistol
+
+-- Access music directly
+local music = AssetConfig.Music.TitleTheme
+```
 
 ---
 
