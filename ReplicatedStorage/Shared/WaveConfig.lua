@@ -14,7 +14,8 @@ WaveConfig.Waves = {
 		ZombieCount = 8,
 		Composition = {
 			Walker = 8
-		}
+		},
+		Types = {"Walker"}
 	},
 
 	-- Wave 2: Introduce runners
@@ -25,7 +26,8 @@ WaveConfig.Waves = {
 		Composition = {
 			Walker = 8,
 			Runner = 4
-		}
+		},
+		Types = {"Walker", "Runner"}
 	},
 
 	-- Wave 3: More variety
@@ -37,7 +39,8 @@ WaveConfig.Waves = {
 			Walker = 8,
 			Runner = 5,
 			Brute = 2
-		}
+		},
+		Types = {"Walker", "Runner", "Brute"}
 	},
 
 	-- Wave 4: Adding spitters
@@ -50,7 +53,8 @@ WaveConfig.Waves = {
 			Runner = 6,
 			Brute = 2,
 			Spitter = 2
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter"}
 	},
 
 	-- Wave 5: Boss wave
@@ -64,7 +68,8 @@ WaveConfig.Waves = {
 			Brute = 3,
 			Spitter = 2,
 			Boss = 1
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter", "Boss"}
 	},
 
 	-- Wave 6: Post-boss difficulty spike
@@ -77,7 +82,8 @@ WaveConfig.Waves = {
 			Runner = 8,
 			Brute = 4,
 			Spitter = 3
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter"}
 	},
 
 	-- Wave 7: Double trouble
@@ -90,7 +96,8 @@ WaveConfig.Waves = {
 			Runner = 10,
 			Brute = 5,
 			Spitter = 3
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter"}
 	},
 
 	-- Wave 8: Multiple brutes
@@ -103,7 +110,8 @@ WaveConfig.Waves = {
 			Runner = 10,
 			Brute = 8,
 			Spitter = 4
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter"}
 	},
 
 	-- Wave 9: Nightmare mode
@@ -117,7 +125,8 @@ WaveConfig.Waves = {
 			Brute = 8,
 			Spitter = 4,
 			Boss = 2
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter", "Boss"}
 	},
 
 	-- Wave 10: Final wave
@@ -131,7 +140,8 @@ WaveConfig.Waves = {
 			Brute = 10,
 			Spitter = 5,
 			Boss = 3
-		}
+		},
+		Types = {"Walker", "Runner", "Brute", "Spitter", "Boss"}
 	}
 }
 

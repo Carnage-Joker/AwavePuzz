@@ -70,8 +70,16 @@ GameConfig.BASE_CAMP = {
 -- Wave Settings
 GameConfig.STARTING_WAVE = 1
 GameConfig.WAVE_DELAY = 30 -- Seconds between waves
+GameConfig.WAVE_INTERMISSION = GameConfig.WAVE_DELAY -- Alias for WAVE_DELAY (used by tests)
 GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER = 1.5 -- How much zombies increase per wave
 GameConfig.BASE_ZOMBIES_PER_WAVE = 5
+
+-- Spawning Settings (defined early for aliasing)
+GameConfig.Spawning = {
+	SPAWN_INTERVAL = 2.5, -- seconds between spawns for the same spawn point
+	DEFAULT_ATTACK_INTERVAL = 1.8,
+	DEFAULT_ATTACK_RANGE = 6,
+}
 
 -- Zombie Settings
 GameConfig.ZOMBIE_HEALTH = 50
@@ -83,7 +91,7 @@ GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.2 -- Health increase per wave
 GameConfig.ZOMBIE_ATTACK_RANGE = 6 -- Range at which zombies attack (studs)
 GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5 -- Seconds between zombie attacks
 GameConfig.ZOMBIE_REPATH_INTERVAL = 0.4 -- How often zombies recalculate path (reduced from 1.0 to prevent pausing)
-GameConfig.ZOMBIE_SPAWN_DELAY = 2.5 -- Delay between zombie spawns (alias for Spawning.SPAWN_INTERVAL)
+GameConfig.ZOMBIE_SPAWN_DELAY = GameConfig.Spawning.SPAWN_INTERVAL -- Delay between zombie spawns (alias for Spawning.SPAWN_INTERVAL)
 
 -- Cure Crafting Settings
 GameConfig.CURE_COMPONENTS_REQUIRED = 5
@@ -93,13 +101,6 @@ GameConfig.CURE_COMPONENT_NAMES = {
 	"Biological Sample",
 	"Research Notes",
 	"Catalyst"
-}
-
--- Spawning Settings
-GameConfig.Spawning = {
-	SPAWN_INTERVAL = 2.5, -- seconds between spawns for the same spawn point
-	DEFAULT_ATTACK_INTERVAL = 1.8,
-	DEFAULT_ATTACK_RANGE = 6,
 }
 
 -- Alliance Settings
