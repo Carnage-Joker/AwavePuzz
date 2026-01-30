@@ -176,7 +176,7 @@ end
 
 function BaseManager:isDestroyed()
 	-- Alias for isBaseDestroyed to match test expectations
-	return self.isBaseDestroyed
+	return self:isBaseDestroyed()
 end
 
 function BaseManager:isBaseDestroyed()
