@@ -83,6 +83,7 @@ GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.2 -- Health increase per wave
 GameConfig.ZOMBIE_ATTACK_RANGE = 6 -- Range at which zombies attack (studs)
 GameConfig.ZOMBIE_ATTACK_INTERVAL = 1.5 -- Seconds between zombie attacks
 GameConfig.ZOMBIE_REPATH_INTERVAL = 0.4 -- How often zombies recalculate path (reduced from 1.0 to prevent pausing)
+GameConfig.ZOMBIE_SPAWN_DELAY = 2.5 -- Delay between zombie spawns (alias for Spawning.SPAWN_INTERVAL)
 
 -- Cure Crafting Settings
 GameConfig.CURE_COMPONENTS_REQUIRED = 5
