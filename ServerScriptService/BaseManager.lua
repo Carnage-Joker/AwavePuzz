@@ -150,6 +150,35 @@ function BaseManager:getHealthPercentage()
 	return (self.health / self.maxHealth) * 100
 end
 
+function BaseManager:setHealth(value)
+	value = tonumber(value) or 0
+	
+	-- Clamp health between 0 and maxHealth
+	self.health = math.clamp(value, 0, self.maxHealth)
+	
+	-- Update isDestroyed flag based on new health
+	if self.health <= 0 then
+		self.isDestroyed = true
+	else
+		self.isDestroyed = false
+	end
+	
+	-- Broadcast the health update
+	self:broadcastHealthUpdate()
+	
+	return self.health
+end
+
+function BaseManager:takeDamage(damage)
+	-- Alias for damageBase to match test expectations
+	return self:damageBase(damage)
+end
+
+function BaseManager:isDestroyed()
+	-- Alias for isBaseDestroyed to match test expectations
+	return self:isBaseDestroyed()
+end
+
 function BaseManager:isBaseDestroyed()
 	return self.isDestroyed
 end
