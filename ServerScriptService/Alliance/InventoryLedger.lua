@@ -398,28 +398,65 @@ function InventoryLedger:transferInventory(fromPlayerOrId, toPlayerOrId, itemNam
 	
 	amount = (type(amount) == "number" and amount > 0) and amount or 1
 	
-	-- Use existing transaction system for atomicity
+	-- Get both players
+	local fromUserId = type(fromPlayerOrId) == "number" and fromPlayerOrId 
+		or (typeof(fromPlayerOrId) == "Instance" and fromPlayerOrId:IsA("Player") and fromPlayerOrId.UserId)
+	local toUserId = type(toPlayerOrId) == "number" and toPlayerOrId
+		or (typeof(toPlayerOrId) == "Instance" and toPlayerOrId:IsA("Player") and toPlayerOrId.UserId)
+	
+	if not fromUserId or not toUserId then
+		return false, "Invalid player types"
+	end
+	
+	local fromPlayer = Players:GetPlayerByUserId(fromUserId)
+	local toPlayer = Players:GetPlayerByUserId(toUserId)
+	
+	if not fromPlayer or not toPlayer then
+		return false, "Players not found"
+	end
+	
+	local fromData = self.playerManager:getPlayerData(fromPlayer)
+	local toData = self.playerManager:getPlayerData(toPlayer)
+	
+	if not fromData or not toData then
+		return false, "Player data not found"
+	end
+	
+	-- Validate source has enough items
+	local currentAmount = fromData.inventory and fromData.inventory[itemName] or 0
+	if currentAmount < amount then
+		return false, "Insufficient items in source inventory"
+	end
+	
+	-- Perform atomic transfer using transaction system
 	if not self:begin() then
 		return false, "Failed to begin transaction"
 	end
 	
-	-- Remove from source
-	local success, err = self:removeItem(fromPlayerOrId, itemName, amount)
+	-- Create deduction and grant structures
+	local deduction = {
+		currency = 0,
+		resources = {[itemName] = amount},
+		components = {},
+		weapons = {}
+	}
+	
+	local grant = {
+		currency = 0,
+		resources = {[itemName] = amount},
+		components = {},
+		weapons = {}
+	}
+	
+	self:applyDeduction(fromUserId, deduction)
+	self:applyGrant(toUserId, grant)
+	
+	-- Commit transaction
+	local success = self:commit()
 	if not success then
-		self:rollback()
-		return false, "Failed to remove from source: " .. tostring(err)
+		return false, "Transaction commit failed"
 	end
 	
-	-- Add to target
-	success, err = self:addItem(toPlayerOrId, itemName, amount, "transfer")
-	if not success then
-		-- Note: rollback doesn't undo the removeItem since we're not using the transaction system for these
-		-- This is a simplified implementation for test compatibility
-		-- In production, should use proper transaction methods
-		return false, "Failed to add to target: " .. tostring(err)
-	end
-	
-	self:rollback() -- Clear transaction state
 	return true
 end
 

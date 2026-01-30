@@ -154,15 +154,35 @@ function PoolCalculator.calculatePooledCurrency(members, ledgerOrBalances)
 	
 	local total = 0
 	
-	-- Case 1: ledgerOrBalances is a plain table of balances
-	if type(ledgerOrBalances) == "table" and not ledgerOrBalances.playerManager then
-		-- It's a plain balance table
-		for userId, balance in pairs(ledgerOrBalances) do
-			if type(balance) == "number" then
-				total = total + balance
+	-- Detect if ledgerOrBalances is a plain balance table by checking if all values are numbers
+	if type(ledgerOrBalances) == "table" then
+		local isPlainBalanceTable = true
+		local hasNumericValues = false
+		
+		-- Check if it has any method-like properties (functions)
+		if ledgerOrBalances.getCurrency or ledgerOrBalances.getBalance or ledgerOrBalances.playerManager then
+			isPlainBalanceTable = false
+		else
+			-- Verify all values are numbers
+			for key, value in pairs(ledgerOrBalances) do
+				if type(value) ~= "number" then
+					isPlainBalanceTable = false
+					break
+				else
+					hasNumericValues = true
+				end
 			end
 		end
-		return total
+		
+		-- Case 1: It's a plain balance table
+		if isPlainBalanceTable and hasNumericValues then
+			for userId, balance in pairs(ledgerOrBalances) do
+				if type(balance) == "number" then
+					total = total + balance
+				end
+			end
+			return total
+		end
 	end
 	
 	-- Case 2: members list + ledger with methods

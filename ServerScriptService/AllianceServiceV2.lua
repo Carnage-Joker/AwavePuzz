@@ -373,6 +373,26 @@ function AllianceServiceV2:proposeAlliance(requester, target)
 		return false, "Invalid players"
 	end
 	
+	-- Check if already allied
+	if self:areAllied(requester, target) then
+		return false, "Already allied"
+	end
+	
+	-- Check if requester is locked
+	if self.betrayalService and self.betrayalService:isPlayerLocked(requester) then
+		return false, "Player is locked in betrayal window"
+	end
+	
+	-- Check if requester is a traitor
+	if self.betrayalService and self.betrayalService:isTraitor(requester) then
+		return false, "Traitors cannot form alliances"
+	end
+	
+	-- Check betrayal cooldown
+	if self:isOnBetrayalCooldown(requester) then
+		return false, "Player is on betrayal cooldown"
+	end
+	
 	self:handleAllianceRequest(requester, target)
 	return true
 end
@@ -381,6 +401,14 @@ end
 function AllianceServiceV2:acceptAlliance(responder, requester)
 	if not responder or not requester then
 		return false, "Invalid players"
+	end
+	
+	-- Check if there's a pending request
+	local responderId = responder.UserId
+	local requesterId = requester.UserId
+	
+	if not self.pendingRequests[responderId] or not self.pendingRequests[responderId][requesterId] then
+		return false, "No pending alliance request"
 	end
 	
 	self:handleAllianceResponse(responder, requester, true)
@@ -393,6 +421,14 @@ function AllianceServiceV2:denyAlliance(responder, requester)
 		return false, "Invalid players"
 	end
 	
+	-- Check if there's a pending request
+	local responderId = responder.UserId
+	local requesterId = requester.UserId
+	
+	if not self.pendingRequests[responderId] or not self.pendingRequests[responderId][requesterId] then
+		return false, "No pending alliance request"
+	end
+	
 	self:handleAllianceResponse(responder, requester, false)
 	return true
 end
@@ -401,6 +437,11 @@ end
 function AllianceServiceV2:breakAlliance(player, target)
 	if not player or not target then
 		return false, "Invalid players"
+	end
+	
+	-- Check if allied
+	if not self:areAllied(player, target) then
+		return false, "Players are not allied"
 	end
 	
 	self:handleBreakAlliance(player, target)
