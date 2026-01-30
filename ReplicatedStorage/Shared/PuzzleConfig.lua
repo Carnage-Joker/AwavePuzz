@@ -290,8 +290,12 @@ function PuzzleConfig.generatePatternPuzzle()
 		
 		-- Handle different pattern types
 		if template.type == "rotation" then
-			-- For rotation patterns, use a simple fallback
-			local pattern = {"rotate90", "rotate180", "rotate270", "rotate360"}
+			-- For rotation patterns, use the configured pattern list from the template
+			local pattern = template.patterns
+			if type(pattern) ~= "table" or #pattern < 3 then
+				error("Rotation pattern must be a table with at least 3 entries")
+			end
+
 			local sequence = {}
 			for i = 1, #pattern do
 				sequence[i] = pattern[i]
