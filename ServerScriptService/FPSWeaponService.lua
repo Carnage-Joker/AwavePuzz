@@ -72,6 +72,24 @@ function FPSWeaponService:initializePlayer(player)
 	end
 end
 
+-- Add player to FPS weapon tracking (safe to call multiple times)
+-- Does not require character/humanoid at call time
+function FPSWeaponService:addPlayer(player)
+	-- Validate input
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	local userId = player.UserId
+	
+	-- Ensure player ammo tracking exists (idempotent)
+	if not self.playerAmmo[userId] then
+		self:initializePlayer(player)
+	end
+	
+	return true
+end
+
 function FPSWeaponService:removePlayer(player)
 	local userId = player.UserId
 	

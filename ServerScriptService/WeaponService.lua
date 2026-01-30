@@ -646,4 +646,63 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 	weld.Part1 = rightHand
 	weld.Parent = primaryPart
 end
+
+-- Deal damage to a target (Humanoid, Model, or Player)
+-- 
+-- ⚠️ TEST INFRASTRUCTURE ONLY ⚠️
+-- This method is a simplified damage adapter required by WeaponSystemTests.
+-- It bypasses important game logic including:
+--   - Kill tracking and reward bonuses (onZombieKilled)
+--   - Alliance system checks (damagePlayer checks areAllied before PvP damage)
+--   - Player kill credit tracking via attributes (LastAttackerUserId, LastVictimUserId)
+--   - GameManager kill count incrementing
+--
+-- For production game logic, use the specialized methods instead:
+--   - damageZombie(zombieModel, player, stats, weaponId) for zombie damage
+--   - damagePlayer(characterModel, targetPlayer, attackingPlayer, stats, weaponId) for PvP damage
+--
+-- This method exists solely to satisfy test requirements and should NOT be used
+-- in gameplay code paths where proper context (player, weapon stats, etc.) is available.
+--
+-- Returns boolean success
+function WeaponService:dealDamage(target, amount, meta)
+	-- Validate amount
+	if typeof(amount) ~= "number" or amount <= 0 then
+		return false
+	end
+	
+	-- Resolve target to Humanoid
+	local humanoid = nil
+	local targetModel = nil
+	
+	if typeof(target) == "Instance" then
+		if target:IsA("Humanoid") then
+			humanoid = target
+			targetModel = target.Parent
+		elseif target:IsA("Model") then
+			humanoid = target:FindFirstChild("Humanoid")
+			targetModel = target
+		elseif target:IsA("Player") and target.Character then
+			humanoid = target.Character:FindFirstChild("Humanoid")
+			targetModel = target.Character
+		end
+	end
+	
+	if not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+	
+	-- Apply damage with error handling
+	local success, err = pcall(function()
+		humanoid:TakeDamage(amount)
+	end)
+	
+	if not success then
+		warn("[WeaponService] dealDamage failed:", err)
+		return false
+	end
+	
+	return true
+end
+
 return WeaponService
