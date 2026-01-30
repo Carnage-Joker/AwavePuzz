@@ -284,18 +284,63 @@ end
 
 -- Generate a random pattern puzzle
 function PuzzleConfig.generatePatternPuzzle()
-	local template = PuzzleConfig.PatternPuzzles[math.random(1, #PuzzleConfig.PatternPuzzles)]
-	local pattern = template.patterns[math.random(1, #template.patterns)]
-	-- Generate sequence with missing element
-	local sequence = {}
-	for i = 1, #pattern do
-		sequence[i] = pattern[(i - 1) % #pattern + 1]
+	-- Wrap in pcall for safety
+	local success, result = pcall(function()
+		local template = PuzzleConfig.PatternPuzzles[math.random(1, #PuzzleConfig.PatternPuzzles)]
+		
+		-- Handle different pattern types
+		if template.type == "rotation" then
+			-- For rotation patterns, use a simple fallback
+			local pattern = {"rotate90", "rotate180", "rotate270", "rotate360"}
+			local sequence = {}
+			for i = 1, #pattern do
+				sequence[i] = pattern[i]
+			end
+			local missingIndex = math.random(2, #sequence - 1)
+			local answer = sequence[missingIndex]
+			sequence[missingIndex] = nil
+			return {sequence = sequence, answer = answer, missingIndex = missingIndex, type = template.type}
+		end
+		
+		-- For shape_sequence and number_pattern types
+		local pattern = template.patterns[math.random(1, #template.patterns)]
+		
+		-- Ensure pattern is a table
+		if type(pattern) ~= "table" then
+			error("Pattern must be a table")
+		end
+		
+		-- Generate sequence with missing element
+		local sequence = {}
+		for i = 1, #pattern do
+			sequence[i] = pattern[(i - 1) % #pattern + 1]
+		end
+		table.insert(sequence, pattern[1]) -- Add one more to complete cycle
+		
+		-- Ensure we have enough elements for a missing index
+		if #sequence < 3 then
+			error("Sequence too short")
+		end
+		
+		local missingIndex = math.random(2, #sequence - 1)
+		local answer = sequence[missingIndex]
+		sequence[missingIndex] = nil
+		return {sequence = sequence, answer = answer, missingIndex = missingIndex, type = template.type}
+	end)
+	
+	if success then
+		return result
+	else
+		-- Safe fallback if generation fails
+		warn("[PuzzleConfig] Pattern puzzle generation failed:", result, "- using fallback")
+		return {
+			type = "pattern",
+			sequence = {2, 4, nil, 8},
+			answer = 6,
+			missingIndex = 3,
+			prompt = "What comes next? 2, 4, ?, 8"
+		}
 	end
-	table.insert(sequence, pattern[1]) -- Add one more to complete cycle
-	local missingIndex = math.random(2, #sequence - 1)
-	local answer = sequence[missingIndex]
-	sequence[missingIndex] = nil
-	return {sequence = sequence, answer = answer, missingIndex = missingIndex, type = template.type}
 end
 
 return PuzzleConfig

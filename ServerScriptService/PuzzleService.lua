@@ -696,4 +696,63 @@ function PuzzleService:onSurvivorVictory(survivor, betrayer)
 	print("[PuzzleService]", survivor.Name, "claimed all puzzles from defeated betrayer", betrayer.Name)
 end
 
+-- Request puzzle (adapter method for tests and alternative API)
+-- This delegates to the existing handlePuzzleRequest but can be called directly
+function PuzzleService:requestPuzzle(player, componentNameOrType, difficulty)
+	-- Validate player
+	if not player or not player:IsA("Player") then
+		warn("[PuzzleService] requestPuzzle: Invalid player")
+		return nil, "Invalid player"
+	end
+	
+	-- Initialize player if needed
+	self:initializePlayer(player)
+	
+	-- If componentNameOrType is nil, return a generic puzzle
+	local componentName = componentNameOrType
+	if not componentName then
+		-- Default to first component
+		componentName = next(PuzzleConfig.ComponentPuzzles)
+	end
+	
+	-- Validate component name
+	if componentName ~= "FinalSynthesis" and not PuzzleConfig.ComponentPuzzles[componentName] then
+		-- Invalid component, try to generate a generic puzzle
+		warn("[PuzzleService] requestPuzzle: Invalid component '" .. tostring(componentName) .. "', generating generic puzzle")
+		
+		-- Return a safe generic puzzle
+		return {
+			type = "pattern",
+			prompt = "What comes next? 2, 4, 6, ?",
+			options = {8, 10, 12},
+			answer = 8,
+			componentName = componentName or "Generic"
+		}, nil
+	end
+	
+	-- Generate puzzle using existing method
+	local success, puzzle = pcall(function()
+		return self:generatePuzzle(componentName)
+	end)
+	
+	if not success then
+		warn("[PuzzleService] requestPuzzle: Failed to generate puzzle:", puzzle)
+		-- Return safe fallback
+		return {
+			type = "pattern",
+			prompt = "What comes next? 2, 4, 6, ?",
+			options = {8, 10, 12},
+			answer = 8,
+			componentName = componentName
+		}, "Generation failed, using fallback"
+	end
+	
+	return puzzle, nil
+end
+
+-- Alias submitAnswer for consistency with requestPuzzle
+function PuzzleService:submitAnswer(player, componentName, answer)
+	return self:handlePuzzleAnswer(player, componentName, answer)
+end
+
 return PuzzleService
