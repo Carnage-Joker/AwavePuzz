@@ -152,7 +152,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 end
 
 -- Start method for tests (safe to call even if dependencies aren't fully present)
-function ZombieBrain.start()
+function ZombieBrain:start()
 	-- This method exists for test compatibility
 	-- ZombieBrain uses update() for its main loop
 	return true
