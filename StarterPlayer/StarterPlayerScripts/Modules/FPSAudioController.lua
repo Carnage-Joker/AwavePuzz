@@ -15,54 +15,15 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local AssetValidation = require(SharedFolder:WaitForChild("AssetValidation"))
+local AssetConfig = require(SharedFolder:WaitForChild("AssetConfig"))
 
 --------------------------------------------------------------------------------
 -- SOUND CONFIGURATION
--- Replace these placeholder IDs with actual Roblox sound asset IDs
--- Format: "rbxassetid://XXXXXXXX" where XXXXXXXX is the asset ID
+-- All sound asset IDs are now centralized in AssetConfig.lua
+-- To update sound IDs, edit ReplicatedStorage/Shared/AssetConfig.lua
 --------------------------------------------------------------------------------
 
-local SoundAssets = {
-	-- Weapon sounds (per weapon type)
-	WeaponFire = {
-		Pistol = "rbxassetid://1905367471", -- Replace with pistol fire sound
-		SMG = "rbxassetid://77130830495173",    -- Replace with SMG fire sound
-		Shotgun = "rbxassetid://8429881678", -- Replace with shotgun fire sound
-		Rifle = "rbxassetid://6862108495",  -- Replace with rifle fire sound
-		Default = "rbxassetid://1905367471", -- Default fire sound
-	},
-
-	WeaponReload = {
-		Pistol = "rbxassetid://138084889",
-		SMG = "rbxassetid://138084889",
-		Shotgun = "rbxassetid://86072977471971",
-		Rifle = "rbxassetid://138084889",
-		Default = "rbxassetid://138084889",
-	},
-
-	-- UI/Feedback sounds
-	EmptyClick = "rbxassetid://96880586397913",     -- Click when trying to fire with no ammo
-	HeadshotHitmarker = "rbxassetid://131472999032031",      -- Headshot hitmarker sound
-	Hitmarker = "rbxassetid://79356893392985", -- Standard hitmarker (different pitch/sound)
-	KillConfirm = "rbxassetid://86596819653473",    -- Kill confirmation sound
-
-	-- Movement sounds
-	Footsteps = {
-		Concrete = "rbxassetid://127328919401626",
-		Grass = "rbxassetid://126726565555894",
-		Metal = "rbxassetid://127328919401626",
-		Wood = "rbxassetid://128186716150447",
-		Default = "rbxassetid://127328919401626",
-	},
-
-	-- Damage feedback
-	DamageTaken = "rbxassetid://106256862427202",    -- Sound when player takes damage
-	LowHealthHeartbeat = "rbxassetid://120008174551190", -- Heartbeat when low HP
-
-	-- UI sounds
-	MenuSelect = "rbxassetid://104003605923230",
-	MenuNavigate = "rbxassetid://9055474333",
-}
+local SoundAssets = AssetConfig.Sounds
 
 --------------------------------------------------------------------------------
 -- STATE

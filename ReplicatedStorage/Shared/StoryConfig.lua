@@ -5,6 +5,10 @@
 -- Story, lore, and narrative configuration for Aether Wave: Convergence
 -- Contains the backstory of the Aether Wave outbreak and narrative elements
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local AssetConfig = require(SharedFolder:WaitForChild("AssetConfig"))
+
 local StoryConfig = {}
 
 -- ========================================
@@ -469,42 +473,11 @@ StoryConfig.Achievements = {
 
 -- ========================================
 -- MUSIC CONFIGURATION
+-- All music asset IDs are now centralized in AssetConfig.lua
+-- To update music IDs, edit ReplicatedStorage/Shared/AssetConfig.lua
 -- ========================================
 
-StoryConfig.Music = {
-	-- Sound IDs would be set here if you have custom music
-	-- For now, we'll use placeholders that can be replaced
-	TitleTheme = {
-		SoundId = "rbxassetid://134645167323648", -- Set to "rbxassetid://XXXXXX" when you have music
-		Volume = 0.5,
-		Looped = true
-	},
-	GameplayAmbient = {
-		SoundId = "rbxassetid://83451793513373",
-		Volume = 0.3,
-		Looped = true
-	},
-	CombatIntense = {
-		SoundId = "rbxassetid://1131937949",
-		Volume = 0.6,
-		Looped = true
-	},
-	Victory = {
-		SoundId = "rbxassetid://135116298613253",
-		Volume = 0.7,
-		Looped = false
-	},
-	Defeat = {
-		SoundId = "rbxassetid://1839772694",
-		Volume = 0.5,
-		Looped = false
-	},
-	Credits = {
-		SoundId = "rbxassetid://81857578704617",
-		Volume = 0.4,
-		Looped = true
-	}
-}
+StoryConfig.Music = AssetConfig.Music
 
 -- ========================================
 -- UI TEXT SNIPPETS
