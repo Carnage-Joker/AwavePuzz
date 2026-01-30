@@ -444,8 +444,15 @@ function AllianceServiceV2:breakAlliance(player, target)
 		return false, "Players are not allied"
 	end
 	
-	self:handleBreakAlliance(player, target)
-	return true
+	local success, err = self:handleBreakAlliance(player, target)
+	
+	-- Backwards compatibility: if handleBreakAlliance does not return
+	-- an explicit success flag yet, assume success as before
+	if success == nil then
+		return true
+	end
+	
+	return success, err
 end
 
 -- Get alliance status between two players (test-compatible)
