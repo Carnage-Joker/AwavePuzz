@@ -96,23 +96,43 @@ function PlayerManager:addPlayer(player)
 		currency = GameConfig.STARTING_CURRENCY,
 		upgrades = {},
 		connections = {}, -- Track connections for cleanup
+		currentCharacter = nil, -- Track which character has health listeners
 	}
 
 	self.alliances[player.UserId] = {}
 
-	-- Setup character respawn tracking for health sync
-	local characterAddedConnection = player.CharacterAdded:Connect(function(character)
-		self:_syncHumanoidHealth(player)
-		self:_setupHealthListener(player, character)
-	end)
-	self.players[player.UserId].connections.characterAdded = characterAddedConnection
+	local playerData = self.players[player.UserId]
 
-	-- Sync health for current character if it exists
+	-- Initial health sync and listener setup for current character (if any)
 	self:_syncHumanoidHealth(player)
 	if player.Character then
+		playerData.currentCharacter = player.Character
 		self:_setupHealthListener(player, player.Character)
 	end
 
+	-- Setup character respawn tracking for health sync
+	local characterAddedConnection = player.CharacterAdded:Connect(function(character)
+		-- Re-fetch player data in case the player was removed
+		local data = self.players[player.UserId]
+		if not data then
+			return
+		end
+
+		-- Ignore invalid/destroyed characters
+		if not character or not character.Parent then
+			return
+		end
+
+		-- Avoid duplicate setup for the same character instance
+		if data.currentCharacter == character then
+			return
+		end
+
+		data.currentCharacter = character
+		self:_syncHumanoidHealth(player)
+		self:_setupHealthListener(player, character)
+	end)
+	playerData.connections.characterAdded = characterAddedConnection
 	self:sendCurrencyUpdate(player)
 	self:sendInventoryUpdate(player)
 	self:sendWeaponLoadout(player)
