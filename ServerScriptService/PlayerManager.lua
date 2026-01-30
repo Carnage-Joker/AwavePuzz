@@ -75,7 +75,7 @@ function PlayerManager:addPlayer(player)
 		return false, "Invalid player"
 	end
 
-	if GameConfig.MAX_PLAYERS and #self:getAllPlayers() >= GameConfig.MAX_PLAYERS then
+	if GameConfig.MAX_PLAYERS and self:getPlayerCount() >= GameConfig.MAX_PLAYERS then
 		return false, "Server is full"
 	end
 
@@ -95,10 +95,44 @@ function PlayerManager:addPlayer(player)
 
 		currency = GameConfig.STARTING_CURRENCY,
 		upgrades = {},
+		connections = {}, -- Track connections for cleanup
+		currentCharacter = nil, -- Track which character has health listeners
 	}
 
 	self.alliances[player.UserId] = {}
 
+	local playerData = self.players[player.UserId]
+
+	-- Initial health sync and listener setup for current character (if any)
+	self:_syncHumanoidHealth(player)
+	if player.Character then
+		playerData.currentCharacter = player.Character
+		self:_setupHealthListener(player, player.Character)
+	end
+
+	-- Setup character respawn tracking for health sync
+	local characterAddedConnection = player.CharacterAdded:Connect(function(character)
+		-- Re-fetch player data in case the player was removed
+		local data = self.players[player.UserId]
+		if not data then
+			return
+		end
+
+		-- Ignore invalid/destroyed characters
+		if not character or not character.Parent then
+			return
+		end
+
+		-- Avoid duplicate setup for the same character instance
+		if data.currentCharacter == character then
+			return
+		end
+
+		data.currentCharacter = character
+		self:_syncHumanoidHealth(player)
+		self:_setupHealthListener(player, character)
+	end)
+	playerData.connections.characterAdded = characterAddedConnection
 	self:sendCurrencyUpdate(player)
 	self:sendInventoryUpdate(player)
 	self:sendWeaponLoadout(player)
@@ -110,6 +144,16 @@ end
 function PlayerManager:removePlayer(player)
 	if not player or not player.UserId then
 		return
+	end
+
+	-- Disconnect all tracked connections to prevent memory leaks
+	local playerData = self.players[player.UserId]
+	if playerData and playerData.connections then
+		for _, connection in pairs(playerData.connections) do
+			if typeof(connection) == "RBXScriptConnection" then
+				connection:Disconnect()
+			end
+		end
 	end
 
 	self.players[player.UserId] = nil
@@ -228,6 +272,118 @@ end
 -- Health (game health + Humanoid sync)
 ----------------------------------------------------------------
 
+function PlayerManager:_setupHealthListener(player, character)
+	-- Internal helper: Setup listener for external Humanoid health changes
+	-- This prevents desyncs from external damage sources (e.g., WeaponService)
+	if not player or not player.UserId then
+		return
+	end
+
+	local playerData = self.players[player.UserId]
+	if not playerData then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+
+	-- Disconnect existing health listener if any
+	if playerData.connections.healthChanged then
+		playerData.connections.healthChanged:Disconnect()
+		playerData.connections.healthChanged = nil
+	end
+
+	-- Track the last known Humanoid health to detect external changes
+	-- This prevents circular updates when _syncHumanoidHealth modifies Humanoid.Health
+	playerData.lastHumanoidHealth = humanoid.Health
+
+	-- Track Humanoid health changes and sync back to internal state
+	local healthChangedConnection = humanoid.HealthChanged:Connect(function(newHealth)
+		if not playerData or not player.Parent then
+			-- Player left or data cleared
+			return
+		end
+
+		-- Calculate delta from last known Humanoid health (not internal state)
+		-- This way we can distinguish external changes from our own _syncHumanoidHealth calls
+		local healthDelta = newHealth - (playerData.lastHumanoidHealth or newHealth)
+		playerData.lastHumanoidHealth = newHealth
+
+		-- Ignore negligible changes (rounding differences)
+		if math.abs(healthDelta) < 0.01 then
+			return
+		end
+
+		if healthDelta < 0 then
+			-- Health decreased (external damage taken)
+			-- Update internal state to match
+			playerData.health = math.max(0, newHealth)
+			
+			if playerData.health <= 0 then
+				playerData.isAlive = false
+			end
+
+			self:sendHealthUpdate(player)
+		elseif healthDelta > 0 then
+			-- Health increased (external healing)
+			-- Only allow if player is alive
+			if playerData.isAlive then
+				playerData.health = math.min(GameConfig.STARTING_HEALTH, newHealth)
+				self:sendHealthUpdate(player)
+			else
+				-- Dead players cannot be healed via Humanoid
+				humanoid.Health = 0
+				playerData.lastHumanoidHealth = 0
+			end
+		end
+	end)
+
+	playerData.connections.healthChanged = healthChangedConnection
+end
+
+function PlayerManager:_syncHumanoidHealth(player)
+	-- Internal helper: Sync Humanoid health from internal state
+	-- Makes playerData.health the authoritative source of truth
+	if not player or not player.UserId then
+		return
+	end
+
+	local playerData = self.players[player.UserId]
+	if not playerData then
+		return
+	end
+
+	local character = player.Character
+	if not character then
+		return
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+
+	-- Set MaxHealth to match config
+	humanoid.MaxHealth = GameConfig.STARTING_HEALTH
+
+	-- Sync current health from internal state
+	local newHumanoidHealth
+	if playerData.isAlive then
+		newHumanoidHealth = math.clamp(playerData.health, 0, GameConfig.STARTING_HEALTH)
+	else
+		-- Dead players stay dead
+		newHumanoidHealth = 0
+	end
+	
+	humanoid.Health = newHumanoidHealth
+	
+	-- Update last known Humanoid health to prevent circular updates
+	-- This tells the HealthChanged listener that WE made this change
+	playerData.lastHumanoidHealth = newHumanoidHealth
+end
+
 function PlayerManager:damagePlayer(player, damage)
 	-- Validate player parameter
 	if not player or not player.UserId then
@@ -244,23 +400,16 @@ function PlayerManager:damagePlayer(player, damage)
 	end
 
 	playerData.health = math.max(0, playerData.health - damage)
-	self:sendHealthUpdate(player)
 
 	if playerData.health <= 0 then
 		playerData.isAlive = false
-
-		local character = player.Character
-		if character then
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then
-				humanoid.Health = 0
-			end
-		end
-
-		return true
 	end
 
-	return false
+	-- Sync Humanoid health from internal state
+	self:_syncHumanoidHealth(player)
+	self:sendHealthUpdate(player)
+
+	return playerData.health <= 0
 end
 
 function PlayerManager:healPlayer(player, amount)
@@ -276,21 +425,15 @@ function PlayerManager:healPlayer(player, amount)
 	-- Healing cannot resurrect dead players
 	-- Note: Game design decision - no resurrection mechanic in this mode
 	-- Players remain dead until round reset or spectator mode
-	if playerData.health <= 0 then
+	if playerData.health <= 0 or not playerData.isAlive then
 		return false
 	end
 
 	-- Update internal health state
 	playerData.health = math.min(GameConfig.STARTING_HEALTH, playerData.health + amount)
 	
-	-- FIX: Also update the actual character's Humanoid health
-	if player.Character then
-		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + amount)
-		end
-	end
-	
+	-- Sync Humanoid health from internal state
+	self:_syncHumanoidHealth(player)
 	self:sendHealthUpdate(player)
 
 	return true
@@ -461,6 +604,34 @@ end
 -- Queries
 ----------------------------------------------------------------
 
+function PlayerManager:getPlayer(userIdOrPlayer)
+	-- Accept either a Player instance or a userId number
+	if not userIdOrPlayer then
+		return nil
+	end
+
+	local userId
+	if typeof(userIdOrPlayer) == "Instance" and userIdOrPlayer:IsA("Player") then
+		userId = userIdOrPlayer.UserId
+	elseif type(userIdOrPlayer) == "number" then
+		userId = userIdOrPlayer
+	else
+		return nil
+	end
+
+	return self.players[userId]
+end
+
+function PlayerManager:getPlayerCount()
+	-- Count active players in self.players table
+	-- Do NOT use #table as it doesn't work reliably with dictionaries
+	local count = 0
+	for _ in pairs(self.players) do
+		count = count + 1
+	end
+	return count
+end
+
 function PlayerManager:getActivePlayers()
 	local active = {}
 	for _, playerData in pairs(self.players) do
@@ -477,6 +648,24 @@ function PlayerManager:getAllPlayers()
 		table.insert(all, playerData.player)
 	end
 	return all
+end
+
+function PlayerManager:reset()
+	-- Reset the PlayerManager state for testing
+	-- Disconnect all active connections first
+	for _, playerData in pairs(self.players) do
+		if playerData.connections then
+			for _, connection in pairs(playerData.connections) do
+				if typeof(connection) == "RBXScriptConnection" then
+					connection:Disconnect()
+				end
+			end
+		end
+	end
+
+	-- Clear all state
+	self.players = {}
+	self.alliances = {}
 end
 
 ----------------------------------------------------------------
