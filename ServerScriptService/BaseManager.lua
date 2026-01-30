@@ -1,3 +1,4 @@
+-- @ScriptType: ModuleScript
 -- BaseManager.lua
 -- Manages shared base health for the entire game
 -- Features live updates broadcast to clients on damage
@@ -11,7 +12,6 @@ BaseManager.__index = BaseManager
 local _instance = nil
 
 -- Cached references
-local _remoteEventsFolder = nil
 local _baseHealthEvent = nil
 
 local function safeWaitForChild(parent, name, timeout)
@@ -41,12 +41,12 @@ local function resolveRemotes()
 		return _baseHealthEvent
 	end
 
-	_remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not _remoteEventsFolder then
+	local remoteEventsFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if not remoteEventsFolder then
 		return nil
 	end
 
-	_baseHealthEvent = _remoteEventsFolder:FindFirstChild("BaseHealthUpdate")
+	_baseHealthEvent = remoteEventsFolder:FindFirstChild("BaseHealthUpdate")
 	return _baseHealthEvent
 end
 
