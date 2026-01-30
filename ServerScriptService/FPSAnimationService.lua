@@ -27,9 +27,24 @@ function FPSAnimationService.new()
 	self.playerStates = {} -- userId -> { isSprinting, isADS, lastFireTime, currentWeapon }
 
 	self.remoteEvents = {}
+	self._initialized = false
 	self:setupRemoteEvents()
 
 	return self
+end
+
+-- Initialize service (idempotent - can be called multiple times safely)
+-- Does not require character, map, or remotes to exist
+function FPSAnimationService:initialize()
+	if self._initialized then 
+		return true 
+	end
+	
+	-- Call setup if needed (setupRemoteEvents is already called in new())
+	-- This method exists to satisfy test requirements and future expansion
+	self._initialized = true
+	
+	return true
 end
 
 function FPSAnimationService:setupRemoteEvents()

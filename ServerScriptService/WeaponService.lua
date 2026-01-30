@@ -646,4 +646,48 @@ function WeaponService:_equipVisualWeapon(player, weaponId)
 	weld.Part1 = rightHand
 	weld.Parent = primaryPart
 end
+
+-- Deal damage to a target (Humanoid, Model, or Player)
+-- Safe baseline implementation that delegates to existing damage flow
+-- Returns boolean success
+function WeaponService:dealDamage(target, amount, meta)
+	-- Validate amount
+	if typeof(amount) ~= "number" or amount <= 0 then
+		return false
+	end
+	
+	-- Resolve target to Humanoid
+	local humanoid = nil
+	local targetModel = nil
+	
+	if typeof(target) == "Instance" then
+		if target:IsA("Humanoid") then
+			humanoid = target
+			targetModel = target.Parent
+		elseif target:IsA("Model") then
+			humanoid = target:FindFirstChild("Humanoid")
+			targetModel = target
+		elseif target:IsA("Player") and target.Character then
+			humanoid = target.Character:FindFirstChild("Humanoid")
+			targetModel = target.Character
+		end
+	end
+	
+	if not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+	
+	-- Apply damage with error handling
+	local success, err = pcall(function()
+		humanoid:TakeDamage(amount)
+	end)
+	
+	if not success then
+		warn("[WeaponService] dealDamage failed:", err)
+		return false
+	end
+	
+	return true
+end
+
 return WeaponService
