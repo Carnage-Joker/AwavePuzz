@@ -81,7 +81,7 @@ local function getControlInfo()
 				{icon = "🖱️", name = "Look", desc = "Move mouse"},
 				{icon = "🏃", name = "Sprint", desc = "Hold Left Shift"},
 				{icon = "🔫", name = "Fire", desc = "Left Mouse Button"},
-				{icon = "🎯", name = "Aim", desc = "Right Mouse Button"},
+				{icon = "🎯", name = "Aim", desc = "Left Alt"},
 				{icon = "⬆️", name = "Jump", desc = "Space Bar"},
 				{icon = "⬇️", name = "Crouch", desc = "Left Ctrl or C"},
 				{icon = "🔄", name = "Reload", desc = "R key"},

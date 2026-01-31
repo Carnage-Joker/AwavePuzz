@@ -17,7 +17,7 @@
 | **MOVEMENT** | Crouch | LeftControl / C | Crouch Button | B | FPSMovement | None |
 | **MOVEMENT** | Jump | Space | Jump Button | A | FPSMovement | Menu Select ⚠️ |
 | **COMBAT** | Fire Weapon | Mouse1 (LMB) | Fire Button | R2 | FPSWeaponController | None |
-| **COMBAT** | Aim Down Sights | Mouse2 (RMB) | ADS Button | L2 | FPSWeaponController | None |
+| **COMBAT** | Aim Down Sights | LeftAlt | ADS Button | L2 | FPSWeaponController | None |
 | **COMBAT** | Reload | R | Reload Button | X | FPSWeaponController | None |
 | **COMBAT** | Switch Weapon | Q | ❌ Not Impl | Y | ❌ Not Impl | Spectator ⚠️ |
 | **COMBAT** | Next Weapon | E | ❌ Not Impl | R1 | ❌ Not Impl | Spectator ⚠️ |
@@ -168,7 +168,7 @@ Server-side validation with raycast
 -- Owner: FPSWeaponController.lua
 
 PC Binding:
-  Mouse2 (Right Mouse Button)
+  LeftAlt (Left Alt key)
   - Hold to aim
 
 Touch Binding:

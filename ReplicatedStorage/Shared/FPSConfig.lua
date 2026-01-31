@@ -319,7 +319,7 @@ FPSConfig.Audio = {
 FPSConfig.Controls = {
 	-- Fire
 	FireKey = Enum.UserInputType.MouseButton1,
-	ADSKey = Enum.UserInputType.MouseButton2,
+	ADSKey = Enum.KeyCode.LeftAlt,
 	ReloadKey = Enum.KeyCode.R,
 
 	-- Movement
