@@ -27,6 +27,20 @@ end
 local GameConfig = require(GameConfigModule)
 print("[MainServer] Configuration loaded successfully")
 
+-- Validate animation and sound asset IDs at boot time
+print("[MainServer] Validating animation and sound assets...")
+local AssetConfig = require(SharedFolder:WaitForChild("AssetConfig"))
+local AssetValidation = require(SharedFolder:WaitForChild("AssetValidation"))
+local invalidAssetCount = AssetValidation.runBootTimeValidation(AssetConfig)
+if invalidAssetCount > 0 then
+	warn(string.format(
+		"[MainServer] ⚠️ Boot-time validation found %d invalid asset(s). Game will continue but assets may not load correctly.",
+		invalidAssetCount
+	))
+else
+	print("[MainServer] ✅ All assets validated successfully")
+end
+
 -- Require managers / services
 local GameManager = require(script.Parent.GameManager)
 local AllianceService = require(script.Parent.AllianceServiceV2) -- Using V2 with networked alliance pools

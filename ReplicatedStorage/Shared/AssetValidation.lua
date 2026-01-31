@@ -231,14 +231,90 @@ end
 
 -- Runs validation at boot time for all asset tables
 -- Call this early in initialization to catch issues before they cause runtime errors
-function AssetValidation.runBootTimeValidation()
+-- @param AssetConfig: The AssetConfig module (optional, will require if not provided)
+-- @return totalInvalid: Number of invalid assets found
+function AssetValidation.runBootTimeValidation(AssetConfig)
 	print("=== AssetValidation: Boot-Time Validation ===")
 	
-	-- Note: This is a placeholder for future integration
-	-- Individual controllers should call validateSoundAssets/validateAnimationAssets
-	-- with their specific asset tables during initialization
+	-- Load AssetConfig if not provided
+	if not AssetConfig then
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+		AssetConfig = require(SharedFolder:WaitForChild("AssetConfig"))
+	end
+	
+	local totalInvalidAnimations = {}
+	local totalInvalidSounds = {}
+	
+	-- Validate weapon animations
+	if AssetConfig.Animations and AssetConfig.Animations.WeaponAnimations then
+		local invalid = AssetValidation.validateAnimationAssets(
+			AssetConfig.Animations.WeaponAnimations,
+			"WeaponAnimations"
+		)
+		-- Keys already include the prefix, so don't duplicate it
+		for _, key in ipairs(invalid) do
+			table.insert(totalInvalidAnimations, key)
+		end
+	else
+		warn("[AssetValidation] WeaponAnimations not found in AssetConfig")
+	end
+	
+	-- Validate zombie animations
+	if AssetConfig.Animations and AssetConfig.Animations.ZombieAnimations then
+		local invalid = AssetValidation.validateAnimationAssets(
+			AssetConfig.Animations.ZombieAnimations,
+			"ZombieAnimations"
+		)
+		-- Keys already include the prefix, so don't duplicate it
+		for _, key in ipairs(invalid) do
+			table.insert(totalInvalidAnimations, key)
+		end
+	else
+		warn("[AssetValidation] ZombieAnimations not found in AssetConfig")
+	end
+	
+	-- Validate sound assets
+	if AssetConfig.Sounds then
+		local invalid = AssetValidation.validateSoundAssets(
+			AssetConfig.Sounds,
+			"Sounds"
+		)
+		-- Keys already include the prefix, so don't duplicate it
+		for _, key in ipairs(invalid) do
+			table.insert(totalInvalidSounds, key)
+		end
+	else
+		warn("[AssetValidation] Sounds not found in AssetConfig")
+	end
+	
+	-- Summary
+	local totalInvalid = #totalInvalidAnimations + #totalInvalidSounds
+	
+	if totalInvalid > 0 then
+		warn(string.format(
+			"[AssetValidation] ⚠️ Found %d invalid asset(s): %d animation(s), %d sound(s)",
+			totalInvalid,
+			#totalInvalidAnimations,
+			#totalInvalidSounds
+		))
+		
+		-- Only show invalid animations if there are any
+		if #totalInvalidAnimations > 0 then
+			warn("[AssetValidation] Invalid animations: " .. table.concat(totalInvalidAnimations, ", "))
+		end
+		
+		-- Only show invalid sounds if there are any
+		if #totalInvalidSounds > 0 then
+			warn("[AssetValidation] Invalid sounds: " .. table.concat(totalInvalidSounds, ", "))
+		end
+	else
+		print("[AssetValidation] ✅ All animation and sound assets validated successfully!")
+	end
 	
 	print("=== AssetValidation: Validation Complete ===")
+	
+	return totalInvalid
 end
 
 return AssetValidation
