@@ -55,6 +55,8 @@ suite.tests["InputActionRegistry_IdempotentRegistration"] = function()
 	warn = function(...)
 		warningCount = warningCount + 1
 		lastWarning = table.concat({...}, " ")
+		-- Optionally call original warn for logging infrastructure
+		-- originalWarn(...)
 	end
 	
 	-- Clear any existing test registrations
@@ -87,6 +89,8 @@ suite.tests["InputActionRegistry_IdempotentRegistration"] = function()
 	-- Assert exactly 1 warning was produced for conflicting registration
 	TestFramework:assertEqual(warningCount, 1, "Conflicting registration should produce exactly 1 warning")
 	TestFramework:assertTrue(lastWarning ~= nil and lastWarning:find("TestAction1"), "Warning should mention the action name")
+	TestFramework:assertTrue(lastWarning:find("owner:"), "Warning should include owner change details")
+	TestFramework:assertTrue(lastWarning:find("TestOwner") and lastWarning:find("DifferentOwner"), "Warning should show old and new owner")
 	
 	-- Verify the registration was updated
 	action = Registry.getAction("TestAction1")
