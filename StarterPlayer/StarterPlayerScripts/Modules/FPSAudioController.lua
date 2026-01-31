@@ -64,7 +64,7 @@ local function createSound(soundId, parent, properties)
 	end
 	
 	-- Extract digits after rbxassetid:// and ensure it's numeric and > 0
-	local assetIdStr = soundId:match("rbxassetid://(%d+)")
+	local assetIdStr = soundId:match("^rbxassetid://(%d+)$")
 	if assetIdStr then
 		local numId = tonumber(assetIdStr)
 		if not numId or numId <= 0 then
