@@ -40,33 +40,49 @@ local testCases = {
 local passedTests = 0
 local failedTests = 0
 
-for i, test in ipairs(testCases) do
-	-- Use the internal validation function (expose it for testing)
-	local function isValidAnimationId(animId)
-		if not animId then return false end
-		
-		local idStr = tostring(animId)
-		
-		-- Check for placeholder/empty IDs
-		if idStr == "0" or idStr == "rbxassetid://0" or idStr == "" then
-			return false
+-- Prefer using AssetValidation's production logic if available, with a local
+-- fallback to preserve current behavior for this dev-only test script.
+local function isValidAnimationId(animId)
+	-- Delegate to public helpers on AssetValidation if they exist
+	if AssetValidation and typeof(AssetValidation) == "table" then
+		if typeof(AssetValidation.isValidAnimationId) == "function" then
+			return AssetValidation.isValidAnimationId(animId)
 		end
-		
-		-- Must be a number or rbxassetid:// format
-		local numIdStr = idStr:match("^rbxassetid://(%d+)$")
-		if numIdStr then
-			local numId = tonumber(numIdStr)
-			return numId ~= nil and numId > 0
+
+		if typeof(AssetValidation.ValidateAnimationId) == "function" then
+			return AssetValidation.ValidateAnimationId(animId)
 		end
-		
-		local numericId = tonumber(idStr)
-		if numericId then
-			return numericId > 0
-		end
-		
+	end
+
+	-- Fallback: use the local rules previously defined in this script
+	if not animId then
 		return false
 	end
-	
+
+	local idStr = tostring(animId)
+
+	-- Check for placeholder/empty IDs
+	if idStr == "0" or idStr == "rbxassetid://0" or idStr == "" then
+		return false
+	end
+
+	-- Must be a number or rbxassetid:// format
+	local numIdStr = idStr:match("^rbxassetid://(%d+)$")
+	if numIdStr then
+		local numId = tonumber(numIdStr)
+		return numId ~= nil and numId > 0
+	end
+
+	local numericId = tonumber(idStr)
+	if numericId then
+		return numericId > 0
+	end
+
+	return false
+end
+
+for i, test in ipairs(testCases) do
+	-- Use the shared validation helper, which prefers AssetValidation's logic
 	local result = isValidAnimationId(test.id)
 	local passed = result == test.expected
 	
