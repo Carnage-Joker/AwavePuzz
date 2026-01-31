@@ -155,7 +155,7 @@ To enable detailed UI creation logging:
 
 1. Open `ReplicatedStorage/Shared/UIDebugConfig.lua`
 2. Set `DEBUG_UI_CREATION = true`
-3. Set `LOG_SCREENGUI_LIFECYCLE = true` and/or `LOG_UI_INITIALIZATION = true`
+3. (Optional) `LOG_SCREENGUI_LIFECYCLE` and `LOG_UI_INITIALIZATION` are currently defined but unused (no-op); you can ignore them for UI creation logging.
 4. Test in Roblox Studio
 5. Check Output window for detailed logs:
    ```
