@@ -43,6 +43,7 @@ function TestRunner.loadTestSuites()
 		"MovementSystemTests",
 		"SpectatorSystemTests",
 		"ConfigurationTests",
+		"AssetValidationTests",
 		"IntegrationTests"
 	}
 	

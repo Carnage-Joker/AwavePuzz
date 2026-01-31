@@ -34,11 +34,60 @@ function InputActionRegistry.register(actionName, owner, keys, priority, enabled
 	
 	-- Check if already registered
 	if InputActionRegistry._registeredActions[actionName] then
+		local existing = InputActionRegistry._registeredActions[actionName]
+		
+		-- Check if this is an idempotent re-registration (same owner and same configuration)
+		local isSameOwner = existing.owner == owner
+		local isSamePriority = existing.priority == priority
+		local isSameEnabled = existing.enabled == enabled
+		
+		-- Compare keys arrays
+		-- Note: This comparison is order-dependent. Keys must be in the same order
+		-- for idempotent registration to work. This is acceptable since the same code
+		-- typically provides keys in the same order.
+		local isSameKeys = #existing.keys == #keys
+		if isSameKeys then
+			for i, key in ipairs(keys) do
+				if existing.keys[i] ~= key then
+					isSameKeys = false
+					break
+				end
+			end
+		end
+		
+		-- If everything matches, this is a duplicate registration - skip silently
+		if isSameOwner and isSamePriority and isSameEnabled and isSameKeys then
+			-- Idempotent re-registration - skip without warning
+			return
+		end
+		
+		-- Otherwise, this is a conflict - warn about it with details
+		local conflicts = {}
+		if not isSameOwner then
+			table.insert(conflicts, string.format("owner: %s → %s", existing.owner, owner))
+		end
+		if not isSameKeys then
+			local oldKeys = {}
+			local newKeys = {}
+			for _, k in ipairs(existing.keys) do
+				table.insert(oldKeys, tostring(k):match("%.(.+)$") or tostring(k))
+			end
+			for _, k in ipairs(keys) do
+				table.insert(newKeys, tostring(k):match("%.(.+)$") or tostring(k))
+			end
+			table.insert(conflicts, string.format("keys: [%s] → [%s]", table.concat(oldKeys, ", "), table.concat(newKeys, ", ")))
+		end
+		if not isSamePriority then
+			table.insert(conflicts, string.format("priority: %d → %d", existing.priority, priority))
+		end
+		if not isSameEnabled then
+			table.insert(conflicts, string.format("enabled: %s → %s", tostring(existing.enabled), tostring(enabled)))
+		end
+		
 		warn(string.format(
-			"[InputActionRegistry] Action '%s' registered multiple times! Previous owner: %s, New owner: %s",
+			"[InputActionRegistry] Action '%s' configuration conflict! Changes: %s",
 			actionName,
-			InputActionRegistry._registeredActions[actionName].owner,
-			owner
+			table.concat(conflicts, ", ")
 		))
 	end
 	
