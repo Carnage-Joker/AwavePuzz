@@ -155,9 +155,8 @@ To enable detailed UI creation logging:
 
 1. Open `ReplicatedStorage/Shared/UIDebugConfig.lua`
 2. Set `DEBUG_UI_CREATION = true`
-3. (Optional) `LOG_SCREENGUI_LIFECYCLE` and `LOG_UI_INITIALIZATION` are currently defined but unused (no-op); you can ignore them for UI creation logging.
-4. Test in Roblox Studio
-5. Check Output window for detailed logs:
+3. Test in Roblox Studio
+4. Check Output window for detailed logs:
    ```
    [HH:MM:SS] [UIDebug] AllianceUI - Creating ScreenGui: AllianceUI.lua
    [UIDebug] Removing duplicate WaveUI from PlayerGui

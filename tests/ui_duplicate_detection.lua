@@ -36,7 +36,8 @@ local expectedUIs = {
 	"FunFactUI",
 	"SynthesisUI",
 	"ControlsTutorialUI",
-	"TouchControls" -- Note: This is "TouchControls" not "TouchControlsUI"
+	"TouchControls", -- Note: This is "TouchControls" not "TouchControlsUI"
+	"PortalQueueUI" -- Conditionally loaded based on USE_PORTAL_MATCHMAKING
 }
 
 local totalDuplicates = 0

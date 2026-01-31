@@ -3,6 +3,12 @@
 -- This is the ONLY LocalScript that should run on the client
 -- All other client logic is in ModuleScripts initialized from here
 
+-- Ensure ClientController only runs once globally
+if _G.AwavePuzzClientControllerInitialized then
+	error("[ClientController] CRITICAL: ClientController.client.lua is running multiple times! This should never happen.")
+end
+_G.AwavePuzzClientControllerInitialized = true
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -492,12 +498,6 @@ function ClientController.initialize()
 		InputActionRegistry.runStartupAudit()
 	end)
 end
-
--- Ensure ClientController only runs once globally
-if _G.AwavePuzzClientControllerInitialized then
-	error("[ClientController] CRITICAL: ClientController.client.lua is running multiple times! This should never happen.")
-end
-_G.AwavePuzzClientControllerInitialized = true
 
 -- Start the client
 ClientController.initialize()

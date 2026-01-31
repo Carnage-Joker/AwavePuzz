@@ -13,6 +13,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local ControlsTutorialUI = {}
 

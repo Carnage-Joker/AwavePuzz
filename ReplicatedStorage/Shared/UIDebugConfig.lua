@@ -6,12 +6,6 @@ local UIDebugConfig = {
 	-- Master flag for UI creation debugging
 	DEBUG_UI_CREATION = false,
 	
-	-- If true, prints when UI ScreenGuis are created/destroyed
-	LOG_SCREENGUI_LIFECYCLE = false,
-	
-	-- If true, prints when UI modules are initialized
-	LOG_UI_INITIALIZATION = false,
-	
 	-- If true, warns when duplicate UIs are detected and destroyed
 	WARN_ON_DUPLICATES = true,
 }
