@@ -252,8 +252,9 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 			AssetConfig.Animations.WeaponAnimations,
 			"WeaponAnimations"
 		)
+		-- Keys already include the prefix, so don't duplicate it
 		for _, key in ipairs(invalid) do
-			table.insert(totalInvalidAnimations, "WeaponAnimations." .. key)
+			table.insert(totalInvalidAnimations, key)
 		end
 	else
 		warn("[AssetValidation] WeaponAnimations not found in AssetConfig")
@@ -265,8 +266,9 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 			AssetConfig.Animations.ZombieAnimations,
 			"ZombieAnimations"
 		)
+		-- Keys already include the prefix, so don't duplicate it
 		for _, key in ipairs(invalid) do
-			table.insert(totalInvalidAnimations, "ZombieAnimations." .. key)
+			table.insert(totalInvalidAnimations, key)
 		end
 	else
 		warn("[AssetValidation] ZombieAnimations not found in AssetConfig")
@@ -278,8 +280,9 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 			AssetConfig.Sounds,
 			"Sounds"
 		)
+		-- Keys already include the prefix, so don't duplicate it
 		for _, key in ipairs(invalid) do
-			table.insert(totalInvalidSounds, "Sounds." .. key)
+			table.insert(totalInvalidSounds, key)
 		end
 	else
 		warn("[AssetValidation] Sounds not found in AssetConfig")
