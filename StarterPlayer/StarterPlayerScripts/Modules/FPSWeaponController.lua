@@ -8,7 +8,7 @@
 -- Features:
 -- - Recoil system with camera kick and recovery
 -- - Dynamic spread based on movement/firing
--- - ADS (Aim Down Sights) with right-click
+-- - ADS (Aim Down Sights) with left alt key
 -- - Fire modes: Semi-auto, Burst, Full-auto
 -- - Magazine + reserve ammo system
 -- - Manual reload with R key
