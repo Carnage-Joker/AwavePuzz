@@ -504,18 +504,16 @@ end
 -- PUBLIC API
 --------------------------------------------------------------------------------
 
-local FPSAudioModule = {}
-
-function FPSAudioModule.initialize()
+function FPSAudioController.initialize()
 	initialize()
 end
 
-function FPSAudioModule.onCharacterAdded(character)
+function FPSAudioController.onCharacterAdded(character)
 	-- Handle character added
 end
 
-function FPSAudioModule.onCharacterRemoving()
+function FPSAudioController.onCharacterRemoving()
 	-- Cleanup
 end
 
-return FPSAudioModule
+return FPSAudioController

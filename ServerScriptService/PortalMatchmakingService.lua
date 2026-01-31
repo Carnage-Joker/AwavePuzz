@@ -38,7 +38,7 @@ function PortalMatchmakingService.new(gameManager)
 	self.countdownTasks = {}
 	
 	-- Remote events
-	self.remotes = {}
+	self.remoteEvents = {}
 	self:setupRemoteEvents()
 	
 	-- Config shortcuts
@@ -62,7 +62,7 @@ function PortalMatchmakingService:setupRemoteEvents()
 	-- Use RemoteEventUtil for consistency with the rest of the codebase
 	local RemoteEventUtil = require(Shared:WaitForChild("RemoteEventUtil", 5))
 	
-	self.remotes = RemoteEventUtil.getOrCreateEvents({
+	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"PortalQueueStatus",
 		"PortalLeaveQueue",
 		"PortalQueueJoined",
@@ -70,7 +70,7 @@ function PortalMatchmakingService:setupRemoteEvents()
 	})
 	
 	-- Hook client requests to leave queue
-	self.remotes.PortalLeaveQueue.OnServerEvent:Connect(function(player)
+	self.remoteEvents.PortalLeaveQueue.OnServerEvent:Connect(function(player)
 		self:onPlayerLeaveQueue(player)
 	end)
 	
@@ -290,7 +290,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 	if portal.locked then
 		print(string.format("[PortalMatchmakingService] Portal %s is locked", portalId))
 		-- Send feedback to client
-		self.remotes.PortalQueueStatus:FireClient(player, {
+		self.remoteEvents.PortalQueueStatus:FireClient(player, {
 			portalId = portalId,
 			status = "locked",
 			message = "Portal is launching..."
@@ -312,7 +312,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		player.Name, portalId, #portal.queue, self.maxPlayersPerMatch))
 	
 	-- Send join confirmation to player
-	self.remotes.PortalQueueJoined:FireClient(player, {
+	self.remoteEvents.PortalQueueJoined:FireClient(player, {
 		portalId = portalId,
 		mapId = portal.config.mapId,
 		queueCount = #portal.queue,
@@ -358,7 +358,7 @@ function PortalMatchmakingService:removePlayerFromQueue(player, portalId)
 	
 	-- Send leave notification to player
 	if player and player.Parent then
-		self.remotes.PortalQueueLeft:FireClient(player, {
+		self.remoteEvents.PortalQueueLeft:FireClient(player, {
 			portalId = portalId
 		})
 	end
@@ -544,7 +544,7 @@ function PortalMatchmakingService:launchMatch(portalId)
 			self.playerQueues[player.UserId] = nil
 			-- Notify player they've left the queue (match is starting)
 			if player.Parent then
-				self.remotes.PortalQueueLeft:FireClient(player, {
+				self.remoteEvents.PortalQueueLeft:FireClient(player, {
 					portalId = portalId
 				})
 			end
@@ -584,7 +584,7 @@ function PortalMatchmakingService:broadcastQueueStatus(portalId)
 	}
 	
 	-- Send to all players
-	self.remotes.PortalQueueStatus:FireAllClients(status)
+	self.remoteEvents.PortalQueueStatus:FireAllClients(status)
 	
 	-- Update visual indicator
 	self:updatePortalIndicator(portalId)

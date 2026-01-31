@@ -585,13 +585,13 @@ end
 --------------------------------------------------------------------------------
 
 -- Module export (without auto-init)
-local FPSWeaponControllerModule = {}
+local FPSWeaponController = {}
 
-function FPSWeaponControllerModule.initialize()
+function FPSWeaponController.initialize()
 	initialize()
 end
 
-function FPSWeaponControllerModule.onCharacterAdded(character)
+function FPSWeaponController.onCharacterAdded(character)
 	-- FIX: Refresh weapon info on respawn
 	-- The server will send WeaponLoadoutUpdate and AmmoUpdate via the GameManager hookCharacter
 	-- This ensures the client UI is ready to receive those updates
@@ -605,7 +605,7 @@ function FPSWeaponControllerModule.onCharacterAdded(character)
 	end
 end
 
-function FPSWeaponControllerModule.onCharacterRemoving()
+function FPSWeaponController.onCharacterRemoving()
 	-- Cleanup connections to prevent memory leaks
 	if inputBeganConn then
 		inputBeganConn:Disconnect()
@@ -621,4 +621,4 @@ function FPSWeaponControllerModule.onCharacterRemoving()
 	end
 end
 
-return FPSWeaponControllerModule
+return FPSWeaponController
