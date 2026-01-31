@@ -15,8 +15,8 @@ This audit reviewed all animation IDs used throughout the AwavePuzz Roblox game 
 - ✅ **Validation system** exists in `AssetValidation.lua`
 - ⚠️ **Inconsistent formats** between modern and legacy animation references
 - ⚠️ **Placeholder IDs** present in weapon animations (ads = "rbxassetid://0")
-- ⚠️ **No automated validation** currently running at boot time
-- ✅ **Documentation** is comprehensive and up-to-date
+- ✅ **Automated validation** runs at server startup via `AssetValidation.runBootTimeValidation()` wired in `MainServer.lua`
+- ✅ **Documentation** reflects current boot-time validation behavior and asset ID usage
 
 ---
 
