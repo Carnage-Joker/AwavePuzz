@@ -63,11 +63,14 @@ local function createSound(soundId, parent, properties)
 		return nil
 	end
 	
-	-- Extract asset ID and validate it's not suspiciously long (typical IDs are 9-13 digits)
-	local assetIdStr = soundId:match("rbxassetid://(%d+)")
-	if assetIdStr and #assetIdStr > 13 then
-		warn("[FPSAudioController] Skipping invalid sound ID (too long): " .. soundId)
-		return nil
+	-- Extract digits after rbxassetid:// and ensure it's numeric and > 0
+	local assetIdStr = soundId:match("^rbxassetid://(%d+)$")
+	if assetIdStr then
+		local numId = tonumber(assetIdStr)
+		if not numId or numId <= 0 then
+			warn("[FPSAudioController] Skipping invalid sound ID: " .. soundId)
+			return nil
+		end
 	end
 	
 	local sound = Instance.new("Sound")
