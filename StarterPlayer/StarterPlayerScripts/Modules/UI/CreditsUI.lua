@@ -11,6 +11,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local CreditsUI = {}
 CreditsUI.__index = CreditsUI
@@ -53,6 +54,15 @@ function CreditsUI:setupRemoteEvents()
 end
 
 function CreditsUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("CreditsUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("CreditsUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("CreditsUI", "Creating ScreenGui", "CreditsUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "CreditsUI"

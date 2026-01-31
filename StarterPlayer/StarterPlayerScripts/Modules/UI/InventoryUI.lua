@@ -9,6 +9,7 @@ local player = Players.LocalPlayer
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -26,11 +27,21 @@ local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
 
+-- Prevent duplicate UI instances
+local playerGui = player:WaitForChild("PlayerGui")
+local existing = playerGui:FindFirstChild("InventoryUI")
+if existing then
+	UIDebugConfig.warnDuplicate("InventoryUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("InventoryUI", "Creating ScreenGui", "InventoryUI.lua")
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "InventoryUI"
 screenGui.ResetOnSpawn = false
 screenGui.Enabled = true
-screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.Parent = playerGui
 
 -- Calculate position dynamically based on elements above (WaveUI + BaseHealthUI)
 local function getInventoryYOffset()

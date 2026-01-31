@@ -14,6 +14,7 @@ local camera = workspace.CurrentCamera
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Connection tracking for cleanup
 local connections = {}
@@ -35,12 +36,22 @@ local targetUserId = nil
 local aliveList = {}
 local aliveCount = 0
 
+-- Prevent duplicate UI instances
+local playerGui = player:WaitForChild("PlayerGui")
+local existing = playerGui:FindFirstChild("SpectatorUI")
+if existing then
+	UIDebugConfig.warnDuplicate("SpectatorUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("SpectatorUI", "Creating ScreenGui", "SpectatorUI.lua")
+
 -- UI
 local gui = Instance.new("ScreenGui")
 gui.Name = "SpectatorUI"
 gui.ResetOnSpawn = false
 gui.Enabled = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local root = Instance.new("Frame")
 root.Name = "Root"

@@ -13,6 +13,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -46,8 +47,11 @@ end
 local playerGui = player:WaitForChild("PlayerGui")
 local existing = playerGui:FindFirstChild("PlayerHUD")
 if existing then
+	UIDebugConfig.warnDuplicate("PlayerHUD")
 	existing:Destroy()
 end
+
+UIDebugConfig.logUICreation("PlayerHUD", "Creating ScreenGui", "PlayerHUD.lua")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "PlayerHUD"

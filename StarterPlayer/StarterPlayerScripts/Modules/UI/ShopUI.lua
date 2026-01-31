@@ -14,6 +14,7 @@ local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -34,11 +35,21 @@ end
 -- Minimum touch target from config with fallback
 local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
 
+-- Prevent duplicate UI instances
+local playerGui = player:WaitForChild("PlayerGui")
+local existing = playerGui:FindFirstChild("ShopUI")
+if existing then
+	UIDebugConfig.warnDuplicate("ShopUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("ShopUI", "Creating ScreenGui", "ShopUI.lua")
+
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ShopUI"
 screenGui.ResetOnSpawn = false
 screenGui.Enabled = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.Parent = playerGui
 
 -- Center the shop dialog with scaled size
 local frame = Instance.new("Frame")

@@ -11,6 +11,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local AchievementUI = {}
 AchievementUI.__index = AchievementUI
@@ -44,6 +45,15 @@ function AchievementUI:setupRemoteEvents()
 end
 
 function AchievementUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("AchievementUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("AchievementUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("AchievementUI", "Creating ScreenGui", "AchievementUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "AchievementUI"

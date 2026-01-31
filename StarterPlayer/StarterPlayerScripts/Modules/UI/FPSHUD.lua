@@ -17,6 +17,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -35,8 +36,11 @@ local lastAmmoData = nil
 -- Prevent duplicate HUDs on respawn
 local existing = playerGui:FindFirstChild("FPSHUD")
 if existing then
+	UIDebugConfig.warnDuplicate("FPSHUD")
 	existing:Destroy()
 end
+
+UIDebugConfig.logUICreation("FPSHUD", "Creating ScreenGui", "FPSHUD.lua")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "FPSHUD"

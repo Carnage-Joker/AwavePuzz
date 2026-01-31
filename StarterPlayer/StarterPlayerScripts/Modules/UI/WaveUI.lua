@@ -12,6 +12,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -24,6 +25,15 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("WaveUI")
+if existing then
+	UIDebugConfig.warnDuplicate("WaveUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("WaveUI", "Creating ScreenGui", "WaveUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

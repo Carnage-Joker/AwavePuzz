@@ -11,6 +11,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local SynthesisUI = {}
 SynthesisUI.__index = SynthesisUI
@@ -60,6 +61,15 @@ function SynthesisUI:setupRemoteEvents()
 end
 
 function SynthesisUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("SynthesisUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("SynthesisUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("SynthesisUI", "Creating ScreenGui", "SynthesisUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "SynthesisUI"
