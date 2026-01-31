@@ -510,7 +510,7 @@ InputActionRegistry.register("EpilogueContinue", "EpilogueUI", {Enum.KeyCode.Spa
 InputActionRegistry.register("EpilogueMute", "EpilogueUI", {Enum.KeyCode.M}, InputActionRegistry.Priority.FULLSCREEN_STATE)
 
 -- Cleanup function
-function epilogue:cleanup()
+function EpilogueUI:cleanup()
 	for name, connection in pairs(connections) do
 		if connection then
 			connection:Disconnect()

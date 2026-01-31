@@ -570,13 +570,11 @@ end
 -- MODULE EXPORT
 --------------------------------------------------------------------------------
 
-local FPSMenuModule = {}
-
-function FPSMenuModule.initialize()
+function FPSMenuController.initialize()
 	initialize()
 end
 
-function FPSMenuModule.onCharacterAdded(character) end
-function FPSMenuModule.onCharacterRemoving() end
+function FPSMenuController.onCharacterAdded(character) end
+function FPSMenuController.onCharacterRemoving() end
 
-return FPSMenuModule
+return FPSMenuController

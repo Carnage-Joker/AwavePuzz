@@ -66,14 +66,14 @@ function LobbyManager.new()
 	self.selectedMapId = nil
 
 	-- Remotes (non-breaking: if your UI already uses different ones, this won’t crash)
-	self.remotes = {
+	self.remoteEvents = {
 		MapVotingState = getOrCreateRemote("MapVotingState"),   -- start/stop payload
 		MapVoteCast = getOrCreateRemote("MapVoteCast"),         -- client -> server (mapId)
 		MapVotingUpdate = getOrCreateRemote("MapVotingUpdate"), -- server -> clients (counts/time)
 	}
 
 	-- Hook vote casting
-	self.remotes.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
+	self.remoteEvents.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
 		self:castVote(player, mapId)
 	end)
 
@@ -180,7 +180,7 @@ function LobbyManager:startVoting()
 	print(string.format("[LobbyManager] Map voting started with %d available maps", #self.availableMaps))
 
 	-- Broadcast start state
-	self.remotes.MapVotingState:FireAllClients({
+	self.remoteEvents.MapVotingState:FireAllClients({
 		active = true,
 		timeRemaining = math.ceil(self.voteTimeRemaining),
 		maps = self.availableMaps,
@@ -196,7 +196,7 @@ function LobbyManager:startVoting()
 	end
 
 	-- initial update push
-	self.remotes.MapVotingUpdate:FireAllClients({
+	self.remoteEvents.MapVotingUpdate:FireAllClients({
 		timeRemaining = math.ceil(self.voteTimeRemaining),
 		votes = self:_countVotes(),
 	})
@@ -213,7 +213,7 @@ function LobbyManager:castVote(player, mapId)
 
 	self.votes[player.UserId] = mapId
 
-	self.remotes.MapVotingUpdate:FireAllClients({
+	self.remoteEvents.MapVotingUpdate:FireAllClients({
 		timeRemaining = math.ceil(self.voteTimeRemaining),
 		votes = self:_countVotes(),
 	})
@@ -232,7 +232,7 @@ function LobbyManager:update(dt)
 	self._acc = (self._acc or 0) + dt
 	if self._acc >= 1 then
 		self._acc = 0
-		self.remotes.MapVotingUpdate:FireAllClients({
+		self.remoteEvents.MapVotingUpdate:FireAllClients({
 			timeRemaining = math.ceil(self.voteTimeRemaining),
 			votes = self:_countVotes(),
 		})
@@ -246,7 +246,7 @@ function LobbyManager:update(dt)
 
 		print(string.format("[LobbyManager] Voting ended. Selected map: %s", tostring(self.selectedMapId)))
 
-		self.remotes.MapVotingState:FireAllClients({
+		self.remoteEvents.MapVotingState:FireAllClients({
 			active = false,
 			timeRemaining = 0,
 			selectedMapId = self.selectedMapId,
