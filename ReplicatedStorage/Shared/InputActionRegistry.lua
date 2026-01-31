@@ -34,10 +34,35 @@ function InputActionRegistry.register(actionName, owner, keys, priority, enabled
 	
 	-- Check if already registered
 	if InputActionRegistry._registeredActions[actionName] then
+		local existing = InputActionRegistry._registeredActions[actionName]
+		
+		-- Check if this is an idempotent re-registration (same owner and same configuration)
+		local isSameOwner = existing.owner == owner
+		local isSamePriority = existing.priority == priority
+		local isSameEnabled = existing.enabled == enabled
+		
+		-- Compare keys arrays
+		local isSameKeys = #existing.keys == #keys
+		if isSameKeys then
+			for i, key in ipairs(keys) do
+				if existing.keys[i] ~= key then
+					isSameKeys = false
+					break
+				end
+			end
+		end
+		
+		-- If everything matches, this is a duplicate registration - skip silently
+		if isSameOwner and isSamePriority and isSameEnabled and isSameKeys then
+			-- Idempotent re-registration - skip without warning
+			return
+		end
+		
+		-- Otherwise, this is a conflict - warn about it
 		warn(string.format(
 			"[InputActionRegistry] Action '%s' registered multiple times! Previous owner: %s, New owner: %s",
 			actionName,
-			InputActionRegistry._registeredActions[actionName].owner,
+			existing.owner,
 			owner
 		))
 	end
