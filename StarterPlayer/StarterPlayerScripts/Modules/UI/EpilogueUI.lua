@@ -15,6 +15,7 @@ local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local EpilogueUI = {}
 EpilogueUI.__index = EpilogueUI
@@ -65,6 +66,15 @@ function EpilogueUI:setupRemoteEvents()
 end
 
 function EpilogueUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("EpilogueUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("EpilogueUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("EpilogueUI", "Creating ScreenGui", "EpilogueUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "EpilogueUI"

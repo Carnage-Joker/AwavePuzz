@@ -23,6 +23,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -35,6 +36,15 @@ end
 local function getScaledTextSize(baseSize)
 	return UIScaleManager.scaleTextSize(baseSize)
 end
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("ScoreboardUI")
+if existing then
+	UIDebugConfig.warnDuplicate("ScoreboardUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("ScoreboardUI", "Creating ScreenGui", "ScoreboardUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

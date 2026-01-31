@@ -9,8 +9,21 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Load UI debug config
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+
 -- Constants
 local REMOTE_EVENT_WAIT_TIMEOUT = 10
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("MapVotingUI")
+if existing then
+	UIDebugConfig.warnDuplicate("MapVotingUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("MapVotingUI", "Creating ScreenGui", "MapVotingUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

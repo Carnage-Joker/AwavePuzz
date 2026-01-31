@@ -14,6 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -32,6 +33,15 @@ end
 ----------------------------------------------------------------
 -- UI creation
 ----------------------------------------------------------------
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("BaseHealthUI")
+if existing then
+	UIDebugConfig.warnDuplicate("BaseHealthUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("BaseHealthUI", "Creating ScreenGui", "BaseHealthUI.lua")
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "BaseHealthUI"

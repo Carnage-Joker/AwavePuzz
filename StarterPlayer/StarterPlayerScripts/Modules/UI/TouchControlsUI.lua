@@ -18,6 +18,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize managers
 InputManager.initialize()
@@ -95,8 +96,11 @@ local function createScreenGui()
 	-- Remove existing UI
 	local existing = playerGui:FindFirstChild("TouchControls")
 	if existing then
+		UIDebugConfig.warnDuplicate("TouchControls")
 		existing:Destroy()
 	end
+	
+	UIDebugConfig.logUICreation("TouchControls", "Creating ScreenGui", "TouchControlsUI.lua")
 	
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "TouchControls"

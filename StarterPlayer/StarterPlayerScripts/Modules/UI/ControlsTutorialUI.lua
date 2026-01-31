@@ -100,8 +100,11 @@ local function createTutorialUI()
 	-- Remove existing UI if present
 	local existing = playerGui:FindFirstChild("ControlsTutorialUI")
 	if existing then
+		UIDebugConfig.warnDuplicate("ControlsTutorialUI")
 		existing:Destroy()
 	end
+	
+	UIDebugConfig.logUICreation("ControlsTutorialUI", "Creating ScreenGui", "ControlsTutorialUI.lua")
 	
 	screenGui = Instance.new("ScreenGui")
 	screenGui.Name = "ControlsTutorialUI"

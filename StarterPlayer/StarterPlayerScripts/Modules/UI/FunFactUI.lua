@@ -11,6 +11,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local FunFactUI = {}
 FunFactUI.__index = FunFactUI
@@ -54,6 +55,15 @@ function FunFactUI:setupRemoteEvents()
 end
 
 function FunFactUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("FunFactUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("FunFactUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("FunFactUI", "Creating ScreenGui", "FunFactUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "FunFactUI"

@@ -21,6 +21,7 @@ local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -36,6 +37,15 @@ end
 
 -- Minimum touch target from config
 local MIN_TOUCH_TARGET = UIScaleConfig.MinSizes.touchTarget.width
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("AllianceUI")
+if existing then
+	UIDebugConfig.warnDuplicate("AllianceUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("AllianceUI", "Creating ScreenGui", "AllianceUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

@@ -17,6 +17,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -32,6 +33,15 @@ end
 
 -- Minimum touch target from config with fallback
 local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("CureUI")
+if existing then
+	UIDebugConfig.warnDuplicate("CureUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("CureUI", "Creating ScreenGui", "CureUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

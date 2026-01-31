@@ -9,6 +9,10 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Load UI debug config
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+
 local PortalQueueUI = {}
 
 -- Constants
@@ -17,6 +21,15 @@ local REMOTE_EVENT_WAIT_TIMEOUT = 10
 -- UI State
 local currentPortalId = nil
 local isInQueue = false
+
+-- Prevent duplicate UI instances
+local existing = playerGui:FindFirstChild("PortalQueueUI")
+if existing then
+	UIDebugConfig.warnDuplicate("PortalQueueUI")
+	existing:Destroy()
+end
+
+UIDebugConfig.logUICreation("PortalQueueUI", "Creating ScreenGui", "PortalQueueUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")

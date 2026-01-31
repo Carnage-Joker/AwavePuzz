@@ -13,6 +13,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local TitleScreenUI = {}
 TitleScreenUI.__index = TitleScreenUI
@@ -59,6 +60,15 @@ function TitleScreenUI:setupRemoteEvents()
 end
 
 function TitleScreenUI:createUI()
+	-- Prevent duplicate UI instances
+	local existing = PlayerGui:FindFirstChild("TitleScreenUI")
+	if existing then
+		UIDebugConfig.warnDuplicate("TitleScreenUI")
+		existing:Destroy()
+	end
+	
+	UIDebugConfig.logUICreation("TitleScreenUI", "Creating ScreenGui", "TitleScreenUI.lua")
+	
 	-- Create ScreenGui
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "TitleScreenUI"
