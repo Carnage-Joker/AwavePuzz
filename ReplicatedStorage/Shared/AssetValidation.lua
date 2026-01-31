@@ -294,8 +294,16 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 			#totalInvalidAnimations,
 			#totalInvalidSounds
 		))
-		warn("[AssetValidation] Invalid animations: " .. table.concat(totalInvalidAnimations, ", "))
-		warn("[AssetValidation] Invalid sounds: " .. table.concat(totalInvalidSounds, ", "))
+		
+		-- Only show invalid animations if there are any
+		if #totalInvalidAnimations > 0 then
+			warn("[AssetValidation] Invalid animations: " .. table.concat(totalInvalidAnimations, ", "))
+		end
+		
+		-- Only show invalid sounds if there are any
+		if #totalInvalidSounds > 0 then
+			warn("[AssetValidation] Invalid sounds: " .. table.concat(totalInvalidSounds, ", "))
+		end
 	else
 		print("[AssetValidation] ✅ All animation and sound assets validated successfully!")
 	end
