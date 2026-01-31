@@ -59,7 +59,7 @@
 | **Crouch** | LeftControl | C | FPSMovement | ✗ | ✓ Button |
 | **Jump** | Space | - | FPSMovement | ⚠️ Conflicts with menu selections | ✓ Button |
 | **Fire** | Mouse1 | - | FPSWeaponController | ✗ | ✓ Button |
-| **Aim (ADS)** | Mouse2 | - | FPSWeaponController | ✗ | ✓ Button |
+| **Aim (ADS)** | LeftAlt | - | FPSWeaponController | ✗ | ✓ Button |
 | **Reload** | R | - | FPSWeaponController | ✗ | ✓ Button |
 | **Toggle Scoreboard** | Tab | - | ScoreboardUI | ⚠️ Conflicts with Prev Weapon | ✗ Missing |
 | **Toggle Shop** | B | - | ShopUI | ✗ | ✗ Missing |
@@ -86,7 +86,7 @@
 | CROUCH | LeftControl, C | ButtonB | VirtualButton_Crouch | FPSMovement |
 | JUMP | Space | ButtonA | VirtualButton_Jump | FPSMovement |
 | FIRE | Mouse1 | ButtonR2 | VirtualButton_Fire | FPSWeaponController |
-| AIM | Mouse2 | ButtonL2 | VirtualButton_Aim | FPSWeaponController |
+| AIM | LeftAlt | ButtonL2 | VirtualButton_Aim | FPSWeaponController |
 | RELOAD | R | ButtonX | VirtualButton_Reload | FPSWeaponController |
 | SWITCH_WEAPON | Q | ButtonY | - | ❌ Not implemented |
 | NEXT_WEAPON | E | ButtonR1 | - | ❌ Not implemented |

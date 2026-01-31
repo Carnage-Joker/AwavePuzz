@@ -943,7 +943,7 @@ end)
 | Movement | ✅ W/A/S/D | ⚠️ Test | ✅ L-Stick | Check modal conflicts |
 | Sprint | ✅ Shift | ✅ Button | ✅ L3 | Test after AllianceUI change |
 | Fire | ✅ Mouse1 | ✅ Button | ✅ R2 | All platforms working |
-| Aim | ✅ Mouse2 | ✅ Button | ✅ L2 | All platforms working |
+| Aim | ✅ LeftAlt | ✅ Button | ✅ L2 | All platforms working |
 | Reload | ✅ R | ✅ Button | ✅ X | All platforms working |
 | Jump | ✅ Space | ✅ Button | ✅ A | Test modal conflicts |
 | Crouch | ✅ Ctrl/C | ✅ Button | ✅ B | All platforms working |
