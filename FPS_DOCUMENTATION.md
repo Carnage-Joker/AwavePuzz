@@ -204,7 +204,7 @@ The `FPSWeaponController.client.lua` provides comprehensive FPS gunplay:
 | Action | Default Key |
 |--------|-------------|
 | Fire | Left Mouse |
-| ADS | Right Mouse |
+| ADS | Left Alt |
 | Reload | R |
 | Weapon 1-4 | 1, 2, 3, 4 |
 

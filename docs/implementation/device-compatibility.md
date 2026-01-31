@@ -244,7 +244,7 @@ All input-dependent controllers were updated to use InputManager:
 | Movement | ✅ WASD | ✅ Virtual Joystick | ✅ Left Stick | ✅ Left Stick |
 | Look/Aim | ✅ Mouse | ✅ Touch Drag | ✅ Right Stick | ✅ Head Tracking |
 | Fire | ✅ LMB | ✅ Fire Button | ✅ RT/R2 | ✅ Trigger |
-| AIM/ADS | ✅ RMB | ✅ AIM Button | ✅ LT/L2 | ✅ Grip/Trigger |
+| AIM/ADS | ✅ Left Alt | ✅ AIM Button | ✅ LT/L2 | ✅ Grip/Trigger |
 | Reload | ✅ R Key | ✅ Reload Button | ✅ X/Square | ✅ Button |
 | Jump | ✅ Space | ✅ Jump Button | ✅ A/X | ✅ A Button |
 | Sprint | ✅ Shift | ✅ Sprint Button | ✅ L3 Click | ✅ L3 Click |

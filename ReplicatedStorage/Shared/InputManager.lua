@@ -72,7 +72,7 @@ local DEFAULT_BINDINGS = {
 		[InputManager.Action.JUMP] = {Enum.KeyCode.Space},
 
 		[InputManager.Action.FIRE] = {Enum.UserInputType.MouseButton1},
-		[InputManager.Action.AIM] = {Enum.UserInputType.MouseButton2},
+		[InputManager.Action.AIM] = {Enum.KeyCode.LeftAlt},
 		[InputManager.Action.RELOAD] = {Enum.KeyCode.R},
 		[InputManager.Action.SWITCH_WEAPON] = {Enum.KeyCode.Q},
 		[InputManager.Action.NEXT_WEAPON] = {Enum.KeyCode.E},
