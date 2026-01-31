@@ -69,6 +69,8 @@ suite.tests["InputActionRegistry_IdempotentRegistration"] = function()
 	TestFramework:assertEqual(action.owner, "TestOwner", "Owner should still match")
 	
 	-- Try to register with a different owner (should warn)
+	-- Note: In Roblox, we can't easily capture and verify warnings,
+	-- but this should produce a warning in the output
 	Registry.register("TestAction1", "DifferentOwner", {Enum.KeyCode.T}, Registry.Priority.CORE_GAMEPLAY, true)
 	
 	-- Verify the registration was updated

@@ -42,6 +42,9 @@ function InputActionRegistry.register(actionName, owner, keys, priority, enabled
 		local isSameEnabled = existing.enabled == enabled
 		
 		-- Compare keys arrays
+		-- Note: This comparison is order-dependent. Keys must be in the same order
+		-- for idempotent registration to work. This is acceptable since the same code
+		-- typically provides keys in the same order.
 		local isSameKeys = #existing.keys == #keys
 		if isSameKeys then
 			for i, key in ipairs(keys) do
