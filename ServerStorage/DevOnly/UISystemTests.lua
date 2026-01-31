@@ -48,8 +48,18 @@ suite.tests["InputActionRegistry_IdempotentRegistration"] = function()
 		return
 	end
 	
+	-- Stub warn function to capture warnings without noise
+	local originalWarn = warn
+	local warningCount = 0
+	local lastWarning = nil
+	warn = function(...)
+		warningCount = warningCount + 1
+		lastWarning = table.concat({...}, " ")
+	end
+	
 	-- Clear any existing test registrations
 	Registry.unregister("TestAction1")
+	warningCount = 0  -- Reset after any potential warnings from unregister
 	
 	-- Register an action for the first time
 	Registry.register("TestAction1", "TestOwner", {Enum.KeyCode.T}, Registry.Priority.CORE_GAMEPLAY, true)
@@ -63,19 +73,27 @@ suite.tests["InputActionRegistry_IdempotentRegistration"] = function()
 	-- This should NOT produce a warning
 	Registry.register("TestAction1", "TestOwner", {Enum.KeyCode.T}, Registry.Priority.CORE_GAMEPLAY, true)
 	
+	-- Assert no warnings were produced for idempotent registration
+	TestFramework:assertEqual(warningCount, 0, "Idempotent registration should not produce warnings")
+	
 	-- Verify it's still registered correctly
 	action = Registry.getAction("TestAction1")
 	TestFramework:assertTrue(action ~= nil, "Action should still be registered")
 	TestFramework:assertEqual(action.owner, "TestOwner", "Owner should still match")
 	
 	-- Try to register with a different owner (should warn)
-	-- Note: In Roblox, we can't easily capture and verify warnings,
-	-- but this should produce a warning in the output
 	Registry.register("TestAction1", "DifferentOwner", {Enum.KeyCode.T}, Registry.Priority.CORE_GAMEPLAY, true)
+	
+	-- Assert exactly 1 warning was produced for conflicting registration
+	TestFramework:assertEqual(warningCount, 1, "Conflicting registration should produce exactly 1 warning")
+	TestFramework:assertTrue(lastWarning ~= nil and lastWarning:find("TestAction1"), "Warning should mention the action name")
 	
 	-- Verify the registration was updated
 	action = Registry.getAction("TestAction1")
 	TestFramework:assertEqual(action.owner, "DifferentOwner", "Owner should be updated")
+	
+	-- Restore original warn function
+	warn = originalWarn
 	
 	-- Clean up
 	Registry.unregister("TestAction1")

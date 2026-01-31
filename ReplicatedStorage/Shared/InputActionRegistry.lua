@@ -61,12 +61,33 @@ function InputActionRegistry.register(actionName, owner, keys, priority, enabled
 			return
 		end
 		
-		-- Otherwise, this is a conflict - warn about it
+		-- Otherwise, this is a conflict - warn about it with details
+		local conflicts = {}
+		if not isSameOwner then
+			table.insert(conflicts, string.format("owner: %s → %s", existing.owner, owner))
+		end
+		if not isSameKeys then
+			local oldKeys = {}
+			local newKeys = {}
+			for _, k in ipairs(existing.keys) do
+				table.insert(oldKeys, tostring(k):match("%.(.+)$") or tostring(k))
+			end
+			for _, k in ipairs(keys) do
+				table.insert(newKeys, tostring(k):match("%.(.+)$") or tostring(k))
+			end
+			table.insert(conflicts, string.format("keys: [%s] → [%s]", table.concat(oldKeys, ", "), table.concat(newKeys, ", ")))
+		end
+		if not isSamePriority then
+			table.insert(conflicts, string.format("priority: %d → %d", existing.priority, priority))
+		end
+		if not isSameEnabled then
+			table.insert(conflicts, string.format("enabled: %s → %s", tostring(existing.enabled), tostring(enabled)))
+		end
+		
 		warn(string.format(
-			"[InputActionRegistry] Action '%s' registered multiple times! Previous owner: %s, New owner: %s",
+			"[InputActionRegistry] Action '%s' configuration conflict! Changes: %s",
 			actionName,
-			existing.owner,
-			owner
+			table.concat(conflicts, ", ")
 		))
 	end
 	
