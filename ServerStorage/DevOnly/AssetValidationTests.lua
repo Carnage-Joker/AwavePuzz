@@ -72,7 +72,7 @@ suite.tests["AssetValidation_ExtractsDigitsCorrectly"] = function()
 		-- Invalid formats
 		Invalid1 = "rbxassetid://", -- no number
 		Invalid2 = "rbxassetid://abc123", -- contains letters
-		Invalid3 = "rbxassetid://-123", -- negative number
+		Invalid3 = "rbxassetid://-123", -- malformed format (contains minus sign)
 	}
 	
 	TestFramework:info("Running validation on format test...")
@@ -94,6 +94,8 @@ suite.tests["AssetValidation_RejectsZeroAndNegative"] = function()
 		Zero1 = "rbxassetid://0",
 		Zero2 = 0,
 		Zero3 = "0",
+		Negative1 = -123, -- raw negative number
+		Negative2 = "-123", -- string negative number
 		PositiveValid = "rbxassetid://1", -- minimum valid ID
 		LargeValid = "rbxassetid://99999999999999999999", -- very large ID
 	}
@@ -101,8 +103,8 @@ suite.tests["AssetValidation_RejectsZeroAndNegative"] = function()
 	TestFramework:info("Running validation on zero/negative test...")
 	local invalidKeys = AssetValidation.validateSoundAssets(testAssets, "ZeroTest")
 	
-	-- Should have 3 invalid assets (all the zeros)
-	TestFramework:assertEqual(#invalidKeys, 3, "Should have exactly 3 invalid assets (zeros)")
+	-- Should have 5 invalid assets (all the zeros and negatives)
+	TestFramework:assertEqual(#invalidKeys, 5, "Should have exactly 5 invalid assets (zeros and negatives)")
 	
 	TestFramework:debug("Zero/negative rejection test passed")
 end
