@@ -452,7 +452,7 @@ end
 
 function ClientController.initialize()
 	if ClientController.initialized then
-		warn("[ClientController] Already initialized")
+		warn("[ClientController] Already initialized, preventing duplicate initialization")
 		return
 	end
 	
@@ -492,6 +492,12 @@ function ClientController.initialize()
 		InputActionRegistry.runStartupAudit()
 	end)
 end
+
+-- Ensure ClientController only runs once globally
+if _G.AwavePuzzClientControllerInitialized then
+	error("[ClientController] CRITICAL: ClientController.client.lua is running multiple times! This should never happen.")
+end
+_G.AwavePuzzClientControllerInitialized = true
 
 -- Start the client
 ClientController.initialize()
