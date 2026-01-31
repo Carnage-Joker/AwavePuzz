@@ -495,5 +495,3 @@ end
 
 -- Start the client
 ClientController.initialize()
-
-return ClientController
