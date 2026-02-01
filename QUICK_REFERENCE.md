@@ -247,7 +247,7 @@ Before merging, verify:
 - [x] No legacy patterns (wait/spawn/delay)
 - [x] No _G globals
 - [x] Modern Luau throughout
-- [x] Entry points are idempotent
+- [x] Entry points guard against duplicate execution (CRITICAL on duplicate run)
 - [x] RemoteRegistry properly initialized
 
 ### Testing (Pending) ⏳
