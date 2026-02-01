@@ -298,19 +298,8 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 	-- ✅ FIX: On first join (from TITLE_SCREEN), go to LOBBY, not EPILOGUE
 	-- Epilogue should only show after a round ends (VICTORY/DEFEAT -> EPILOGUE -> LOBBY)
 	-- This fixes the "nonsense epilogue on first join" bug
-	print("[GameManager] Transitioning to LOBBY state")
-	self:setState(GameManager.States.LOBBY)
-	self.stateTimer = GameConfig.LOBBY_VOTING_TIME or 20
-	
-	-- Initialize lobby if needed
-	if self.lobbySetup then
-		self.lobbySetup:getOrCreateLobby()
-	end
-	
-	-- Start lobby voting if not using portal matchmaking
-	if not GameConfig.USE_PORTAL_MATCHMAKING then
-		self.lobbyManager:startVoting()
-	end
+	print("[GameManager] Transitioning to LOBBY via startLobby() after title screen")
+	self:startLobby()
 end
 
 function GameManager:checkAllPlayersCompletedEpilogue()
