@@ -792,7 +792,7 @@ function GameManager:startMatch(players, mapId, matchId)
 			end
 		end
 		
-		print(string.format("[Flow] Spawn -> Countdown -> Starting countdown", #players))
+		print(string.format("[Flow] Spawn -> Countdown -> Starting countdown for %d players", #players))
 	end
 	
 	-- Start game countdown
