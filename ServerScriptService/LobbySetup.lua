@@ -124,6 +124,8 @@ function LobbySetup:createLobby()
 	if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
 		self:createPortals()
 	end
+	
+	return model
 end
 
 -- Create portal system for matchmaking
