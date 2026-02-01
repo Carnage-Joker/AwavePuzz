@@ -244,7 +244,8 @@ git push
 Before merging, verify:
 
 ### Code Quality ✅
-- [x] No legacy patterns (wait/spawn/delay)
+- [x] No legacy patterns (wait/spawn/delay) in core gameplay + client/server scripts  
+      ↳ Note: Map-embedded / map-local scripts may still use `wait()` and will be cleaned up in a later pass
 - [x] No _G globals
 - [x] Modern Luau throughout
 - [x] Entry points guard against duplicate execution (CRITICAL on duplicate run)
