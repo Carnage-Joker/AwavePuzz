@@ -270,6 +270,8 @@ To revert to map voting:
 
 ### Server
 
+- **Main.server.lua**: `ServerScriptService/Main.server.lua` - **✨ NEW: Server entry point**
+- **RemoteRegistry**: `ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua` - **✨ NEW: Remote management**
 - **GameManager**: `ServerScriptService/GameManager.lua` - Main state machine
 - **LobbySetup**: `ServerScriptService/LobbySetup.lua` - Lobby creation and portals
 - **PortalMatchmakingService**: `ServerScriptService/PortalMatchmakingService.lua` - Portal queue logic
@@ -278,7 +280,7 @@ To revert to map voting:
 
 ### Client
 
-- **ClientController**: `StarterPlayerScripts/ClientController.client.lua` - Client initialization
+- **ClientMain.client.lua**: `StarterPlayerScripts/ClientMain.client.lua` - **✨ NEW: Client entry point**
 - **TitleScreenUI**: `StarterPlayerScripts/Modules/UI/TitleScreenUI.lua` - Title screen
 - **EpilogueUI**: `StarterPlayerScripts/Modules/UI/EpilogueUI.lua` - Epilogue cinematic
 - **PortalQueueUI**: `StarterPlayerScripts/Modules/UI/PortalQueueUI.lua` - Portal queue display
@@ -293,4 +295,5 @@ To revert to map voting:
 ---
 
 **Last Updated**: 2026-02-01  
-**AwavePuzz Version**: Boot Flow Fix
+**AwavePuzz Version**: Modern Luau Refactor - v1.0  
+**Changes**: New entry points (Main.server.lua, ClientMain.client.lua), RemoteRegistry, modern Luau patterns
