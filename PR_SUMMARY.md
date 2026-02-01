@@ -20,13 +20,13 @@ Complete modernization of AwavePuzz codebase to modern Luau standards with clear
    - Replaces `MainServer.lua` (now disabled)
    - Phase-based initialization (6 phases)
    - Uses RemoteRegistry
-   - Idempotent and deterministic
+   - Deterministic; duplicate executions are treated as a hard error
 
 2. **`StarterPlayer/StarterPlayerScripts/ClientMain.client.lua`** - New client entry point
    - Replaces `ClientController.client.lua` (now disabled)
    - Phase-based initialization (8 phases)
    - No `_G` globals
-   - Idempotent and deterministic
+   - Deterministic; duplicate executions are treated as a hard error
 
 3. **`ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua`** - Centralized remote management
    - Single source of truth for all defined remotes
