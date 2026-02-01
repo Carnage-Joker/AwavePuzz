@@ -3,11 +3,21 @@
 -- This is the ONLY LocalScript that should run on the client
 -- All other client logic is in ModuleScripts initialized from here
 
--- Ensure ClientController only runs once globally
+-- ✅ IMPORTANT: Set RunContext to "Legacy" in Studio properties!
+-- This script should have RunContext = Enum.RunContext.Legacy
+-- to avoid running multiple times in non-legacy contexts.
+
+-- Ensure ClientController only runs once globally (primary guard)
 if _G.AwavePuzzClientControllerInitialized then
 	error("[ClientController] CRITICAL: ClientController.client.lua is running multiple times! This should never happen.")
 end
 _G.AwavePuzzClientControllerInitialized = true
+
+-- Attribute-based guard (backup/secondary guard)
+if script:GetAttribute("Started") then
+	error("[ClientController] CRITICAL: ClientController already started (attribute guard)! Check RunContext settings.")
+end
+script:SetAttribute("Started", true)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

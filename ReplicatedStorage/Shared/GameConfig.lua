@@ -149,6 +149,7 @@ GameConfig.PORTAL_MATCHMAKING = {
 -- Title Screen & Epilogue Settings
 GameConfig.SHOW_TITLE_SCREEN = true -- Show title screen on game start
 GameConfig.SHOW_EPILOGUE = true -- Show epilogue/intro cinematic
+GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN = false -- Show epilogue on first join (before lobby). If false, epilogue only shows after rounds.
 GameConfig.EPILOGUE_SKIPPABLE = true -- Allow players to skip the epilogue
 GameConfig.TITLE_SCREEN_TIMEOUT = 30 -- Auto-continue after this many seconds if no input
 

@@ -251,7 +251,7 @@ end
 function GameManager:onPlayerPassedTitleScreen(player)
 	if not player then return end
 
-	print(string.format("[GameManager] Player %s passed title screen", player.Name))
+	print(string.format("[Flow] Player %s passed title screen (TitleScreenContinue)", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
 
 	-- ✅ FIX: Do NOT show epilogue during title screen (removed lines 257-263)
@@ -282,12 +282,28 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 		end
 	end
 
-	print("[GameManager] All players passed title screen")
-	-- ✅ FIX: On first join (from TITLE_SCREEN), go to LOBBY, not EPILOGUE
-	-- Epilogue should only show after a round ends (VICTORY/DEFEAT -> EPILOGUE -> LOBBY)
-	-- This fixes the "nonsense epilogue on first join" bug
-	print("[GameManager] Transitioning to LOBBY via startLobby() after title screen")
-	self:startLobby()
+	print("[Flow] All players passed title screen")
+	
+	-- Check if we should show epilogue on first join (configurable)
+	-- Requires BOTH SHOW_EPILOGUE and INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN to be true
+	if self.currentState == GameManager.States.TITLE_SCREEN 
+		and GameConfig.SHOW_EPILOGUE 
+		and GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN then
+		print("[Flow] TitleScreen -> Epilogue (SHOW_EPILOGUE=true, INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN=true)")
+		self:setState(GameManager.States.EPILOGUE)
+		-- Reset epilogue completion tracking
+		self.playersCompletedEpilogue = {}
+		-- Show epilogue to all players
+		if self.remoteEvents.ShowEpilogue then
+			self.remoteEvents.ShowEpilogue:FireAllClients()
+		end
+	else
+		-- ✅ FIX: On first join (from TITLE_SCREEN), go directly to LOBBY, not EPILOGUE
+		-- Epilogue should only show after a round ends (VICTORY/DEFEAT -> EPILOGUE -> LOBBY)
+		-- This fixes the "nonsense epilogue on first join" bug
+		print("[Flow] TitleScreenContinue -> Lobby (entering lobby)")
+		self:startLobby()
+	end
 end
 
 function GameManager:checkAllPlayersCompletedEpilogue()
@@ -503,6 +519,8 @@ function GameManager:onPlayerAdded(player)
 		return
 	end
 
+	print(string.format("[Flow] Join -> Player %s added to game", player.Name))
+
 	-- ✅ Init FPS ammo tracking first (safe even if WeaponService also triggers ammo setup)
 	if self.fpsWeaponService and self.fpsWeaponService.initializePlayer then
 		self.fpsWeaponService:initializePlayer(player)
@@ -525,19 +543,27 @@ function GameManager:onPlayerAdded(player)
 	self.playerSpawnManager:onPlayerAdded(player)
 
 	-- Handle title screen and epilogue for new players
-	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.SHOW_TITLE_SCREEN then
-		if self.remoteEvents.ShowTitleScreen then
-			self.remoteEvents.ShowTitleScreen:FireClient(player)
-		end
-	elseif self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
+	-- Show title screen to ALL joiners (including late joiners) unless in epilogue
+	if self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
+		-- If currently in epilogue, mark player as having seen both title and epilogue
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
+		print(string.format("[Flow] Join -> Epilogue (late joiner during epilogue: %s)", player.Name))
+	elseif GameConfig.SHOW_TITLE_SCREEN then
+		-- Show title screen to all other joiners (initial + late joiners)
+		-- This keeps late joiners out of active matches and in lobby until next round
+		print(string.format("[Flow] Join -> TitleScreen (showing to %s)", player.Name))
+		if self.remoteEvents.ShowTitleScreen then
+			self.remoteEvents.ShowTitleScreen:FireClient(player)
+		end
 	else
+		-- Title screen disabled: mark as ready immediately
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
+		print(string.format("[Flow] Join -> Ready (title screen disabled for %s)", player.Name))
 	end
 end
 
@@ -680,7 +706,8 @@ function GameManager:startGame()
 end
 
 function GameManager:startLobby()
-	if self.currentState ~= GameManager.States.WAITING and self.currentState ~= GameManager.States.SCOREBOARD then
+	if self.currentState ~= GameManager.States.WAITING and self.currentState ~= GameManager.States.SCOREBOARD 
+		and self.currentState ~= GameManager.States.TITLE_SCREEN then
 		return false
 	end
 
@@ -689,7 +716,7 @@ function GameManager:startLobby()
 		return false
 	end
 
-	print("[GameManager] Entering lobby...")
+	print("[Flow] Entering lobby (state -> LOBBY)")
 	self:setState(GameManager.States.LOBBY)
 	self.stateTimer = GameConfig.LOBBY_VOTING_TIME
 
@@ -702,7 +729,11 @@ function GameManager:startLobby()
 		self.lobbySetup:getOrCreateLobby()
 	end
 
-	self.lobbyManager:startVoting()
+	if not GameConfig.USE_PORTAL_MATCHMAKING then
+		self.lobbyManager:startVoting()
+	else
+		print("[Flow] Lobby -> Portal matchmaking enabled (players can queue at portals)")
+	end
 
 	return true
 end
@@ -725,8 +756,8 @@ function GameManager:startMatch(players, mapId, matchId)
 		return false
 	end
 	
-	print(string.format("[GameManager] Starting match for %d players on map %s (matchId: %s)", 
-		#players, mapId, tostring(matchId)))
+	print(string.format("[Flow] Lobby -> MapLoading(%s) - Starting match for %d players (matchId: %s)", 
+		mapId, #players, tostring(matchId)))
 	
 	-- Store matchId for cleanup
 	self._currentMatchId = matchId
@@ -751,23 +782,27 @@ function GameManager:startMatch(players, mapId, matchId)
 			self.lobbySetup:cleanup()
 		end
 		
+		print(string.format("[Flow] MapLoading(%s) -> Loading map...", mapId))
 		local mapLoaded = self.mapManager:load(mapId)
 		if not mapLoaded then
 			warn(string.format("[GameManager] startMatch: Failed to load map %s", tostring(mapId)))
 			return false
 		end
 		
+		print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", mapId))
+		
 		self:configureSpawnersForMap()
 		self.playerSpawnManager:onMapLoaded()
 		
 		-- Spawn only the match players on the map
+		print(string.format("[Flow] MapLoaded -> Spawn -> Spawning %d players on map", #players))
 		for _, player in ipairs(players) do
 			if player and player.Parent then
 				self.playerSpawnManager:spawnPlayerOnMap(player)
 			end
 		end
 		
-		print(string.format("[GameManager] Spawned %d players on map for match", #players))
+		print(string.format("[Flow] Spawn -> Countdown -> Starting countdown for %d players", #players))
 	end
 	
 	-- Start game countdown
@@ -778,7 +813,7 @@ function GameManager:startMatch(players, mapId, matchId)
 		self:broadcastMap()
 	end
 	
-	print("[GameManager] Match started successfully")
+	print("[Flow] Match started successfully - countdown running")
 	return true
 end
 
@@ -828,7 +863,7 @@ function GameManager:startWave()
 		waveData = self:generateEndlessWave()
 	end
 
-	print("Starting Wave " .. self.currentWave)
+	print(string.format("[Flow] Countdown -> Wave%d - Starting wave", self.currentWave))
 
 	if self.funFactService then
 		for _, player in ipairs(Players:GetPlayers()) do
@@ -1155,6 +1190,8 @@ function GameManager:updateLobby(deltaTime)
 		-- Mark as resolved immediately to prevent double loading
 		self._lobbyResolved = true
 
+		print(string.format("[Flow] Lobby -> MapLoading(%s) - Voting complete, loading map", selectedMapId))
+
 		if GameConfig.ENABLE_MULTI_MAP then
 			if self.lobbySetup then
 				self.lobbySetup:cleanup()
@@ -1171,12 +1208,14 @@ function GameManager:updateLobby(deltaTime)
 				return
 			end
 			
+			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", selectedMapId))
+			
 			self:configureSpawnersForMap()
 
 			-- Notify PlayerSpawnManager that map has loaded
 			self.playerSpawnManager:onMapLoaded()
 
-			print("[GameManager] Map loaded, spawning players on map")
+			print("[Flow] MapLoaded -> Spawn -> Spawning all players on map")
 			self.playerSpawnManager:spawnAllPlayersOnMap()
 		end
 
@@ -1202,10 +1241,20 @@ function GameManager:updateTitleScreen(deltaTime)
 		self.stateTimer += deltaTime
 
 		if self.stateTimer >= GameConfig.TITLE_SCREEN_TIMEOUT then
-			if GameConfig.SHOW_EPILOGUE then
+			-- Consistent with checkAllPlayersReadyForEpilogue: require both flags for first-join epilogue
+			if GameConfig.SHOW_EPILOGUE and GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN then
+				print("[Flow] TitleScreen timeout -> Epilogue (SHOW_EPILOGUE=true, INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN=true)")
 				self:setState(GameManager.States.EPILOGUE)
 			else
-				self:setState(GameManager.States.WAITING)
+				-- Go directly to lobby (or waiting if not enough players)
+				local playerCount = #Players:GetPlayers()
+				if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+					print("[Flow] TitleScreen timeout -> Lobby")
+					self:startLobby()
+				else
+					print("[Flow] TitleScreen timeout -> Waiting (not enough players)")
+					self:setState(GameManager.States.WAITING)
+				end
 			end
 		end
 	end
