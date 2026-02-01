@@ -285,8 +285,11 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 	print("[Flow] All players passed title screen")
 	
 	-- Check if we should show epilogue on first join (configurable)
-	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN then
-		print("[Flow] TitleScreen -> Epilogue (INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN=true)")
+	-- Requires BOTH SHOW_EPILOGUE and INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN to be true
+	if self.currentState == GameManager.States.TITLE_SCREEN 
+		and GameConfig.SHOW_EPILOGUE 
+		and GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN then
+		print("[Flow] TitleScreen -> Epilogue (SHOW_EPILOGUE=true, INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN=true)")
 		self:setState(GameManager.States.EPILOGUE)
 		-- Reset epilogue completion tracking
 		self.playersCompletedEpilogue = {}
@@ -1231,10 +1234,20 @@ function GameManager:updateTitleScreen(deltaTime)
 		self.stateTimer += deltaTime
 
 		if self.stateTimer >= GameConfig.TITLE_SCREEN_TIMEOUT then
-			if GameConfig.SHOW_EPILOGUE then
+			-- Consistent with checkAllPlayersReadyForEpilogue: require both flags for first-join epilogue
+			if GameConfig.SHOW_EPILOGUE and GameConfig.INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN then
+				print("[Flow] TitleScreen timeout -> Epilogue (SHOW_EPILOGUE=true, INTRO_SHOW_EPILOGUE_ON_FIRST_JOIN=true)")
 				self:setState(GameManager.States.EPILOGUE)
 			else
-				self:setState(GameManager.States.WAITING)
+				-- Go directly to lobby (or waiting if not enough players)
+				local playerCount = #Players:GetPlayers()
+				if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+					print("[Flow] TitleScreen timeout -> Lobby")
+					self:startLobby()
+				else
+					print("[Flow] TitleScreen timeout -> Waiting (not enough players)")
+					self:setState(GameManager.States.WAITING)
+				end
 			end
 		end
 	end
