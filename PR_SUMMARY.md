@@ -80,7 +80,7 @@ These are kept for reference but will not execute.
 
 ### ✨ Modern Luau Patterns
 
-- ✅ Uses `task` library exclusively (no legacy wait/spawn/delay)
+- ✅ Core gameplay scripts (ServerScriptService, StarterPlayerScripts, ReplicatedStorage/Shared) use the `task` library instead of legacy `wait`/`spawn`/`delay` (remaining legacy usages in map assets are documented in `AUDIT_REPORT.md`)
 - ✅ No `_G` global usage
 - ✅ Proper use of `:WaitForChild` with timeouts
 - ✅ Modern Luau syntax throughout
