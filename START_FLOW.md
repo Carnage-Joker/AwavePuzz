@@ -225,7 +225,7 @@ OR
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `LOBBY_VOTING_TIME` | `20` | Seconds for voting phase |
+| `LOBBY_VOTING_TIME` | `5` | Seconds for voting phase |
 | `LOBBY_MIN_PLAYERS` | `1` | Minimum players to start lobby |
 
 ## Flow Logging
