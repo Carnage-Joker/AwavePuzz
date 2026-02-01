@@ -21,7 +21,7 @@ Successfully refactored AwavePuzz codebase to modern Luau standards with clear c
 - Features:
   - Phase-based initialization (6 phases)
   - `[BOOT][SERVER]` logging for debugging
-  - Idempotent (safe to run multiple times)
+  - Deterministic boot order with duplicate execution guard
   - Uses RemoteRegistry for centralized remote management
   - Server-authoritative design
 
@@ -39,7 +39,7 @@ Successfully refactored AwavePuzz codebase to modern Luau standards with clear c
 - Features:
   - Phase-based initialization (8 phases)
   - `[BOOT][CLIENT]` logging for debugging
-  - Idempotent (safe to run multiple times)
+  - Deterministic boot order with duplicate execution guard
   - No `_G` globals (uses script attributes only)
   - Uses RemoteRegistry to wait for server remotes
 
@@ -348,11 +348,11 @@ The old entry points still have modern patterns applied, so they will work corre
 
 ## Documentation Updated
 
-- ✅ Created `AUDIT_REPORT.md` - Comprehensive audit of current architecture
+- ✅ Created `AUDIT_REPORT.md` - Comprehensive audit of pre-refactor architecture
 - ✅ Created this file (`REFACTOR_SUMMARY.md`) - Implementation summary
 - ✅ Updated inline comments in all modified files
-- ⏳ BOOT_FLOW.md - Needs update for new entry points
-- ⏳ START_FLOW.md - Needs update for new entry points
+- ✅ `BOOT_FLOW.md` - Updated for new entry points (`Main.server.lua`, `ClientMain.client.lua`)
+- ✅ `START_FLOW.md` - Updated for new entry points (`Main.server.lua`, `ClientMain.client.lua`)
 
 ---
 

@@ -1,21 +1,23 @@
 # AwavePuzz Modern Luau Refactor - Audit Report
 
 **Date**: 2026-02-01  
-**Purpose**: Comprehensive audit for converting to modern Luau with clear client/server boundaries
+**Purpose**: Comprehensive audit of pre-refactor architecture for converting to modern Luau with clear client/server boundaries
+
+**Note**: This document describes the architecture state **before** the refactor. For the new architecture, see `REFACTOR_SUMMARY.md`.
 
 ---
 
 ## Executive Summary
 
-The AwavePuzz codebase is **mostly well-structured** with proper client/server separation. Key findings:
+The AwavePuzz codebase is **mostly well-structured** with proper client/server separation. Key findings from the pre-refactor state:
 
-✅ **Good**:
+✅ **Good** (Pre-Refactor):
 - Single client entry point (`ClientController.client.lua`)
 - Single server entry point (`MainServer.lua`)
 - No Scripts in StarterPlayerScripts (only LocalScripts and ModuleScripts)
 - Clear folder organization
 
-⚠️ **Needs Refactoring**:
+⚠️ **Needs Refactoring** (Addressed in this PR):
 - Uses `_G` for singleton guard in ClientController
 - Legacy `wait()` and `spawn()` calls throughout (~68 files)
 - RemoteEventsBootstrap has side effects on require

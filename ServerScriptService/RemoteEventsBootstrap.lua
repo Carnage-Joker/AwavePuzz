@@ -17,7 +17,7 @@ if not RunService:IsServer() then
 	error(LOG_PREFIX .. " must be required from the server. Clients must not bootstrap RemoteEvents.")
 end
 
--- Module is now an explicit initializer, not auto-executing
+-- Module exposes an explicit initializer; auto-initialization on require is kept for backward compatibility
 local RemoteEventsBootstrap = {}
 RemoteEventsBootstrap.initialized = false
 

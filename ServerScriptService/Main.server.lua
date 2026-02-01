@@ -2,11 +2,12 @@
 -- Main.server.lua
 -- SINGLE SERVER ENTRY POINT for Aether Wave: Convergence
 -- Boots all server systems in deterministic order
--- Idempotent: safe to run multiple times without duplicating connections
+-- Deterministic boot order with duplicate execution guard
 
 -- Guard against duplicate execution
 if script:GetAttribute("Initialized") then
-	error("[Main.server] CRITICAL: Server entry point is executing multiple times! Check for duplicate scripts.")
+	warn("[Main.server] Already initialized, skipping duplicate execution")
+	return
 end
 script:SetAttribute("Initialized", true)
 

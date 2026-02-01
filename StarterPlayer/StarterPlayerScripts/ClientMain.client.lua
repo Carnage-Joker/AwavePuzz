@@ -2,11 +2,12 @@
 -- ClientMain.client.lua
 -- SINGLE CLIENT ENTRY POINT for Aether Wave: Convergence
 -- Boots all client subsystems in deterministic order
--- Idempotent: safe to run multiple times without duplicating connections
+-- Deterministic boot order with duplicate execution guard
 
 -- Guard against duplicate execution using script attribute only (no _G)
 if script:GetAttribute("Initialized") then
-	error("[ClientMain] CRITICAL: Client entry point is executing multiple times! Check RunContext settings.")
+	warn("[ClientMain] Already initialized, skipping duplicate execution")
+	return
 end
 script:SetAttribute("Initialized", true)
 
