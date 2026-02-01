@@ -106,7 +106,7 @@ Successfully refactored AwavePuzz codebase to modern Luau standards with clear c
 - Wrapped side effects in `initialize()` method
 - Added deprecation notice (replaced by RemoteRegistry)
 - Maintains backward compatibility
-- No longer auto-executes on require
+- Still auto-executes on require for backward compatibility (calls `RemoteEventsBootstrap.initialize()` when required)
 
 ### 5. Disabled Legacy Entry Points
 
