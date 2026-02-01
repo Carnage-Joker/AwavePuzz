@@ -164,15 +164,7 @@ function GameManager.new(allianceService)
 	-- 2. Lobby voting when voting completes (GameManager:updateLobby -> MapManager:load)
 	-- 
 	-- Loading the map here causes the "player joins -> map loads immediately" bug.
-	-- Comment out map loading on boot:
-	-- 
-	-- if GameConfig.ENABLE_MULTI_MAP then
-	-- 	self.mapManager:loadDefault()
-	-- 	self:configureSpawnersForMap()
-	-- 	self.playerSpawnManager:onMapLoaded()
-	-- else
-	-- 	self.spawner:loadSpawnPoints()
-	-- end
+	-- Legacy boot-time map loading logic has been removed; refer to version control history if needed.
 	
 	print("[GameManager] Boot complete - no map loaded yet (maps load after lobby/portal selection)")
 
