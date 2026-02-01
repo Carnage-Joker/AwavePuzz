@@ -135,7 +135,7 @@ GameConfig.ROUND_COUNTDOWN_TIME = 5 -- Countdown before round starts after votin
 GameConfig.ONE_LIFE_PER_ROUND = true -- Players only have one life per round
 
 -- Portal Matchmaking Settings (New System)
-GameConfig.USE_PORTAL_MATCHMAKING = false -- Feature flag: enable portal-based matchmaking instead of voting
+GameConfig.USE_PORTAL_MATCHMAKING = true -- Feature flag: enable portal-based matchmaking instead of voting
 GameConfig.PORTAL_MATCHMAKING = {
 	MAX_PLAYERS_PER_MATCH = 8, -- Maximum players per match instance
 	DEFAULT_MIN_PLAYERS = 1, -- Default minimum players to start countdown (can be overridden per-portal)

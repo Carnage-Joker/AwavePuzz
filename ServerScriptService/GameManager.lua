@@ -158,13 +158,23 @@ function GameManager.new(allianceService)
 	-- Cleanup tracking
 	self._heartbeatConnection = nil       -- Will be set by MainServer
 
-	if GameConfig.ENABLE_MULTI_MAP then
-		self.mapManager:loadDefault()
-		self:configureSpawnersForMap()
-		self.playerSpawnManager:onMapLoaded()
-	else
-		self.spawner:loadSpawnPoints()
-	end
+	-- ✅ FIX: Do NOT load map on server boot! Map should only load after portal queue or lobby voting.
+	-- Maps will be loaded by:
+	-- 1. Portal matchmaking when a queue is ready (PortalMatchmakingService:launchMatch -> GameManager:startMatch)
+	-- 2. Lobby voting when voting completes (GameManager:updateLobby -> MapManager:load)
+	-- 
+	-- Loading the map here causes the "player joins -> map loads immediately" bug.
+	-- Comment out map loading on boot:
+	-- 
+	-- if GameConfig.ENABLE_MULTI_MAP then
+	-- 	self.mapManager:loadDefault()
+	-- 	self:configureSpawnersForMap()
+	-- 	self.playerSpawnManager:onMapLoaded()
+	-- else
+	-- 	self.spawner:loadSpawnPoints()
+	-- end
+	
+	print("[GameManager] Boot complete - no map loaded yet (maps load after lobby/portal selection)")
 
 	-- Discover portals if portal matchmaking is enabled
 	if self.portalMatchmakingService then
@@ -285,12 +295,21 @@ function GameManager:checkAllPlayersReadyForEpilogue()
 	end
 
 	print("[GameManager] All players passed title screen")
-	if GameConfig.SHOW_EPILOGUE then
-		print("[GameManager] Transitioning to EPILOGUE state")
-		self:setState(GameManager.States.EPILOGUE)
-	else
-		print("[GameManager] Transitioning to WAITING state")
-		self:setState(GameManager.States.WAITING)
+	-- ✅ FIX: On first join (from TITLE_SCREEN), go to LOBBY, not EPILOGUE
+	-- Epilogue should only show after a round ends (VICTORY/DEFEAT -> EPILOGUE -> LOBBY)
+	-- This fixes the "nonsense epilogue on first join" bug
+	print("[GameManager] Transitioning to LOBBY state")
+	self:setState(GameManager.States.LOBBY)
+	self.stateTimer = GameConfig.LOBBY_VOTING_TIME or 20
+	
+	-- Initialize lobby if needed
+	if self.lobbySetup then
+		self.lobbySetup:getOrCreateLobby()
+	end
+	
+	-- Start lobby voting if not using portal matchmaking
+	if not GameConfig.USE_PORTAL_MATCHMAKING then
+		self.lobbyManager:startVoting()
 	end
 end
 
@@ -304,8 +323,14 @@ function GameManager:checkAllPlayersCompletedEpilogue()
 		end
 	end
 
-	print("[GameManager] All players completed epilogue, transitioning to WAITING")
-	self:setState(GameManager.States.WAITING)
+	print("[GameManager] All players completed epilogue, transitioning to LOBBY")
+	-- Start lobby after epilogue completion
+	local playerCount = #Players:GetPlayers()
+	if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+		self:startLobby()
+	else
+		self:setState(GameManager.States.WAITING)
+	end
 end
 
 function GameManager:disableServer()
@@ -1207,11 +1232,25 @@ function GameManager:updateScoreboard(deltaTime)
 	self.stateTimer -= deltaTime
 
 	if self.stateTimer <= 0 then
-		local playerCount = #Players:GetPlayers()
-		if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
-			self:startLobby()
+		-- ✅ FIX: After round ends (SCOREBOARD), show EPILOGUE if enabled, then go to LOBBY
+		-- This is the correct flow: ROUND_END -> SCOREBOARD -> EPILOGUE -> LOBBY
+		if GameConfig.SHOW_EPILOGUE then
+			print("[GameManager] Transitioning from SCOREBOARD to EPILOGUE")
+			self:setState(GameManager.States.EPILOGUE)
+			-- Reset epilogue completion tracking for all players
+			self.playersCompletedEpilogue = {}
+			-- Show epilogue to all players
+			if self.remoteEvents.ShowEpilogue then
+				self.remoteEvents.ShowEpilogue:FireAllClients()
+			end
 		else
-			self:setState(GameManager.States.WAITING)
+			-- No epilogue, go straight to lobby
+			local playerCount = #Players:GetPlayers()
+			if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
+				self:startLobby()
+			else
+				self:setState(GameManager.States.WAITING)
+			end
 		end
 	end
 end

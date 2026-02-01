@@ -229,10 +229,13 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	end
 
 	if state == "waiting" then
+		-- ✅ FIX: Lobby should allow movement! Players need to walk around and interact with portals.
+		-- "waiting" state is used for lobby, so DO NOT freeze or hide the character.
+		-- Changed from: frozen + hidden → visible + movable
 		hrp.CFrame = CFrame.new(LOBBY_POS)
-		freezeCharacter(character, true)
-		setCharacterHidden(character, true)
-		print(string.format("[PlayerSpawnManager] %s -> LOBBY (frozen/hidden)", player.Name))
+		freezeCharacter(character, false)  -- Allow movement
+		setCharacterHidden(character, false)  -- Visible
+		print(string.format("[PlayerSpawnManager] %s -> LOBBY (visible, can move)", player.Name))
 
 	elseif state == "map" then
 		local pos = self:getMapSpawnPosition()
@@ -258,8 +261,9 @@ function PlayerSpawnManager:keepPlayerInLobby(player)
 		if hrp then
 			hrp.CFrame = CFrame.new(LOBBY_POS)
 		end
-		freezeCharacter(player.Character, true)
-		setCharacterHidden(player.Character, true)
+		-- ✅ FIX: Allow movement in lobby (unfroze + visible)
+		freezeCharacter(player.Character, false)
+		setCharacterHidden(player.Character, false)
 	end
 end
 
