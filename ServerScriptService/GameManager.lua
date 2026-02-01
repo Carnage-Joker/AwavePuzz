@@ -316,7 +316,17 @@ function GameManager:checkAllPlayersCompletedEpilogue()
 	-- Start lobby after epilogue completion
 	local playerCount = #Players:GetPlayers()
 	if playerCount >= (GameConfig.LOBBY_MIN_PLAYERS or 1) then
-		self:startLobby()
+		-- Directly transition to LOBBY and initialize lobby, similar to checkAllPlayersReadyForEpilogue
+		self:setState(GameManager.States.LOBBY)
+		self.stateTimer = GameConfig.LOBBY_VOTING_TIME or 20
+
+		if self.lobbySetup then
+			self.lobbySetup:getOrCreateLobby()
+		end
+
+		if not GameConfig.USE_PORTAL_MATCHMAKING then
+			self.lobbyManager:startVoting()
+		end
 	else
 		self:setState(GameManager.States.WAITING)
 	end
