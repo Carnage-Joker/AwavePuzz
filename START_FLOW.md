@@ -301,24 +301,30 @@ This makes it easy to track player progression through the game.
 - Verify `PortalMatchmakingService:discoverPortals()` finds them
 - Look for log: `[PortalMatchmakingService] Discovered N portals`
 
-### Problem: ClientController runs multiple times
+### Problem: Entry point runs multiple times
 
 **Symptoms:**
-- Warning in Studio: "script 'ClientController' with a non-legacy RunContext..."
+- Warning in Studio: "script with a non-legacy RunContext..."
 - Systems initialize twice
+- Duplicate remote connections
 
 **Cause:**
-- RunContext is not set to Legacy
+- Old entry points still enabled alongside new ones
+- RunContext not properly configured
 
 **Fix:**
-1. Open ClientController.client.lua in Studio
-2. Set RunContext property to `Legacy` (Enum.RunContext.Legacy)
-3. Script has dual guards (_G and attribute) as backup
+1. Ensure old entry points are disabled:
+   - `MainServer.lua` should be `MainServer.lua.disabled`
+   - `ClientController.client.lua` should be `ClientController.client.lua.disabled`
+2. Only `Main.server.lua` and `ClientMain.client.lua` should run
+3. Both new entry points have idempotent guards (script attributes)
 
 ## Test Checklist
 
 ### Solo Join Test
 - [ ] Player joins server
+- [ ] See `[BOOT][SERVER]` logs for server boot
+- [ ] See `[BOOT][CLIENT]` logs for client boot
 - [ ] Title screen appears
 - [ ] No map loaded yet (lobby only)
 - [ ] Player clicks continue
@@ -360,15 +366,28 @@ This makes it easy to track player progression through the game.
 
 ## Related Files
 
+### ✨ New Entry Points
+- `ServerScriptService/Main.server.lua` - **NEW: Server entry point**
+- `StarterPlayerScripts/ClientMain.client.lua` - **NEW: Client entry point**
+- `ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua` - **NEW: Remote management**
+
+### Core Systems
 - `ServerScriptService/GameManager.lua` - Main game state machine
 - `ServerScriptService/PlayerSpawnManager.lua` - Player spawning logic
 - `ServerScriptService/LobbySetup.lua` - Lobby and portal creation
 - `ServerScriptService/PortalMatchmakingService.lua` - Portal queue system
-- `StarterPlayerScripts/ClientController.client.lua` - Client initialization
 - `ReplicatedStorage/Shared/GameConfig.lua` - Configuration flags
 
 ## Version History
 
+- **v2.0** (2026-02-01) - Modern Luau Refactor
+  - New entry points: Main.server.lua and ClientMain.client.lua
+  - RemoteRegistry system for centralized remote management
+  - Replaced all legacy patterns (wait/spawn/delay → task library)
+  - Removed _G global usage
+  - Phase-based boot logging with [BOOT][SERVER] and [BOOT][CLIENT]
+  - Idempotent entry points with duplicate execution guards
+  
 - **v1.0** (2026-02-01) - Initial documentation after startup flow fix
   - Fixed map loading on boot
   - Fixed epilogue showing before lobby
