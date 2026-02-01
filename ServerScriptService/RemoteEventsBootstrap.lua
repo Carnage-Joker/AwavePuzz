@@ -2,21 +2,26 @@
 -- @ScriptType: ModuleScript
 -- RemoteEventsBootstrap
 --
--- Server-owned bootstrap for ReplicatedStorage.RemoteEvents and its canonical RemoteEvent instances.
--- Clients must never create/rename these. This module is the single source of truth.
+-- DEPRECATED: This module has been replaced by RemoteRegistry (ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua)
+-- Kept for backward compatibility only. Will be removed in a future version.
 --
--- Behaviour:
--- - Ensures ReplicatedStorage.RemoteEvents (Folder) exists
--- - Ensures a fixed list of RemoteEvents exist (and are RemoteEvent instances)
--- - Cleans up name conflicts + duplicates safely
--- - Idempotent: safe to require multiple times
+-- New code should use RemoteRegistry.initializeServer() instead of requiring this module.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local LOG_PREFIX = "[RemoteEventsBootstrap]"
 
--- Canonical list (keep names stable)
+-- Server-only guard
+if not RunService:IsServer() then
+	error(LOG_PREFIX .. " must be required from the server. Clients must not bootstrap RemoteEvents.")
+end
+
+-- Module is now an explicit initializer, not auto-executing
+local RemoteEventsBootstrap = {}
+RemoteEventsBootstrap.initialized = false
+
+-- Canonical list (keep names stable for backward compatibility)
 local NAMES: {string} = {
 	"AnimationFire",
 	"AnimationSprint",
@@ -26,16 +31,8 @@ local NAMES: {string} = {
 	"AnimationADSReplicate",
 }
 
-local function warnf(fmt: string, ...: any)
-	warn(string.format("%s "..fmt, LOG_PREFIX, ...))
-end
-
 local function printf(fmt: string, ...: any)
 	print(string.format("%s "..fmt, LOG_PREFIX, ...))
-end
-
-local function isFolder(inst: Instance?): boolean
-	return inst ~= nil and inst:IsA("Folder")
 end
 
 local function getOrCreateRemoteEventsFolder(): Folder
@@ -121,39 +118,54 @@ local function ensureSingleRemoteEvent(folder: Folder, name: string): (RemoteEve
 	return kept, false, replacedOrDeduped
 end
 
--- Server-only guard
-if not RunService:IsServer() then
-	error(LOG_PREFIX .. " must be required from the server. Clients must not bootstrap RemoteEvents.")
+--[[
+	Initialize animation remotes
+	This is now an explicit function instead of auto-executing code
+	Idempotent: safe to call multiple times
+]]
+function RemoteEventsBootstrap.initialize()
+	if RemoteEventsBootstrap.initialized then
+		warn(LOG_PREFIX .. " Already initialized, skipping")
+		return RemoteEventsBootstrap
+	end
+	
+	print(LOG_PREFIX .. " [BOOT][SERVER] Initializing (DEPRECATED - use RemoteRegistry)")
+	
+	local folder = getOrCreateRemoteEventsFolder()
+	
+	local created = 0
+	local existing = 0
+	local replaced = 0
+	
+	local remotesByName: {[string]: RemoteEvent} = {}
+	
+	for _, name in ipairs(NAMES) do
+		local ev, wasCreated, wasReplaced = ensureSingleRemoteEvent(folder, name)
+		remotesByName[name] = ev
+	
+		if wasCreated then
+			created += 1
+		else
+			existing += 1
+		end
+	
+		if wasReplaced then
+			replaced += 1
+		end
+	end
+	
+	printf("Animation remotes ready. Created: %d | Existing: %d | Replaced/Deduped: %d | Total: %d", created, existing, replaced, #NAMES)
+	
+	RemoteEventsBootstrap.initialized = true
+	RemoteEventsBootstrap.Folder = folder
+	RemoteEventsBootstrap.Names = NAMES
+	RemoteEventsBootstrap.Remotes = remotesByName
+	
+	return RemoteEventsBootstrap
 end
 
-local folder = getOrCreateRemoteEventsFolder()
+-- For backward compatibility with old code that just requires this module
+-- Auto-initialize but warn that this is deprecated
+RemoteEventsBootstrap.initialize()
 
-local created = 0
-local existing = 0
-local replaced = 0
-
-local remotesByName: {[string]: RemoteEvent} = {}
-
-for _, name in ipairs(NAMES) do
-	local ev, wasCreated, wasReplaced = ensureSingleRemoteEvent(folder, name)
-	remotesByName[name] = ev
-
-	if wasCreated then
-		created += 1
-	else
-		existing += 1
-	end
-
-	if wasReplaced then
-		replaced += 1
-	end
-end
-
-printf("Animation remotes ready. Created: %d | Existing: %d | Replaced/Deduped: %d | Total: %d", created, existing, replaced, #NAMES)
-
--- Optional: expose canonical names too, for other systems to reference safely.
-return {
-	Folder = folder,
-	Names = NAMES,
-	Remotes = remotesByName,
-}
+return RemoteEventsBootstrap
