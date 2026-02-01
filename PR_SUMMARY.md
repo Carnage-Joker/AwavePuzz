@@ -29,7 +29,7 @@ Complete modernization of AwavePuzz codebase to modern Luau standards with clear
    - Idempotent and deterministic
 
 3. **`ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua`** - Centralized remote management
-   - Single source of truth for all 96 remotes
+   - Single source of truth for all defined remotes
    - Server creates, client waits with timeout
    - Version tracking and validation
 
