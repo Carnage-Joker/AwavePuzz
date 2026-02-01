@@ -71,19 +71,19 @@ Successfully refactored AwavePuzz codebase to modern Luau standards with clear c
 - `RemoteRegistry.getRemote(name)` - Get individual remote
 - `RemoteRegistry.getAllRemoteNames()` - List all remotes
 
-**Remotes Defined** (96 total):
-- Animation replication (6)
-- Game state and waves (3)
-- Cure system (2)
-- Base and map (2)
-- UI state management (13)
-- Player systems (4)
-- Matchmaking and lobby (2)
-- Puzzle and items (3)
-- Weapons and combat (4)
-- Shop and economy (3)
-- Alliance system (5)
-- Fun facts (1)
+**Remote Categories**:
+- Animation replication
+- Game state and waves
+- Cure system
+- Base and map
+- UI state management
+- Player systems
+- Matchmaking and lobby
+- Puzzle and items
+- Weapons and combat
+- Shop and economy
+- Alliance system
+- Fun facts
 
 ### 3. Legacy Pattern Removal
 
