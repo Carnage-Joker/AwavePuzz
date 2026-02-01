@@ -254,13 +254,9 @@ function GameManager:onPlayerPassedTitleScreen(player)
 	print(string.format("[GameManager] Player %s passed title screen", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
 
-	-- If showing epilogue, send them to epilogue
-	if GameConfig.SHOW_EPILOGUE and self.currentState == GameManager.States.TITLE_SCREEN then
-		print(string.format("[GameManager] Showing epilogue to %s", player.Name))
-		if self.remoteEvents.ShowEpilogue then
-			self.remoteEvents.ShowEpilogue:FireClient(player)
-		end
-	end
+	-- ✅ FIX: Do NOT show epilogue during title screen (removed lines 257-263)
+	-- Epilogue should only show after rounds complete, not on first join
+	-- Individual players no longer receive epilogue during TITLE_SCREEN state
 
 	-- Check if all players have passed title screen
 	self:checkAllPlayersReadyForEpilogue()
