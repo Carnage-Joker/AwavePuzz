@@ -543,20 +543,27 @@ function GameManager:onPlayerAdded(player)
 	self.playerSpawnManager:onPlayerAdded(player)
 
 	-- Handle title screen and epilogue for new players
-	if self.currentState == GameManager.States.TITLE_SCREEN and GameConfig.SHOW_TITLE_SCREEN then
-		print(string.format("[Flow] Join -> TitleScreen (showing to %s)", player.Name))
-		if self.remoteEvents.ShowTitleScreen then
-			self.remoteEvents.ShowTitleScreen:FireClient(player)
-		end
-	elseif self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
+	-- Show title screen to ALL joiners (including late joiners) unless in epilogue
+	if self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
+		-- If currently in epilogue, mark player as having seen both title and epilogue
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
+		print(string.format("[Flow] Join -> Epilogue (late joiner during epilogue: %s)", player.Name))
+	elseif GameConfig.SHOW_TITLE_SCREEN then
+		-- Show title screen to all other joiners (initial + late joiners)
+		-- This keeps late joiners out of active matches and in lobby until next round
+		print(string.format("[Flow] Join -> TitleScreen (showing to %s)", player.Name))
+		if self.remoteEvents.ShowTitleScreen then
+			self.remoteEvents.ShowTitleScreen:FireClient(player)
+		end
 	else
+		-- Title screen disabled: mark as ready immediately
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
+		print(string.format("[Flow] Join -> Ready (title screen disabled for %s)", player.Name))
 	end
 end
 
