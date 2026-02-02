@@ -874,17 +874,25 @@ function GameManager:startWave()
 	local multiplier = self:getIntensityMultiplier()
 	if multiplier ~= 1.0 then
 		-- Create a modified copy of wave data with scaled zombie counts
-		local scaledComposition = {}
-		for zombieType, count in pairs(waveData.Composition) do
-			scaledComposition[zombieType] = math.floor(count * multiplier)
+		-- Clone the full waveData table so any future metadata fields are preserved
+		local scaledWaveData = {}
+		for key, value in pairs(waveData) do
+			scaledWaveData[key] = value
 		end
-		waveData = {
-			Number = waveData.Number,
-			TimeLimit = waveData.TimeLimit,
-			ZombieCount = math.floor(waveData.ZombieCount * multiplier),
-			Composition = scaledComposition,
-			Types = waveData.Types
-		}
+
+		-- Scale composition counts and keep ZombieCount consistent with the sum
+		local scaledComposition = {}
+		local scaledZombieCount = 0
+		for zombieType, count in pairs(waveData.Composition) do
+			local scaledCount = math.floor(count * multiplier)
+			scaledComposition[zombieType] = scaledCount
+			scaledZombieCount = scaledZombieCount + scaledCount
+		end
+
+		scaledWaveData.Composition = scaledComposition
+		scaledWaveData.ZombieCount = scaledZombieCount
+
+		waveData = scaledWaveData
 		print(string.format("[GameManager] Applied intensity multiplier %.1f to wave %d", multiplier, self.currentWave))
 	end
 
