@@ -978,12 +978,15 @@ function GameManager:onVictory()
 
 	local alivePlayers = {}
 	for _, player in ipairs(Players:GetPlayers()) do
-		self:initializePlayerStats(player)
-		if not self.spectatorManager:isPlayerDead(player) then
-			self.playerStats[player.UserId].roundWins += 1
-			table.insert(alivePlayers, player)
-		else
-			self.playerStats[player.UserId].roundLosses += 1
+		-- Only count match participants for victory/loss stats
+		if not self._matchParticipants or self._matchParticipants[player.UserId] then
+			self:initializePlayerStats(player)
+			if not self.spectatorManager:isPlayerDead(player) then
+				self.playerStats[player.UserId].roundWins += 1
+				table.insert(alivePlayers, player)
+			else
+				self.playerStats[player.UserId].roundLosses += 1
+			end
 		end
 	end
 	self:broadcastScoreboard()
@@ -1080,15 +1083,21 @@ function GameManager:checkLoseConditions()
 
 	local players = Players:GetPlayers()
 	local anyAlive = false
+	local participantCount = 0
 
 	for _, player in ipairs(players) do
-		if not self.spectatorManager:isPlayerDead(player) then
-			anyAlive = true
-			break
+		-- Only check match participants for defeat condition
+		if not self._matchParticipants or self._matchParticipants[player.UserId] then
+			participantCount = participantCount + 1
+			if not self.spectatorManager:isPlayerDead(player) then
+				anyAlive = true
+				break
+			end
 		end
 	end
 
-	if #players > 0 and not anyAlive then
+	-- Only trigger defeat if there were participants and all are dead
+	if participantCount > 0 and not anyAlive then
 		self:onDefeat("All players eliminated")
 		return true
 	end

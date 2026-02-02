@@ -527,7 +527,21 @@ function PlayerSpawnManager:getMapSpawnPosition()
 
 	-- 3) Hard fallback: map offset above ground, then snap
 	local fallback = MAP_OFFSET + Vector3.new(math.random(-50, 50), 40, math.random(-50, 50))
-	return resolveCandidate(fallback) or (MAP_OFFSET + Vector3.new(0, 10, 0))
+	local resolved = resolveCandidate(fallback)
+	if resolved then
+		return resolved
+	end
+	
+	-- Absolute last resort: high above map center with ground snap
+	local lastResort = MAP_OFFSET + Vector3.new(0, 100, 0)
+	local snapped = groundSnapPosition(lastResort, ignore)
+	if snapped and (lastResort - snapped).Magnitude < 200 then  -- Ensure we hit ground within reasonable distance
+		return snapped
+	end
+	
+	-- If even that fails, return 10 studs above map offset (legacy fallback)
+	warn("[PlayerSpawnManager] All spawn resolution attempts failed, using legacy fallback")
+	return MAP_OFFSET + Vector3.new(0, 10, 0)
 end
 
 -- Private method to clear spawn bag cache

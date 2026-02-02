@@ -523,15 +523,23 @@ end
 function ResourceSpawner:onResourceCollected(player, resourceId, componentName, part)
 	local resource = self.activeResources[resourceId]
 	if not resource then
+		-- Resource already collected or removed - not an error
 		return
 	end
 
 	print(player.Name .. " collected " .. componentName)
 
+	-- Handle the collection
 	if self.cureService then
-		self.cureService:handleDepositComponent(player, componentName)
+		local success = pcall(function()
+			self.cureService:handleDepositComponent(player, componentName)
+		end)
+		if not success then
+			warn("[ResourceSpawner] Failed to deposit component for " .. player.Name)
+		end
 	end
 
+	-- Always cleanup the resource, even if deposit fails
 	if resource.connection then
 		resource.connection:Disconnect()
 	end

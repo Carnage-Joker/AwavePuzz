@@ -451,23 +451,27 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 		end
 	end
 
-	-- Only clean up the item if the reward was successfully granted
-	if rewardGranted then
-		-- Get item data before removing it from activeItems
-		local success, item = self:removeActiveItem(itemId)
+	-- Always clean up the item, regardless of reward success
+	-- This prevents spam-collection attempts on failed rewards
+	-- Get item data before removing it from activeItems
+	local success, item = self:removeActiveItem(itemId)
 
-		if success and item then
-			if item.touchConnection then
-				item.touchConnection:Disconnect()
-			end
-			if item.rotationConnection then
-				item.rotationConnection:Disconnect()
-			end
-
-			if part and part.Parent then
-				part:Destroy()
-			end
+	if success and item then
+		if item.touchConnection then
+			item.touchConnection:Disconnect()
 		end
+		if item.rotationConnection then
+			item.rotationConnection:Disconnect()
+		end
+
+		if part and part.Parent then
+			part:Destroy()
+		end
+	end
+
+	-- If reward wasn't granted, at least log it
+	if not rewardGranted then
+		warn("[ItemSpawner] Item " .. itemId .. " collected but reward not granted to " .. player.Name)
 	end
 end
 
