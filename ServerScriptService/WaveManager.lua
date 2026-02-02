@@ -19,11 +19,13 @@ function WaveManager.new()
 end
 
 function WaveManager:calculateZombiesForWave(waveNumber)
-	return math.floor(GameConfig.BASE_ZOMBIES_PER_WAVE * (GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER ^ (waveNumber - 1)))
+	-- Apply intensity multiplier for synthesis system
+	return math.floor(GameConfig.BASE_ZOMBIES_PER_WAVE * (GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER ^ (waveNumber - 1)) * self.intensityMultiplier)
 end
 
 function WaveManager:calculateZombieHealthForWave(waveNumber)
-	return math.floor(GameConfig.ZOMBIE_HEALTH * (GameConfig.ZOMBIE_HEALTH_MULTIPLIER ^ (waveNumber - 1)))
+	-- Apply intensity multiplier for synthesis system
+	return math.floor(GameConfig.ZOMBIE_HEALTH * (GameConfig.ZOMBIE_HEALTH_MULTIPLIER ^ (waveNumber - 1)) * self.intensityMultiplier)
 end
 
 function WaveManager:startWave()

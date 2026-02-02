@@ -523,7 +523,7 @@ function ZombieBrain:update(deltaTime)
 		local targetPos, targetType, targetPlayer = self:selectBestTarget()
 		if targetPos then
 			local desiredPos = self.spitterController:update(deltaTime, targetPos, targetType, targetPlayer)
-			if desiredPos then
+			if desiredPos and typeof(desiredPos) == "Vector3" then
 				self.humanoid:MoveTo(desiredPos)
 				self.lastMoveTarget = desiredPos
 			end

@@ -162,13 +162,25 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
+		-- Deduct currency first (proper transaction order)
 		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
+		-- Add weapon after currency deducted
+		local weaponAdded = false
 		if self.playerManager.addWeapon then
-			self.playerManager:addWeapon(player, selectedItem.WeaponId)
+			weaponAdded = self.playerManager:addWeapon(player, selectedItem.WeaponId)
+		end
+
+		-- Refund if weapon add failed
+		if not weaponAdded then
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
+			self:sendResult(player, false, "Failed to add weapon")
+			return
 		end
 
 		if self.playerManager.equipWeapon then
@@ -184,23 +196,26 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		-- Validate weaponService exists before deducting currency
+		-- Validate weaponService exists before attempting upgrade
 		if not (self.weaponService and self.weaponService.applyUpgrade) then
 			warn("[ShopService] weaponService or applyUpgrade missing")
 			self:sendResult(player, false, "Service temporarily unavailable")
 			return
 		end
 
+		-- Deduct currency first (proper transaction order)
 		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		-- Apply upgrade (weaponService already validated above)
+		-- Apply upgrade after currency deducted
 		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
 		if not success then
-			-- Refund on failure (playerManager already validated earlier)
-			self.playerManager:addCurrency(player, price)
+			-- Refund on failure since upgrade is not reversible
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
 			self:sendResult(player, false, "Upgrade failed")
 			return
 		end

@@ -452,6 +452,7 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 	end
 
 	-- Only clean up the item if the reward was successfully granted
+	-- This prevents players from wasting pickups by touching them while ineligible
 	if rewardGranted then
 		-- Get item data before removing it from activeItems
 		local success, item = self:removeActiveItem(itemId)
@@ -468,6 +469,9 @@ function ItemSpawner:onItemCollected(player, itemId, itemType, part)
 				part:Destroy()
 			end
 		end
+	else
+		-- If reward not granted, log but keep the item for valid pickups
+		warn("[ItemSpawner] Item " .. itemId .. " touched by " .. player.Name .. " but reward not granted (may be ineligible)")
 	end
 end
 
