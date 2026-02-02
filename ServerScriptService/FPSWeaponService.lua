@@ -52,6 +52,20 @@ function FPSWeaponService.new(playerManager, weaponService)
 	-- Security: Start periodic ammo validation
 	self:startAmmoValidationLoop()
 
+	-- Cleanup: Ensure per-player state is cleared when players disconnect
+	self.playerRemovingConn = Players.PlayerRemoving:Connect(function(player)
+		if not player or not player.UserId then
+			return
+		end
+
+		local userId = player.UserId
+
+		-- Clear all per-player caches to avoid memory leaks
+		self.playerAmmo[userId] = nil
+		self.playerReloadState[userId] = nil
+		self.activeReloadTasks[userId] = nil
+		self.lastAmmoSync[userId] = nil
+	end)
 	return self
 end
 
