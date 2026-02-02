@@ -202,7 +202,7 @@ function NotificationUI:processQueue()
 	end)
 end
 
-return NotificationUI
-
 -- Initialize the UI immediately
 local notificationUI = NotificationUI.new()
+
+return notificationUI
