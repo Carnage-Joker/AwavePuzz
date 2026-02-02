@@ -238,6 +238,17 @@ local function closePuzzle()
 		timerConnection:Disconnect()
 		timerConnection = nil
 	end
+	
+	-- Disconnect dynamic color block connections
+	for key, connection in pairs(connections) do
+		if type(key) == "string" and key:match("^colorBlock_") then
+			if connection and connection.Connected then
+				connection:Disconnect()
+			end
+			connections[key] = nil
+		end
+	end
+	
 	clearContent()
 	currentPuzzle = nil
 	currentComponentName = nil
@@ -450,7 +461,9 @@ local function createColorPuzzleUI(puzzleData)
 			colorBlocks[i] = {frame = block, color = color}
 
 			-- Simple swap on click (click two blocks to swap)
-			block.MouseButton1Click:Connect(function()
+			-- Store connection for cleanup
+			local connectionKey = "colorBlock_" .. i
+			connections[connectionKey] = block.MouseButton1Click:Connect(function()
 				local currentIndex = block:GetAttribute("ColorIndex")
 				if not currentIndex then return end
 

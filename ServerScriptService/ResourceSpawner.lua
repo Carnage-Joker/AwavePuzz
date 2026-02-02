@@ -478,6 +478,14 @@ function ResourceSpawner:spawnResource()
 	textLabel.Font = Enum.Font.GothamBold
 	textLabel.Parent = billboard
 
+	-- Register resource BEFORE connecting Touched to prevent race condition
+	-- where Touched fires before activeResources is set
+	self.activeResources[resourceId] = {
+		component = componentName,
+		instance = part,
+		connection = nil  -- Will be set after creating connection
+	}
+
 	local debouncing = false
 	local touchConnection = part.Touched:Connect(function(hit)
 		if debouncing then
@@ -496,13 +504,16 @@ function ResourceSpawner:spawnResource()
 
 		debouncing = true
 		self:onResourceCollected(player, resourceId, componentName, part)
+		
+		-- Reset debounce immediately if resource still exists (collection may have failed)
+		-- This is safe because onResourceCollected removes from activeResources on success
+		if self.activeResources[resourceId] then
+			debouncing = false
+		end
 	end)
 
-	self.activeResources[resourceId] = {
-		component = componentName,
-		instance = part,
-		connection = touchConnection
-	}
+	-- Store the connection in the resource entry
+	self.activeResources[resourceId].connection = touchConnection
 
 	print("Spawned " .. componentName .. " resource at " .. tostring(spawnPoint))
 

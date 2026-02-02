@@ -469,19 +469,33 @@ function PortalMatchmakingService:launchMatch(portalId)
 	
 	print(string.format("[PortalMatchmakingService] Launching match for portal %s", portalId))
 	
-	-- Lock portal
+	-- Lock portal to prevent concurrent modifications
 	portal.locked = true
 	
-	-- Snapshot players (up to max)
+	-- Snapshot players (up to max) and immediately remove from queue
+	-- This prevents race conditions with concurrent queue modifications
 	local matchPlayers = {}
 	local numToTake = math.min(#portal.queue, self.maxPlayersPerMatch)
 	
-	for i = 1, numToTake do
+	-- Remove players from queue first, store them for match
+	-- Note: Iterating backwards and removing maintains correct indices
+	for i = numToTake, 1, -1 do
 		local player = portal.queue[i]
 		if player and player.Parent then
-			table.insert(matchPlayers, player)
+			table.insert(matchPlayers, player) -- Append to end (O(1))
+		end
+		table.remove(portal.queue, i)
+		if player then
+			self.playerQueues[player.UserId] = nil
 		end
 	end
+	
+	-- Reverse matchPlayers to restore original order
+	local orderedPlayers = {}
+	for i = #matchPlayers, 1, -1 do
+		table.insert(orderedPlayers, matchPlayers[i])
+	end
+	matchPlayers = orderedPlayers
 	
 	-- Determine map
 	local mapId = portal.config.mapId
@@ -506,6 +520,17 @@ function PortalMatchmakingService:launchMatch(portalId)
 		else
 			warn("[PortalMatchmakingService] No default map available, aborting match launch")
 			portal.locked = false
+			-- Rollback: re-add players to queue on failure
+			for _, player in ipairs(matchPlayers) do
+				if player and player.Parent then
+					table.insert(portal.queue, player)
+					self.playerQueues[player.UserId] = {
+						portalId = portalId,
+						joinTime = tick()
+					}
+				end
+			end
+			self:broadcastQueueStatus(portalId)
 			return
 		end
 	end
@@ -516,6 +541,17 @@ function PortalMatchmakingService:launchMatch(portalId)
 	if not matchId then
 		warn("[PortalMatchmakingService] Failed to create match")
 		portal.locked = false
+		-- Rollback: re-add players to queue on failure
+		for _, player in ipairs(matchPlayers) do
+			if player and player.Parent then
+				table.insert(portal.queue, player)
+				self.playerQueues[player.UserId] = {
+					portalId = portalId,
+					joinTime = tick()
+				}
+			end
+		end
+		self:broadcastQueueStatus(portalId)
 		return
 	end
 	
@@ -527,29 +563,44 @@ function PortalMatchmakingService:launchMatch(portalId)
 			warn("[PortalMatchmakingService] Failed to start match")
 			self.matchRegistry:endMatch(matchId)
 			portal.locked = false
+			-- Rollback: re-add players to queue on failure
+			for _, player in ipairs(matchPlayers) do
+				if player and player.Parent then
+					table.insert(portal.queue, player)
+					self.playerQueues[player.UserId] = {
+						portalId = portalId,
+						joinTime = tick()
+					}
+				end
+			end
+			self:broadcastQueueStatus(portalId)
 			return
 		end
 	else
 		warn("[PortalMatchmakingService] GameManager does not have startMatch method")
 		self.matchRegistry:endMatch(matchId)
 		portal.locked = false
+		-- Rollback: re-add players to queue on failure
+		for _, player in ipairs(matchPlayers) do
+			if player and player.Parent then
+				table.insert(portal.queue, player)
+				self.playerQueues[player.UserId] = {
+					portalId = portalId,
+					joinTime = tick()
+				}
+			end
+		end
+		self:broadcastQueueStatus(portalId)
 		return
 	end
 	
-	-- Only dequeue players after successful match start
-	-- Remove these players from queue and notify them
-	for i = numToTake, 1, -1 do
-		local player = portal.queue[i]
-		if player then
-			self.playerQueues[player.UserId] = nil
-			-- Notify player they've left the queue (match is starting)
-			if player.Parent then
-				self.remoteEvents.PortalQueueLeft:FireClient(player, {
-					portalId = portalId
-				})
-			end
+	-- Notify players they've left the queue (match is starting)
+	for _, player in ipairs(matchPlayers) do
+		if player and player.Parent then
+			self.remoteEvents.PortalQueueLeft:FireClient(player, {
+				portalId = portalId
+			})
 		end
-		table.remove(portal.queue, i)
 	end
 	
 	-- Broadcast portal status

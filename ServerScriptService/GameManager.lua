@@ -870,6 +870,32 @@ function GameManager:startWave()
 		waveData = self:generateEndlessWave()
 	end
 
+	-- Apply intensity multiplier to wave data (for cure synthesis)
+	local multiplier = self:getIntensityMultiplier()
+	if multiplier ~= 1.0 then
+		-- Create a modified copy of wave data with scaled zombie counts
+		-- Clone the full waveData table so any future metadata fields are preserved
+		local scaledWaveData = {}
+		for key, value in pairs(waveData) do
+			scaledWaveData[key] = value
+		end
+
+		-- Scale composition counts and keep ZombieCount consistent with the sum
+		local scaledComposition = {}
+		local scaledZombieCount = 0
+		for zombieType, count in pairs(waveData.Composition) do
+			local scaledCount = math.floor(count * multiplier)
+			scaledComposition[zombieType] = scaledCount
+			scaledZombieCount = scaledZombieCount + scaledCount
+		end
+
+		scaledWaveData.Composition = scaledComposition
+		scaledWaveData.ZombieCount = scaledZombieCount
+
+		waveData = scaledWaveData
+		print(string.format("[GameManager] Applied intensity multiplier %.1f to wave %d", multiplier, self.currentWave))
+	end
+
 	print(string.format("[Flow] Countdown -> Wave%d - Starting wave", self.currentWave))
 
 	if self.funFactService then
@@ -906,6 +932,7 @@ end
 
 function GameManager:generateEndlessWave()
 	local baseCount = 15 + (self.currentWave * 2)
+	-- Don't apply multiplier here - it will be applied in startWave()
 
 	return {
 		Number = self.currentWave,
