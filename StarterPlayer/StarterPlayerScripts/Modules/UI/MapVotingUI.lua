@@ -254,12 +254,13 @@ end
 -- Function to clear map cards
 local function clearMapCards()
 	-- Disconnect all tracked connections
-	for _, connection in ipairs(connections) do
+	for i = #connections, 1, -1 do
+		local connection = connections[i]
 		if connection and connection.Connected then
 			connection:Disconnect()
 		end
+		connections[i] = nil
 	end
-	connections = {}
 	
 	-- Clean up map buttons
 	for _, buttonData in pairs(mapButtons) do

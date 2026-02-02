@@ -478,16 +478,24 @@ function PortalMatchmakingService:launchMatch(portalId)
 	local numToTake = math.min(#portal.queue, self.maxPlayersPerMatch)
 	
 	-- Remove players from queue first, store them for match
+	-- Note: Iterating backwards and removing maintains correct indices
 	for i = numToTake, 1, -1 do
 		local player = portal.queue[i]
 		if player and player.Parent then
-			table.insert(matchPlayers, 1, player) -- Insert at beginning to maintain order
+			table.insert(matchPlayers, player) -- Append to end (O(1))
 		end
 		table.remove(portal.queue, i)
 		if player then
 			self.playerQueues[player.UserId] = nil
 		end
 	end
+	
+	-- Reverse matchPlayers to restore original order
+	local orderedPlayers = {}
+	for i = #matchPlayers, 1, -1 do
+		table.insert(orderedPlayers, matchPlayers[i])
+	end
+	matchPlayers = orderedPlayers
 	
 	-- Determine map
 	local mapId = portal.config.mapId
