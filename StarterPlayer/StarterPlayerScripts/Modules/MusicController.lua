@@ -202,8 +202,19 @@ end
 function MusicController:unmuteAll()
 	for _, track in pairs(self.tracks) do
 		local preMuteVolume = track:GetAttribute("PreMuteVolume")
-		if preMuteVolume then
+		if preMuteVolume ~= nil then
+			-- Restore the exact volume from before muteAll and clear the attribute
 			track.Volume = preMuteVolume
+			track:SetAttribute("PreMuteVolume", nil)
+		elseif track.Volume == 0 then
+			-- Track has no stored pre-mute volume but is muted (0 volume).
+			-- Fall back to its original volume if known, otherwise a sane default.
+			local originalVolume = track:GetAttribute("OriginalVolume")
+			if originalVolume ~= nil then
+				track.Volume = originalVolume
+			else
+				track.Volume = 1
+			end
 		end
 	end
 end
