@@ -653,7 +653,7 @@ function GameManager:setCureSynthesisService(cureSynthesisService)
 end
 
 function GameManager:getWaveManager()
-	return self
+	return self.waveManager -- Fixed: Return actual WaveManager instance, not self
 end
 
 function GameManager:setIntensityMultiplier(multiplier)
