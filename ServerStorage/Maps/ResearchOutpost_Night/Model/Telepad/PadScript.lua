@@ -274,8 +274,9 @@ function touchHandler(part)
 		--wait(1) -- give the system a little time to actually teleport them [1 sec. before next teleport]
 	end
 
-	-- make teleportation sickness only temporary
-	debris:AddItem(teleportDelay, 5) -- 5 second delay on teleporting (unless they run off teleporter first: TODO--ADD THAT SCRIPT IMMEDIATELY BELOW HERE!)
+	-- Make teleportation sickness only temporary
+	-- KillDelayScript monitors player position and removes delay if they step off teleporter
+	debris:AddItem(teleportDelay, 5) -- 5 second delay on teleporting
 	killTeleDelayScript = killDelayScript:Clone()
 	killTeleDelayScript.Parent = teleportDelay
 	killTeleDelayScript.Disabled = false

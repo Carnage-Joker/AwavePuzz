@@ -17,6 +17,9 @@ local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
+-- Get MusicController for audio muting
+local MusicController = require(script.Parent.Parent:WaitForChild("MusicController"))
+
 local EpilogueUI = {}
 EpilogueUI.__index = EpilogueUI
 
@@ -198,11 +201,14 @@ function EpilogueUI:createUI()
 		if self.audioMuted then
 			muteButton.Text = "[M] Unmute Audio"
 			muteButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+			-- Mute all music tracks
+			MusicController.muteAll()
 		else
 			muteButton.Text = StoryConfig.MuteButtonText
 			muteButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+			-- Unmute all music tracks
+			MusicController.unmuteAll()
 		end
-		-- TODO: Implement audio muting when voiceover is added
 	end)
 	
 	self.muteButton = muteButton
@@ -273,9 +279,13 @@ function EpilogueUI:show()
 				if self.audioMuted then
 					self.muteButton.Text = "[M] Unmute Audio"
 					self.muteButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+					-- Mute all music tracks
+					MusicController.muteAll()
 				else
 					self.muteButton.Text = StoryConfig.MuteButtonText
 					self.muteButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+					-- Unmute all music tracks
+					MusicController.unmuteAll()
 				end
 			end
 		end

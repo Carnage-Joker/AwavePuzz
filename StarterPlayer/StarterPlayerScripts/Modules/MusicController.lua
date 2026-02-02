@@ -190,15 +190,52 @@ function MusicController:setMasterVolume(volume)
 	end
 end
 
+-- Mute all music tracks
+function MusicController:muteAll()
+	for _, track in pairs(self.tracks) do
+		track:SetAttribute("PreMuteVolume", track.Volume)
+		track.Volume = 0
+	end
+end
+
+-- Unmute all music tracks (restore previous volumes)
+function MusicController:unmuteAll()
+	for _, track in pairs(self.tracks) do
+		local preMuteVolume = track:GetAttribute("PreMuteVolume")
+		if preMuteVolume then
+			track.Volume = preMuteVolume
+		end
+	end
+end
+
 --------------------------------------------------------------------------------
 -- PUBLIC API  
 --------------------------------------------------------------------------------
 
 local MusicModule = {}
+local musicControllerInstance = nil
 
 function MusicModule.initialize()
-	local musicController = MusicController.new()
-	return musicController
+	if not musicControllerInstance then
+		musicControllerInstance = MusicController.new()
+	end
+	return musicControllerInstance
+end
+
+function MusicModule.getInstance()
+	return musicControllerInstance
+end
+
+function MusicModule.muteAll()
+	if musicControllerInstance then
+		musicControllerInstance:muteAll()
+	end
+end
+
+function MusicModule.unmuteAll()
+	if musicControllerInstance then
+		musicControllerInstance:unmuteAll()
+	end
 end
 
 function MusicModule.onCharacterAdded(character)
