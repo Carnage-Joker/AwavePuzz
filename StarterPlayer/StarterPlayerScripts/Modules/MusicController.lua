@@ -190,15 +190,72 @@ function MusicController:setMasterVolume(volume)
 	end
 end
 
+-- Mute all music tracks
+function MusicController:muteAll()
+	for _, track in pairs(self.tracks) do
+		track:SetAttribute("PreMuteVolume", track.Volume)
+		track.Volume = 0
+	end
+end
+
+-- Unmute all music tracks (restore previous volumes)
+function MusicController:unmuteAll()
+	for _, track in pairs(self.tracks) do
+		local preMuteVolume = track:GetAttribute("PreMuteVolume")
+		if preMuteVolume ~= nil then
+			-- Restore the exact volume from before muteAll and clear the attribute
+			track.Volume = preMuteVolume
+			track:SetAttribute("PreMuteVolume", nil)
+		elseif track.Volume == 0 then
+			-- Track has no stored pre-mute volume but is muted (0 volume).
+			-- Fall back to its original volume if known, otherwise a sane default.
+			local originalVolume = track:GetAttribute("OriginalVolume")
+			if originalVolume ~= nil then
+				track.Volume = originalVolume
+			else
+				track.Volume = 1
+			end
+		end
+	end
+end
+
 --------------------------------------------------------------------------------
 -- PUBLIC API  
 --------------------------------------------------------------------------------
 
 local MusicModule = {}
+local musicControllerInstance = nil
 
 function MusicModule.initialize()
-	local musicController = MusicController.new()
-	return musicController
+	if not musicControllerInstance then
+		musicControllerInstance = MusicController.new()
+	end
+	return musicControllerInstance
+end
+
+function MusicModule.getInstance()
+	return musicControllerInstance
+end
+
+function MusicModule.muteAll()
+	if not musicControllerInstance then
+		warn("[MusicController] muteAll called before initialization; initializing controller now.")
+		MusicModule.initialize()
+	end
+
+	if musicControllerInstance then
+		musicControllerInstance:muteAll()
+	end
+end
+
+function MusicModule.unmuteAll()
+	if not musicControllerInstance then
+		warn("[MusicController] unmuteAll called before initialization; initializing controller now.")
+		MusicModule.initialize()
+	end
+	if musicControllerInstance then
+		musicControllerInstance:unmuteAll()
+	end
 end
 
 function MusicModule.onCharacterAdded(character)

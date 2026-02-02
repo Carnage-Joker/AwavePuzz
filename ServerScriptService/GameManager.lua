@@ -131,6 +131,9 @@ function GameManager.new(allianceService)
 	end
 	self.currentWave = 0
 	self.cureProgress = 0
+	
+	-- Security: Track wave rewards to prevent multiple grants per wave
+	self.waveRewardsGranted = {} -- Format: [waveNumber] = true
 
 	self.playerStats = {}
 
@@ -821,6 +824,9 @@ end
 function GameManager:resetForNewRound()
 	self.currentWave = 0
 	self.cureProgress = 0
+	
+	-- Security: Reset wave rewards tracking for new round
+	self.waveRewardsGranted = {}
 
 	self._deathDebounce = {}
 
@@ -927,8 +933,19 @@ function GameManager:onWaveComplete()
 	self:setState(GameManager.States.INTERMISSION)
 	self.stateTimer = GameConfig.WAVE_DELAY
 
-	for _, player in ipairs(Players:GetPlayers()) do
-		self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
+	-- Security: Prevent multiple reward grants for the same wave (rate limiting)
+	if not self.waveRewardsGranted[self.currentWave] then
+		self.waveRewardsGranted[self.currentWave] = true
+		
+		for _, player in ipairs(Players:GetPlayers()) do
+			self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
+		end
+		
+		print(string.format("[GameManager] Wave %d rewards granted to %d players", 
+			self.currentWave, #Players:GetPlayers()))
+	else
+		warn(string.format("[GameManager] SECURITY: Duplicate wave completion detected for wave %d - rewards not granted", 
+			self.currentWave))
 	end
 
 	if self.funFactService then
