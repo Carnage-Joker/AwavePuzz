@@ -94,7 +94,8 @@ function CureSynthesisService:setupRemoteEvents()
 		"SynthesisStateUpdate",     -- Server -> Client: Update synthesis state
 		"SynthesisPuzzleComplete",  -- Client -> Server: Mini-puzzle completed
 		"SynthesisComplete",        -- Server -> All: Synthesis succeeded
-		"SynthesisFailed"           -- Server -> All: Synthesis failed
+		"SynthesisFailed",          -- Server -> All: Synthesis failed
+		"ShowNotification"          -- Server -> Client: Display notification message
 	})
 
 	-- Handle synthesis start requests
@@ -304,9 +305,24 @@ function CureSynthesisService:broadcastSynthesisState(stateData)
 end
 
 -- Send message to specific player
+-- @param player - The player to send the message to
+-- @param message - The message text to display
+-- @param messageType - Optional type: "info" (default), "warning", "error", "success"
 function CureSynthesisService:sendMessage(player, message, messageType)
-	-- TODO: Implement messaging system or use existing notification system
-	print("[CureSynthesisService] Message to", player.Name, ":", message)
+	messageType = messageType or "info"
+	
+	-- Send notification to client
+	if self.remoteEvents.ShowNotification and player and player:IsA("Player") then
+		self.remoteEvents.ShowNotification:FireClient(player, {
+			message = message,
+			messageType = messageType,
+			source = "CureSynthesisService"
+		})
+	end
+	
+	-- Also log to console for debugging
+	print(string.format("[CureSynthesisService] Message to %s (%s): %s", 
+		player.Name, messageType, message))
 end
 
 -- Get current synthesis state

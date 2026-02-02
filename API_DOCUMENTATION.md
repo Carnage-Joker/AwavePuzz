@@ -521,9 +521,9 @@ Returns count of living zombies.
 
 ## BaseManager
 
-**Location**: `src/server/BaseManager.lua`  
-**Type**: Class  
-**Description**: Manages base health and status.
+**Location**: `ServerScriptService/BaseManager.lua`  
+**Type**: Server Module (Singleton)  
+**Description**: Manages base health and status with security logging.
 
 ### Constructor
 
@@ -535,12 +535,22 @@ BaseManager.new() -> BaseManager
 
 #### damageBase
 ```lua
-BaseManager:damageBase(damage: number) -> boolean
+BaseManager:damageBase(damage: number, source: string?) -> boolean
 ```
-Applies damage to base.
+**✅ UPDATED (2026-02-02)**: Now accepts optional source parameter for audit logging
+
+Applies damage to base with source tracking.
+
+**Parameters:**
+- `damage` (number): Amount of damage to apply
+- `source` (string, optional): Source identifier (e.g., zombie name, "Player")
 
 **Returns:**
 - `destroyed` (boolean): Whether base was destroyed
+
+**Security:**
+- Logs all damage events with source for auditing
+- Server-authoritative validation
 
 #### repairBase
 ```lua

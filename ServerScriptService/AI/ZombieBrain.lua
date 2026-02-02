@@ -427,7 +427,9 @@ function ZombieBrain:tryAttack()
 			end
 
 			if self.baseManager then
-				self.baseManager:damageBase(damage)
+				-- Pass zombie name as source for damage logging
+				local zombieName = self.model.Name or "Unknown Zombie"
+				self.baseManager:damageBase(damage, zombieName)
 			end
 		end
 
