@@ -450,7 +450,9 @@ local function createColorPuzzleUI(puzzleData)
 			colorBlocks[i] = {frame = block, color = color}
 
 			-- Simple swap on click (click two blocks to swap)
-			block.MouseButton1Click:Connect(function()
+			-- Store connection for cleanup
+			local connectionKey = "colorBlock_" .. i
+			connections[connectionKey] = block.MouseButton1Click:Connect(function()
 				local currentIndex = block:GetAttribute("ColorIndex")
 				if not currentIndex then return end
 

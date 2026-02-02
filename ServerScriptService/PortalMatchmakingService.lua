@@ -469,17 +469,23 @@ function PortalMatchmakingService:launchMatch(portalId)
 	
 	print(string.format("[PortalMatchmakingService] Launching match for portal %s", portalId))
 	
-	-- Lock portal
+	-- Lock portal to prevent concurrent modifications
 	portal.locked = true
 	
-	-- Snapshot players (up to max)
+	-- Snapshot players (up to max) and immediately remove from queue
+	-- This prevents race conditions with concurrent queue modifications
 	local matchPlayers = {}
 	local numToTake = math.min(#portal.queue, self.maxPlayersPerMatch)
 	
-	for i = 1, numToTake do
+	-- Remove players from queue first, store them for match
+	for i = numToTake, 1, -1 do
 		local player = portal.queue[i]
 		if player and player.Parent then
-			table.insert(matchPlayers, player)
+			table.insert(matchPlayers, 1, player) -- Insert at beginning to maintain order
+		end
+		table.remove(portal.queue, i)
+		if player then
+			self.playerQueues[player.UserId] = nil
 		end
 	end
 	
@@ -527,29 +533,36 @@ function PortalMatchmakingService:launchMatch(portalId)
 			warn("[PortalMatchmakingService] Failed to start match")
 			self.matchRegistry:endMatch(matchId)
 			portal.locked = false
+			-- Re-add players to queue on failure
+			for _, player in ipairs(matchPlayers) do
+				if player and player.Parent then
+					table.insert(portal.queue, player)
+					self.playerQueues[player.UserId] = portalId
+				end
+			end
 			return
 		end
 	else
 		warn("[PortalMatchmakingService] GameManager does not have startMatch method")
 		self.matchRegistry:endMatch(matchId)
 		portal.locked = false
+		-- Re-add players to queue on failure
+		for _, player in ipairs(matchPlayers) do
+			if player and player.Parent then
+				table.insert(portal.queue, player)
+				self.playerQueues[player.UserId] = portalId
+			end
+		end
 		return
 	end
 	
-	-- Only dequeue players after successful match start
-	-- Remove these players from queue and notify them
-	for i = numToTake, 1, -1 do
-		local player = portal.queue[i]
-		if player then
-			self.playerQueues[player.UserId] = nil
-			-- Notify player they've left the queue (match is starting)
-			if player.Parent then
-				self.remoteEvents.PortalQueueLeft:FireClient(player, {
-					portalId = portalId
-				})
-			end
+	-- Notify players they've left the queue (match is starting)
+	for _, player in ipairs(matchPlayers) do
+		if player and player.Parent then
+			self.remoteEvents.PortalQueueLeft:FireClient(player, {
+				portalId = portalId
+			})
 		end
-		table.remove(portal.queue, i)
 	end
 	
 	-- Broadcast portal status

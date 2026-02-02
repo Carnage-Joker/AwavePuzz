@@ -496,6 +496,13 @@ function ResourceSpawner:spawnResource()
 
 		debouncing = true
 		self:onResourceCollected(player, resourceId, componentName, part)
+		
+		-- Reset debounce if resource still exists (collection may have failed)
+		task.defer(function()
+			if self.activeResources[resourceId] then
+				debouncing = false
+			end
+		end)
 	end)
 
 	self.activeResources[resourceId] = {

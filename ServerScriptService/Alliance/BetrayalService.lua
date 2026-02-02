@@ -132,10 +132,7 @@ function BetrayalService:startBetrayal(betrayer, victim)
 		return false, "Traitors cannot initiate betrayals"
 	end
 
-	-- 1) Remove the alliance edge immediately
-	self.allianceGraph:removeEdge(betrayer, victim)
-
-	-- 2) Create snapshots BEFORE any changes
+	-- 1) Create snapshots BEFORE any changes
 	local victimSnapshot = self.poolCalculator:snapshotPool(victim)
 	local betrayerSnapshot = self.poolCalculator:snapshotPool(betrayer)
 
@@ -168,9 +165,12 @@ function BetrayalService:startBetrayal(betrayer, victim)
 		return false, "Failed to create valid snapshots"
 	end
 
-	-- 3) Lock both players from alliance changes
+	-- 2) Lock both players from alliance changes BEFORE removing edge
 	self.lockedPlayers[betrayer.UserId] = true
 	self.lockedPlayers[victim.UserId] = true
+
+	-- 3) Remove the alliance edge AFTER locks are applied (prevents PvP exploit window)
+	self.allianceGraph:removeEdge(betrayer, victim)
 
 	-- 4) Create active window data
 	self.activeWindows[betrayer.UserId] = {

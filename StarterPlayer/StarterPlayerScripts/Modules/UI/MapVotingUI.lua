@@ -16,6 +16,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Constants
 local REMOTE_EVENT_WAIT_TIMEOUT = 10
 
+-- Connection tracking for cleanup
+local connections = {}
+
 -- Prevent duplicate UI instances
 local existing = playerGui:FindFirstChild("MapVotingUI")
 if existing then
@@ -177,14 +180,15 @@ local function createMapCard(mapData, layoutOrder)
 	buttonCorner.CornerRadius = UDim.new(0, 8)
 	buttonCorner.Parent = voteButton
 
-	-- Hover effect
-	voteButton.MouseEnter:Connect(function()
+	-- Hover effect - store connections for cleanup
+	local hoverEnter = voteButton.MouseEnter:Connect(function()
 		TweenService:Create(voteButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(70, 180, 70)
 		}):Play()
 	end)
+	table.insert(connections, hoverEnter)
 
-	voteButton.MouseLeave:Connect(function()
+	local hoverLeave = voteButton.MouseLeave:Connect(function()
 		if currentVote == mapData.id then
 			TweenService:Create(voteButton, TweenInfo.new(0.2), {
 				BackgroundColor3 = Color3.fromRGB(255, 165, 0)
@@ -195,6 +199,7 @@ local function createMapCard(mapData, layoutOrder)
 			}):Play()
 		end
 	end)
+	table.insert(connections, hoverLeave)
 
 	-- Store reference
 	mapButtons[mapData.id] = {
@@ -248,6 +253,15 @@ end
 
 -- Function to clear map cards
 local function clearMapCards()
+	-- Disconnect all tracked connections
+	for _, connection in ipairs(connections) do
+		if connection and connection.Connected then
+			connection:Disconnect()
+		end
+	end
+	connections = {}
+	
+	-- Clean up map buttons
 	for _, buttonData in pairs(mapButtons) do
 		-- Disconnect click handler to prevent memory leaks
 		if buttonData.connection then
@@ -300,6 +314,7 @@ if mapVoteStartEvent then
 				buttonData.connection = buttonData.button.MouseButton1Click:Connect(function()
 					castVote(mapData.id)
 				end)
+				table.insert(connections, buttonData.connection)
 			end
 		end
 

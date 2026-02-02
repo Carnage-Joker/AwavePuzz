@@ -870,6 +870,24 @@ function GameManager:startWave()
 		waveData = self:generateEndlessWave()
 	end
 
+	-- Apply intensity multiplier to wave data (for cure synthesis)
+	local multiplier = self:getIntensityMultiplier()
+	if multiplier ~= 1.0 then
+		-- Create a modified copy of wave data with scaled zombie counts
+		local scaledComposition = {}
+		for zombieType, count in pairs(waveData.Composition) do
+			scaledComposition[zombieType] = math.floor(count * multiplier)
+		end
+		waveData = {
+			Number = waveData.Number,
+			TimeLimit = waveData.TimeLimit,
+			ZombieCount = math.floor(waveData.ZombieCount * multiplier),
+			Composition = scaledComposition,
+			Types = waveData.Types
+		}
+		print(string.format("[GameManager] Applied intensity multiplier %.1f to wave %d", multiplier, self.currentWave))
+	end
+
 	print(string.format("[Flow] Countdown -> Wave%d - Starting wave", self.currentWave))
 
 	if self.funFactService then
@@ -906,16 +924,18 @@ end
 
 function GameManager:generateEndlessWave()
 	local baseCount = 15 + (self.currentWave * 2)
+	local multiplier = self:getIntensityMultiplier()
+	local scaledCount = math.floor(baseCount * multiplier)
 
 	return {
 		Number = self.currentWave,
 		TimeLimit = 240,
-		ZombieCount = baseCount,
+		ZombieCount = scaledCount,
 		Composition = {
-			Walker = math.floor(baseCount * 0.4),
-			Runner = math.floor(baseCount * 0.3),
-			Brute = math.floor(baseCount * 0.2),
-			Spitter = math.floor(baseCount * 0.1)
+			Walker = math.floor(scaledCount * 0.4),
+			Runner = math.floor(scaledCount * 0.3),
+			Brute = math.floor(scaledCount * 0.2),
+			Spitter = math.floor(scaledCount * 0.1)
 		}
 	}
 end
