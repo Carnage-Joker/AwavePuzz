@@ -238,6 +238,17 @@ local function closePuzzle()
 		timerConnection:Disconnect()
 		timerConnection = nil
 	end
+	
+	-- Disconnect dynamic color block connections
+	for key, connection in pairs(connections) do
+		if type(key) == "string" and key:match("^colorBlock_") then
+			if connection and connection.Connected then
+				connection:Disconnect()
+			end
+			connections[key] = nil
+		end
+	end
+	
 	clearContent()
 	currentPuzzle = nil
 	currentComponentName = nil

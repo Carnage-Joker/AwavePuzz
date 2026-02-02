@@ -932,18 +932,17 @@ end
 
 function GameManager:generateEndlessWave()
 	local baseCount = 15 + (self.currentWave * 2)
-	local multiplier = self:getIntensityMultiplier()
-	local scaledCount = math.floor(baseCount * multiplier)
+	-- Don't apply multiplier here - it will be applied in startWave()
 
 	return {
 		Number = self.currentWave,
 		TimeLimit = 240,
-		ZombieCount = scaledCount,
+		ZombieCount = baseCount,
 		Composition = {
-			Walker = math.floor(scaledCount * 0.4),
-			Runner = math.floor(scaledCount * 0.3),
-			Brute = math.floor(scaledCount * 0.2),
-			Spitter = math.floor(scaledCount * 0.1)
+			Walker = math.floor(baseCount * 0.4),
+			Runner = math.floor(baseCount * 0.3),
+			Brute = math.floor(baseCount * 0.2),
+			Spitter = math.floor(baseCount * 0.1)
 		}
 	}
 end

@@ -520,6 +520,17 @@ function PortalMatchmakingService:launchMatch(portalId)
 		else
 			warn("[PortalMatchmakingService] No default map available, aborting match launch")
 			portal.locked = false
+			-- Rollback: re-add players to queue on failure
+			for _, player in ipairs(matchPlayers) do
+				if player and player.Parent then
+					table.insert(portal.queue, player)
+					self.playerQueues[player.UserId] = {
+						portalId = portalId,
+						joinTime = tick()
+					}
+				end
+			end
+			self:broadcastQueueStatus(portalId)
 			return
 		end
 	end
@@ -530,6 +541,17 @@ function PortalMatchmakingService:launchMatch(portalId)
 	if not matchId then
 		warn("[PortalMatchmakingService] Failed to create match")
 		portal.locked = false
+		-- Rollback: re-add players to queue on failure
+		for _, player in ipairs(matchPlayers) do
+			if player and player.Parent then
+				table.insert(portal.queue, player)
+				self.playerQueues[player.UserId] = {
+					portalId = portalId,
+					joinTime = tick()
+				}
+			end
+		end
+		self:broadcastQueueStatus(portalId)
 		return
 	end
 	
@@ -541,26 +563,34 @@ function PortalMatchmakingService:launchMatch(portalId)
 			warn("[PortalMatchmakingService] Failed to start match")
 			self.matchRegistry:endMatch(matchId)
 			portal.locked = false
-			-- Re-add players to queue on failure
+			-- Rollback: re-add players to queue on failure
 			for _, player in ipairs(matchPlayers) do
 				if player and player.Parent then
 					table.insert(portal.queue, player)
-					self.playerQueues[player.UserId] = portalId
+					self.playerQueues[player.UserId] = {
+						portalId = portalId,
+						joinTime = tick()
+					}
 				end
 			end
+			self:broadcastQueueStatus(portalId)
 			return
 		end
 	else
 		warn("[PortalMatchmakingService] GameManager does not have startMatch method")
 		self.matchRegistry:endMatch(matchId)
 		portal.locked = false
-		-- Re-add players to queue on failure
+		-- Rollback: re-add players to queue on failure
 		for _, player in ipairs(matchPlayers) do
 			if player and player.Parent then
 				table.insert(portal.queue, player)
-				self.playerQueues[player.UserId] = portalId
+				self.playerQueues[player.UserId] = {
+					portalId = portalId,
+					joinTime = tick()
+				}
 			end
 		end
+		self:broadcastQueueStatus(portalId)
 		return
 	end
 	

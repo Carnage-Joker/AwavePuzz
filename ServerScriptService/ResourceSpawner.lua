@@ -478,6 +478,14 @@ function ResourceSpawner:spawnResource()
 	textLabel.Font = Enum.Font.GothamBold
 	textLabel.Parent = billboard
 
+	-- Register resource BEFORE connecting Touched to prevent race condition
+	-- where Touched fires before activeResources is set
+	self.activeResources[resourceId] = {
+		component = componentName,
+		instance = part,
+		connection = nil  -- Will be set after creating connection
+	}
+
 	local debouncing = false
 	local touchConnection = part.Touched:Connect(function(hit)
 		if debouncing then
@@ -504,11 +512,8 @@ function ResourceSpawner:spawnResource()
 		end
 	end)
 
-	self.activeResources[resourceId] = {
-		component = componentName,
-		instance = part,
-		connection = touchConnection
-	}
+	-- Store the connection in the resource entry
+	self.activeResources[resourceId].connection = touchConnection
 
 	print("Spawned " .. componentName .. " resource at " .. tostring(spawnPoint))
 
