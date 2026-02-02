@@ -99,7 +99,9 @@ end
 -----------------------------------------------------
 -- Damage & Repair
 -----------------------------------------------------
-function BaseManager:damageBase(damage)
+-- @param damage - Amount of damage to apply
+-- @param source - Optional source identifier (zombie name, player name, etc.)
+function BaseManager:damageBase(damage, source)
 	if self.isDestroyed then
 		return false
 	end
@@ -110,6 +112,12 @@ function BaseManager:damageBase(damage)
 	end
 
 	self.health = math.max(0, self.health - damage)
+	
+	-- Security: Log base damage events with source tracking
+	local sourceStr = source and tostring(source) or "Unknown"
+	print(string.format("[BaseManager] DAMAGE: Base took %.1f damage from %s (Health: %.1f/%.1f)", 
+		damage, sourceStr, self.health, self.maxHealth))
+	
 	self:broadcastHealthUpdate()
 
 	if self.health <= 0 then
@@ -169,9 +177,9 @@ function BaseManager:setHealth(value)
 	return self.health
 end
 
-function BaseManager:takeDamage(damage)
+function BaseManager:takeDamage(damage, source)
 	-- Alias for damageBase to match test expectations
-	return self:damageBase(damage)
+	return self:damageBase(damage, source)
 end
 
 function BaseManager:isDestroyed()

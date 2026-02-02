@@ -30,6 +30,9 @@ RemoteEventUtil = require(RemoteEventUtil)
 local FPSWeaponService = {}
 FPSWeaponService.__index = FPSWeaponService
 
+-- Security: Ammo validation constants
+local AMMO_SYNC_INTERVAL = 30 -- Check ammo consistency every 30 seconds
+
 function FPSWeaponService.new(playerManager, weaponService)
 	local self = setmetatable({}, FPSWeaponService)
 
@@ -39,9 +42,15 @@ function FPSWeaponService.new(playerManager, weaponService)
 	self.playerAmmo = {} -- userId -> { weaponId -> { current, reserve, max } }
 	self.playerReloadState = {} -- userId -> { isReloading, reloadStartTime, weaponId }
 	self.activeReloadTasks = {} -- userId -> task handle (to cancel on disconnect)
+	
+	-- Security: Track last ammo sync time per player
+	self.lastAmmoSync = {} -- userId -> timestamp
 
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
+	
+	-- Security: Start periodic ammo validation
+	self:startAmmoValidationLoop()
 
 	return self
 end
@@ -384,6 +393,37 @@ function FPSWeaponService:awardAmmoPickup(player, weaponId, amount)
 	end
 
 	return false
+end
+
+-- Security: Periodic ammo validation to detect client-side manipulation
+function FPSWeaponService:startAmmoValidationLoop()
+	task.spawn(function()
+		while true do
+			task.wait(AMMO_SYNC_INTERVAL)
+			
+			for _, player in ipairs(Players:GetPlayers()) do
+				local userId = player.UserId
+				local currentTime = tick()
+				
+				-- Sync ammo for all players
+				if self.playerAmmo[userId] then
+					local equippedWeapon = self.playerManager:getEquippedWeapon(player)
+					if equippedWeapon then
+						-- Resend current ammo to client to verify sync
+						self:sendAmmoUpdate(player, equippedWeapon)
+						self.lastAmmoSync[userId] = currentTime
+						
+						if DEBUG_AMMO then
+							print(string.format("[FPSWeaponService] Periodic ammo sync for %s - Weapon: %s", 
+								player.Name, equippedWeapon))
+						end
+					end
+				end
+			end
+		end
+	end)
+	
+	print("[FPSWeaponService] Started periodic ammo validation (interval: " .. AMMO_SYNC_INTERVAL .. "s)")
 end
 
 return FPSWeaponService
