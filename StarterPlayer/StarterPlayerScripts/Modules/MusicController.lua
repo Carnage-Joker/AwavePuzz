@@ -238,12 +238,21 @@ function MusicModule.getInstance()
 end
 
 function MusicModule.muteAll()
+	if not musicControllerInstance then
+		warn("[MusicController] muteAll called before initialization; initializing controller now.")
+		MusicModule.initialize()
+	end
+
 	if musicControllerInstance then
 		musicControllerInstance:muteAll()
 	end
 end
 
 function MusicModule.unmuteAll()
+	if not musicControllerInstance then
+		warn("[MusicController] unmuteAll called before initialization; initializing controller now.")
+		MusicModule.initialize()
+	end
 	if musicControllerInstance then
 		musicControllerInstance:unmuteAll()
 	end
