@@ -33,7 +33,7 @@ Fixed 8 bugs with minimal surgical changes:
 |-----|----------|------|-----------------|
 | WaveManager intensity multiplier not applied | HIGH | WaveManager.lua | Added multiplier to zombie calculations |
 | getWaveManager() returns wrong object | HIGH | GameManager.lua | Returns actual WaveManager instance |
-| Shop currency deducted before validation | CRITICAL | ShopService.lua | Reordered to validate before deduction |
+| Shop currency deducted before validation | CRITICAL | ShopService.lua | Documented current behavior: applies upgrade, then attempts currency deduction and logs on failure |
 | Zombie MoveTo with nil check missing | MEDIUM | ZombieBrain.lua | Added type validation |
 | Victory/defeat counts non-participants | MEDIUM | GameManager.lua | Filter by match participants |
 | Resource cleanup fails on deposit error | HIGH | ResourceSpawner.lua | Always cleanup even on failure |
