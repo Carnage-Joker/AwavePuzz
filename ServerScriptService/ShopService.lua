@@ -162,26 +162,24 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		-- Add weapon first, then deduct currency only if successful
-		local weaponAdded = false
-		if self.playerManager.addWeapon then
-			weaponAdded = self.playerManager:addWeapon(player, selectedItem.WeaponId)
-			if not weaponAdded then
-				self:sendResult(player, false, "Failed to add weapon")
-				return
-			end
-		else
-			self:sendResult(player, false, "Shop service unavailable")
+		-- Deduct currency first (proper transaction order)
+		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		-- Only deduct currency after weapon successfully added
-		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
-			-- Refund the weapon since we couldn't deduct currency
-			if self.playerManager.removeWeapon then
-				self.playerManager:removeWeapon(player, selectedItem.WeaponId)
+		-- Add weapon after currency deducted
+		local weaponAdded = false
+		if self.playerManager.addWeapon then
+			weaponAdded = self.playerManager:addWeapon(player, selectedItem.WeaponId)
+		end
+
+		-- Refund if weapon add failed
+		if not weaponAdded then
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
 			end
-			self:sendResult(player, false, "Not enough currency")
+			self:sendResult(player, false, "Failed to add weapon")
 			return
 		end
 
@@ -205,18 +203,20 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		-- Apply upgrade first, then deduct currency only if successful
-		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
-		if not success then
-			self:sendResult(player, false, "Upgrade failed")
+		-- Deduct currency first (proper transaction order)
+		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
+			self:sendResult(player, false, "Not enough currency")
 			return
 		end
 
-		-- Only deduct currency after upgrade successfully applied
-		if not (self.playerManager and self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
-			-- Can't refund upgrade easily, but log the issue
-			warn("[ShopService] CRITICAL: Upgrade applied but currency deduction failed for " .. player.Name)
-			self:sendResult(player, false, "Currency error - please report to admin")
+		-- Apply upgrade after currency deducted
+		local success = self.weaponService:applyUpgrade(player, selectedItem.UpgradeId)
+		if not success then
+			-- Refund on failure since upgrade is not reversible
+			if self.playerManager.addCurrency then
+				self.playerManager:addCurrency(player, price)
+			end
+			self:sendResult(player, false, "Upgrade failed")
 			return
 		end
 

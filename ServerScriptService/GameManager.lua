@@ -1031,9 +1031,12 @@ function GameManager:onDefeat(reason)
 
 	self:_cleanupRoundResources()
 
+	-- Only count match participants for loss stats
 	for _, player in ipairs(Players:GetPlayers()) do
-		self:initializePlayerStats(player)
-		self.playerStats[player.UserId].roundLosses += 1
+		if not self._matchParticipants or self._matchParticipants[player.UserId] then
+			self:initializePlayerStats(player)
+			self.playerStats[player.UserId].roundLosses += 1
+		end
 	end
 	self:broadcastScoreboard()
 

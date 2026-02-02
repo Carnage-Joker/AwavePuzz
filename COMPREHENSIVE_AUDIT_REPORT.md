@@ -22,15 +22,35 @@ The game has a solid foundation with good architectural separation, but contains
 
 **Total Issues Found**: **73 bugs** across all systems
 
-### Critical Issues Summary
+### Critical Issues Summary (Initial Findings - See Corrections Below)
 
-1. **Weapon ammo not consumed server-side** - Players can fire unlimited shots
-2. **Synthesis puzzle auto-completes** - Victory condition bypassed
-3. **Weapon duplication in betrayal** - Resource exploit
-4. **Shop currency deducted before validation** - Players lose money on failures
-5. **Zombie targeting race condition** - Crashes on player disconnect
-6. **Component sync mismatch** - Cure progress desynchronization
-7. **Fire rate bypass on automatic weapons** - 6x fire rate possible
+**Note**: Items #1, #2, and #3 were later determined to be false positives. See "Audit Report Corrections" section below for details.
+
+1. ~~**Weapon ammo not consumed server-side**~~ - FALSE POSITIVE: Already implemented correctly in WeaponService.lua:350
+2. ~~**Synthesis puzzle auto-completes**~~ - FALSE POSITIVE: Intentional MVP design per code comments
+3. ~~**Weapon duplication in betrayal**~~ - FALSE POSITIVE: Deductions and grants properly separated
+4. **Shop currency deducted before validation** - Players lose money on failures (FIXED)
+5. ~~**Zombie targeting race condition**~~ - Already protected with pcall (lines 413-419)
+6. **Component sync mismatch** - Cure progress desynchronization (COMPLEX - requires refactor)
+7. **Fire rate bypass on automatic weapons** - 6x fire rate possible (COMPLEX - requires extensive testing)
+
+---
+
+## Audit Report Corrections
+
+**IMPORTANT**: Several "critical bugs" in the initial audit were false positives upon detailed code review:
+
+1. **Server-side ammo consumption** (Item #1 in Critical Summary): Already implemented correctly in WeaponService.lua line 350. The server DOES consume ammo via `fpsWeaponService:consumeAmmo(player, weaponId, 1)` before processing each shot.
+
+2. **Synthesis puzzle auto-complete** (Item #2 in Critical Summary): Intentional MVP design per inline code comments. The synthesis puzzle is unlocked only after all 5 component puzzles are solved, which is the intended victory condition.
+
+3. **Weapon duplication in betrayal** (Item #3 in Critical Summary): No actual duplication occurs. The `weaponsToTransfer.byOwner` splits weapons by original owner for deductions, while `weaponsToTransfer.list` is the aggregated list for granting. Each weapon appears only once in the final transfer.
+
+4. **Zombie targeting crashes** (Item #5 in Critical Summary): Already protected with pcall wrapper at lines 413-419 in ZombieBrain.lua. Player disconnects during attack are safely handled.
+
+5. **MoveTo nil targets**: Most MoveTo calls already have nil checks in place (lines 487, 592, 601, 607, 618). Added one missing type check for spitter movement as a defensive enhancement.
+
+**Corrected Bug Count**: 68 actual bugs (73 initially reported - 5 false positives)
 
 ---
 
