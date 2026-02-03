@@ -414,8 +414,9 @@ function PortalMatchmakingService:checkCancelCountdown(portalId)
 	-- Only cancel if countdown is active
 	if portal.countdown <= 0 then return end
 	
-	-- Cancel if queue drops below the portal's minimum players requirement
-	local minRequired = math.max(portal.config.minPlayers, self.countdownCancelThreshold)
+	-- BUGFIX (MEDIUM): Use math.min instead of math.max to properly cancel countdown below minimum
+	-- We should cancel if below minPlayers, not below max(minPlayers, cancelThreshold)
+	local minRequired = math.min(portal.config.minPlayers, self.countdownCancelThreshold)
 	if #portal.queue < minRequired then
 		print(string.format("[PortalMatchmakingService] Cancelling countdown for portal %s (queue %d < required %d)", 
 			portalId, #portal.queue, minRequired))
@@ -456,6 +457,8 @@ function PortalMatchmakingService:runCountdown(portalId)
 		
 		-- If countdown finished, launch match
 		if portal.countdown <= 0 then
+			-- BUGFIX (MEDIUM): Clean up countdown task reference to prevent memory leak
+			self.countdownTasks[portalId] = nil
 			self:launchMatch(portalId)
 			return
 		end
@@ -466,6 +469,12 @@ end
 function PortalMatchmakingService:launchMatch(portalId)
 	local portal = self.portals[portalId]
 	if not portal then return end
+	
+	-- BUGFIX (MEDIUM): Prevent double launch if portal is already locked
+	if portal.locked then
+		warn(string.format("[PortalMatchmakingService] Portal %s already launching, ignoring duplicate launch", portalId))
+		return
+	end
 	
 	print(string.format("[PortalMatchmakingService] Launching match for portal %s", portalId))
 	

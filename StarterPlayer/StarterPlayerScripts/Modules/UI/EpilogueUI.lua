@@ -335,6 +335,9 @@ function EpilogueUI:displayPage(pageNumber)
 	task.spawn(function()
 		task.wait(0.3)
 		
+		-- BUGFIX (MEDIUM): Check if UI is still active before updating
+		if not self or not self.isActive then return end
+		
 		-- Update content
 		self.titleLabel.Text = pageData.Title
 		self.storyText.Text = pageData.Text
