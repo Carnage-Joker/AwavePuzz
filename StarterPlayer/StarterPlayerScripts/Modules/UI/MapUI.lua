@@ -5,7 +5,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -13,6 +12,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
@@ -80,11 +80,10 @@ infoLabel.TextXAlignment = Enum.TextXAlignment.Center
 infoLabel.TextYAlignment = Enum.TextYAlignment.Top
 infoLabel.Parent = frame
 
--- Toggle map display with M key
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	
-	if input.KeyCode == Enum.KeyCode.M then
+-- Toggle map display using InputManager
+-- Bind to MAP action which supports both keyboard (M) and gamepad (DPadDown)
+InputManager.bindAction(InputManager.Action.MAP, function(active)
+	if active then
 		screenGui.Enabled = not screenGui.Enabled
 	end
 end)
@@ -93,7 +92,7 @@ end)
 InputActionRegistry.register("MapToggle", "MapUI", {Enum.KeyCode.M}, InputActionRegistry.Priority.TOGGLE_UI)
 InputActionRegistry.register("MapToggleGamepad", "MapUI", {Enum.KeyCode.DPadDown}, InputActionRegistry.Priority.TOGGLE_UI)
 
-print("[MapUI] Placeholder map display initialized (toggle with M key)")
+print("[MapUI] Placeholder map display initialized (toggle with M key or DPad Down)")
 
 -- Return module table
 local MapUI = {}
