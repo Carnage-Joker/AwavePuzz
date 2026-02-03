@@ -1,7 +1,7 @@
 -- @ScriptType: ModuleScript
 -- ZombieBrain.lua
 -- AI controller for zombies with tactical targeting and behavior
--- 
+--
 -- Features:
 -- - Tactical target selection with overcrowding prevention
 -- - Surround slot system for anti-pileup movement
@@ -18,19 +18,16 @@
 -- - Implemented fallback movement when no path available
 -- - Result: Zombies now continuously pressure players without idle pauses
 --
--- AI controller for zombies with attack system and intelligent targeting
--- 
--- Features:
--- - Intelligent target selection: chooses nearest player or base
--- - Proximity-based attack system with cooldowns
--- - Attack animation support
--- - Server-authoritative damage dealing
--- - Base reference caching for performance
--- - Difficulty scaling through stats inherited from spawner
+-- DROP-IN SAFETY FIXES (this rewrite):
+-- - FIX: self.model nil crash in base damage (use self.zombieModel)
+-- - PERF: LOD determination throttled (no longer every frame)
+-- - STABILITY: MoveTo rate-limited to avoid spam/state churn
+-- - CONSISTENCY: Aura retarget interval keeps per-zombie jitter
 
 local Players = game:GetService("Players")
-local PathfindingService = game:GetService("PathfindingService")
+local PathfindingService = game:GetService("PathfindingService") -- kept for future use/compat
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 local SpitterController = require(script.Parent.SpitterController)
 
@@ -39,12 +36,18 @@ ZombieBrain.__index = ZombieBrain
 
 -- LOD (Level of Detail) Configuration
 local LOD_CONFIG = {
-	DISTANCE_LOW = 100,    -- > 100 studs: LOW detail (simple movement)
-	DISTANCE_MEDIUM = 50,  -- 50-100 studs: MEDIUM detail (basic pathfinding)
+	DISTANCE_LOW = 100,          -- > 100 studs: LOW detail (simple movement)
+	DISTANCE_MEDIUM = 50,        -- 50-100 studs: MEDIUM detail (basic pathfinding)
 	-- < 50 studs: HIGH detail (full AI with surround system)
-	LOW_COOLDOWN_MULTIPLIER = 3,  -- LOW LOD updates 3x slower
-	LOW_BASE_NEAR_DISTANCE = 20  -- Distance at which LOW LOD zombies can still attack base
+	LOW_COOLDOWN_MULTIPLIER = 3, -- LOW LOD updates 3x slower
+	LOW_BASE_NEAR_DISTANCE = 20, -- Distance at which LOW LOD zombies can still attack base
 }
+
+-- Small helper to avoid nil indexing and keep calls compact
+local function clampNonNegative(x)
+	if x < 0 then return 0 end
+	return x
+end
 
 function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targetingService, surroundService, bossAuraService, waveNumber)
 	if not zombieModel or not zombieModel:IsA("Model") then
@@ -78,34 +81,39 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 
 	-- Movement and targeting
 	self.moveCooldown = 0
-	-- FIX: Reduce base interval and improve jitter to prevent long pauses
-	-- Old: 1.0s + up to 1.2s jitter = 2.2s max wait (too long, causes pausing)
-	-- New: 0.4s + up to 0.3s jitter = 0.7s max wait (smoother, continuous pressure)
-	self.repathInterval = stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
 
-	-- Add jitter for performance and desynchronization
-	-- Use configured jitter values from GameConfig.AI
-	local minJitter = GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1
-	local maxJitter = GameConfig.AI and GameConfig.AI.MAX_UPDATE_JITTER or 0.3
-	-- Ensure maxJitter >= minJitter to avoid negative jitter while preserving a non-zero range
+	-- Base repath interval (before jitter / aura)
+	self._baseRepathInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
+
+	-- Jitter for performance and desync (stored so aura updates preserve it)
+	local minJitter = (GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER) or 0.1
+	local maxJitter = (GameConfig.AI and GameConfig.AI.MAX_UPDATE_JITTER) or 0.3
 	if maxJitter < minJitter then
-		-- Swap values instead of collapsing them to a single point
 		local temp = minJitter
 		minJitter = maxJitter
 		maxJitter = temp
 	end
-	local jitter = math.random() * (maxJitter - minJitter) + minJitter
-	self.repathInterval = self.repathInterval + jitter
+	self._repathJitter = (math.random() * (maxJitter - minJitter)) + minJitter
+	self.repathInterval = self._baseRepathInterval + self._repathJitter
 
-	self.currentTarget = nil -- Last known target position
-	self.currentTargetType = nil -- "player" or "base"
+	self.currentTarget = nil -- Last known target position (Vector3)
+	self.currentTargetType = nil -- "player" or "base" or "wander"
 	self.currentTargetPlayer = nil -- Player reference if targeting player
 	self.currentSlot = nil -- Current surround slot position
-	self.lastMoveTarget = nil -- FIX: Track last move command for continuity
+	self.lastMoveTarget = nil -- Track last move command for continuity
 
 	-- Movement continuity thresholds from config
-	self.waypointSkipDistance = GameConfig.AI and GameConfig.AI.WAYPOINT_SKIP_DISTANCE or 3
-	self.movementReissueDistance = GameConfig.AI and GameConfig.AI.MOVEMENT_REISSUE_DISTANCE or 0.5
+	self.waypointSkipDistance = (GameConfig.AI and GameConfig.AI.WAYPOINT_SKIP_DISTANCE) or 3
+	self.movementReissueDistance = (GameConfig.AI and GameConfig.AI.MOVEMENT_REISSUE_DISTANCE) or 0.5
+
+	-- MoveTo rate limiting (prevents spam + state churn)
+	self._lastMoveIssueT = 0
+	self._minMoveIssueInterval = (GameConfig.AI and GameConfig.AI.MIN_MOVETO_REISSUE_INTERVAL) or 0.15
+
+	-- LOD throttling (avoid per-frame all-player scanning)
+	self._lod = "HIGH"
+	self._lodCooldown = 0
+	self._lodInterval = (GameConfig.AI and GameConfig.AI.LOD_CHECK_INTERVAL) or 0.4
 
 	-- Cache base reference for performance
 	self.cachedBase = nil
@@ -121,7 +129,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	self:loadAttackAnimation()
 
 	-- Type-specific behavior
-	self.aiBehavior = stats.AIBehavior or "standard"
+	self.aiBehavior = self.stats.AIBehavior or "standard"
 	self.spitterController = nil
 
 	-- Special behavior timers
@@ -135,7 +143,7 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 
 	-- Initialize type-specific controller
 	if self.aiBehavior == "ranged" then
-		self.spitterController = SpitterController.new(zombieModel, stats, baseManager, playerManager)
+		self.spitterController = SpitterController.new(zombieModel, self.stats, baseManager, playerManager)
 	end
 
 	-- Basic speed from stats if provided
@@ -144,17 +152,29 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	end
 
 	-- Register with boss aura if this is a boss
-	if stats.HasAura and bossAuraService then
+	if self.stats.HasAura and bossAuraService then
 		bossAuraService:registerBoss(zombieModel)
 	end
 
 	return self
 end
 
+-- Safe MoveTo wrapper (rate-limited)
+function ZombieBrain:_moveTo(dest)
+	if not dest or not self.humanoid then return end
+
+	local now = tick()
+	if now - (self._lastMoveIssueT or 0) < (self._minMoveIssueInterval or 0) then
+		return
+	end
+
+	self._lastMoveIssueT = now
+	self.humanoid:MoveTo(dest)
+	self.lastMoveTarget = dest
+end
+
 -- Start method for tests (safe to call even if dependencies aren't fully present)
 function ZombieBrain:start()
-	-- This method exists for test compatibility
-	-- ZombieBrain uses update() for its main loop
 	return true
 end
 
@@ -171,14 +191,12 @@ function ZombieBrain:loadAttackAnimation()
 		animator.Parent = self.humanoid
 	end
 
-	-- Try to find attack animation in the zombie model
 	local attackAnim = self.zombieModel:FindFirstChild("AttackAnimation", true)
 	if attackAnim and attackAnim:IsA("Animation") then
 		self.attackAnimationTrack = animator:LoadAnimation(attackAnim)
 	end
 end
 
--- Play attack animation if available
 function ZombieBrain:playAttackAnimation()
 	if self.attackAnimationTrack then
 		self.attackAnimationTrack:Play()
@@ -186,40 +204,39 @@ function ZombieBrain:playAttackAnimation()
 end
 
 -- Determine Level of Detail based on distance to nearest player
--- Returns: "HIGH", "MEDIUM", or "LOW"
 function ZombieBrain:determineLOD()
-	-- Validate rootPart exists
 	if not self.rootPart then
-		return "HIGH" -- Default to full AI if we can't calculate distance
+		return "HIGH"
 	end
-	
+
 	local closestPlayerDistance = math.huge
-	
-	-- Check distance to all players
+
 	for _, player in ipairs(Players:GetPlayers()) do
-		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-			local distance = (player.Character.HumanoidRootPart.Position - self.rootPart.Position).Magnitude
-			closestPlayerDistance = math.min(closestPlayerDistance, distance)
+		local char = player.Character
+		if char then
+			local hrp = char:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local distance = (hrp.Position - self.rootPart.Position).Magnitude
+				if distance < closestPlayerDistance then
+					closestPlayerDistance = distance
+				end
+			end
 		end
 	end
-	
-	-- If no valid players found, use HIGH LOD to ensure zombies remain active
-	-- (they'll target base via fallback mechanisms)
+
 	if closestPlayerDistance == math.huge then
 		return "HIGH"
 	end
-	
-	-- Use module-level LOD configuration constants
+
 	if closestPlayerDistance > LOD_CONFIG.DISTANCE_LOW then
-		return "LOW" -- Simple movement toward base
+		return "LOW"
 	elseif closestPlayerDistance > LOD_CONFIG.DISTANCE_MEDIUM then
-		return "MEDIUM" -- Basic pathfinding
+		return "MEDIUM"
 	else
-		return "HIGH" -- Full AI with surround system
+		return "HIGH"
 	end
 end
 
--- Get all nearby zombies for separation steering
 function ZombieBrain:getNearbyZombies()
 	local nearby = {}
 	local zombiesFolder = workspace:FindFirstChild("Zombies")
@@ -227,8 +244,11 @@ function ZombieBrain:getNearbyZombies()
 	if zombiesFolder then
 		for _, zombie in ipairs(zombiesFolder:GetChildren()) do
 			if zombie ~= self.zombieModel and zombie:IsA("Model") then
-				local distance = (zombie:GetPivot().Position - self.rootPart.Position).Magnitude
-				if distance < 15 then -- Only consider nearby zombies
+				-- Avoid GetPivot() allocations if HRP exists
+				local zhrp = zombie:FindFirstChild("HumanoidRootPart")
+				local zpos = zhrp and zhrp.Position or zombie:GetPivot().Position
+				local distance = (zpos - self.rootPart.Position).Magnitude
+				if distance < 15 then
 					table.insert(nearby, zombie)
 				end
 			end
@@ -238,8 +258,6 @@ function ZombieBrain:getNearbyZombies()
 	return nearby
 end
 
--- Get base position for LOW LOD zombies
--- Uses same logic as TargetingService for consistency
 function ZombieBrain:getBasePosition()
 	local baseModel = workspace:FindFirstChild("BaseCaptureZone")
 	if not baseModel then
@@ -260,63 +278,50 @@ function ZombieBrain:getBasePosition()
 	return nil
 end
 
--- Get target using tactical targeting service
 function ZombieBrain:selectBestTarget()
 	if not self.targetingService then
 		return nil, nil, nil
 	end
 
-	-- Use targeting service for tactical selection
 	local targetPos, targetType, targetPlayer = self.targetingService:selectBestTarget(
 		self.zombieModel,
 		self.rootPart.Position,
 		self.waveNumber
 	)
-	
-	-- If no target available (no players and no base), provide wander behavior
+
 	if not targetPos or not targetType then
+		-- Wander fallback (keep this warn, but it's noisy; switch to print if you want)
 		warn("[ZombieBrain] No valid targets available. Zombie will wander.")
-		
-		-- Create a wander point near last known position
+
 		local lastPos = self.currentTarget or self.rootPart.Position
-		local randomOffset = Vector3.new(
-			math.random(-30, 30),
-			0,
-			math.random(-30, 30)
-		)
+		local randomOffset = Vector3.new(math.random(-30, 30), 0, math.random(-30, 30))
 		local wanderPos = lastPos + randomOffset
-		
+
 		return wanderPos, "wander", nil
 	end
 
 	return targetPos, targetType, targetPlayer
 end
 
--- Get slot position for surround behavior
 function ZombieBrain:getSlotPosition(targetPos, targetId)
 	if not self.surroundService then
 		return targetPos
 	end
 
-	-- Check if should re-roll slot
 	if self.surroundService:shouldRerollSlot(self.zombieModel, self.rootPart.Position) then
 		self.surroundService:releaseSlot(self.zombieModel)
 		self.currentSlot = nil
 	end
 
-	-- Get or assign slot
 	if not self.currentSlot then
 		local slotPreference = self.stats.SlotPreference or "middle"
 		local sidePreference = nil
 
-		-- Determine side preference based on type
 		if self.stats.PreferBackSlots then
 			sidePreference = "back"
 		elseif self.stats.FlankChance then
-			-- Roll for flank
 			local flankChance = self.stats.FlankChance
 
-			-- Boss aura boosts flank chance
 			if self.bossAuraService then
 				flankChance = self.bossAuraService:getFlankChance(self.zombieModel, flankChance)
 			end
@@ -342,7 +347,6 @@ function ZombieBrain:getSlotPosition(targetPos, targetId)
 	return self.currentSlot or targetPos
 end
 
--- Apply special behavior for Screamer type
 function ZombieBrain:handleScreamerBehavior()
 	if self.aiBehavior ~= "screamer" then
 		return
@@ -352,20 +356,18 @@ function ZombieBrain:handleScreamerBehavior()
 	local currentTime = tick()
 
 	if currentTime - self.lastCallTime >= callCooldown then
-		-- Emit "call" effect
 		self.lastCallTime = currentTime
 
 		local callRadius = self.stats.CallRadius or 30
 		local callDuration = self.stats.CallDuration or 5.0
 
-		-- Mark nearby zombies with call buff
 		local zombiesFolder = workspace:FindFirstChild("Zombies")
 		if zombiesFolder then
 			for _, zombie in ipairs(zombiesFolder:GetChildren()) do
 				if zombie ~= self.zombieModel and zombie:IsA("Model") then
-					local distance = (zombie:GetPivot().Position - self.rootPart.Position).Magnitude
+					local zpos = zombie:GetPivot().Position
+					local distance = (zpos - self.rootPart.Position).Magnitude
 					if distance <= callRadius then
-						-- Set temporary buff attribute
 						zombie:SetAttribute("ScreamerBuffed", true)
 						zombie:SetAttribute("ScreamerBuffExpire", currentTime + callDuration)
 					end
@@ -377,7 +379,6 @@ function ZombieBrain:handleScreamerBehavior()
 	end
 end
 
--- Attempt to attack target if in range
 function ZombieBrain:tryAttack()
 	if not self.rootPart or self.attackCooldown > 0 then
 		return false
@@ -389,28 +390,22 @@ function ZombieBrain:tryAttack()
 	end
 
 	local distance = (targetPos - self.rootPart.Position).Magnitude
-
-	-- Check if in attack range
 	if distance <= self.attackRange then
 		self.attackCooldown = self.attackInterval
 		self:playAttackAnimation()
 
-		-- Calculate damage (with type-specific modifiers)
 		local damage = self.attackDamage
 
-		-- Deal damage to appropriate target
 		if targetType == "player" and targetPlayer then
-			-- Validate player still exists and character is parented (not disconnecting)
 			if targetPlayer.Character and targetPlayer.Character.Parent then
 				local targetHumanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 				if targetHumanoid and targetHumanoid.Health > 0 then
-					-- Apply player damage penalty if Breacher (proper nil check to allow 0 multiplier)
+					-- Allow 0 multipliers (use ~= nil)
 					if self.aiBehavior == "breacher" and self.stats.PlayerDamagePenalty ~= nil then
 						damage = damage * self.stats.PlayerDamagePenalty
 					end
 
 					if self.playerManager then
-						-- Wrap in pcall for extra safety against disconnect race conditions
 						local success, err = pcall(function()
 							self.playerManager:damagePlayer(targetPlayer, damage)
 						end)
@@ -421,14 +416,13 @@ function ZombieBrain:tryAttack()
 				end
 			end
 		elseif targetType == "base" then
-			-- Apply base damage bonus if applicable (proper nil check to allow 0 multiplier)
 			if (self.aiBehavior == "bruiser" or self.aiBehavior == "breacher") and self.stats.BaseDamageBonus ~= nil then
 				damage = damage * self.stats.BaseDamageBonus
 			end
 
 			if self.baseManager then
-				-- Pass zombie name as source for damage logging
-				local zombieName = self.model.Name or "Unknown Zombie"
+				-- FIX: self.model was nil; use self.zombieModel safely
+				local zombieName = (self.zombieModel and self.zombieModel.Name) or "Unknown Zombie"
 				self.baseManager:damageBase(damage, zombieName)
 			end
 		end
@@ -458,50 +452,50 @@ function ZombieBrain:update(deltaTime)
 	if self.bossAuraService and not self.stats.HasAura then
 		self.bossAuraService:applyAuraBuffs(self.zombieModel, self)
 
-		-- Adjust retarget interval based on aura
+		-- Adjust retarget interval based on aura (preserve this zombie's jitter)
 		if self.zombieModel:GetAttribute("InBossAura") and self.bossAuraService.getRetargetInterval then
-			local baseInterval = self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4
-			self.repathInterval = self.bossAuraService:getRetargetInterval(self.zombieModel, baseInterval)
+			local auraBase = self._baseRepathInterval or (self.stats.RetargetInterval or GameConfig.ZOMBIE_REPATH_INTERVAL or 0.4)
+			local auraInterval = self.bossAuraService:getRetargetInterval(self.zombieModel, auraBase)
+			self.repathInterval = auraInterval + (self._repathJitter or 0)
 		end
 	end
 
-	-- Determine Level of Detail based on distance to players
-	local lod = self:determineLOD()
-	
+	-- Throttled LOD calc (avoid per-frame all-player scan)
+	self._lodCooldown -= deltaTime
+	if self._lodCooldown <= 0 then
+		self._lodCooldown = self._lodInterval
+		self._lod = self:determineLOD()
+	end
+	local lod = self._lod
+
 	-- LOW LOD: Skip most AI updates for distant zombies
 	if lod == "LOW" then
-		-- Check if zombie is close to base - allow full AI in that case
 		local basePos = self:getBasePosition()
 		local isNearBase = false
+
 		if basePos and self.rootPart then
 			local distanceToBase = (self.rootPart.Position - basePos).Magnitude
 			if distanceToBase <= LOD_CONFIG.LOW_BASE_NEAR_DISTANCE then
 				isNearBase = true
 			end
 		end
-		
-		-- Only use simplified LOW LOD behavior when far from base
+
 		if not isNearBase then
-			-- Only do basic movement toward base every few seconds
 			if self.moveCooldown <= 0 then
-				-- Update less frequently using config multiplier
 				self.moveCooldown = self.repathInterval * LOD_CONFIG.LOW_COOLDOWN_MULTIPLIER
 				if basePos then
-					self.humanoid:MoveTo(basePos)
-					self.lastMoveTarget = basePos
+					self:_moveTo(basePos)
 				end
 			else
-				self.moveCooldown = self.moveCooldown - deltaTime
+				self.moveCooldown -= deltaTime
 			end
-			return -- Skip rest of AI processing while far from base
+			return
 		end
-		-- If near base, continue with full AI to allow attacks
 	end
-	
-	-- MEDIUM LOD: Basic pathfinding only, no advanced behaviors
+
 	local useMediumLOD = (lod == "MEDIUM")
-	
-	-- Periodic LOS cache cleanup to prevent memory leak
+
+	-- LOS cache cleanup
 	if tick() - self.losCacheTime > self.losCacheLifetime then
 		self.losCache = {}
 		self.losCacheTime = tick()
@@ -509,69 +503,56 @@ function ZombieBrain:update(deltaTime)
 
 	-- Update attack cooldown
 	if self.attackCooldown > 0 then
-		self.attackCooldown = math.max(0, self.attackCooldown - deltaTime)
+		self.attackCooldown = clampNonNegative(self.attackCooldown - deltaTime)
 	end
 
-	-- Skip advanced behaviors for MEDIUM LOD
+	-- High-only behaviors
 	if not useMediumLOD then
-		-- Handle Screamer behavior (HIGH LOD only)
 		self:handleScreamerBehavior()
 	end
 
-	-- Handle Spitter behavior (ranged) - skip for MEDIUM LOD
+	-- Spitter behavior (ranged) - skip for MEDIUM LOD
 	if self.spitterController and not useMediumLOD then
 		local targetPos, targetType, targetPlayer = self:selectBestTarget()
 		if targetPos then
 			local desiredPos = self.spitterController:update(deltaTime, targetPos, targetType, targetPlayer)
 			if desiredPos and typeof(desiredPos) == "Vector3" then
-				self.humanoid:MoveTo(desiredPos)
-				self.lastMoveTarget = desiredPos
+				self:_moveTo(desiredPos)
 			end
 		end
-		return -- Spitter uses its own movement logic
+		return
 	end
 
-	-- Try to attack if in range
-	local didAttack = self:tryAttack()
+	-- Try attack if in range
+	self:tryAttack()
 
-	-- FIX: Decrement movement cooldown but don't block all movement
-	self.moveCooldown = self.moveCooldown - deltaTime
-
-	-- FIX: Instead of blocking completely, provide movement continuity
-	-- Check if we need to recalculate path (cooldown expired)
-	local shouldRecalculatePath = self.moveCooldown <= 0
+	-- Decrement movement cooldown (but do not block movement)
+	self.moveCooldown -= deltaTime
+	local shouldRecalculatePath = (self.moveCooldown <= 0)
 
 	if shouldRecalculatePath then
-		-- Reset cooldown with small random variance to prevent sync
-		-- Use a small fraction of the configured jitter for micro-variance (non-negative)
-		local microJitter = (GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER or 0.1) * 0.5
-		local jitterOffset = math.random() * microJitter
+		-- Reset cooldown with small micro variance
+		local microBase = ((GameConfig.AI and GameConfig.AI.DEFAULT_UPDATE_JITTER) or 0.1) * 0.5
+		local jitterOffset = math.random() * microBase
 		self.moveCooldown = self.repathInterval + jitterOffset
 
-		-- Recalculate target and path
 		if self.rootPart then
 			local targetPos, targetType, targetPlayer = self:selectBestTarget()
 
 			if targetPos then
-				-- Store current target info
 				self.currentTarget = targetPos
 				self.currentTargetType = targetType
 				self.currentTargetPlayer = targetPlayer
 
 				local finalTarget = targetPos
-				
-				-- Only use surround system for HIGH LOD
-				if not useMediumLOD then
-					-- Get target ID for slot assignment
-					local targetId = targetType == "base" and "base" or (targetPlayer and targetPlayer.UserId or "unknown")
 
-					-- Get slot position with surround system
+				if not useMediumLOD then
+					local targetId = (targetType == "base") and "base" or ((targetPlayer and targetPlayer.UserId) or "unknown")
 					local slotPos = self:getSlotPosition(targetPos, targetId)
 
-					-- Validate slotPos before using (could be nil if target destroyed)
 					if slotPos then
 						finalTarget = slotPos
-						-- Apply separation steering if service available
+
 						if self.surroundService then
 							local nearbyZombies = self:getNearbyZombies()
 							local steeringTarget = self.surroundService:getSteeringTarget(
@@ -580,80 +561,57 @@ function ZombieBrain:update(deltaTime)
 								slotPos,
 								nearbyZombies
 							)
-							-- Validate steering target before using
 							if steeringTarget then
 								finalTarget = steeringTarget
 							end
-							-- If steering target is nil, finalTarget remains slotPos
 						end
 					end
-					-- If slotPos is nil, finalTarget remains targetPos (fallback)
 				end
 
-				-- FIX: Issue new move command
 				if finalTarget then
-					self.humanoid:MoveTo(finalTarget)
-					self.lastMoveTarget = finalTarget
+					self:_moveTo(finalTarget)
 				end
 			end
 		end
 	else
-		-- FIX: CRITICAL - Keep moving toward last known target during cooldown
-		-- This prevents zombies from standing idle while waiting for next path recalc
+		-- Movement continuity during cooldown
 		if self.lastMoveTarget and self.rootPart then
-			-- Check if we're close to the last target
 			local distanceToLastTarget = (self.lastMoveTarget - self.rootPart.Position).Magnitude
 
-			-- If we've reached the last waypoint or are very close, move directly toward raw target
-			-- Use configurable waypoint skip distance
 			if distanceToLastTarget < self.waypointSkipDistance and self.currentTarget then
-				-- FIX: Don't stop at waypoints - push through toward actual target
-				self.humanoid:MoveTo(self.currentTarget)
-				self.lastMoveTarget = self.currentTarget
+				self:_moveTo(self.currentTarget)
 			elseif distanceToLastTarget > self.movementReissueDistance then
-				-- FIX: Re-issue move command to ensure continuous movement
-				-- This prevents the zombie from stopping when it "thinks" it arrived
-				-- Use configurable movement reissue distance
-				self.humanoid:MoveTo(self.lastMoveTarget)
-				-- else: distance is between reissue and skip thresholds, already moving correctly
+				self:_moveTo(self.lastMoveTarget)
 			end
 		elseif self.currentTarget then
-			-- FIX: Fallback - if no last move target, use current target
-			self.humanoid:MoveTo(self.currentTarget)
-			self.lastMoveTarget = self.currentTarget
+			self:_moveTo(self.currentTarget)
 		end
 	end
 end
 
 function ZombieBrain:destroy()
-	-- BUGFIX (MEDIUM): Add re-entrance guard to prevent double-destruction
 	if self._destroying then return end
 	self._destroying = true
-	
+
 	self.isActive = false
 
-	-- Release slot reservation
 	if self.surroundService then
 		self.surroundService:releaseSlot(self.zombieModel)
 	end
 
-	-- Release target assignment
 	if self.targetingService then
 		self.targetingService:releaseAssignment(self.zombieModel)
 	end
 
-	-- Unregister from boss aura if this is a boss
 	if self.stats.HasAura and self.bossAuraService then
 		self.bossAuraService:unregisterBoss(self.zombieModel)
 	end
 
-	-- Stop and cleanup animation
 	if self.attackAnimationTrack then
 		self.attackAnimationTrack:Stop()
 		self.attackAnimationTrack = nil
 	end
 
-	-- Cleanup spitter controller
 	if self.spitterController then
 		self.spitterController:destroy()
 		self.spitterController = nil
