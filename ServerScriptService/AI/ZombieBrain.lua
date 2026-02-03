@@ -626,6 +626,10 @@ function ZombieBrain:update(deltaTime)
 end
 
 function ZombieBrain:destroy()
+	-- BUGFIX (MEDIUM): Add re-entrance guard to prevent double-destruction
+	if self._destroying then return end
+	self._destroying = true
+	
 	self.isActive = false
 
 	-- Release slot reservation

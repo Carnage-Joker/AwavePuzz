@@ -485,6 +485,9 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		-- Update reload state
 		isReloading = false
 		
+		-- BUGFIX (MEDIUM): Reset consecutive shots on reload completion
+		consecutiveShots = 0
+		
 		if DEBUG_AMMO then
 			print(string.format("[FPSWeaponController] ✓ Ammo update applied: %s (current=%d, reserve=%d, max=%d)", 
 				data.weaponId, data.current, data.reserve, maxAmmo))

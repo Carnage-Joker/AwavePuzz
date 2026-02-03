@@ -430,6 +430,12 @@ function ResourceSpawner:spawnResource()
 
 	local componentName = self:getRandomComponent()
 	local resourceId = "resource_" .. os.time() .. "_" .. math.random(1000, 9999)
+	
+	-- BUGFIX (MEDIUM): Validate no duplicate ID to prevent race condition
+	if self.activeResources[resourceId] then
+		-- ID collision, regenerate with timestamp precision
+		resourceId = "resource_" .. tick() .. "_" .. math.random(10000, 99999)
+	end
 
 	local part = Instance.new("Part")
 	part.Name = componentName .. "_Resource"

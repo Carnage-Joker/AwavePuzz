@@ -44,7 +44,27 @@ function InventoryLedger:applyDeduction(playerId, deductionStruct)
 		return false
 	end
 
-	self.activeTransaction.deductions[playerId] = deductionStruct
+	-- BUGFIX (MEDIUM): Merge with existing deduction instead of overwriting
+	local existing = self.activeTransaction.deductions[playerId]
+	if existing then
+		-- Merge the structures
+		for key, value in pairs(deductionStruct) do
+			if type(value) == "table" and type(existing[key]) == "table" then
+				-- Merge nested tables (e.g., weapons, resources)
+				for subKey, subValue in pairs(value) do
+					existing[key][subKey] = (existing[key][subKey] or 0) + subValue
+				end
+			elseif type(value) == "number" and type(existing[key]) == "number" then
+				-- Add numbers (e.g., currency)
+				existing[key] = existing[key] + value
+			else
+				-- Overwrite for non-numeric values
+				existing[key] = value
+			end
+		end
+	else
+		self.activeTransaction.deductions[playerId] = deductionStruct
+	end
 	return true
 end
 
@@ -59,7 +79,27 @@ function InventoryLedger:applyGrant(playerId, grantStruct)
 		return false
 	end
 
-	self.activeTransaction.grants[playerId] = grantStruct
+	-- BUGFIX (MEDIUM): Merge with existing grant instead of overwriting
+	local existing = self.activeTransaction.grants[playerId]
+	if existing then
+		-- Merge the structures
+		for key, value in pairs(grantStruct) do
+			if type(value) == "table" and type(existing[key]) == "table" then
+				-- Merge nested tables (e.g., weapons, resources)
+				for subKey, subValue in pairs(value) do
+					existing[key][subKey] = (existing[key][subKey] or 0) + subValue
+				end
+			elseif type(value) == "number" and type(existing[key]) == "number" then
+				-- Add numbers (e.g., currency)
+				existing[key] = existing[key] + value
+			else
+				-- Overwrite for non-numeric values
+				existing[key] = value
+			end
+		end
+	else
+		self.activeTransaction.grants[playerId] = grantStruct
+	end
 	return true
 end
 
