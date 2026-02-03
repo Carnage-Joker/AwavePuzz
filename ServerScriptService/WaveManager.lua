@@ -49,6 +49,9 @@ function WaveManager:spawnZombie()
 	end
 
 	-- BUGFIX (MEDIUM): Add mutex for thread safety to prevent race condition
+	-- NOTE: Lua mutexes are not truly atomic. This assumes single-threaded execution
+	-- with potential concurrent calls through yielding. For true thread safety,
+	-- a proper semaphore or queue-based approach would be needed.
 	if self._spawnMutex then
 		return nil
 	end

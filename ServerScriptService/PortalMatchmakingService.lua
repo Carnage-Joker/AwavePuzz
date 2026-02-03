@@ -414,12 +414,12 @@ function PortalMatchmakingService:checkCancelCountdown(portalId)
 	-- Only cancel if countdown is active
 	if portal.countdown <= 0 then return end
 	
-	-- BUGFIX (MEDIUM): Use math.min instead of math.max to properly cancel countdown below minimum
-	-- We should cancel if below minPlayers, not below max(minPlayers, cancelThreshold)
-	local minRequired = math.min(portal.config.minPlayers, self.countdownCancelThreshold)
-	if #portal.queue < minRequired then
+	-- BUGFIX (MEDIUM): Use math.min for proper cancel threshold
+	-- Cancel countdown if queue drops below minimum requirement
+	local effectiveCancelThreshold = math.min(portal.config.minPlayers, self.countdownCancelThreshold)
+	if #portal.queue < effectiveCancelThreshold then
 		print(string.format("[PortalMatchmakingService] Cancelling countdown for portal %s (queue %d < required %d)", 
-			portalId, #portal.queue, minRequired))
+			portalId, #portal.queue, effectiveCancelThreshold))
 		
 		portal.countdown = 0
 		

@@ -306,9 +306,11 @@ function CureSynthesisService:failSynthesis(reason)
 
 	-- Reset state after delay
 	local originalPlayer = self.synthesisPlayer
+	local sessionId = tick() -- Use timestamp as unique session ID
 	task.delay(5, function()
-		-- BUGFIX (MEDIUM): Check if new synthesis started to prevent state corruption
-		if self.synthesisPlayer ~= originalPlayer then
+		-- BUGFIX (MEDIUM): Check if new synthesis session started to prevent state corruption
+		-- Compare session timestamp instead of player identity to catch same-player re-synthesis
+		if self.synthesisPlayer ~= originalPlayer or (self.synthesisStartTime or 0) > sessionId then
 			return
 		end
 		self.synthesisState = CureSynthesisService.States.IDLE

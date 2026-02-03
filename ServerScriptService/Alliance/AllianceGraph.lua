@@ -27,6 +27,9 @@ function AllianceGraph:addEdge(player1, player2)
 	end
 
 	-- BUGFIX (MEDIUM): Add mutex to prevent race condition on concurrent addEdge calls
+	-- NOTE: Lua mutexes are not truly atomic. This assumes single-threaded execution
+	-- with potential concurrent calls through yielding. The check-and-set pattern
+	-- creates a small race condition window, but is acceptable for this use case.
 	if self._edgeMutex then
 		return false
 	end
