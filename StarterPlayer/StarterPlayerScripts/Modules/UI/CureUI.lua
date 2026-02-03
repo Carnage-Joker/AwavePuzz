@@ -612,10 +612,31 @@ end
 -- Synthesis failed handler
 local synthesisFailedEvent = remoteEvents:FindFirstChild("SynthesisFailed")
 if synthesisFailedEvent then
-	synthesisFailedEvent.OnClientEvent:Connect(function(reason)
+	synthesisFailedEvent.OnClientEvent:Connect(function(payload)
 		-- Hide synthesis overlay
 		synthesisOverlay.Visible = false
-		warn("[CureUI] Synthesis failed:", reason)
+		
+		-- Support both table payloads ({ reason = ..., initiator = ... }) and legacy string payloads
+		local reasonText = "Unknown failure"
+		local initiatorText
+		
+		if typeof(payload) == "table" then
+			if payload.reason ~= nil then
+				reasonText = tostring(payload.reason)
+			end
+			if payload.initiator ~= nil then
+				initiatorText = tostring(payload.initiator)
+			end
+		elseif payload ~= nil then
+			-- Backwards compatibility for string or other simple payloads
+			reasonText = tostring(payload)
+		end
+		
+		if initiatorText then
+			warn(string.format("[CureUI] Synthesis failed: %s (initiator: %s)", reasonText, initiatorText))
+		else
+			warn(string.format("[CureUI] Synthesis failed: %s", reasonText))
+		end
 	end)
 end
 
