@@ -760,6 +760,12 @@ function GameManager:startLobby()
 	if self.lobbySetup then
 		self.lobbySetup:getOrCreateLobby()
 	end
+	
+	-- Discover portals after lobby exists (portal matchmaking only)
+	if self.portalMatchmakingService then
+		print("[Flow] Lobby -> Discovering portals...")
+		self.portalMatchmakingService:discoverPortals()
+	end
 
 	if not GameConfig.USE_PORTAL_MATCHMAKING then
 		self.lobbyManager:startVoting()

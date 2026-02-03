@@ -66,6 +66,7 @@ local isGrounded = true
 local isMoving = false
 local wantsToSprint = false
 local wantsToCrouch = false
+local _enabled = true -- Movement enabled/disabled state
 
 -- Stamina (synced with server but also tracked locally for responsiveness)
 local currentStamina = FPSConfig.Movement.StaminaMax
@@ -103,7 +104,8 @@ local clamp = MathUtil.clamp
 local function shouldBlockGameplay()
 	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
 	-- PANEL priority (like Scoreboard) allows gameplay to continue
-	return ModalManager.shouldBlockGameplay()
+	-- Also block if movement is explicitly disabled via setEnabled()
+	return not _enabled or ModalManager.shouldBlockGameplay()
 end
 
 --------------------------------------------------------------------------------
@@ -454,6 +456,27 @@ end
 function FPSMovementController.setADSActive(active)
 	-- Called by weapon controller to reduce speed during ADS
 	-- Speed adjustment happens in calculateMoveSpeed
+end
+
+-- Enable or disable movement (used by state manager)
+function FPSMovementController.setEnabled(enabled)
+	_enabled = enabled
+	if not enabled then
+		-- Reset movement state when disabled
+		isSprinting = false
+		wantsToSprint = false
+		isMoving = false
+		keysHeld.forward = false
+		keysHeld.backward = false
+		keysHeld.left = false
+		keysHeld.right = false
+		movementVector = Vector2.new(0, 0)
+	end
+	print(string.format("[FPSMovement] Movement %s", enabled and "enabled" or "disabled"))
+end
+
+function FPSMovementController.isEnabled()
+	return _enabled
 end
 
 --------------------------------------------------------------------------------

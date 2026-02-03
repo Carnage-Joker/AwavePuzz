@@ -383,10 +383,83 @@ else
 		end
 	end
 	
+	-- Special handling for TitleScreenUI - create instance and bind remotes
+	if UI.TitleScreenUI then
+		local titleScreenInstance = UI.TitleScreenUI.new()
+		titleScreenInstance:bindRemotes(remotes)
+		UI.TitleScreenUI = titleScreenInstance
+		print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
+	end
+	
 	print(string.format("[BOOT][CLIENT] ✓ %d UI systems initialized", uiCount))
 end
 
 print("[BOOT][CLIENT] Phase 6 complete: UI systems ready")
+
+----------------------------------------------------------------
+-- PHASE 6.5: Client State Router
+----------------------------------------------------------------
+
+print("[BOOT][CLIENT] Phase 6.5: Setting up client state router...")
+
+-- State-based control for movement and weapons
+local function applyState(stateName)
+	print(string.format("[ClientState] Applying state: %s", stateName))
+	
+	local enableMovement = false
+	local enableWeapons = false
+	
+	-- Map states to movement/weapon enable flags
+	if stateName == "TitleScreen" or stateName == "Epilogue" then
+		-- Title and epilogue: no movement, no weapons
+		enableMovement = false
+		enableWeapons = false
+	elseif stateName == "Lobby" or stateName == "Waiting" then
+		-- Lobby/Waiting: can move, no weapons
+		enableMovement = true
+		enableWeapons = false
+	elseif stateName == "Countdown" or stateName == "WaveActive" or stateName == "Intermission" then
+		-- Active gameplay: can move and use weapons
+		enableMovement = true
+		enableWeapons = true
+	elseif stateName == "Victory" or stateName == "Defeat" or stateName == "Scoreboard" then
+		-- End states: can move, no weapons
+		enableMovement = true
+		enableWeapons = false
+	else
+		-- Unknown state: safe defaults (allow movement, disable weapons)
+		warn(string.format("[ClientState] Unknown state '%s', using safe defaults", tostring(stateName)))
+		enableMovement = true
+		enableWeapons = false
+	end
+	
+	-- Apply movement state
+	if Movement and Movement.setEnabled then
+		Movement.setEnabled(enableMovement)
+	end
+	
+	-- Apply weapon state
+	if WeaponController and WeaponController.setEnabled then
+		WeaponController.setEnabled(enableWeapons)
+	end
+end
+
+-- Connect to server GameStateUpdate
+if remotes.GameStateUpdate then
+	remotes.GameStateUpdate.OnClientEvent:Connect(function(stateName)
+		if stateName then
+			applyState(stateName)
+		end
+	end)
+	print("[BOOT][CLIENT] ✓ Client state router connected to GameStateUpdate")
+else
+	warn("[BOOT][CLIENT] ✗ GameStateUpdate remote not found")
+end
+
+-- Apply safe initial state
+applyState("Waiting")
+
+print("[BOOT][CLIENT] Phase 6.5 complete: Client state router active")
 
 ----------------------------------------------------------------
 -- PHASE 7: Character Lifecycle Handlers

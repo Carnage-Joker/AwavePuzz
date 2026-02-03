@@ -53,12 +53,14 @@ local consecutiveShots = 0
 local lastShotTime = 0
 local currentSpread = 0
 local targetSpread = 0
+local _enabled = true -- Weapon controller enabled/disabled state
 
 -- Helper: Check if gameplay input should be blocked by modal state
 local function shouldBlockGameplay()
 	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
 	-- PANEL priority (like Scoreboard) allows gameplay to continue
-	return ModalManager.shouldBlockGameplay()
+	-- Also block if weapon controller is explicitly disabled via setEnabled()
+	return not _enabled or ModalManager.shouldBlockGameplay()
 end
 
 -- Remote events
@@ -633,6 +635,27 @@ function FPSWeaponController.onCharacterRemoving()
 		fireConnection:Disconnect()
 		fireConnection = nil
 	end
+end
+
+-- Enable or disable weapon controller (used by state manager)
+function FPSWeaponController.setEnabled(enabled)
+	_enabled = enabled
+	if not enabled then
+		-- Cancel any active firing
+		if fireConnection then
+			fireConnection:Disconnect()
+			fireConnection = nil
+		end
+		-- Reset weapon state
+		isAiming = false
+		isReloading = false
+		adsStateBindable:Fire(false)
+	end
+	print(string.format("[FPSWeaponController] Weapons %s", enabled and "enabled" or "disabled"))
+end
+
+function FPSWeaponController.isEnabled()
+	return _enabled
 end
 
 return FPSWeaponController

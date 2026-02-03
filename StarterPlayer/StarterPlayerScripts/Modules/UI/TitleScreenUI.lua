@@ -12,7 +12,6 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local TitleScreenUI = {}
@@ -27,36 +26,38 @@ function TitleScreenUI.new()
 	self.hasInteracted = false
 	self.pulseTweens = {} -- Store pulse tweens for cleanup
 	self.pulseThread = nil -- Store pulse thread for cleanup
+	self.remotes = nil -- Will be set via bindRemotes()
 	
 	self:createUI()
-	self:setupRemoteEvents()
 	
 	return self
 end
 
-function TitleScreenUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShowTitleScreen",
-		"HideTitleScreen",
-		"TitleScreenContinue" -- Client -> Server when player wants to continue
-	})
+-- Bind remotes from RemoteRegistry (called by ClientMain)
+function TitleScreenUI:bindRemotes(remotes)
+	if not remotes then
+		warn("[TitleScreenUI] bindRemotes: No remotes provided")
+		return
+	end
+	
+	self.remotes = remotes
 	
 	-- Listen for server commands
-	if self.remoteEvents.ShowTitleScreen then
-		self.remoteEvents.ShowTitleScreen.OnClientEvent:Connect(function()
+	if self.remotes.ShowTitleScreen then
+		self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
 			print("[TitleScreenUI] Received ShowTitleScreen event")
 			self:show()
 		end)
 	end
 	
-	if self.remoteEvents.HideTitleScreen then
-		self.remoteEvents.HideTitleScreen.OnClientEvent:Connect(function()
+	if self.remotes.HideTitleScreen then
+		self.remotes.HideTitleScreen.OnClientEvent:Connect(function()
 			print("[TitleScreenUI] Received HideTitleScreen event")
 			self:hide()
 		end)
 	end
 	
-	print("[TitleScreenUI] Initialized and ready")
+	print("[TitleScreenUI] Remotes bound and ready")
 end
 
 function TitleScreenUI:createUI()
@@ -234,8 +235,8 @@ function TitleScreenUI:onContinue()
 	print("[TitleScreenUI] Player clicked continue, notifying server")
 	
 	-- Notify server that player wants to continue
-	if self.remoteEvents.TitleScreenContinue then
-		self.remoteEvents.TitleScreenContinue:FireServer()
+	if self.remotes and self.remotes.TitleScreenContinue then
+		self.remotes.TitleScreenContinue:FireServer()
 	end
 	
 	-- Hide immediately
@@ -369,7 +370,9 @@ function TitleScreenUI:startPromptPulse()
 	end)
 end
 
--- Initialize
-local titleScreen = TitleScreenUI.new()
+-- Module interface
+TitleScreenUI.initialize = function()
+	-- Initialization handled by ClientMain via bindRemotes()
+end
 
-return titleScreen
+return TitleScreenUI

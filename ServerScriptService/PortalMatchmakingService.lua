@@ -79,6 +79,8 @@ end
 
 -- Discover and register portals from workspace
 function PortalMatchmakingService:discoverPortals()
+	print("[PortalMatchmakingService] Starting portal discovery...")
+	
 	local lobby = workspace:FindFirstChild("Lobby")
 	if not lobby then
 		warn("[PortalMatchmakingService] No Lobby folder in Workspace - cannot discover portals")
@@ -92,7 +94,10 @@ function PortalMatchmakingService:discoverPortals()
 	end
 	
 	local discovered = 0
-	for _, portalPart in ipairs(portalsFolder:GetChildren()) do
+	local children = portalsFolder:GetChildren()
+	print(string.format("[PortalMatchmakingService] Found %d potential portal objects in Portals folder", #children))
+	
+	for _, portalPart in ipairs(children) do
 		if portalPart:IsA("BasePart") or portalPart:IsA("Model") then
 			local success = self:registerPortal(portalPart)
 			if success then
@@ -101,7 +106,7 @@ function PortalMatchmakingService:discoverPortals()
 		end
 	end
 	
-	print(string.format("[PortalMatchmakingService] Discovered %d portals", discovered))
+	print(string.format("[PortalMatchmakingService] Discovery complete: %d portals registered", discovered))
 end
 
 -- Register a single portal
