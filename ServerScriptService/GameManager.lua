@@ -1303,7 +1303,14 @@ function GameManager:updateLobby(deltaTime)
 			end
 			
 			-- Map loaded successfully
-			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", self._selectedMapId))
+			local resolvedMapId = nil
+			if self.mapManager and self.mapManager.getCurrentMapId then
+				resolvedMapId = self.mapManager:getCurrentMapId()
+			end
+			if resolvedMapId ~= nil then
+				self._selectedMapId = resolvedMapId
+			end
+			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", tostring(resolvedMapId or self._selectedMapId)))
 			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADED
 		else
 			-- Multi-map disabled: use existing workspace map but still run configuration/spawn steps
