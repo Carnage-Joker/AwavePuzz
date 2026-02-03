@@ -99,9 +99,10 @@ end
 #### 4. `StarterPlayer/StarterPlayerScripts/Modules/FPSMovement.lua`
 **Changes**:
 - Added `_enabled` boolean flag (default: true)
-- Added `setEnabled(enabled)` method with state reset on disable
+- Added `setEnabled(enabled)` method that resets movement state and Humanoid WalkSpeed on disable
 - Added `isEnabled()` method
 - Updated `shouldBlockGameplay()` to check `_enabled` flag
+- Input handlers gate on `_enabled` via `shouldBlockGameplay()` check
 
 **Key Addition**:
 ```lua
@@ -111,12 +112,23 @@ function FPSMovementController.setEnabled(enabled)
         -- Reset movement state when disabled
         isSprinting = false
         wantsToSprint = false
+        wantsToCrouch = false
+        isCrouching = false
         isMoving = false
         keysHeld.forward = false
         keysHeld.backward = false
         keysHeld.left = false
         keysHeld.right = false
         movementVector = Vector2.new(0, 0)
+        
+        -- Reset Humanoid WalkSpeed to base when movement is disabled
+        local character = player.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = FPSConfig.Movement.WalkSpeed or 16
+            end
+        end
     end
     print(string.format("[FPSMovement] Movement %s", enabled and "enabled" or "disabled"))
 end
@@ -125,16 +137,17 @@ end
 #### 5. `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua`
 **Changes**:
 - Added `_enabled` boolean flag (default: true)
-- Added `setEnabled(enabled)` method with fire connection cleanup on disable
+- Added `setEnabled(enabled)` method that disconnects fire connection and resets weapon state on disable
 - Added `isEnabled()` method
 - Updated `shouldBlockGameplay()` to check `_enabled` flag
+- Input handlers gate on `_enabled` via `shouldBlockGameplay()` check
 
 **Key Addition**:
 ```lua
 function FPSWeaponController.setEnabled(enabled)
     _enabled = enabled
     if not enabled then
-        -- Cancel any active firing
+        -- Cancel any active firing connection
         if fireConnection then
             fireConnection:Disconnect()
             fireConnection = nil
@@ -147,6 +160,8 @@ function FPSWeaponController.setEnabled(enabled)
     print(string.format("[FPSWeaponController] Weapons %s", enabled and "enabled" or "disabled"))
 end
 ```
+
+**Note**: Both implementations use input gating via `shouldBlockGameplay()` which checks the `_enabled` flag. The `setEnabled()` methods reset state variables and clear the active fire connection, but do not disconnect all input connections. Input connections remain active but are gated by the `shouldBlockGameplay()` check.
 
 ### Server-Side Files
 

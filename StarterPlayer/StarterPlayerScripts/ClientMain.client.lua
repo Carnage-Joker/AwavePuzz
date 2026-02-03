@@ -325,6 +325,7 @@ local uiFolder = clientModules:FindFirstChild("UI")
 if not uiFolder then
 	warn("[BOOT][CLIENT] ✗ UI folder not found")
 else
+	-- UI modules that follow standard initialization pattern
 	local uiModules = {
 		"FPSHUD",
 		"PlayerHUD",
@@ -341,8 +342,7 @@ else
 		"MapVotingUI",
 		"LobbyUI",
 		"SpectatorUI",
-		"TitleScreenUI",
-		"EpilogueUI",
+		-- NOTE: TitleScreenUI and EpilogueUI excluded - they use special bindRemotes pattern
 		"AchievementUI",
 		"CreditsUI",
 		"FunFactUI",
@@ -383,20 +383,38 @@ else
 		end
 	end
 	
-	-- Special handling for TitleScreenUI - create instance and bind remotes
-	if UI.TitleScreenUI then
-		local titleScreenInstance = UI.TitleScreenUI.new()
-		titleScreenInstance:bindRemotes(remotes)
-		UI.TitleScreenUI = titleScreenInstance
-		print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
+	-- Special handling for TitleScreenUI - load module, create instance, bind remotes
+	local titleScreenModule = uiFolder:FindFirstChild("TitleScreenUI")
+	if titleScreenModule then
+		local success, TitleScreenClass = pcall(function()
+			return require(titleScreenModule)
+		end)
+		if success and TitleScreenClass then
+			local titleScreenInstance = TitleScreenClass.new()
+			titleScreenInstance:bindRemotes(remotes)
+			UI.TitleScreenUI = titleScreenInstance
+			uiCount = uiCount + 1
+			print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
+		else
+			warn("[BOOT][CLIENT] ✗ TitleScreenUI failed to load")
+		end
 	end
 	
-	-- Special handling for EpilogueUI - create instance and bind remotes
-	if UI.EpilogueUI then
-		local epilogueInstance = UI.EpilogueUI.new()
-		epilogueInstance:bindRemotes(remotes)
-		UI.EpilogueUI = epilogueInstance
-		print("[BOOT][CLIENT] ✓ EpilogueUI instance created and remotes bound")
+	-- Special handling for EpilogueUI - load module, create instance, bind remotes
+	local epilogueModule = uiFolder:FindFirstChild("EpilogueUI")
+	if epilogueModule then
+		local success, EpilogueClass = pcall(function()
+			return require(epilogueModule)
+		end)
+		if success and EpilogueClass then
+			local epilogueInstance = EpilogueClass.new()
+			epilogueInstance:bindRemotes(remotes)
+			UI.EpilogueUI = epilogueInstance
+			uiCount = uiCount + 1
+			print("[BOOT][CLIENT] ✓ EpilogueUI instance created and remotes bound")
+		else
+			warn("[BOOT][CLIENT] ✗ EpilogueUI failed to load")
+		end
 	end
 	
 	print(string.format("[BOOT][CLIENT] ✓ %d UI systems initialized", uiCount))
