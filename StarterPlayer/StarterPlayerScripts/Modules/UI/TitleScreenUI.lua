@@ -375,4 +375,14 @@ TitleScreenUI.initialize = function()
 	-- Initialization handled by ClientMain via bindRemotes()
 end
 
-return TitleScreenUI
+-- Create a default singleton instance for backward compatibility.
+-- This allows older code that expects `require(TitleScreenUI)` to return
+-- an instance to keep working, while still exposing `.new` for newer code.
+local defaultTitleScreen = TitleScreenUI.new()
+
+-- Expose the constructor on the singleton so callers that do
+-- `local TitleScreenUI = require(...); local ui = TitleScreenUI.new()`
+-- continue to work even though the module returns an instance.
+defaultTitleScreen.new = TitleScreenUI.new
+
+return defaultTitleScreen
