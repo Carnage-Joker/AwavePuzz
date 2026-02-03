@@ -125,15 +125,29 @@ Replaced the simple `_lobbyResolved` boolean flag with a proper state machine (`
 
 ### Console Commands
 ```lua
--- Check current lobby state
-print(game.ServerScriptService.GameManager:GetAttribute("_lobbyResolutionState"))
+-- Recommended: rely on [Flow] logs in the Output window to observe
+-- lobby state transitions and retry counts in real time.
+--
+-- You should see messages such as:
+--   [Flow][Lobby] state=VOTING
+--   [Flow][Lobby] state=FAILED retry=1
+--
+-- Optional: if the GameManager exposes a dedicated runtime Instance
+-- (for example, a Folder named "GameManagerState" under ServerScriptService)
+-- and sets attributes on it for debugging, you can inspect them like this:
 
--- Check retry count
-print(game.ServerScriptService.GameManager:GetAttribute("_lobbyRetryCount"))
+local gmState = game.ServerScriptService:FindFirstChild("GameManagerState")
 
--- Force state change (for debugging only)
-local GM = require(game.ServerScriptService.GameManager)
--- Don't use in production!
+if gmState then
+    print("Lobby state:", gmState:GetAttribute("LobbyResolutionState"))
+    print("Retry count:", gmState:GetAttribute("LobbyRetryCount"))
+else
+    warn("GameManagerState instance not found; use [Flow] logs in the Output window instead.")
+end
+
+-- Note: ModuleScripts like GameManager do not automatically expose these
+-- attributes. They must be explicitly set on a real Instance at runtime
+-- by your game code if you want to inspect them via GetAttribute().
 ```
 
 ### Output Panel
