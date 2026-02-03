@@ -325,6 +325,7 @@ local uiFolder = clientModules:FindFirstChild("UI")
 if not uiFolder then
 	warn("[BOOT][CLIENT] ✗ UI folder not found")
 else
+	-- UI modules that follow standard initialization pattern
 	local uiModules = {
 		"FPSHUD",
 		"PlayerHUD",
@@ -341,8 +342,7 @@ else
 		"MapVotingUI",
 		"LobbyUI",
 		"SpectatorUI",
-		"TitleScreenUI",
-		"EpilogueUI",
+		-- NOTE: TitleScreenUI and EpilogueUI excluded - they use special bindRemotes pattern
 		"AchievementUI",
 		"CreditsUI",
 		"FunFactUI",
@@ -383,10 +383,112 @@ else
 		end
 	end
 	
+	-- Special handling for TitleScreenUI - load module, create instance, bind remotes
+	local titleScreenModule = uiFolder:FindFirstChild("TitleScreenUI")
+	if titleScreenModule then
+		local success, TitleScreenClass = pcall(function()
+			return require(titleScreenModule)
+		end)
+		if success and TitleScreenClass then
+			local titleScreenInstance = TitleScreenClass.new()
+			titleScreenInstance:bindRemotes(remotes)
+			UI.TitleScreenUI = titleScreenInstance
+			uiCount = uiCount + 1
+			print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
+		else
+			warn("[BOOT][CLIENT] ✗ TitleScreenUI failed to load")
+		end
+	end
+	
+	-- Special handling for EpilogueUI - load module, create instance, bind remotes
+	local epilogueModule = uiFolder:FindFirstChild("EpilogueUI")
+	if epilogueModule then
+		local success, EpilogueClass = pcall(function()
+			return require(epilogueModule)
+		end)
+		if success and EpilogueClass then
+			local epilogueInstance = EpilogueClass.new()
+			epilogueInstance:bindRemotes(remotes)
+			UI.EpilogueUI = epilogueInstance
+			uiCount = uiCount + 1
+			print("[BOOT][CLIENT] ✓ EpilogueUI instance created and remotes bound")
+		else
+			warn("[BOOT][CLIENT] ✗ EpilogueUI failed to load")
+		end
+	end
+	
 	print(string.format("[BOOT][CLIENT] ✓ %d UI systems initialized", uiCount))
 end
 
 print("[BOOT][CLIENT] Phase 6 complete: UI systems ready")
+
+----------------------------------------------------------------
+-- PHASE 6.5: Client State Router
+----------------------------------------------------------------
+
+print("[BOOT][CLIENT] Phase 6.5: Setting up client state router...")
+
+-- State-based control for movement and weapons
+local function applyState(stateName)
+	print(string.format("[ClientState] Applying state: %s", stateName))
+	
+	local enableMovement = false
+	local enableWeapons = false
+	
+	-- Treat any epilogue-like state (e.g. "EpilogueActive", "ShowingEpilogue") as epilogue
+	local isEpilogueState = typeof(stateName) == "string" and string.find(stateName, "Epilogue", 1, true) ~= nil
+	
+	-- Map states to movement/weapon enable flags
+	if stateName == "TitleScreen" or isEpilogueState then
+		-- Title and epilogue: no movement, no weapons
+		enableMovement = false
+		enableWeapons = false
+	elseif stateName == "Lobby" or stateName == "Waiting" then
+		-- Lobby/Waiting: can move, no weapons
+		enableMovement = true
+		enableWeapons = false
+	elseif stateName == "Countdown" or stateName == "WaveActive" or stateName == "Intermission" then
+		-- Active gameplay: can move and use weapons
+		enableMovement = true
+		enableWeapons = true
+	elseif stateName == "Victory" or stateName == "Defeat" or stateName == "Scoreboard" then
+		-- End states: can move, no weapons
+		enableMovement = true
+		enableWeapons = false
+	else
+		-- Unknown state: safe defaults (allow movement, disable weapons)
+		warn(string.format("[ClientState] Unknown state '%s', using safe defaults", tostring(stateName)))
+		enableMovement = true
+		enableWeapons = false
+	end
+	
+	-- Apply movement state
+	if Movement and Movement.setEnabled then
+		Movement.setEnabled(enableMovement)
+	end
+	
+	-- Apply weapon state
+	if WeaponController and WeaponController.setEnabled then
+		WeaponController.setEnabled(enableWeapons)
+	end
+end
+
+-- Connect to server GameStateUpdate
+if remotes.GameStateUpdate then
+	remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
+		if data and data.state then
+			applyState(data.state)
+		end
+	end)
+	print("[BOOT][CLIENT] ✓ Client state router connected to GameStateUpdate")
+else
+	warn("[BOOT][CLIENT] ✗ GameStateUpdate remote not found")
+end
+
+-- Apply safe initial state
+applyState("Waiting")
+
+print("[BOOT][CLIENT] Phase 6.5 complete: Client state router active")
 
 ----------------------------------------------------------------
 -- PHASE 7: Character Lifecycle Handlers

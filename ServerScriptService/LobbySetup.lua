@@ -35,10 +35,12 @@ end
 
 -- Get or create lobby (idempotent)
 -- Reuses existing lobby if found, or creates a new one if needed
+-- Ensures workspace.Lobby and workspace.Lobby.Portals folders exist
 function LobbySetup:getOrCreateLobby()
 	-- Check if we already have a valid lobby
 	if self.lobbyModel and self.lobbyModel.Parent then
 		print("[LobbySetup] Reusing existing lobby")
+		self:ensureLobbyStructure()
 		return self.lobbyModel
 	end
 	
@@ -47,11 +49,45 @@ function LobbySetup:getOrCreateLobby()
 	if existing then
 		print("[LobbySetup] Reusing existing lobby from Workspace")
 		self.lobbyModel = existing
+		self:ensureLobbyStructure()
 		return self.lobbyModel
 	end
 	
 	-- No existing lobby, create a new one
 	return self:createLobby()
+end
+
+-- Ensure Lobby folder and Portals folder exist in Workspace
+-- Creates default portals if portal matchmaking is enabled and Portals is empty
+function LobbySetup:ensureLobbyStructure()
+	-- Ensure workspace.Lobby folder exists
+	local lobby = Workspace:FindFirstChild("Lobby")
+	if not lobby then
+		lobby = Instance.new("Folder")
+		lobby.Name = "Lobby"
+		lobby.Parent = Workspace
+		print("[LobbySetup] Created workspace.Lobby folder")
+	end
+	
+	-- Ensure workspace.Lobby.Portals folder exists
+	local portalsFolder = lobby:FindFirstChild("Portals")
+	if not portalsFolder then
+		portalsFolder = Instance.new("Folder")
+		portalsFolder.Name = "Portals"
+		portalsFolder.Parent = lobby
+		print("[LobbySetup] Created workspace.Lobby.Portals folder")
+	end
+	
+	-- If portal matchmaking is enabled and Portals is empty, create default portals
+	if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
+		local portalCount = #portalsFolder:GetChildren()
+		if portalCount == 0 then
+			print("[LobbySetup] Portals folder is empty, creating default portals")
+			self:createPortals()
+		else
+			print(string.format("[LobbySetup] Portals folder has %d existing portals", portalCount))
+		end
+	end
 end
 
 function LobbySetup:createLobby()
@@ -120,10 +156,8 @@ function LobbySetup:createLobby()
 	self.lobbyModel = model
 	print(string.format("[LobbySetup] Lobby created at position %d, %d, %d", LOBBY_BASE.X, 5, LOBBY_BASE.Z))
 	
-	-- Create portals if portal matchmaking is enabled
-	if GameConfig and GameConfig.USE_PORTAL_MATCHMAKING then
-		self:createPortals()
-	end
+	-- Ensure lobby structure (folders and portals if needed)
+	self:ensureLobbyStructure()
 	
 	return model
 end
