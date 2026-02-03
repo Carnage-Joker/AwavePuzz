@@ -38,6 +38,7 @@ local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local WeaponConfig = require(SharedFolder:WaitForChild("WeaponConfig"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 --------------------------------------------------------------------------------
 -- STATE MANAGEMENT
@@ -570,6 +571,15 @@ end)
 --------------------------------------------------------------------------------
 
 local function initialize()
+	-- Register weapon switching input actions with InputActionRegistry
+	-- Note: These are defined in InputManager but not yet fully implemented
+	InputActionRegistry.register("WeaponSwitch", "FPSWeaponController", {Enum.KeyCode.Q}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+	InputActionRegistry.register("WeaponSwitchGamepad", "FPSWeaponController", {Enum.KeyCode.ButtonY}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+	InputActionRegistry.register("NextWeapon", "FPSWeaponController", {Enum.KeyCode.E}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+	InputActionRegistry.register("NextWeaponGamepad", "FPSWeaponController", {Enum.KeyCode.ButtonR1}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+	InputActionRegistry.register("PrevWeapon", "FPSWeaponController", {Enum.KeyCode.Tab}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+	InputActionRegistry.register("PrevWeaponGamepad", "FPSWeaponController", {Enum.KeyCode.ButtonL1}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+
 	-- Setup InputManager callbacks
 	setupInputCallbacks()
 

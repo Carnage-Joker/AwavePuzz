@@ -19,6 +19,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize managers
 InputManager.initialize()
@@ -726,6 +727,10 @@ task.spawn(function()
 		end
 	end
 end)
+
+-- Register INTERACT action with InputActionRegistry
+InputActionRegistry.register("Interact", "TouchControlsUI", {Enum.KeyCode.F}, InputActionRegistry.Priority.CORE_GAMEPLAY)
+InputActionRegistry.register("InteractGamepad", "TouchControlsUI", {Enum.KeyCode.ButtonX}, InputActionRegistry.Priority.CORE_GAMEPLAY)
 
 -- Auto-initialize on touch devices
 if InputManager.isTouch() then

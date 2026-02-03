@@ -14,6 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 --------------------------------------------------------------------------------
 -- UTILS
@@ -466,6 +467,12 @@ local function handleInput(input, gameProcessedEvent)
 end
 
 UserInputService.InputBegan:Connect(handleInput)
+
+-- Register PAUSE action with InputActionRegistry
+-- Uses P key per problem statement, but FPSConfig.Controls.PauseKey is Escape
+-- We'll register both P and Escape for pause functionality
+InputActionRegistry.register("PauseMenu", "FPSMenuController", {Enum.KeyCode.P, Enum.KeyCode.Escape}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("PauseMenuGamepad", "FPSMenuController", {Enum.KeyCode.ButtonStart}, InputActionRegistry.Priority.TOGGLE_UI)
 
 --------------------------------------------------------------------------------
 -- PUBLIC API

@@ -4,12 +4,14 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -160,6 +162,19 @@ currencyEvent.OnClientEvent:Connect(function(payload)
 	local balance = tonumber(payload.balance) or 0
 	currencyLabel.Text = "Currency: " .. tostring(balance)
 end)
+
+-- Toggle inventory display with I key
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+	if gameProcessedEvent then return end
+	
+	if input.KeyCode == Enum.KeyCode.I then
+		screenGui.Enabled = not screenGui.Enabled
+	end
+end)
+
+-- Register INVENTORY action with InputActionRegistry
+InputActionRegistry.register("InventoryToggle", "InventoryUI", {Enum.KeyCode.I}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("InventoryToggleGamepad", "InventoryUI", {Enum.KeyCode.DPadUp}, InputActionRegistry.Priority.TOGGLE_UI)
 
 -- Return module table (required for ModuleScript compatibility)
 local InventoryUI = {}
