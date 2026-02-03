@@ -310,6 +310,7 @@ else
 		"CureUI",
 		"BaseHealthUI",
 		"InventoryUI",
+		"MapUI",
 		"ShopUI",
 		"AllianceUI",
 		"PuzzleUI",
