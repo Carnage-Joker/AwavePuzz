@@ -553,7 +553,20 @@ end
 
 -- Module interface
 EpilogueUI.initialize = function()
-	-- Initialization handled by ClientMain via bindRemotes()
+	-- Ensure connections table exists
+	connections = connections or {}
+
+	-- Re-establish CharacterRemoving handler to ensure cleanup runs on respawn
+	if connections.CharacterRemovingConnection then
+		connections.CharacterRemovingConnection:Disconnect()
+	end
+
+	if Player and Player.CharacterRemoving then
+		connections.CharacterRemovingConnection = Player.CharacterRemoving:Connect(function()
+			-- Use module-level cleanup to clear connections and timers
+			EpilogueUI:cleanup()
+		end)
+	end
 end
 
 return EpilogueUI
