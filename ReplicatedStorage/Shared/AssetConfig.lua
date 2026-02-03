@@ -218,6 +218,64 @@ AssetConfig.Music = {
 }
 
 -- ========================================
+-- VOICEOVER AUDIO IDs
+-- ========================================
+-- NOTE: Audio assets not yet created - these are placeholders
+-- When voiceover assets are created, replace the empty strings with actual asset IDs
+
+AssetConfig.Voiceovers = {
+	-- Epilogue Voiceovers
+	EpilogueIntro = {
+		SoundId = "",  -- Placeholder - epilogue introduction voiceover
+		Duration = 10
+	},
+	
+	-- Wave Announcements
+	WaveStart = {
+		SoundId = "",  -- Placeholder - "Wave incoming" announcement
+		Duration = 3
+	},
+	WaveComplete = {
+		SoundId = "",  -- Placeholder - "Wave complete" announcement
+		Duration = 2
+	},
+	
+	-- Synthesis Events
+	SynthesisStart = {
+		SoundId = "",  -- Placeholder - "Cure synthesis initiated"
+		Duration = 4
+	},
+	SynthesisWarning = {
+		SoundId = "",  -- Placeholder - "Increased hostile activity detected"
+		Duration = 3
+	},
+	SynthesisComplete = {
+		SoundId = "",  -- Placeholder - "Synthesis complete"
+		Duration = 3
+	},
+	
+	-- Victory/Defeat
+	Victory = {
+		SoundId = "",  -- Placeholder - "Cure complete, outbreak contained"
+		Duration = 5
+	},
+	Defeat = {
+		SoundId = "",  -- Placeholder - "Base compromised, evacuation initiated"
+		Duration = 5
+	},
+	
+	-- Alliance Events
+	AllianceFormed = {
+		SoundId = "",  -- Placeholder - "Alliance established"
+		Duration = 2
+	},
+	AllianceBetrayed = {
+		SoundId = "",  -- Placeholder - "Alliance broken"
+		Duration = 2
+	}
+}
+
+-- ========================================
 -- HELPER FUNCTIONS
 -- ========================================
 
@@ -244,6 +302,11 @@ end
 -- Get a specific music configuration
 function AssetConfig:GetMusic(musicName)
 	return self.Music[musicName]
+end
+
+-- Get a specific voiceover configuration
+function AssetConfig:GetVoiceover(voiceoverName)
+	return self.Voiceovers[voiceoverName]
 end
 
 return AssetConfig

@@ -77,6 +77,7 @@ local SprintService = require(script.Parent.SprintService)
 local AchievementService = require(script.Parent.AchievementService)
 local FunFactService = require(script.Parent.FunFactService)
 local CureSynthesisService = require(script.Parent.CureSynthesisService)
+local VoiceoverService = require(script.Parent.VoiceoverService)
 
 -- Initialize services
 local allianceService = AllianceService.new()
@@ -130,6 +131,9 @@ local cureSynthesisService = CureSynthesisService.new(cureService, gameManager:g
 cureSynthesisService:setPuzzleService(puzzleService)
 print("[BOOT][SERVER] CureSynthesisService initialized")
 
+local voiceoverService = VoiceoverService.new()
+print("[BOOT][SERVER] VoiceoverService initialized")
+
 -- Link services together
 cureService:setPuzzleService(puzzleService)
 cureService:setAllianceService(allianceService)
@@ -141,6 +145,7 @@ gameManager:setCureService(cureService)
 gameManager:setAchievementService(achievementService)
 gameManager:setFunFactService(funFactService)
 gameManager:setCureSynthesisService(cureSynthesisService)
+gameManager:setVoiceoverService(voiceoverService)
 print("[BOOT][SERVER] Services linked")
 
 print("[BOOT][SERVER] Phase 3 complete: All services initialized")
