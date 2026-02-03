@@ -15,6 +15,7 @@ function WaveManager.new()
 	self.zombiesSpawned = 0
 	self.waveActive = false
 	self.intensityMultiplier = 1.0 -- For synthesis system to increase zombie intensity
+	self._spawnMutex = false -- BUGFIX (MEDIUM): Add mutex for thread safety
 	return self
 end
 
@@ -47,13 +48,22 @@ function WaveManager:spawnZombie()
 		return nil
 	end
 
+	-- BUGFIX (MEDIUM): Add mutex for thread safety to prevent race condition
+	if self._spawnMutex then
+		return nil
+	end
+	self._spawnMutex = true
+
 	local maxZombies = self:calculateZombiesForWave(self.currentWave)
 	if self.zombiesSpawned >= maxZombies then
+		self._spawnMutex = false
 		return nil
 	end
 
 	self.zombiesSpawned = self.zombiesSpawned + 1
 	self.zombiesAlive = self.zombiesAlive + 1
+	
+	self._spawnMutex = false
 
 	return {
 		health = self:calculateZombieHealthForWave(self.currentWave),
