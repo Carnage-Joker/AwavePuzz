@@ -14,6 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 --------------------------------------------------------------------------------
 -- UTILS
@@ -466,6 +467,12 @@ local function handleInput(input, gameProcessedEvent)
 end
 
 UserInputService.InputBegan:Connect(handleInput)
+
+-- Register PAUSE action with InputActionRegistry
+-- Phase 3 spec requires P key, but the menu handler (line 436) already responds to FPSConfig.Controls.PauseKey (Escape)
+-- Both keys are registered here to support both the legacy Escape behavior and the new P key requirement
+InputActionRegistry.register("PauseMenu", "FPSMenuController", {Enum.KeyCode.P, Enum.KeyCode.Escape}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("PauseMenuGamepad", "FPSMenuController", {Enum.KeyCode.ButtonStart}, InputActionRegistry.Priority.TOGGLE_UI)
 
 --------------------------------------------------------------------------------
 -- PUBLIC API

@@ -10,6 +10,8 @@ local player = Players.LocalPlayer
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -160,6 +162,18 @@ currencyEvent.OnClientEvent:Connect(function(payload)
 	local balance = tonumber(payload.balance) or 0
 	currencyLabel.Text = "Currency: " .. tostring(balance)
 end)
+
+-- Toggle inventory display using InputManager
+-- Bind to INVENTORY action which supports both keyboard (I) and gamepad (DPadUp)
+InputManager.bindAction(InputManager.Action.INVENTORY, function(active)
+	if active then
+		screenGui.Enabled = not screenGui.Enabled
+	end
+end)
+
+-- Register INVENTORY action with InputActionRegistry
+InputActionRegistry.register("InventoryToggle", "InventoryUI", {Enum.KeyCode.I}, InputActionRegistry.Priority.TOGGLE_UI)
+InputActionRegistry.register("InventoryToggleGamepad", "InventoryUI", {Enum.KeyCode.DPadUp}, InputActionRegistry.Priority.TOGGLE_UI)
 
 -- Return module table (required for ModuleScript compatibility)
 local InventoryUI = {}
