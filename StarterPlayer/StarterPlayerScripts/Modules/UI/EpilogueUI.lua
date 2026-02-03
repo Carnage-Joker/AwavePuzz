@@ -12,7 +12,6 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
@@ -33,39 +32,41 @@ function EpilogueUI.new()
 	self.currentPage = 1
 	self.isTransitioning = false
 	self.autoAdvanceTimer = nil
+	self.remotes = nil -- Will be set via bindRemotes()
 	
 	self.screenGui = nil
 	self.frame = nil
 	
 	self:createUI()
-	self:setupRemoteEvents()
 	
 	return self
 end
 
-function EpilogueUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShowEpilogue",
-		"HideEpilogue",
-		"EpilogueComplete" -- Client -> Server when epilogue finishes
-	})
+-- Bind remotes from RemoteRegistry (called by ClientMain)
+function EpilogueUI:bindRemotes(remotes)
+	if not remotes then
+		warn("[EpilogueUI] bindRemotes: No remotes provided")
+		return
+	end
+	
+	self.remotes = remotes
 	
 	-- Listen for server commands
-	if self.remoteEvents.ShowEpilogue then
-		self.remoteEvents.ShowEpilogue.OnClientEvent:Connect(function()
+	if self.remotes.ShowEpilogue then
+		self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received ShowEpilogue event")
 			self:show()
 		end)
 	end
 	
-	if self.remoteEvents.HideEpilogue then
-		self.remoteEvents.HideEpilogue.OnClientEvent:Connect(function()
+	if self.remotes.HideEpilogue then
+		self.remotes.HideEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received HideEpilogue event")
 			self:hide()
 		end)
 	end
 	
-	print("[EpilogueUI] Initialized and ready")
+	print("[EpilogueUI] Remotes bound and ready")
 end
 
 function EpilogueUI:createUI()
@@ -396,8 +397,8 @@ end
 function EpilogueUI:complete()
 	print("[EpilogueUI] ✓ Complete() called - closing epilogue UI")
 	-- Notify server that epilogue is complete
-	if self.remoteEvents.EpilogueComplete then
-		self.remoteEvents.EpilogueComplete:FireServer()
+	if self.remotes and self.remotes.EpilogueComplete then
+		self.remotes.EpilogueComplete:FireServer()
 	end
 	
 	self:hide()
@@ -525,9 +526,6 @@ function EpilogueUI:fadeOutContent()
 	end)
 end
 
--- Initialize
-local epilogue = EpilogueUI.new()
-
 -- Register input actions with InputActionRegistry
 InputActionRegistry.register("EpilogueContinue", "EpilogueUI", {Enum.KeyCode.Space, Enum.KeyCode.Return}, InputActionRegistry.Priority.FULLSCREEN_STATE)
 InputActionRegistry.register("EpilogueMute", "EpilogueUI", {Enum.KeyCode.M}, InputActionRegistry.Priority.FULLSCREEN_STATE)
@@ -553,9 +551,9 @@ function EpilogueUI:cleanup()
 	end
 end
 
--- Handle respawn - cleanup connections
-connections.characterRemoving = Player.CharacterRemoving:Connect(function()
-	epilogue:cleanup()
-end)
+-- Module interface
+EpilogueUI.initialize = function()
+	-- Initialization handled by ClientMain via bindRemotes()
+end
 
-return epilogue
+return EpilogueUI

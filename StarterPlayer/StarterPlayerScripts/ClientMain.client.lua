@@ -391,6 +391,14 @@ else
 		print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
 	end
 	
+	-- Special handling for EpilogueUI - create instance and bind remotes
+	if UI.EpilogueUI then
+		local epilogueInstance = UI.EpilogueUI.new()
+		epilogueInstance:bindRemotes(remotes)
+		UI.EpilogueUI = epilogueInstance
+		print("[BOOT][CLIENT] ✓ EpilogueUI instance created and remotes bound")
+	end
+	
 	print(string.format("[BOOT][CLIENT] ✓ %d UI systems initialized", uiCount))
 end
 
