@@ -13,6 +13,9 @@ function AllianceGraph.new()
 
 	-- Store edges as adjacency list: userId -> {allyUserId = true, ...}
 	self.edges = {}
+	
+	-- BUGFIX (MEDIUM): Add mutex for thread safety
+	self._edgeMutex = false
 
 	return self
 end
@@ -23,10 +26,17 @@ function AllianceGraph:addEdge(player1, player2)
 		return false
 	end
 
+	-- BUGFIX (MEDIUM): Add mutex to prevent race condition on concurrent addEdge calls
+	if self._edgeMutex then
+		return false
+	end
+	self._edgeMutex = true
+
 	local userId1 = player1.UserId
 	local userId2 = player2.UserId
 
 	if userId1 == userId2 then
+		self._edgeMutex = false
 		return false
 	end
 
@@ -42,6 +52,7 @@ function AllianceGraph:addEdge(player1, player2)
 	self.edges[userId1][userId2] = true
 	self.edges[userId2][userId1] = true
 
+	self._edgeMutex = false
 	return true
 end
 

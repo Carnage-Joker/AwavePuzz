@@ -378,10 +378,13 @@ end
 
 function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	local userId = player.UserId
+	
+	-- BUGFIX (MEDIUM): Initialize player if not found to prevent silent failure
 	if not self.playerPuzzles[userId] then
-		warn("[PuzzleService] Player not initialized:", player.Name)
-		return
+		warn("[PuzzleService] Player not initialized:", player.Name, "- initializing now")
+		self:initializePlayer(player)
 	end
+	
 	local puzzleState = self.playerPuzzles[userId][componentName]
 
 	if not puzzleState or not puzzleState.currentPuzzle then
@@ -644,11 +647,14 @@ function PuzzleService:onBetrayal(betrayer, victim)
 
 	-- Steal solved puzzles
 	for componentName, puzzleState in pairs(victimPuzzles) do
-		if puzzleState.solved and betrayerPuzzles[componentName] and not betrayerPuzzles[componentName].solved then
-			-- Steal with probability
-			if math.random() < PuzzleConfig.BetrayalMechanics.stealPercentage then
-				betrayerPuzzles[componentName].solved = true
-				print("[PuzzleService]", betrayer.Name, "stole", componentName, "puzzle from", victim.Name)
+		-- BUGFIX (MEDIUM): Add validation to prevent crash if betrayer doesn't have component structure
+		if puzzleState.solved and betrayerPuzzles[componentName] then
+			if not betrayerPuzzles[componentName].solved then
+				-- Steal with probability
+				if math.random() < PuzzleConfig.BetrayalMechanics.stealPercentage then
+					betrayerPuzzles[componentName].solved = true
+					print("[PuzzleService]", betrayer.Name, "stole", componentName, "puzzle from", victim.Name)
+				end
 			end
 		end
 	end

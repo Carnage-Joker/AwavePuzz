@@ -254,9 +254,10 @@ function ItemSpawner:spawnItem(itemType)
 
 	local spawnPoint = self:getRandomSpawnPositionNearBase()
 
-	-- Generate unique ID using counter and tick for collision prevention
-	self.itemCounter = self.itemCounter + 1
-	local itemId = string.format("item_%d_%.0f", self.itemCounter, tick() * 1000)
+	-- BUGFIX (MEDIUM): Generate ID without incrementing counter yet
+	-- Counter will increment only after successful spawn
+	local tempCounter = self.itemCounter + 1
+	local itemId = string.format("item_%d_%.0f", tempCounter, tick() * 1000)
 
 	local part = Instance.new("Part")
 	part.Name = itemType .. "_Pickup"
@@ -375,6 +376,9 @@ function ItemSpawner:spawnItem(itemType)
 		rotationConnection = rotationConnection
 	}
 	self:addActiveItem(itemId, itemData)
+	
+	-- BUGFIX (MEDIUM): Increment counter only after successful spawn
+	self.itemCounter = tempCounter
 
 	print("Spawned " .. itemType .. " pack at " .. tostring(spawnPoint))
 
