@@ -59,6 +59,17 @@ GameManager.States = {
 	SCOREBOARD = "Scoreboard"
 }
 
+-- Lobby resolution state machine (internal substates within LOBBY state)
+GameManager.LobbyResolutionStates = {
+	VOTING = "Voting",               -- Players are voting for map
+	MAP_LOADING = "MapLoading",      -- Map load initiated
+	MAP_LOADED = "MapLoaded",        -- Map successfully loaded
+	CONFIGURING = "Configuring",     -- Configuring spawners and notifying spawn manager
+	SPAWNING = "Spawning",           -- Spawning players
+	COMPLETE = "Complete",           -- Ready to transition to game
+	FAILED = "Failed"                -- Map load or config failed (will retry)
+}
+
 -- Constants
 local DEFAULT_WEAPON_SYNC_DELAY = 0.5  -- Fallback delay in seconds before sending weapon updates on character respawn
 local WEAPON_SYNC_DELAY = (type(GameConfig) == "table" and type(GameConfig.WEAPON_SYNC_DELAY) == "number")
@@ -154,9 +165,12 @@ function GameManager.new(allianceService)
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
-	-- ✅ FIX: prevents double map load / double base setup / double spawning
-	self._lobbyResolved = false
-	self._lastLobbyResolveAttempt = 0     -- Time-based debounce for lobby resolution
+	-- ✅ REFACTOR: Lobby resolution state machine (replaces simple _lobbyResolved flag)
+	-- Initialize to VOTING as a safe default (will be reset when lobby actually starts)
+	self._lobbyResolutionState = GameManager.LobbyResolutionStates.VOTING
+	self._lastLobbyResolveAttempt = 0     -- Time-based debounce for retry attempts
+	self._lobbyRetryCount = 0             -- Track consecutive failures
+	self._selectedMapId = nil             -- Cache selected map ID during resolution
 	
 	-- Cleanup tracking
 	self._heartbeatConnection = nil       -- Will be set by MainServer
@@ -731,8 +745,10 @@ function GameManager:startLobby()
 	self:setState(GameManager.States.LOBBY)
 	self.stateTimer = GameConfig.LOBBY_VOTING_TIME
 
-	-- ✅ FIX: reset latch for this lobby instance
-	self._lobbyResolved = false
+	-- ✅ REFACTOR: Reset lobby resolution state machine
+	self._lobbyResolutionState = GameManager.LobbyResolutionStates.VOTING
+	self._selectedMapId = nil
+	self._lobbyRetryCount = 0
 
 	self:resetForNewRound()
 
@@ -1234,56 +1250,102 @@ end
 function GameManager:updateLobby(deltaTime)
 	self.lobbyManager:update(deltaTime)
 
-	local selectedMapId = self.lobbyManager:getSelectedMapId()
-
-	-- ✅ FIX: one-shot latch to stop double load/spawn with time-based debounce
-	if self._lobbyResolved then
-		return
-	end
+	-- ✅ REFACTOR: Use proper state machine for lobby resolution
+	local state = self._lobbyResolutionState
 	
-	-- Time-based debounce to prevent race conditions
-	local now = tick()
-	local debounceTime = GameConfig.Security and GameConfig.Security.LOBBY_DEBOUNCE_TIME or 1.0
-	if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < debounceTime then
-		-- Too soon since last attempt, skip to prevent race
-		return
-	end
-	
-	self._lastLobbyResolveAttempt = now
-
-	if not self.lobbyManager:isVotingActive() and selectedMapId then
-		print(string.format("[Flow] Lobby -> MapLoading(%s) - Voting complete, loading map", selectedMapId))
-
+	-- Handle each state in the lobby resolution state machine
+	if state == GameManager.LobbyResolutionStates.VOTING then
+		-- Check if voting is complete
+		local selectedMapId = self.lobbyManager:getSelectedMapId()
+		if not self.lobbyManager:isVotingActive() and selectedMapId then
+			print(string.format("[Flow] Lobby -> MapLoading(%s) - Voting complete", selectedMapId))
+			self._selectedMapId = selectedMapId
+			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADING
+		end
+		
+	elseif state == GameManager.LobbyResolutionStates.MAP_LOADING then
+		-- Attempt to load the selected map
+		-- Debounce to prevent rapid retries
+		local now = tick()
+		local debounceTime = GameConfig.Security and GameConfig.Security.LOBBY_DEBOUNCE_TIME or 1.0
+		if self._lastLobbyResolveAttempt and (now - self._lastLobbyResolveAttempt) < debounceTime then
+			-- Too soon since last attempt, skip to prevent race
+			return
+		end
+		self._lastLobbyResolveAttempt = now
+		
+		print(string.format("[Flow] MapLoading -> Attempting to load map: %s", self._selectedMapId))
+		
 		if GameConfig.ENABLE_MULTI_MAP then
+			-- Cleanup lobby area
 			if self.lobbySetup then
 				self.lobbySetup:cleanup()
 			end
-
-			-- Trigger map load; MapManager:load() now returns true on success, false on failure
-			local mapLoaded = self.mapManager:load(selectedMapId)
 			
-			-- Validate that map loaded successfully
+			-- Trigger map load; MapManager:load() returns true on success, false on failure
+			local mapLoaded = self.mapManager:load(self._selectedMapId)
+			
 			if not mapLoaded then
-				warn("[GameManager] Failed to load map: " .. tostring(selectedMapId))
-				-- Do NOT set _lobbyResolved so we can retry on next cycle
+				-- Map load failed, transition to FAILED state
+				warn(string.format("[GameManager] Failed to load map: %s (attempt %d)", 
+					tostring(self._selectedMapId), self._lobbyRetryCount + 1))
+				self._lobbyRetryCount = self._lobbyRetryCount + 1
+				self._lobbyResolutionState = GameManager.LobbyResolutionStates.FAILED
+				
+				-- If too many failures, fall back to default map
+				local maxRetries = GameConfig.MAX_LOBBY_RETRIES or 3
+				if self._lobbyRetryCount >= maxRetries then
+					warn("[GameManager] Max lobby retries reached, will try default map")
+					self._selectedMapId = nil -- Will use default map on next attempt
+					self._lobbyRetryCount = 0
+				end
 				return
 			end
 			
-			-- BUGFIX (MEDIUM): Set _lobbyResolved AFTER successful map load to prevent race condition
-			self._lobbyResolved = true
-			
-			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", selectedMapId))
-			
-			self:configureSpawnersForMap()
-
-			-- Notify PlayerSpawnManager that map has loaded
-			self.playerSpawnManager:onMapLoaded()
-
-			print("[Flow] MapLoaded -> Spawn -> Spawning all players on map")
-			self.playerSpawnManager:spawnAllPlayersOnMap()
+			-- Map loaded successfully
+			local resolvedMapId = nil
+			if self.mapManager and self.mapManager.getCurrentMapId then
+				resolvedMapId = self.mapManager:getCurrentMapId()
+			end
+			if resolvedMapId ~= nil then
+				self._selectedMapId = resolvedMapId
+			end
+			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", tostring(resolvedMapId or self._selectedMapId)))
+			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADED
+		else
+			-- Multi-map disabled: use existing workspace map but still run configuration/spawn steps
+			print("[Flow] MapLoading -> Multi-map disabled, using existing map and continuing to MAP_LOADED")
+			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADED
 		end
-
+		
+	elseif state == GameManager.LobbyResolutionStates.MAP_LOADED then
+		-- Map loaded successfully, transition to configuration
+		print("[Flow] MapLoaded -> Configuring -> Preparing to configure spawners")
+		self._lobbyResolutionState = GameManager.LobbyResolutionStates.CONFIGURING
+		
+	elseif state == GameManager.LobbyResolutionStates.CONFIGURING then
+		-- Configure spawners with the loaded map and notify spawn manager
+		print("[Flow] Configuring -> Spawning -> Configuring spawners and notifying spawn manager")
+		self:configureSpawnersForMap()
+		self.playerSpawnManager:onMapLoaded()
+		self._lobbyResolutionState = GameManager.LobbyResolutionStates.SPAWNING
+		
+	elseif state == GameManager.LobbyResolutionStates.SPAWNING then
+		-- Spawn all players on the map
+		print("[Flow] Spawning -> Complete -> Spawning all players on map")
+		self.playerSpawnManager:spawnAllPlayersOnMap()
+		self._lobbyResolutionState = GameManager.LobbyResolutionStates.COMPLETE
+		
+	elseif state == GameManager.LobbyResolutionStates.COMPLETE then
+		-- Transition to game start
+		print("[Flow] Complete -> StartGame -> Starting game")
 		self:startGame()
+		-- State machine will be reset on next lobby start
+		
+	elseif state == GameManager.LobbyResolutionStates.FAILED then
+		-- Retry map loading after debounce period
+		-- Will automatically retry on next update cycle due to debounce
+		self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADING
 	end
 end
 

@@ -43,12 +43,16 @@ This document lists bugs found during the comprehensive audit that cannot be eas
 
 ## 3. Race Conditions Requiring State Machine Refactor
 
-### Lobby Resolution Race Condition (MEDIUM)
-- **Location**: GameManager.lua lines 1175-1209
-- **Issue**: `_lobbyResolved` set true before map loads; race condition on failure reset
-- **Why Unfixable**: Requires complete lobby flow refactor with proper state machine
-- **Workaround**: Rapid map load failures rare in practice; debounce mitigates most issues
-- **Estimated Effort**: 6-8 hours for proper state machine
+### ~~Lobby Resolution Race Condition (MEDIUM)~~ **[FIXED]**
+- **Location**: ~~GameManager.lua lines 1175-1209~~ **Fixed in GameManager.lua**
+- **Issue**: ~~`_lobbyResolved` set true before map loads; race condition on failure reset~~
+- **Status**: **✅ RESOLVED** - Implemented proper state machine with LobbyResolutionStates enum
+- **Solution**: Replaced boolean flag with proper state machine tracking each phase:
+  - VOTING → MAP_LOADING → MAP_LOADED → CONFIGURING → SPAWNING → COMPLETE
+  - Added retry logic with max attempts and fallback to default map
+  - Debouncing only applied during MAP_LOADING state
+  - Clear state transitions prevent double-loading and race conditions
+- **Completed**: 2026-02-03
 
 ### Portal Queue Race During Launch (HIGH)
 - **Location**: PortalMatchmakingService.lua lines 541-553

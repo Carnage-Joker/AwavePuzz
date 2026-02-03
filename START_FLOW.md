@@ -148,7 +148,9 @@ OR
 - Map MUST load at pivot (5000, 0, 0) - separate from lobby at (8000, 5, 0)
 - With portal matchmaking, lobby persists for late joiners
 - Without portal matchmaking, lobby is cleaned up after map load
-- Double-load prevention: `_lobbyResolved` latch prevents race conditions
+- Double-load prevention: Proper `LobbyResolutionStates` state machine prevents race conditions
+  - States: VOTING → MAP_LOADING → MAP_LOADED → CONFIGURING → SPAWNING → COMPLETE
+  - Automatic retry on failure with fallback to default map
 
 ### 6. Player Spawn on Map
 
