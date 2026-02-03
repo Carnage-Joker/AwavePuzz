@@ -107,19 +107,13 @@ end
 function PuzzleService:sendPuzzleProgress(player)
 	local progress = self:getPuzzleProgress(player)
 
-	-- Add component counts from CureService
+	-- Add component counts from PlayerManager (using dictionary structure)
 	if self.playerManager then
 		local playerData = self.playerManager:GetPlayerData(player)
-		if playerData and playerData.CureComponents then
+		if playerData and playerData.cureComponents then
 			progress.componentCounts = {}
 			for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
-				local count = 0
-				for _, comp in ipairs(playerData.CureComponents) do
-					if comp == componentName then
-						count = count + 1
-					end
-				end
-				progress.componentCounts[componentName] = count
+				progress.componentCounts[componentName] = playerData.cureComponents[componentName] or 0
 			end
 		end
 	end
@@ -162,17 +156,11 @@ end
 function PuzzleService:checkPlayerHasComponents(player, componentName)
 	-- Check if player has collected 5 of the specified component
 	local playerData = self.playerManager:GetPlayerData(player)
-	if not playerData or not playerData.CureComponents then
+	if not playerData or not playerData.cureComponents then
 		return false
 	end
 
-	local count = 0
-	for _, comp in ipairs(playerData.CureComponents) do
-		if comp == componentName then
-			count = count + 1
-		end
-	end
-
+	local count = playerData.cureComponents[componentName] or 0
 	return count >= GameConfig.CURE_COMPONENTS_REQUIRED
 end
 

@@ -119,14 +119,9 @@ function CureService:addComponentProgress(player, componentName, amount)
 		return false
 	end
 	
-	-- Initialize CureComponents if not exists
-	if not playerData.CureComponents then
-		playerData.CureComponents = {}
-	end
-	
-	-- Batch add components to player's inventory
+	-- Add components using PlayerManager's method (single source of truth)
 	for i = 1, amount do
-		table.insert(playerData.CureComponents, componentName)
+		self.playerManager:addCureComponent(player, componentName)
 	end
 	
 	-- Update component counter once
@@ -178,13 +173,8 @@ function CureService:handleDepositComponent(player, componentName)
 		return false
 	end
 
-	-- Initialize CureComponents if not exists
-	if not playerData.CureComponents then
-		playerData.CureComponents = {}
-	end
-
-	-- Add component to player's inventory
-	table.insert(playerData.CureComponents, componentName)
+	-- Add component using PlayerManager's method (single source of truth)
+	self.playerManager:addCureComponent(player, componentName)
 
 	-- Update component counter
 	self.playerComponents[userId][componentName] = self.playerComponents[userId][componentName] + 1
