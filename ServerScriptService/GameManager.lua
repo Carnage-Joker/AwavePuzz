@@ -1306,8 +1306,9 @@ function GameManager:updateLobby(deltaTime)
 			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", self._selectedMapId))
 			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADED
 		else
-			-- Multi-map disabled, skip directly to complete
-			self._lobbyResolutionState = GameManager.LobbyResolutionStates.COMPLETE
+			-- Multi-map disabled: use existing workspace map but still run configuration/spawn steps
+			print("[Flow] MapLoading -> Multi-map disabled, using existing map and continuing to MAP_LOADED")
+			self._lobbyResolutionState = GameManager.LobbyResolutionStates.MAP_LOADED
 		end
 		
 	elseif state == GameManager.LobbyResolutionStates.MAP_LOADED then
