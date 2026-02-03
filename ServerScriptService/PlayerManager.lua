@@ -505,6 +505,23 @@ function PlayerManager:addCureComponent(player, componentName)
 	return true
 end
 
+function PlayerManager:removeCureComponent(player, componentName, amount)
+	local playerData = self.players[player.UserId]
+	if not playerData or not componentName or not amount or amount <= 0 then
+		return 0
+	end
+
+	local currentCount = playerData.cureComponents[componentName] or 0
+	local actualRemoved = math.min(currentCount, amount)
+	
+	playerData.cureComponents[componentName] = currentCount - actualRemoved
+	if playerData.cureComponents[componentName] == 0 then
+		playerData.cureComponents[componentName] = nil
+	end
+	
+	return actualRemoved
+end
+
 function PlayerManager:getCureComponents(player)
 	local playerData = self.players[player.UserId]
 	return playerData and playerData.cureComponents or {}
