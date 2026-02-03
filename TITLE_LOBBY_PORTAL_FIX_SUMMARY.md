@@ -297,13 +297,20 @@ Result: Portals always discovered after lobby structure exists
 - `[PortalMatchmakingService] Found X potential portal objects in Portals folder`
 - `[PortalMatchmakingService] Discovery complete: X portals registered`
 
+## Implementation Checklist
+
+### RemoteEvent Duplication
+- [x] Unified remote usage to `RemoteRegistry` across title/epilogue UIs
+- [x] `TitleScreenUI` updated to use `RemoteRegistry` remotes
+- [x] `EpilogueUI` updated to use `RemoteRegistry` remotes
+
 ## Testing Checklist
 
 ### RemoteEvent Duplication
-- [x] No duplicate RemoteEvents in ReplicatedStorage.RemoteEvents
-- [x] TitleScreenUI uses RemoteRegistry remotes
-- [x] EpilogueUI uses RemoteRegistry remotes
-- [x] All title screen remotes fire correctly
+- [ ] No duplicate RemoteEvents in `ReplicatedStorage.RemoteEvents`
+- [ ] `TitleScreenUI` uses `RemoteRegistry` remotes at runtime
+- [ ] `EpilogueUI` uses `RemoteRegistry` remotes at runtime
+- [ ] All title screen remotes fire correctly
 
 ### Client State Management
 - [ ] Title screen appears on join (if enabled)
