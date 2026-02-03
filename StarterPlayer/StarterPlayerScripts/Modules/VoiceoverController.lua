@@ -195,7 +195,15 @@ function VoiceoverController:playVoiceover(voiceoverData)
 end
 
 function VoiceoverController:stopVoiceover()
-	if not self.isPlaying then
+	-- Only return early if there is truly nothing to stop.
+	-- We intentionally check actual state (sound/tween/UI) instead of only isPlaying
+	-- so that lingering fade-out tweens from a previous voiceover don't interfere
+	-- with a newly started one.
+	local hasActiveSound = self.currentSound ~= nil
+	local hasActiveTween = self.currentTween ~= nil
+	local isSubtitleVisible = self.subtitleFrame and self.subtitleFrame.Visible
+	
+	if not (self.isPlaying or hasActiveSound or hasActiveTween or isSubtitleVisible) then
 		return
 	end
 	
