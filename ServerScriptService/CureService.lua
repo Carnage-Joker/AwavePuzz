@@ -496,21 +496,8 @@ function CureService:removeComponentsFromPlayer(player, componentName, amount)
 
 	self:initializePlayer(player)
 	
-	local playerData = self.playerManager:GetPlayerData(player)
-	if not playerData or not playerData.cureComponents then
-		return 0
-	end
-	
-	local currentCount = playerData.cureComponents[componentName] or 0
-	local actualRemoved = math.min(currentCount, amount)
-	
-	-- Remove from PlayerManager (single source of truth)
-	playerData.cureComponents[componentName] = currentCount - actualRemoved
-	if playerData.cureComponents[componentName] == 0 then
-		playerData.cureComponents[componentName] = nil
-	end
-	
-	return actualRemoved
+	-- Remove using PlayerManager's method (proper encapsulation)
+	return self.playerManager:removeCureComponent(player, componentName, amount)
 end
 
 -- Transfer components from one player to another
