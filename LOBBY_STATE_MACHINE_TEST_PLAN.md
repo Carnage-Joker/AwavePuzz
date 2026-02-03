@@ -7,8 +7,8 @@ This document describes how to manually test the new lobby resolution state mach
 Replaced the simple `_lobbyResolved` boolean flag with a proper state machine (`LobbyResolutionStates`) that tracks each phase of lobby resolution:
 1. **VOTING** - Players voting for map
 2. **MAP_LOADING** - Map load initiated
-3. **MAP_LOADED** - Map successfully loaded
-4. **CONFIGURING** - Configuring spawners
+3. **MAP_LOADED** - Map successfully loaded (transitions to configuration)
+4. **CONFIGURING** - Configuring spawners and notifying spawn manager
 5. **SPAWNING** - Spawning players
 6. **COMPLETE** - Ready to transition to game
 7. **FAILED** - Map load failed (will retry)
@@ -29,8 +29,8 @@ Replaced the simple `_lobbyResolved` boolean flag with a proper state machine (`
 [Flow] Lobby -> MapLoading(<mapId>) - Voting complete
 [Flow] MapLoading -> Attempting to load map: <mapId>
 [Flow] MapLoaded -> Map <mapId> loaded successfully
-[Flow] MapLoaded -> Configuring -> Configuring spawners
-[Flow] Configuring -> Spawning -> Notifying spawn manager
+[Flow] MapLoaded -> Configuring -> Preparing to configure spawners
+[Flow] Configuring -> Spawning -> Configuring spawners and notifying spawn manager
 [Flow] Spawning -> Complete -> Spawning all players on map
 [Flow] Complete -> StartGame -> Starting game
 ```

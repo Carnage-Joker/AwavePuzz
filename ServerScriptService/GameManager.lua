@@ -64,7 +64,7 @@ GameManager.LobbyResolutionStates = {
 	VOTING = "Voting",               -- Players are voting for map
 	MAP_LOADING = "MapLoading",      -- Map load initiated
 	MAP_LOADED = "MapLoaded",        -- Map successfully loaded
-	CONFIGURING = "Configuring",     -- Configuring spawners
+	CONFIGURING = "Configuring",     -- Configuring spawners and notifying spawn manager
 	SPAWNING = "Spawning",           -- Spawning players
 	COMPLETE = "Complete",           -- Ready to transition to game
 	FAILED = "Failed"                -- Map load or config failed (will retry)
@@ -1319,14 +1319,14 @@ function GameManager:updateLobby(deltaTime)
 		end
 		
 	elseif state == GameManager.LobbyResolutionStates.MAP_LOADED then
-		-- Configure spawners with the loaded map
-		print("[Flow] MapLoaded -> Configuring -> Configuring spawners")
-		self:configureSpawnersForMap()
+		-- Map loaded successfully, transition to configuration
+		print("[Flow] MapLoaded -> Configuring -> Preparing to configure spawners")
 		self._lobbyResolutionState = GameManager.LobbyResolutionStates.CONFIGURING
 		
 	elseif state == GameManager.LobbyResolutionStates.CONFIGURING then
-		-- Notify PlayerSpawnManager and prepare for spawning
-		print("[Flow] Configuring -> Spawning -> Notifying spawn manager")
+		-- Configure spawners with the loaded map and notify spawn manager
+		print("[Flow] Configuring -> Spawning -> Configuring spawners and notifying spawn manager")
+		self:configureSpawnersForMap()
 		self.playerSpawnManager:onMapLoaded()
 		self._lobbyResolutionState = GameManager.LobbyResolutionStates.SPAWNING
 		
