@@ -197,4 +197,7 @@ GameConfig.Security = {
 	LOBBY_DEBOUNCE_TIME = 1.0, -- Seconds between lobby resolution attempts (prevent race conditions)
 }
 
+-- Lobby Settings
+GameConfig.MAX_LOBBY_RETRIES = 3 -- Maximum retry attempts for map loading before falling back to default map
+
 return GameConfig
