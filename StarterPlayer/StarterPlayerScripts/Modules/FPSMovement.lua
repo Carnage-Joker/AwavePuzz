@@ -471,6 +471,17 @@ function FPSMovementController.setEnabled(enabled)
 		keysHeld.left = false
 		keysHeld.right = false
 		movementVector = Vector2.new(0, 0)
+
+		-- Ensure Humanoid WalkSpeed is reset to base when movement is disabled
+		local character = player.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				-- Use configured base walk speed if available, otherwise fall back to Roblox default
+				local baseSpeed = humanoid:GetAttribute("BaseWalkSpeed") or 16
+				humanoid.WalkSpeed = baseSpeed
+			end
+		end
 	end
 	print(string.format("[FPSMovement] Movement %s", enabled and "enabled" or "disabled"))
 end
