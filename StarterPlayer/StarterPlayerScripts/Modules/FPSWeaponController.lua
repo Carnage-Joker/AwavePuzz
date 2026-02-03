@@ -571,8 +571,9 @@ end)
 --------------------------------------------------------------------------------
 
 local function initialize()
-	-- Register weapon switching input actions with InputActionRegistry
-	-- Note: These are defined in InputManager but not yet fully implemented
+	-- Register weapon switching input actions with InputActionRegistry for conflict detection
+	-- Phase 3: Actions are registered but weapon switching logic is not yet implemented in this controller
+	-- Future work: Add weapon inventory system and switching handlers
 	InputActionRegistry.register("WeaponSwitch", "FPSWeaponController", {Enum.KeyCode.Q}, InputActionRegistry.Priority.CORE_GAMEPLAY)
 	InputActionRegistry.register("WeaponSwitchGamepad", "FPSWeaponController", {Enum.KeyCode.ButtonY}, InputActionRegistry.Priority.CORE_GAMEPLAY)
 	InputActionRegistry.register("NextWeapon", "FPSWeaponController", {Enum.KeyCode.E}, InputActionRegistry.Priority.CORE_GAMEPLAY)
