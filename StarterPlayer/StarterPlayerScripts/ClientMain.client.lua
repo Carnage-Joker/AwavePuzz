@@ -457,9 +457,9 @@ end
 
 -- Connect to server GameStateUpdate
 if remotes.GameStateUpdate then
-	remotes.GameStateUpdate.OnClientEvent:Connect(function(stateName)
-		if stateName then
-			applyState(stateName)
+	remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
+		if data and data.state then
+			applyState(data.state)
 		end
 	end)
 	print("[BOOT][CLIENT] ✓ Client state router connected to GameStateUpdate")
