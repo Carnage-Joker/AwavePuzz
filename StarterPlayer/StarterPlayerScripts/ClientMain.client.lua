@@ -417,8 +417,11 @@ local function applyState(stateName)
 	local enableMovement = false
 	local enableWeapons = false
 	
+	-- Treat any epilogue-like state (e.g. "EpilogueActive", "ShowingEpilogue") as epilogue
+	local isEpilogueState = typeof(stateName) == "string" and string.find(stateName, "Epilogue", 1, true) ~= nil
+	
 	-- Map states to movement/weapon enable flags
-	if stateName == "TitleScreen" or stateName == "Epilogue" then
+	if stateName == "TitleScreen" or isEpilogueState then
 		-- Title and epilogue: no movement, no weapons
 		enableMovement = false
 		enableWeapons = false
