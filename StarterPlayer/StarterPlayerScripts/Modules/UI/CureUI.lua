@@ -473,7 +473,153 @@ end)
 -- Initial state
 updateProgress(0, {})
 
-print("CureUI initialized")
+-- ========================================
+-- SYNTHESIS UI INTEGRATION
+-- ========================================
+
+-- Create synthesis overlay (hidden by default)
+local synthesisOverlay = Instance.new("Frame")
+synthesisOverlay.Name = "SynthesisOverlay"
+synthesisOverlay.Size = UDim2.new(0.8, 0, 0.6, 0)
+synthesisOverlay.Position = UDim2.new(0.5, 0, 0.5, 0)
+synthesisOverlay.AnchorPoint = Vector2.new(0.5, 0.5)
+synthesisOverlay.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+synthesisOverlay.BackgroundTransparency = 0.2
+synthesisOverlay.BorderSizePixel = 3
+synthesisOverlay.BorderColor3 = Color3.fromRGB(255, 100, 100)
+synthesisOverlay.Visible = false
+synthesisOverlay.ZIndex = 100
+synthesisOverlay.Parent = screenGui
+
+local synthesisCorner = Instance.new("UICorner")
+synthesisCorner.CornerRadius = UDim.new(0, 12)
+synthesisCorner.Parent = synthesisOverlay
+
+-- Synthesis title
+local synthesisTitle = Instance.new("TextLabel")
+synthesisTitle.Name = "SynthesisTitle"
+synthesisTitle.Size = UDim2.new(1, -20, 0, 50)
+synthesisTitle.Position = UDim2.new(0, 10, 0, 10)
+synthesisTitle.BackgroundTransparency = 1
+synthesisTitle.Text = "CURE SYNTHESIS IN PROGRESS"
+synthesisTitle.TextColor3 = Color3.fromRGB(255, 100, 100)
+synthesisTitle.TextSize = 24
+synthesisTitle.Font = Enum.Font.GothamBold
+synthesisTitle.TextXAlignment = Enum.TextXAlignment.Center
+synthesisTitle.Parent = synthesisOverlay
+
+-- Synthesis status label
+local synthesisStatus = Instance.new("TextLabel")
+synthesisStatus.Name = "SynthesisStatus"
+synthesisStatus.Size = UDim2.new(1, -40, 0, 30)
+synthesisStatus.Position = UDim2.new(0, 20, 0, 70)
+synthesisStatus.BackgroundTransparency = 1
+synthesisStatus.Text = "Initiated by: Unknown"
+synthesisStatus.TextColor3 = Color3.fromRGB(200, 200, 200)
+synthesisStatus.TextSize = 18
+synthesisStatus.Font = Enum.Font.Gotham
+synthesisStatus.TextXAlignment = Enum.TextXAlignment.Center
+synthesisStatus.Parent = synthesisOverlay
+
+-- Time remaining label
+local synthesisTimer = Instance.new("TextLabel")
+synthesisTimer.Name = "SynthesisTimer"
+synthesisTimer.Size = UDim2.new(1, -40, 0, 40)
+synthesisTimer.Position = UDim2.new(0, 20, 0, 110)
+synthesisTimer.BackgroundTransparency = 1
+synthesisTimer.Text = "Time Remaining: 120s"
+synthesisTimer.TextColor3 = Color3.fromRGB(255, 200, 100)
+synthesisTimer.TextSize = 20
+synthesisTimer.Font = Enum.Font.GothamBold
+synthesisTimer.TextXAlignment = Enum.TextXAlignment.Center
+synthesisTimer.Parent = synthesisOverlay
+
+-- Puzzle progress label
+local puzzleProgress = Instance.new("TextLabel")
+puzzleProgress.Name = "PuzzleProgress"
+puzzleProgress.Size = UDim2.new(1, -40, 0, 40)
+puzzleProgress.Position = UDim2.new(0, 20, 0, 160)
+puzzleProgress.BackgroundTransparency = 1
+puzzleProgress.Text = "Puzzles Completed: 0 / 5"
+puzzleProgress.TextColor3 = Color3.fromRGB(100, 200, 255)
+puzzleProgress.TextSize = 22
+puzzleProgress.Font = Enum.Font.GothamBold
+puzzleProgress.TextXAlignment = Enum.TextXAlignment.Center
+puzzleProgress.Parent = synthesisOverlay
+
+-- Warning message
+local warningLabel = Instance.new("TextLabel")
+warningLabel.Name = "WarningLabel"
+warningLabel.Size = UDim2.new(1, -40, 0, 60)
+warningLabel.Position = UDim2.new(0, 20, 1, -80)
+warningLabel.BackgroundTransparency = 1
+warningLabel.Text = "⚠ WARNING: Zombie intensity increased during synthesis! ⚠"
+warningLabel.TextColor3 = Color3.fromRGB(255, 150, 50)
+warningLabel.TextSize = 16
+warningLabel.Font = Enum.Font.GothamMedium
+warningLabel.TextWrapped = true
+warningLabel.TextXAlignment = Enum.TextXAlignment.Center
+warningLabel.Parent = synthesisOverlay
+
+-- Synthesis state update handler
+local synthesisStateUpdateEvent = remoteEvents:FindFirstChild("SynthesisStateUpdate")
+if synthesisStateUpdateEvent then
+	synthesisStateUpdateEvent.OnClientEvent:Connect(function(stateData)
+		if type(stateData) ~= "table" then
+			return
+		end
+		
+		-- Update overlay visibility based on state
+		if stateData.state == "Active" then
+			synthesisOverlay.Visible = true
+			
+			-- Update status
+			if stateData.initiator then
+				synthesisStatus.Text = "Initiated by: " .. tostring(stateData.initiator)
+			end
+			
+			-- Update timer
+			if stateData.timeRemaining then
+				synthesisTimer.Text = string.format("Time Remaining: %ds", math.ceil(stateData.timeRemaining))
+			elseif stateData.timeLimit then
+				synthesisTimer.Text = string.format("Time Limit: %ds", stateData.timeLimit)
+			end
+			
+			-- Update puzzle progress
+			if stateData.puzzlesCompleted and stateData.puzzlesTotal then
+				puzzleProgress.Text = string.format("Puzzles Completed: %d / %d", stateData.puzzlesCompleted, stateData.puzzlesTotal)
+			end
+		else
+			-- Hide overlay for Success, Failed, or Idle states
+			synthesisOverlay.Visible = false
+		end
+	end)
+	print("[CureUI] Synthesis state update listener registered")
+else
+	warn("[CureUI] SynthesisStateUpdate remote event not found")
+end
+
+-- Synthesis complete handler
+local synthesisCompleteEvent = remoteEvents:FindFirstChild("SynthesisComplete")
+if synthesisCompleteEvent then
+	synthesisCompleteEvent.OnClientEvent:Connect(function()
+		-- Hide synthesis overlay
+		synthesisOverlay.Visible = false
+		print("[CureUI] Synthesis complete!")
+	end)
+end
+
+-- Synthesis failed handler
+local synthesisFailedEvent = remoteEvents:FindFirstChild("SynthesisFailed")
+if synthesisFailedEvent then
+	synthesisFailedEvent.OnClientEvent:Connect(function(reason)
+		-- Hide synthesis overlay
+		synthesisOverlay.Visible = false
+		warn("[CureUI] Synthesis failed:", reason)
+	end)
+end
+
+print("CureUI initialized with synthesis UI integration")
 
 -- Return module table (required for ModuleScript compatibility)
 local CureUI = {}

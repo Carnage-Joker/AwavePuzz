@@ -74,6 +74,7 @@ local AudioController = nil
 local MenuController = nil
 local MusicController = nil
 local StaminaClient = nil
+local VoiceoverController = nil
 
 -- UI systems
 local UI = {}
@@ -281,6 +282,26 @@ local function initializeStamina()
 	end
 end
 
+-- Voiceover System
+local function initializeVoiceover()
+	print("[BOOT][CLIENT] Initializing Voiceover...")
+	local voiceoverModule = clientModules:FindFirstChild("VoiceoverController")
+	if voiceoverModule then
+		local success, result = pcall(function()
+			return require(voiceoverModule)
+		end)
+		
+		if success then
+			VoiceoverController = result.new()
+			print("[BOOT][CLIENT] ✓ Voiceover initialized")
+		else
+			warn("[BOOT][CLIENT] ✗ Voiceover failed to load:", result)
+		end
+	else
+		warn("[BOOT][CLIENT] ✗ Voiceover module not found")
+	end
+end
+
 -- Initialize all core systems in order
 initializeCamera()
 initializeMovement()
@@ -290,6 +311,7 @@ initializeAudio()
 initializeMusic()
 initializeMenu()
 initializeStamina()
+initializeVoiceover()
 
 print("[BOOT][CLIENT] Phase 5 complete: Core systems initialized")
 

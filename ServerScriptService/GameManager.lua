@@ -676,6 +676,11 @@ function GameManager:setCureSynthesisService(cureSynthesisService)
 	print("[GameManager] CureSynthesisService linked")
 end
 
+function GameManager:setVoiceoverService(voiceoverService)
+	self.voiceoverService = voiceoverService
+	print("[GameManager] VoiceoverService linked")
+end
+
 function GameManager:getWaveManager()
 	-- GameManager currently encapsulates wave logic; expose self as the wave manager.
 	return self
@@ -760,6 +765,13 @@ function GameManager:startLobby()
 		self.lobbyManager:startVoting()
 	else
 		print("[Flow] Lobby -> Portal matchmaking enabled (players can queue at portals)")
+	end
+
+	-- Broadcast fun fact to all players in lobby
+	if self.funFactService then
+		task.delay(1, function()
+			self.funFactService:broadcastFactToAll()
+		end)
 	end
 
 	return true
