@@ -166,7 +166,8 @@ function GameManager.new(allianceService)
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
 	-- ✅ REFACTOR: Lobby resolution state machine (replaces simple _lobbyResolved flag)
-	self._lobbyResolutionState = GameManager.LobbyResolutionStates.COMPLETE
+	-- Initialize to VOTING as a safe default (will be reset when lobby actually starts)
+	self._lobbyResolutionState = GameManager.LobbyResolutionStates.VOTING
 	self._lastLobbyResolveAttempt = 0     -- Time-based debounce for retry attempts
 	self._lobbyRetryCount = 0             -- Track consecutive failures
 	self._selectedMapId = nil             -- Cache selected map ID during resolution
