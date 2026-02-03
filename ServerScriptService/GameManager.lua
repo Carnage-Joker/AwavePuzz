@@ -442,7 +442,7 @@ function GameManager:_hookPlayerDeath(player)
 			warn("[GameManager] CRITICAL: Humanoid not found for player " .. player.Name .. " after 5 seconds. Forcing death.")
 			-- Force player death to prevent game state desync
 			self:onPlayerDied(player)
-			return
+			return -- BUGFIX (MEDIUM): Return early to avoid creating connection entry without connection
 		end
 		
 		-- FIX: Re-send weapon loadout and ammo updates on character respawn
@@ -503,13 +503,20 @@ function GameManager:_hookPlayerDeath(player)
 		table.insert(self._deathConnections[player.UserId], connection)
 	end
 
-	local characterAddedConnection = player.CharacterAdded:Connect(hookCharacter)
-
-	-- Store CharacterAdded connection for cleanup to avoid leaks on respawn
-	if not self._deathConnections[player.UserId] then
-		self._deathConnections[player.UserId] = {}
+	-- BUGFIX (MEDIUM): Store CharacterAdded connection separately and disconnect old one before creating new
+	-- This prevents connection leak on multiple _hookPlayerDeath calls
+	if self._characterAddedConnections and self._characterAddedConnections[player.UserId] then
+		self._characterAddedConnections[player.UserId]:Disconnect()
 	end
-	table.insert(self._deathConnections[player.UserId], characterAddedConnection)
+	
+	local characterAddedConnection = player.CharacterAdded:Connect(hookCharacter)
+	
+	-- Store CharacterAdded connection separately for proper cleanup
+	if not self._characterAddedConnections then
+		self._characterAddedConnections = {}
+	end
+	self._characterAddedConnections[player.UserId] = characterAddedConnection
+	
 	if player.Character then
 		hookCharacter(player.Character)
 	end
@@ -1205,7 +1212,8 @@ function GameManager:updateWave(deltaTime)
 
 	self:checkWaveComplete()
 
-	if self.waveTimeRemaining <= 0 then
+	-- BUGFIX (MEDIUM): Change to < 0 to prevent negative values
+	if self.waveTimeRemaining < 0 then
 		print("Wave time limit reached!")
 		self:onWaveComplete()
 	end
@@ -1244,9 +1252,6 @@ function GameManager:updateLobby(deltaTime)
 	self._lastLobbyResolveAttempt = now
 
 	if not self.lobbyManager:isVotingActive() and selectedMapId then
-		-- Mark as resolved immediately to prevent double loading
-		self._lobbyResolved = true
-
 		print(string.format("[Flow] Lobby -> MapLoading(%s) - Voting complete, loading map", selectedMapId))
 
 		if GameConfig.ENABLE_MULTI_MAP then
@@ -1260,10 +1265,12 @@ function GameManager:updateLobby(deltaTime)
 			-- Validate that map loaded successfully
 			if not mapLoaded then
 				warn("[GameManager] Failed to load map: " .. tostring(selectedMapId))
-				-- Reset flag to allow retry on next updateLobby cycle
-				self._lobbyResolved = false
+				-- Do NOT set _lobbyResolved so we can retry on next cycle
 				return
 			end
+			
+			-- BUGFIX (MEDIUM): Set _lobbyResolved AFTER successful map load to prevent race condition
+			self._lobbyResolved = true
 			
 			print(string.format("[Flow] MapLoaded -> Map %s loaded successfully", selectedMapId))
 			

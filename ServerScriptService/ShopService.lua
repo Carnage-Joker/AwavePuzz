@@ -162,6 +162,18 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
+		-- BUGFIX (MEDIUM): Validate player has sufficient currency before attempting deduction
+		-- This provides better early feedback to the player. Note: There's a small TOCTOU
+		-- (time-of-check to time-of-use) window between this check and the actual deduction,
+		-- but deductCurrency handles insufficient funds anyway, making this defensive.
+		if self.playerManager.getCurrency then
+			local currentCurrency = self.playerManager:getCurrency(player) or 0
+			if currentCurrency < price then
+				self:sendResult(player, false, "Not enough currency")
+				return
+			end
+		end
+
 		-- Deduct currency first (proper transaction order)
 		if not (self.playerManager.deductCurrency and self.playerManager:deductCurrency(player, price)) then
 			self:sendResult(player, false, "Not enough currency")
@@ -201,6 +213,17 @@ function ShopService:attemptPurchase(player, itemId)
 			warn("[ShopService] weaponService or applyUpgrade missing")
 			self:sendResult(player, false, "Service temporarily unavailable")
 			return
+		end
+
+		-- BUGFIX (MEDIUM): Validate player has sufficient currency before attempting deduction
+		-- This provides better early feedback. Note: There's a small TOCTOU window, but
+		-- deductCurrency handles insufficient funds anyway, making this defensive.
+		if self.playerManager and self.playerManager.getCurrency then
+			local currentCurrency = self.playerManager:getCurrency(player) or 0
+			if currentCurrency < price then
+				self:sendResult(player, false, "Not enough currency")
+				return
+			end
 		end
 
 		-- Deduct currency first (proper transaction order)

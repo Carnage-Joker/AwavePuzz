@@ -225,6 +225,13 @@ function PlayerSpawnManager:onCharacterAdded(player, character)
 	if not hrp then
 		warn(string.format("[PlayerSpawnManager] Failed to get HumanoidRootPart for %s", player.Name))
 		self._charHandling[player.UserId] = nil
+		
+		-- BUGFIX (MEDIUM): Trigger respawn on timeout instead of leaving player in invalid state
+		task.delay(1, function()
+			if player and player.Parent and player.Character == character then
+				player:LoadCharacter()
+			end
+		end)
 		return
 	end
 

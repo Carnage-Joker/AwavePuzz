@@ -208,14 +208,11 @@ function FPSWeaponService:handleReload(player, payload)
 		return
 	end
 
+	-- BUGFIX (MEDIUM): Add explicit state guard to prevent reload race condition
 	local reloadState = self.playerReloadState[userId]
 	if reloadState and reloadState.isReloading then
-		local elapsed = tick() - reloadState.reloadStartTime
-		local stats = FPSConfig.getWeaponStats(reloadState.weaponId)
-		local reloadTime = stats and stats.ReloadTime or 2.0
-		if elapsed < reloadTime then
-			return
-		end
+		-- Reject immediately if already reloading (prevents rapid reload spam)
+		return
 	end
 
 	local ammo = self:getAmmo(player, weaponId)
@@ -317,7 +314,14 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 end
 
 function FPSWeaponService:cancelReload(player)
-	self.playerReloadState[player.UserId] = nil
+	local userId = player.UserId
+	self.playerReloadState[userId] = nil
+	
+	-- BUGFIX (MEDIUM): Cancel active reload task to prevent reload completing after weapon switch
+	if self.activeReloadTasks[userId] then
+		task.cancel(self.activeReloadTasks[userId])
+		self.activeReloadTasks[userId] = nil
+	end
 end
 
 function FPSWeaponService:isReloading(player)

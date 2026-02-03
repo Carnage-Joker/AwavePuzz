@@ -258,7 +258,22 @@ function CureSynthesisService:completeSynthesis()
 	-- Trigger victory in GameManager
 	if self.gameManager then
 		task.delay(2, function()
-			self.gameManager:triggerVictory()
+			-- BUGFIX (MEDIUM): Wrap in pcall to handle errors gracefully
+			local success, err = pcall(function()
+				self.gameManager:triggerVictory()
+			end)
+			if not success then
+				warn("[CureSynthesisService] Failed to trigger victory:", err)
+				-- Retry once after 1 second
+				task.delay(1, function()
+					local retrySuccess, retryErr = pcall(function()
+						self.gameManager:triggerVictory()
+					end)
+					if not retrySuccess then
+						warn("[CureSynthesisService] Failed to trigger victory on retry:", retryErr)
+					end
+				end)
+			end
 		end)
 	end
 end
@@ -290,7 +305,14 @@ function CureSynthesisService:failSynthesis(reason)
 	end
 
 	-- Reset state after delay
+	local originalPlayer = self.synthesisPlayer
+	local sessionId = tick() -- Use timestamp as unique session ID
 	task.delay(5, function()
+		-- BUGFIX (MEDIUM): Check if new synthesis session started to prevent state corruption
+		-- Compare session timestamp instead of player identity to catch same-player re-synthesis
+		if self.synthesisPlayer ~= originalPlayer or (self.synthesisStartTime or 0) > sessionId then
+			return
+		end
 		self.synthesisState = CureSynthesisService.States.IDLE
 		self.synthesisPlayer = nil
 		self.puzzlesCompleted = 0
