@@ -113,12 +113,15 @@ function VoiceoverService:playEpilogueVoiceover(player, epilogueEntry)
 	-- Build voiceover data from epilogue entry
 	local voiceoverData = {
 		SoundId = "",  -- Placeholder - audio assets not yet created
-		Text = epilogueEntry.text or "",
+		Text = epilogueEntry.Text or "",
 		VoiceoverStyle = epilogueEntry.VoiceoverStyle or "System",
-		Duration = #(epilogueEntry.text or "") / 20  -- Rough estimate: 20 characters per second
+		-- Prefer configured display time; fall back to rough estimate: 20 characters per second
+		Duration = epilogueEntry.DisplayTime or (#(epilogueEntry.Text or "") / 20)
 	}
 	
-	self:playVoiceoverForPlayer(player, "epilogue_" .. (epilogueEntry.timestamp or ""), voiceoverData)
+	-- Use a stable ID based on the epilogue title (or a generic fallback)
+	local epilogueId = "epilogue_" .. (epilogueEntry.Title or "page")
+	self:playVoiceoverForPlayer(player, epilogueId, voiceoverData)
 end
 
 -- Play wave start voiceover
