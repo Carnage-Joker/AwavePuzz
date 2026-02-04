@@ -108,15 +108,16 @@ local REMOTE_DEFINITIONS = {
 	{Name = "CurrencyUpdate", Type = "Event"},
 	{Name = "InventoryUpdate", Type = "Event"},
 	
-	-- Alliance system
+	-- Alliance system (modern API)
 	{Name = "AllianceRequest", Type = "Event"},
 	{Name = "AllianceAccept", Type = "Event"},
 	{Name = "AllianceDecline", Type = "Event"},
 	{Name = "AllianceDisband", Type = "Event"},
 	{Name = "AllianceUpdate", Type = "Event"},
-	{Name = "RequestAlliance", Type = "Event"},
-	{Name = "RespondAlliance", Type = "Event"},
-	{Name = "BreakAlliance", Type = "Event"},
+	-- Alliance system (legacy API - kept for backward compatibility)
+	{Name = "RequestAlliance", Type = "Event"},   -- Legacy: use AllianceRequest instead
+	{Name = "RespondAlliance", Type = "Event"},   -- Legacy: use AllianceAccept/AllianceDecline instead
+	{Name = "BreakAlliance", Type = "Event"},     -- Legacy: use AllianceDisband instead
 	
 	-- Fun facts
 	{Name = "FunFactUpdate", Type = "Event"},

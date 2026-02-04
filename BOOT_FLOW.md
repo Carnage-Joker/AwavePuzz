@@ -411,7 +411,7 @@ Use this checklist to verify the boot flow fixes are working correctly in Roblox
 
 1. **Boot Log Check**:
    - [ ] Check Output for: "Registry initialized: X created, Y existing, Z unexpected, W total"
-   - [ ] Verify unexpected count is 0 or minimal (ideally 1 for _README)
+   - [ ] Verify unexpected count is 0 or minimal (ideally 0-1 for _README only)
    - [ ] No repetitive warnings for known remotes
 
 2. **Remote Availability**:

@@ -451,13 +451,12 @@ function GameManager:_hookPlayerDeath(player)
 		self._deathDebounce[player.UserId] = nil
 		
 		-- ✅ NEW: Re-send state snapshot on character respawn for resilience
-		task.defer(function()
-			if player and player.Parent and self.remoteEvents.GameStateUpdate then
-				local snapshot = self:getStateSnapshotForPlayer(player)
-				self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-				print(string.format("[Flow] Sent state snapshot to %s on character spawn: %s", player.Name, snapshot.state))
-			end
-		end)
+		-- Using immediate execution (not task.defer) to ensure snapshot arrives promptly
+		if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
+			local snapshot = self:getStateSnapshotForPlayer(player)
+			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+			print(string.format("[Flow] Sent state snapshot to %s on character spawn: %s", player.Name, snapshot.state))
+		end
 		
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if not humanoid then
@@ -577,13 +576,12 @@ function GameManager:onPlayerAdded(player)
 
 	-- ✅ NEW: Send current state snapshot immediately after join (join-safe sync)
 	-- This ensures late-joining players get the current game state regardless of timing
-	task.defer(function()
-		if player and player.Parent and self.remoteEvents.GameStateUpdate then
-			local snapshot = self:getStateSnapshotForPlayer(player)
-			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-			print(string.format("[Flow] Sent state snapshot to %s: %s", player.Name, snapshot.state))
-		end
-	end)
+	-- Using immediate execution (not task.defer) to ensure snapshot arrives before other events
+	if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
+		local snapshot = self:getStateSnapshotForPlayer(player)
+		self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+		print(string.format("[Flow] Sent state snapshot to %s: %s", player.Name, snapshot.state))
+	end
 
 	-- Handle title screen and epilogue for new players
 	-- Show title screen to ALL joiners (including late joiners) unless in epilogue
@@ -653,7 +651,7 @@ function GameManager:setState(newState, payload)
 	local stateData = {
 		state = newState,
 		wave = self.currentWave,
-		baseHealth = self.baseManager:getHealth(),
+		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,
 		-- Include additional payload if provided
 		payload = payload
@@ -687,7 +685,7 @@ function GameManager:getStateSnapshotForPlayer(player)
 	return {
 		state = self.currentState,
 		wave = self.currentWave,
-		baseHealth = self.baseManager:getHealth(),
+		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,
 		-- Include player-specific data if needed
 		playerId = player.UserId

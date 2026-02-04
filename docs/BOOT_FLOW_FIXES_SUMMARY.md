@@ -217,7 +217,6 @@ All tests passed successfully.
 
 ## References
 
-- Problem Statement: [Original Issue](../docs/BOOT_FLOW_FIXES_SUMMARY.md)
 - Boot Flow Documentation: [BOOT_FLOW.md](../BOOT_FLOW.md)
 - API Documentation: [API_DOCUMENTATION.md](../API_DOCUMENTATION.md)
 - Code Architecture: [CODE_ARCHITECTURE.md](../CODE_ARCHITECTURE.md)

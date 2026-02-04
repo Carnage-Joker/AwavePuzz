@@ -171,14 +171,42 @@ function PortalMatchmakingService:registerPortal(portalPart)
 	end
 	
 	-- Validate TouchPart is anchored
-	if not touchPart.Anchored then
+	if touchPart.Anchored == false then
 		warn(string.format("[PortalMatchmakingService] Portal skipped: %s TouchPart is not anchored", portalId))
 		return false
 	end
 	
-	-- Extract other attributes with defaults
-	local minPlayers = portalPart:GetAttribute("MinPlayers") or touchPart:GetAttribute("MinPlayers") or self.defaultMinPlayers
-	local countdownTime = portalPart:GetAttribute("CountdownSeconds") or touchPart:GetAttribute("CountdownSeconds") or self.defaultCountdownTime
+	-- Extract other attributes with defaults and validate types/values
+	local rawMinPlayers = portalPart:GetAttribute("MinPlayers") or touchPart:GetAttribute("MinPlayers")
+	local rawCountdownTime = portalPart:GetAttribute("CountdownSeconds") or touchPart:GetAttribute("CountdownSeconds")
+	
+	local minPlayers
+	if rawMinPlayers == nil then
+		minPlayers = self.defaultMinPlayers
+	elseif typeof(rawMinPlayers) ~= "number" or rawMinPlayers < 1 then
+		warn(string.format(
+			"[PortalMatchmakingService] Portal skipped: %s has invalid MinPlayers attribute (%s, expected number >= 1)",
+			portalId,
+			tostring(rawMinPlayers)
+		))
+		return false
+	else
+		minPlayers = rawMinPlayers
+	end
+	
+	local countdownTime
+	if rawCountdownTime == nil then
+		countdownTime = self.defaultCountdownTime
+	elseif typeof(rawCountdownTime) ~= "number" or rawCountdownTime <= 0 then
+		warn(string.format(
+			"[PortalMatchmakingService] Portal skipped: %s has invalid CountdownSeconds attribute (%s, expected number > 0)",
+			portalId,
+			tostring(rawCountdownTime)
+		))
+		return false
+	else
+		countdownTime = rawCountdownTime
+	end
 	
 	-- Check if already registered
 	if self.portals[portalId] then
