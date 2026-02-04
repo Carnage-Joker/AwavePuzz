@@ -111,21 +111,78 @@ end
 
 -- Register a single portal
 function PortalMatchmakingService:registerPortal(portalPart)
-	-- Extract configuration from portal part
-	local portalId = portalPart:GetAttribute("PortalId") or portalPart.Name
-	local mapId = portalPart:GetAttribute("MapId") or "Random"
-	local minPlayers = portalPart:GetAttribute("MinPlayers") or self.defaultMinPlayers
-	local countdownTime = portalPart:GetAttribute("CountdownSeconds") or self.defaultCountdownTime
+	-- ✅ FIX: Explicit portal contract validation with detailed skip reasons
 	
-	-- Validate portal ID
-	if not portalId or portalId == "" then
-		warn(string.format("[PortalMatchmakingService] Portal part %s has no PortalId", portalPart.Name))
+	-- Validate portal is a Model or BasePart
+	if not (portalPart:IsA("BasePart") or portalPart:IsA("Model")) then
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s is not a BasePart or Model (got %s)", 
+			portalPart.Name, portalPart.ClassName))
 		return false
 	end
 	
+	-- Extract configuration from portal part (attributes can be on root or TouchPart)
+	local portalId = portalPart:GetAttribute("PortalId")
+	local mapId = portalPart:GetAttribute("MapId")
+	
+	-- If it's a Model, also check TouchPart for attributes (fallback)
+	local touchPart = nil
+	if portalPart:IsA("Model") then
+		touchPart = portalPart:FindFirstChild("TouchPart") or portalPart.PrimaryPart
+		if not touchPart then
+			warn(string.format("[PortalMatchmakingService] Portal skipped: Model %s has no TouchPart or PrimaryPart", 
+				portalPart.Name))
+			return false
+		end
+		
+		if not touchPart:IsA("BasePart") then
+			warn(string.format("[PortalMatchmakingService] Portal skipped: %s TouchPart is not a BasePart (got %s)", 
+				portalPart.Name, touchPart.ClassName))
+			return false
+		end
+		
+		-- Fallback to TouchPart attributes if not on root
+		if not portalId then
+			portalId = touchPart:GetAttribute("PortalId")
+		end
+		if not mapId then
+			mapId = touchPart:GetAttribute("MapId")
+		end
+	else
+		-- If it's a BasePart, use it as the touchPart
+		touchPart = portalPart
+	end
+	
+	-- Validate PortalId
+	if not portalId or portalId == "" then
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s has no PortalId attribute", portalPart.Name))
+		return false
+	end
+	
+	-- Validate MapId
+	if not mapId or mapId == "" then
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s has no MapId attribute", portalId))
+		return false
+	end
+	
+	-- Validate TouchPart has CanTouch enabled
+	if touchPart.CanTouch == false then
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s TouchPart has CanTouch=false", portalId))
+		return false
+	end
+	
+	-- Validate TouchPart is anchored
+	if not touchPart.Anchored then
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s TouchPart is not anchored", portalId))
+		return false
+	end
+	
+	-- Extract other attributes with defaults
+	local minPlayers = portalPart:GetAttribute("MinPlayers") or touchPart:GetAttribute("MinPlayers") or self.defaultMinPlayers
+	local countdownTime = portalPart:GetAttribute("CountdownSeconds") or touchPart:GetAttribute("CountdownSeconds") or self.defaultCountdownTime
+	
 	-- Check if already registered
 	if self.portals[portalId] then
-		warn(string.format("[PortalMatchmakingService] Portal %s already registered", portalId))
+		warn(string.format("[PortalMatchmakingService] Portal skipped: %s already registered", portalId))
 		return false
 	end
 	

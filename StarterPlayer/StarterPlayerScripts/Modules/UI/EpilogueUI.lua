@@ -51,22 +51,42 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	self.remotes = remotes
 	
-	-- Listen for server commands
+	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
+	if self.remotes.GameStateUpdate then
+		self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+			if stateData and stateData.state then
+				local state = stateData.state
+				-- Show epilogue for any state containing "Epilogue"
+				local isEpilogueState = typeof(state) == "string" and string.find(state, "Epilogue", 1, true) ~= nil
+				
+				if isEpilogueState then
+					print("[EpilogueUI] Received GameStateUpdate with state=" .. state)
+					self:show()
+				elseif self.isActive then
+					-- Hide if state changes away from epilogue
+					print("[EpilogueUI] Received GameStateUpdate with state=" .. state .. ", hiding")
+					self:hide()
+				end
+			end
+		end)
+	end
+	
+	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	if self.remotes.ShowEpilogue then
 		self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
-			print("[EpilogueUI] Received ShowEpilogue event")
+			print("[EpilogueUI] Received ShowEpilogue event (legacy)")
 			self:show()
 		end)
 	end
 	
 	if self.remotes.HideEpilogue then
 		self.remotes.HideEpilogue.OnClientEvent:Connect(function()
-			print("[EpilogueUI] Received HideEpilogue event")
+			print("[EpilogueUI] Received HideEpilogue event (legacy)")
 			self:hide()
 		end)
 	end
 	
-	print("[EpilogueUI] Remotes bound and ready")
+	print("[EpilogueUI] Remotes bound and ready (state-driven + legacy)")
 end
 
 function EpilogueUI:createUI()

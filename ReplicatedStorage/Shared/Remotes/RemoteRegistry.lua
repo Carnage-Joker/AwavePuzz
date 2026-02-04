@@ -38,6 +38,7 @@ local REMOTE_DEFINITIONS = {
 	-- Cure system
 	{Name = "CureUpdate", Type = "Event"},
 	{Name = "CureProgress", Type = "Event"},
+	{Name = "PlayerCureProgressUpdate", Type = "Event"},
 	
 	-- Base and map
 	{Name = "BaseHealthUpdate", Type = "Event"},
@@ -60,27 +61,52 @@ local REMOTE_DEFINITIONS = {
 	{Name = "AchievementUnlocked", Type = "Event"},
 	{Name = "BetrayalStarted", Type = "Event"},
 	{Name = "SpectatorCycleTarget", Type = "Event"},
+	{Name = "SpectatorStateUpdate", Type = "Event"},
+	{Name = "SpectatorTargetUpdate", Type = "Event"},
 	{Name = "SprintRequest", Type = "Event"},
+	{Name = "PlayerHealthUpdate", Type = "Event"},
+	{Name = "StaminaUpdate", Type = "Event"},
+	{Name = "EnterSpectatorMode", Type = "Event"},
+	{Name = "ExitSpectatorMode", Type = "Event"},
 	
 	-- Matchmaking and lobby
 	{Name = "PortalQueueUpdate", Type = "Event"},
 	{Name = "LobbyVoteUpdate", Type = "Event"},
+	{Name = "LobbyStateUpdate", Type = "Event"},
+	{Name = "MapVoteStart", Type = "Event"},
+	{Name = "MapVoteUpdate", Type = "Event"},
+	{Name = "MapVoteEnd", Type = "Event"},
+	{Name = "CastMapVote", Type = "Event"},
 	
 	-- Puzzle and items
 	{Name = "PuzzlePickup", Type = "Event"},
 	{Name = "PuzzleSubmit", Type = "Event"},
 	{Name = "ItemPickup", Type = "Event"},
+	{Name = "PuzzleUpdate", Type = "Event"},
+	{Name = "PuzzleCompleted", Type = "Event"},
+	{Name = "PuzzleFailed", Type = "Event"},
+	{Name = "OpenPuzzleUI", Type = "Event"},
+	{Name = "RequestPuzzle", Type = "Event"},
+	{Name = "RequestPuzzleProgress", Type = "Event"},
+	{Name = "SubmitPuzzleAnswer", Type = "Event"},
 	
 	-- Weapons and combat
 	{Name = "WeaponFire", Type = "Event"},
 	{Name = "WeaponReload", Type = "Event"},
 	{Name = "WeaponEquip", Type = "Event"},
+	{Name = "WeaponHitConfirm", Type = "Event"},
+	{Name = "WeaponLoadoutUpdate", Type = "Event"},
 	{Name = "DealDamage", Type = "Event"},
+	{Name = "AmmoUpdate", Type = "Event"},
 	
 	-- Shop and economy
 	{Name = "ShopPurchase", Type = "Event"},
 	{Name = "ShopOpen", Type = "Event"},
 	{Name = "ShopClose", Type = "Event"},
+	{Name = "ShopRequest", Type = "Event"},
+	{Name = "ShopUpdate", Type = "Event"},
+	{Name = "CurrencyUpdate", Type = "Event"},
+	{Name = "InventoryUpdate", Type = "Event"},
 	
 	-- Alliance system
 	{Name = "AllianceRequest", Type = "Event"},
@@ -88,6 +114,9 @@ local REMOTE_DEFINITIONS = {
 	{Name = "AllianceDecline", Type = "Event"},
 	{Name = "AllianceDisband", Type = "Event"},
 	{Name = "AllianceUpdate", Type = "Event"},
+	{Name = "RequestAlliance", Type = "Event"},
+	{Name = "RespondAlliance", Type = "Event"},
+	{Name = "BreakAlliance", Type = "Event"},
 	
 	-- Fun facts
 	{Name = "FunFactUpdate", Type = "Event"},
@@ -194,12 +223,19 @@ function RemoteRegistry.initializeServer()
 	end
 	
 	local unexpected = 0
+	local unexpectedList = {}
 	for _, child in ipairs(folder:GetChildren()) do
 		if not definedNames[child.Name] then
-			warn(string.format("%s Unexpected remote '%s' found (not in registry). Consider adding to RemoteRegistry.", 
-				LOG_PREFIX, child.Name))
 			unexpected = unexpected + 1
+			table.insert(unexpectedList, child.Name)
 		end
+	end
+	
+	-- ✅ FIX: Provide clean summary instead of spamming warnings
+	if unexpected > 0 then
+		warn(string.format("%s Found %d unexpected remote(s) not in registry:", LOG_PREFIX, unexpected))
+		warn(string.format("%s   %s", LOG_PREFIX, table.concat(unexpectedList, ", ")))
+		warn(string.format("%s   Consider adding these to RemoteRegistry or moving to legacy folder", LOG_PREFIX))
 	end
 	
 	print(string.format("%s [BOOT][SERVER] Registry initialized: %d created, %d existing, %d unexpected, %d total", 

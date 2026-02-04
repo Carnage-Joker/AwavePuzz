@@ -4,6 +4,8 @@
 
 This document describes the server boot flow and state transitions for AwavePuzz (Aether Wave: Convergence).
 
+**🆕 STATE-DRIVEN UI SYSTEM**: As of v1.1, all UI (Title, Epilogue, Lobby) is driven by authoritative `GameStateUpdate` events from the server. Legacy `Show*` and `Hide*` events are maintained for compatibility but are no longer required.
+
 ## Join Flow Diagram
 
 ```
@@ -37,16 +39,18 @@ Back to Lobby
 1. **Server Start**
    - GameManager initializes in `TITLE_SCREEN` state (if `SHOW_TITLE_SCREEN = true`)
    - Lobby is created by LobbySetup
-   - Portals are created if `USE_PORTAL_MATCHMAKING = true`
+   - Portals are created if `USE_PORTAL_MATCHMAKING = true` (all 5 portal types)
    - **NO MAP IS LOADED** (maps load only after portal queue or lobby voting)
 
 2. **Player Joins**
    - Player character spawns in lobby (visible, can move)
-   - Title Screen UI shows on client
+   - **🆕 Server sends state snapshot** via `GameStateUpdate` to joining player
+   - Title Screen UI shows on client (triggered by state snapshot)
    - Player clicks "Continue" on title screen
 
 3. **After Title Screen**
    - State: `TITLE_SCREEN` → `LOBBY`
+   - **🆕 State change broadcast** via `GameStateUpdate` to all clients
    - All players spawn in lobby with movement enabled
    - Portals are visible and usable
    - Lobby voting starts (if portal matchmaking disabled) OR portals accept players
@@ -98,6 +102,41 @@ Back to Lobby
 | `SCOREBOARD` | End of round stats | 2 seconds |
 | `EPILOGUE` | Story cinematic (only after round) | Until all players complete |
 | `WAITING` | Waiting for minimum players | N/A |
+
+### 🆕 State-Driven Architecture
+
+**Server Authority**:
+- GameManager maintains single source of truth: `self.currentState`
+- `GameManager:setState(newState, payload)` broadcasts to all clients via `GameStateUpdate`
+- State snapshots sent on:
+  1. Player join (after remotes ready)
+  2. Character respawn (for resilience)
+  3. Any state change (broadcast to all)
+
+**Client Response**:
+- ClientMain binds `GameStateUpdate` early in boot sequence
+- `applyState(stateName)` function controls:
+  - Movement enable/disable
+  - Weapons enable/disable
+  - Title/Epilogue UI show/hide
+- Late-joining clients receive state snapshot immediately
+- **Join-safe**: Even if client binds 10 seconds late, state snapshot is replayed
+
+**State Snapshot Format**:
+```lua
+{
+    state = "TitleScreen",  -- Current game state
+    wave = 0,               -- Current wave number
+    baseHealth = 1000,      -- Base health
+    cureProgress = 0,       -- Cure completion %
+    payload = {...}         -- Optional state-specific data
+}
+```
+
+**Legacy Compatibility**:
+- `ShowTitleScreen`, `HideTitleScreen`, `ShowEpilogue`, `HideEpilogue` events still fired
+- New code should rely on `GameStateUpdate` only
+- Legacy events will be deprecated in future versions
 
 ## Key Configuration Values
 
@@ -164,11 +203,38 @@ Maps are **NOT** loaded during:
 
 ## Portal System
 
+### Portal Discovery Contract
+
+**🆕 PORTAL CONTRACT**: All portals must satisfy the following requirements to be discoverable:
+
+1. **Structure**: Either a `BasePart` OR a `Model` containing a `TouchPart` BasePart
+2. **Required Attributes** (on root or TouchPart):
+   - `PortalId` (string): Unique identifier
+   - `MapId` (string): Map to load or "Random"
+   - `MinPlayers` (number): Minimum players to start countdown (default: 1)
+   - `MaxPlayers` (number): Maximum players per match (default: 8)
+   - `CountdownSeconds` (number): Countdown duration (default: 10)
+3. **TouchPart Requirements**:
+   - `CanTouch = true` (explicitly enabled)
+   - `Anchored = true`
+   - Valid size and collision settings
+
+**Portal Skip Reasons**: If a portal is not discovered, the server logs an explicit reason:
+- "not a BasePart or Model"
+- "has no TouchPart or PrimaryPart"
+- "TouchPart is not a BasePart"
+- "has no PortalId attribute"
+- "has no MapId attribute"
+- "TouchPart has CanTouch=false"
+- "TouchPart is not anchored"
+- "already registered"
+
 ### Portal Discovery
 
-1. Portals are created by `LobbySetup:createPortals()` during lobby creation
+1. Portals are created by `LobbySetup:createPortals()` during lobby creation (**🆕 Creates 5 portals** matching PortalConfig)
 2. Portals are placed in `Workspace.Lobby.Portals`
 3. `PortalMatchmakingService:discoverPortals()` registers each portal
+4. **Expected**: "Created 5 portals" AND "Discovery complete: 5 portals registered"
 
 ### Portal Queue Flow
 
@@ -294,6 +360,88 @@ To revert to map voting:
 
 ---
 
-**Last Updated**: 2026-02-01  
-**AwavePuzz Version**: Modern Luau Refactor - v1.0  
-**Changes**: New entry points (Main.server.lua, ClientMain.client.lua), RemoteRegistry, modern Luau patterns
+**Last Updated**: 2026-02-04  
+**AwavePuzz Version**: Modern Luau Refactor - v1.1  
+**Changes**: State-driven UI system, portal contract enforcement, RemoteRegistry cleanup, join-safe sync
+
+## 🆕 Verification Checklist
+
+Use this checklist to verify the boot flow fixes are working correctly in Roblox Studio:
+
+### State-Driven UI Verification
+
+1. **Late Join Test**:
+   - [ ] Start server with 1 player
+   - [ ] Wait for Title Screen to show
+   - [ ] Join with second player 10+ seconds later
+   - [ ] Verify second player sees Title Screen immediately (state snapshot works)
+   - [ ] Both players click Continue
+   - [ ] Verify both transition to Lobby state
+
+2. **Character Respawn Test**:
+   - [ ] Join game, pass Title Screen
+   - [ ] Enter Lobby state
+   - [ ] Reset character (die)
+   - [ ] Verify UI state is correct after respawn (no desync)
+
+3. **State Transition Test**:
+   - [ ] Monitor Output logs for "GameStateUpdate" broadcasts
+   - [ ] Verify each state change fires `GameStateUpdate` to all clients
+   - [ ] Check TitleScreenUI and EpilogueUI respond to state changes
+
+### Portal Discovery Verification
+
+1. **Portal Creation**:
+   - [ ] Check Output for: "Created 5 portals"
+   - [ ] Verify 5 portals visible in Workspace.Lobby.Portals
+   - [ ] Check portal names: ResearchOutpost, Village, Dockyards, ResearchOutpost_Night, Random
+
+2. **Portal Registration**:
+   - [ ] Check Output for: "Discovery complete: 5 portals registered"
+   - [ ] If count is less than 5, check for skip reason logs
+   - [ ] Verify each portal has required attributes (PortalId, MapId, MinPlayers, MaxPlayers, CountdownSeconds)
+
+3. **Portal Touch Test**:
+   - [ ] Walk into each portal
+   - [ ] Verify queue count updates (e.g., "1/8")
+   - [ ] Verify countdown starts when MinPlayers reached
+   - [ ] Verify match launches when countdown completes
+
+### RemoteRegistry Verification
+
+1. **Boot Log Check**:
+   - [ ] Check Output for: "Registry initialized: X created, Y existing, Z unexpected, W total"
+   - [ ] Verify unexpected count is 0 or minimal (ideally 1 for _README)
+   - [ ] No repetitive warnings for known remotes
+
+2. **Remote Availability**:
+   - [ ] Verify GameStateUpdate remote exists
+   - [ ] Verify all game systems can find their remotes
+   - [ ] No "Remote not found" errors
+
+### Client Execution Verification
+
+1. **ClientMain Boot**:
+   - [ ] Check Output for: "=== [BOOT][CLIENT] Aether Wave: Convergence Client Starting ==="
+   - [ ] Verify boot sequence completes once (no duplicate execution)
+   - [ ] Check for: "Client initialization complete"
+
+2. **No Studio Warnings**:
+   - [ ] No warnings about "RunContext" or "multiple execution"
+   - [ ] No duplicate UI creation warnings
+
+### Overall Integration Test
+
+1. **Full Play Session**:
+   - [ ] Join server → Title Screen shows
+   - [ ] Continue → Lobby state (can move)
+   - [ ] Touch portal → Queue + Countdown
+   - [ ] Match launches → Map loads → Gameplay
+   - [ ] Round ends → Scoreboard → Return to Lobby
+   - [ ] No UI desync at any point
+
+2. **Multi-Player Test**:
+   - [ ] Test with 2-8 players
+   - [ ] Stagger join times (some join late)
+   - [ ] Verify all players sync correctly
+   - [ ] No race conditions or timing issues

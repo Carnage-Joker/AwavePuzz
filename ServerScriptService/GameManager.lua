@@ -450,6 +450,15 @@ function GameManager:_hookPlayerDeath(player)
 		-- Clear death debounce on respawn to prevent race conditions
 		self._deathDebounce[player.UserId] = nil
 		
+		-- ✅ NEW: Re-send state snapshot on character respawn for resilience
+		task.defer(function()
+			if player and player.Parent and self.remoteEvents.GameStateUpdate then
+				local snapshot = self:getStateSnapshotForPlayer(player)
+				self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+				print(string.format("[Flow] Sent state snapshot to %s on character spawn: %s", player.Name, snapshot.state))
+			end
+		end)
+		
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if not humanoid then
 			-- Critical error: Humanoid missing after 5 seconds
@@ -566,6 +575,16 @@ function GameManager:onPlayerAdded(player)
 	-- Initialize player spawn manager
 	self.playerSpawnManager:onPlayerAdded(player)
 
+	-- ✅ NEW: Send current state snapshot immediately after join (join-safe sync)
+	-- This ensures late-joining players get the current game state regardless of timing
+	task.defer(function()
+		if player and player.Parent and self.remoteEvents.GameStateUpdate then
+			local snapshot = self:getStateSnapshotForPlayer(player)
+			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+			print(string.format("[Flow] Sent state snapshot to %s: %s", player.Name, snapshot.state))
+		end
+	end)
+
 	-- Handle title screen and epilogue for new players
 	-- Show title screen to ALL joiners (including late joiners) unless in epilogue
 	if self.currentState == GameManager.States.EPILOGUE and GameConfig.SHOW_EPILOGUE then
@@ -626,19 +645,26 @@ function GameManager:onPlayerRemoving(player)
 	self.playersCompletedEpilogue[player.UserId] = nil
 end
 
-function GameManager:setState(newState)
+function GameManager:setState(newState, payload)
 	self.currentState = newState
 	self.stateTimer = 0
 
+	-- Build state snapshot (authoritative game state)
+	local stateData = {
+		state = newState,
+		wave = self.currentWave,
+		baseHealth = self.baseManager:getHealth(),
+		cureProgress = self.cureProgress,
+		-- Include additional payload if provided
+		payload = payload
+	}
+
+	-- Broadcast state update to all clients
 	if self.remoteEvents.GameStateUpdate then
-		self.remoteEvents.GameStateUpdate:FireAllClients({
-			state = newState,
-			wave = self.currentWave,
-			baseHealth = self.baseManager:getHealth(),
-			cureProgress = self.cureProgress
-		})
+		self.remoteEvents.GameStateUpdate:FireAllClients(stateData)
 	end
 
+	-- Compatibility: Keep legacy show/hide events for systems that haven't migrated yet
 	if newState == GameManager.States.TITLE_SCREEN then
 		if self.remoteEvents.ShowTitleScreen then
 			self.remoteEvents.ShowTitleScreen:FireAllClients()
@@ -652,6 +678,20 @@ function GameManager:setState(newState)
 			end
 		end
 	end
+	
+	print(string.format("[GameManager] State changed to %s", newState))
+end
+
+-- Get current state snapshot for a player (used on join/character spawn)
+function GameManager:getStateSnapshotForPlayer(player)
+	return {
+		state = self.currentState,
+		wave = self.currentWave,
+		baseHealth = self.baseManager:getHealth(),
+		cureProgress = self.cureProgress,
+		-- Include player-specific data if needed
+		playerId = player.UserId
+	}
 end
 
 function GameManager:setCureService(cureService)

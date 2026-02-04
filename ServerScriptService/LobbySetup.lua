@@ -190,10 +190,13 @@ function LobbySetup:createPortals()
 	end
 	
 	-- Portal positions (spread across the lobby platform)
+	-- ✅ FIX: Create 5 portal positions to match PortalConfig's 5 portal types
 	local portalPositions = {
-		Vector3.new(-20, 12, 0),  -- Left
-		Vector3.new(0, 12, 0),    -- Center
-		Vector3.new(20, 12, 0),   -- Right
+		Vector3.new(-25, 12, -10),  -- Left-back
+		Vector3.new(-15, 12, 10),   -- Left-front
+		Vector3.new(0, 12, 0),      -- Center
+		Vector3.new(15, 12, 10),    -- Right-front
+		Vector3.new(25, 12, -10),   -- Right-back
 	}
 	
 	-- Create portals for each map
@@ -207,14 +210,18 @@ function LobbySetup:createPortals()
 	end
 	
 	-- Fallback to built-in defaults if config does not provide a usable list
+	-- ✅ FIX: Update fallback to include all 5 portal types matching PortalConfig
 	if type(portalTypes) ~= "table" or #portalTypes == 0 then
 		portalTypes = {
 			{ id = "ResearchOutpost", mapId = "ResearchOutpost", name = "Research Outpost" },
-			{ id = "Random", mapId = "Random", name = "Random Map" },
 			{ id = "Village", mapId = "Village", name = "Village" },
+			{ id = "Dockyards", mapId = "Dockyards", name = "Dockyards" },
+			{ id = "ResearchOutpost_Night", mapId = "ResearchOutpost_Night", name = "Research Outpost (Night)" },
+			{ id = "Random", mapId = "Random", name = "Random Map" },
 		}
 	end
 	
+	local createdCount = 0
 	for i, portalInfo in ipairs(portalTypes) do
 		if portalPositions[i] then
 			local portal = self:createPortal(
@@ -224,10 +231,13 @@ function LobbySetup:createPortals()
 				LOBBY_BASE + portalPositions[i]
 			)
 			portal.Parent = portalsFolder
+			createdCount = createdCount + 1
+		else
+			warn(string.format("[LobbySetup] No position available for portal %d: %s", i, portalInfo.id))
 		end
 	end
 	
-	print(string.format("[LobbySetup] Created %d portals", #portalTypes))
+	print(string.format("[LobbySetup] Created %d portals", createdCount))
 end
 
 -- Create a single portal
@@ -242,6 +252,7 @@ function LobbySetup:createPortal(portalId, mapId, displayName, position)
 	touchPart.Position = position
 	touchPart.Anchored = true
 	touchPart.CanCollide = false
+	touchPart.CanTouch = true  -- ✅ FIX: Explicitly enable touch detection
 	touchPart.Transparency = 0.3
 	touchPart.BrickColor = BrickColor.new("Bright blue")
 	touchPart.Material = Enum.Material.Neon
@@ -258,16 +269,18 @@ function LobbySetup:createPortal(portalId, mapId, displayName, position)
 	frame.Material = Enum.Material.Metal
 	frame.Parent = portal
 	
-	-- Set portal attributes
+	-- ✅ FIX: Set portal attributes on the Model root (for consistency with discovery)
 	portal:SetAttribute("PortalId", portalId)
 	portal:SetAttribute("MapId", mapId)
 	
 	-- Use shared matchmaking defaults from GameConfig, with safe fallbacks
 	local matchmakingConfig = GameConfig and GameConfig.PORTAL_MATCHMAKING
 	local minPlayers = (matchmakingConfig and matchmakingConfig.DEFAULT_MIN_PLAYERS) or 1
+	local maxPlayers = (matchmakingConfig and matchmakingConfig.MAX_PLAYERS_PER_MATCH) or 8
 	local countdownSeconds = (matchmakingConfig and matchmakingConfig.DEFAULT_COUNTDOWN_TIME) or 10
 	
 	portal:SetAttribute("MinPlayers", minPlayers)
+	portal:SetAttribute("MaxPlayers", maxPlayers)
 	portal:SetAttribute("CountdownSeconds", countdownSeconds)
 	
 	-- Add billboard GUI for queue status

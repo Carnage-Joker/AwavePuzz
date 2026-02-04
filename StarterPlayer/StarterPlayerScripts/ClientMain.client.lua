@@ -1,8 +1,12 @@
 -- @ScriptType: LocalScript
+-- @RunContext: Legacy
 -- ClientMain.client.lua
 -- SINGLE CLIENT ENTRY POINT for Aether Wave: Convergence
 -- Boots all client subsystems in deterministic order
 -- Deterministic boot order with duplicate execution guard
+--
+-- ✅ FIX: RunContext set to Legacy to prevent multiple execution in StarterPlayerScripts
+-- The duplicate guard below is kept as a safety net
 
 -- Guard against duplicate execution using script attribute only (no _G)
 if script:GetAttribute("Initialized") then
