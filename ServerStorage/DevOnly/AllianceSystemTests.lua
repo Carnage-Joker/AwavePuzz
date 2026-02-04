@@ -266,11 +266,11 @@ suite.tests["Alliance_RemoteEventsExist"] = function()
 	end
 	
 	local allianceEvents = {
-		"RequestAlliance",
-		"AcceptAlliance",
-		"DenyAlliance",
-		"BreakAlliance",
-		"UpdateAlliance"
+		"RequestAlliance", -- Legacy API - kept for backward compatibility
+		"AllianceAccept", -- ✅ FIX: Use modern name (was AcceptAlliance)
+		"AllianceDecline", -- ✅ FIX: Use modern name (was DenyAlliance)
+		"BreakAlliance", -- Legacy API - kept for backward compatibility
+		"AllianceUpdate" -- ✅ FIX: Use modern name (was UpdateAlliance)
 	}
 	
 	for _, eventName in ipairs(allianceEvents) do

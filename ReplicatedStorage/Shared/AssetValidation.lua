@@ -41,9 +41,15 @@ end
 
 -- Validates a single animation ID
 -- @param animId: String or number asset ID
+-- @param optional: Boolean - if true, allows rbxassetid://0 as valid (for optional animations like ADS)
 -- @return boolean: true if valid, false otherwise
-local function isValidAnimationId(animId)
-	-- Same validation as sound IDs for now
+local function isValidAnimationId(animId, optional)
+	-- ✅ FIX: Allow rbxassetid://0 for optional animations (like ADS)
+	if optional and (animId == "rbxassetid://0" or animId == 0 or animId == "0") then
+		return true
+	end
+	
+	-- Same validation as sound IDs for non-optional animations
 	return isValidSoundId(animId)
 end
 
@@ -103,15 +109,23 @@ end
 -- Validates a table of animation assets and logs errors
 -- @param assetTable: Table of animation asset IDs (can be nested)
 -- @param prefix: String prefix for logging (e.g., "WeaponAnims")
+-- @param optionalKeys: Table of keys that are allowed to be rbxassetid://0 (e.g., {"ads"})
 -- @return invalidKeys: Table of invalid asset keys for reference
-function AssetValidation.validateAnimationAssets(assetTable, prefix)
+function AssetValidation.validateAnimationAssets(assetTable, prefix, optionalKeys)
 	if not assetTable or type(assetTable) ~= "table" then
 		warn("[AssetValidation] validateAnimationAssets: assetTable must be a table")
 		return {}
 	end
 	
 	prefix = prefix or "AnimationAsset"
+	optionalKeys = optionalKeys or {}
 	local invalidKeys = {}
+	
+	-- Convert optionalKeys array to set for faster lookup
+	local optionalSet = {}
+	for _, key in ipairs(optionalKeys) do
+		optionalSet[key] = true
+	end
 	
 	local function validateRecursive(tbl, path)
 		for key, value in pairs(tbl) do
@@ -121,13 +135,22 @@ function AssetValidation.validateAnimationAssets(assetTable, prefix)
 				-- Recurse into nested tables
 				validateRecursive(value, fullPath)
 			else
+				-- Check if this key is optional (e.g., "ads")
+				local isOptional = optionalSet[key] or false
+				
 				-- Validate the asset ID
-				if not isValidAnimationId(value) then
+				if not isValidAnimationId(value, isOptional) then
 					table.insert(invalidKeys, fullPath)
 					warn(string.format(
 						"[AssetValidation] Invalid AnimationId for '%s': '%s' (not a valid asset ID)",
 						fullPath,
 						tostring(value)
+					))
+				elseif isOptional and (value == "rbxassetid://0" or value == 0 or value == "0") then
+					-- Log that optional animation is using placeholder (info, not warning)
+					print(string.format(
+						"[AssetValidation] Optional animation '%s' using placeholder (rbxassetid://0) - will be skipped at runtime",
+						fullPath
 					))
 				end
 			end
@@ -250,7 +273,8 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 	if AssetConfig.Animations and AssetConfig.Animations.WeaponAnimations then
 		local invalid = AssetValidation.validateAnimationAssets(
 			AssetConfig.Animations.WeaponAnimations,
-			"WeaponAnimations"
+			"WeaponAnimations",
+			{"ads"} -- ✅ FIX: ADS animations are optional (can be rbxassetid://0)
 		)
 		-- Keys already include the prefix, so don't duplicate it
 		for _, key in ipairs(invalid) do

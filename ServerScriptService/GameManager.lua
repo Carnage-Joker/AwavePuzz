@@ -233,8 +233,17 @@ function GameManager:setupRemoteEvents()
 		"ShowCredits",
 		"HideCredits",
 		"AchievementUnlocked",
-		"BetrayalStarted"
+		"BetrayalStarted",
+		-- ✅ NEW: Map voting remotes for LobbyManager
+		"MapVotingState",
+		"MapVoteCast",
+		"MapVotingUpdate"
 	})
+	
+	-- ✅ NEW: Pass remotes to LobbyManager after they're available
+	if self.lobbyManager and self.lobbyManager.setRemoteEvents then
+		self.lobbyManager:setRemoteEvents(self.remoteEvents)
+	end
 
 	-- Hook title screen and epilogue events
 	self:_hookIntroRemotes()
@@ -680,10 +689,60 @@ function GameManager:setState(newState, payload)
 	print(string.format("[GameManager] State changed to %s", newState))
 end
 
+-- ✅ NEW: Determine player's effective state based on their context
+-- Returns the state that should be sent to a specific player
+function GameManager:_getPlayerEffectiveState(player)
+	if not player or not player.UserId then
+		return self.currentState
+	end
+	
+	-- Check if player is in a match (portal matchmaking)
+	if self.portalMatchmakingService and self.portalMatchmakingService.matchRegistry then
+		local isInMatch = self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
+		if isInMatch then
+			-- Player is in a match - send match state, NOT global lobby state
+			-- Match states: Countdown, WaveActive, Victory, Defeat
+			if self.currentState == "Countdown" or 
+			   self.currentState == "WaveActive" or 
+			   self.currentState == "Victory" or 
+			   self.currentState == "Defeat" then
+				return self.currentState
+			else
+				-- Match exists but state is weird - default to Countdown
+				warn(string.format("[GameManager] Player %s in match but global state is %s; defaulting to Countdown", 
+					player.Name, self.currentState))
+				return "Countdown"
+			end
+		end
+	end
+	
+	-- Player NOT in a match - check title screen status
+	if not self.playersReadyForEpilogue[player.UserId] then
+		-- Player has not passed title screen
+		return "TitleScreen"
+	end
+	
+	-- Player has passed title screen, not in match - send global state
+	-- This handles lobby, waiting, etc.
+	return self.currentState
+end
+
 -- Get current state snapshot for a player (used on join/character spawn)
 function GameManager:getStateSnapshotForPlayer(player)
+	-- ✅ FIX: Use player-specific effective state instead of global state
+	local effectiveState = self:_getPlayerEffectiveState(player)
+	
+	-- Log for debugging state snap-back issues
+	local inMatch = self.portalMatchmakingService and 
+	                self.portalMatchmakingService.matchRegistry and 
+	                self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
+	local matchId = inMatch and self.portalMatchmakingService.matchRegistry.playerToMatch[player.UserId] or "none"
+	
+	print(string.format("[GameManager][StateSnapshot] Player=%s GlobalState=%s EffectiveState=%s InMatch=%s MatchId=%s", 
+		player.Name, self.currentState, effectiveState, tostring(inMatch), tostring(matchId)))
+	
 	return {
-		state = self.currentState,
+		state = effectiveState, -- ✅ FIX: Use effective state, not global
 		wave = self.currentWave,
 		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,

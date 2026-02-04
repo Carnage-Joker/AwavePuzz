@@ -76,6 +76,10 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "MapVoteUpdate", Type = "Event"},
 	{Name = "MapVoteEnd", Type = "Event"},
 	{Name = "CastMapVote", Type = "Event"},
+	-- Map voting (LobbyManager compatibility)
+	{Name = "MapVotingState", Type = "Event"},
+	{Name = "MapVoteCast", Type = "Event"},
+	{Name = "MapVotingUpdate", Type = "Event"},
 
 	-- Puzzle and items
 	{Name = "PuzzlePickup", Type = "Event"},
