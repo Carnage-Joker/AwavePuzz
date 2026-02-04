@@ -121,14 +121,13 @@ function AssetValidation.validateAnimationAssets(assetTable, prefix, optionalKey
 	end
 	
 	prefix = prefix or "AnimationAsset"
+	optionalKeys = optionalKeys or {}
 	local invalidKeys = {}
 	
-	-- Create a lookup table for optional keys
-	local optionalLookup = {}
-	if optionalKeys then
-		for _, key in ipairs(optionalKeys) do
-			optionalLookup[key] = true
-		end
+	-- Convert optionalKeys array to set for faster lookup
+	local optionalSet = {}
+	for _, key in ipairs(optionalKeys) do
+		optionalSet[key] = true
 	end
 	
 	local function validateRecursive(tbl, path)
@@ -140,7 +139,7 @@ function AssetValidation.validateAnimationAssets(assetTable, prefix, optionalKey
 				validateRecursive(value, fullPath)
 			else
 				-- Check if this key is optional (e.g., "ads")
-				local isOptional = optionalLookup[key] or false
+				local isOptional = optionalSet[key] or false
 				
 				-- Validate the asset ID
 				if not isValidAnimationId(value, isOptional) then
@@ -149,6 +148,12 @@ function AssetValidation.validateAnimationAssets(assetTable, prefix, optionalKey
 						"[AssetValidation] Invalid AnimationId for '%s': '%s' (not a valid asset ID)",
 						fullPath,
 						tostring(value)
+					))
+				elseif isOptional and (value == "rbxassetid://0" or value == 0 or value == "0") then
+					-- Log that optional animation is using placeholder (info, not warning)
+					print(string.format(
+						"[AssetValidation] Optional animation '%s' using placeholder (rbxassetid://0) - will be skipped at runtime",
+						fullPath
 					))
 				end
 			end
@@ -273,7 +278,7 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 		local invalid = AssetValidation.validateAnimationAssets(
 			AssetConfig.Animations.WeaponAnimations,
 			"WeaponAnimations",
-			{"ads"}  -- Mark 'ads' as optional
+			{"ads"} -- ✅ FIX: ADS animations are optional (can be rbxassetid://0)
 		)
 		-- Keys already include the prefix, so don't duplicate it
 		for _, key in ipairs(invalid) do

@@ -45,6 +45,11 @@ function TitleScreenUI:bindRemotes(remotes)
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
 		self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+			-- ✅ NEW: Track current state for defensive guards
+			if stateData and stateData.state then
+				self._currentState = stateData.state
+			end
+			
 			if stateData and stateData.state == "TitleScreen" then
 				print("[TitleScreenUI] Received GameStateUpdate with state=TitleScreen")
 				self:show()
@@ -191,6 +196,23 @@ end
 
 function TitleScreenUI:show()
 	if self.isActive then return end
+	
+	-- ✅ NEW: Defensive guard - prevent title screen from showing during active match states
+	-- This prevents the "state snap-back" bug where TitleScreen appears mid-match
+	if self._currentState then
+		local blockStates = {
+			Countdown = true,
+			WaveActive = true,
+			Victory = true,
+			Defeat = true,
+			Epilogue = true
+		}
+		
+		if blockStates[self._currentState] then
+			warn(string.format("[TitleScreenUI] Blocked show() while in %s state (prevents snap-back)", self._currentState))
+			return
+		end
+	end
 	
 	print("[TitleScreenUI] Showing title screen")
 	self.isActive = true
