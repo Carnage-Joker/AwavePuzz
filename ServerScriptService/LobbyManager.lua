@@ -32,28 +32,8 @@ GameConfig = require(GameConfig)
 local LobbyManager = {}
 LobbyManager.__index = LobbyManager
 
-local function getRemoteEventsFolder()
-	local folder = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if not folder then
-		folder = Instance.new("Folder")
-		folder.Name = "RemoteEvents"
-		folder.Parent = ReplicatedStorage
-	end
-	return folder
-end
-
-local function getOrCreateRemote(name)
-	local folder = getRemoteEventsFolder()
-	local evt = folder:FindFirstChild(name)
-	if not evt then
-		evt = Instance.new("RemoteEvent")
-		evt.Name = name
-		evt.Parent = folder
-	end
-	return evt
-end
-
-function LobbyManager.new()
+-- ✅ NEW: Accept remoteEvents from RemoteRegistry instead of creating ad-hoc
+function LobbyManager.new(remoteEvents)
 	local self = setmetatable({}, LobbyManager)
 
 	self.mapManager = nil
@@ -65,17 +45,34 @@ function LobbyManager.new()
 	self.votes = {} -- userId -> mapId
 	self.selectedMapId = nil
 
-	-- Remotes (non-breaking: if your UI already uses different ones, this won’t crash)
-	self.remoteEvents = {
-		MapVotingState = getOrCreateRemote("MapVotingState"),   -- start/stop payload
-		MapVoteCast = getOrCreateRemote("MapVoteCast"),         -- client -> server (mapId)
-		MapVotingUpdate = getOrCreateRemote("MapVotingUpdate"), -- server -> clients (counts/time)
-	}
+-- ✅ FIX: Use remotes from RemoteRegistry (passed by GameManager)
+-- Backwards compatibility: if no remotes passed, wait for them (shouldn't happen in normal flow)
+if not remoteEvents then
+warn("[LobbyManager] No remoteEvents passed; waiting for RemoteEvents folder (legacy fallback)")
+local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
+if not remoteEventsFolder then
+error("[LobbyManager] CRITICAL: RemoteEvents folder not found after 10s")
+end
+self.remoteEvents = {
+MapVotingState = remoteEventsFolder:WaitForChild("MapVotingState", 5),
+MapVoteCast = remoteEventsFolder:WaitForChild("MapVoteCast", 5),
+MapVotingUpdate = remoteEventsFolder:WaitForChild("MapVotingUpdate", 5),
+}
+else
+-- Modern path: use remotes from RemoteRegistry
+self.remoteEvents = {
+MapVotingState = remoteEvents.MapVotingState,
+MapVoteCast = remoteEvents.MapVoteCast,
+MapVotingUpdate = remoteEvents.MapVotingUpdate,
+}
+end
 
-	-- Hook vote casting
-	self.remoteEvents.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
-		self:castVote(player, mapId)
-	end)
+-- Hook vote casting
+if self.remoteEvents.MapVoteCast then
+self.remoteEvents.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
+self:castVote(player, mapId)
+end)
+end
 
 	return self
 end
@@ -86,6 +83,36 @@ end
 
 function LobbyManager:setGameManager(gameManager)
 	self.gameManager = gameManager
+end
+
+-- ✅ NEW: Allow remotes to be set after construction for proper initialization order
+function LobbyManager:setRemoteEvents(remoteEvents)
+	if not remoteEvents then
+		warn("[LobbyManager] setRemoteEvents called with nil remoteEvents")
+		return
+	end
+	
+	-- Disconnect old connections if any
+	if self._mapVoteCastConnection then
+		self._mapVoteCastConnection:Disconnect()
+		self._mapVoteCastConnection = nil
+	end
+	
+	-- Update remotes
+	self.remoteEvents = {
+		MapVotingState = remoteEvents.MapVotingState,
+		MapVoteCast = remoteEvents.MapVoteCast,
+		MapVotingUpdate = remoteEvents.MapVotingUpdate,
+	}
+	
+	-- Re-hook vote casting
+	if self.remoteEvents.MapVoteCast then
+		self._mapVoteCastConnection = self.remoteEvents.MapVoteCast.OnServerEvent:Connect(function(player, mapId)
+			self:castVote(player, mapId)
+		end)
+	end
+	
+	print("[LobbyManager] Remotes updated from RemoteRegistry")
 end
 
 function LobbyManager:reset()

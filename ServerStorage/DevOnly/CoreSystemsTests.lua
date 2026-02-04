@@ -282,8 +282,8 @@ suite.tests["RemoteEvents_CoreEventsExist"] = function()
 	local coreEvents = {
 		"DealDamage",
 		"WaveAnnounce",
-		"GameStateChange",
-		"UpdatePlayerUI"
+		"GameStateUpdate", -- ✅ FIX: Use modern name (was GameStateChange)
+		-- "UpdatePlayerUI" removed - no longer in use
 	}
 	
 	for _, eventName in ipairs(coreEvents) do
