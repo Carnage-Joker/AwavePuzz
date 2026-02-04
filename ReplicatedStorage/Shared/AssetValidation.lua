@@ -41,15 +41,25 @@ end
 
 -- Validates a single animation ID
 -- @param animId: String or number asset ID
--- @param optional: Boolean - if true, allows rbxassetid://0 as valid (for optional animations like ADS)
+-- @param isOptional: Boolean indicating if this animation is optional (e.g., ADS)
 -- @return boolean: true if valid, false otherwise
-local function isValidAnimationId(animId, optional)
-	-- ✅ FIX: Allow rbxassetid://0 for optional animations (like ADS)
-	if optional and (animId == "rbxassetid://0" or animId == 0 or animId == "0") then
-		return true
+local function isValidAnimationId(animId, isOptional)
+	-- For optional animations, treat 0 or rbxassetid://0 as valid (placeholder)
+	if isOptional then
+		local idStr = tostring(animId)
+		if idStr == "0" or idStr == "rbxassetid://0" then
+			return true  -- Valid placeholder for optional animation
+		elseif idStr == "" then
+			-- Empty string is likely a configuration error, not an intentional placeholder
+			warn(string.format(
+				"[AssetValidation] Empty AnimationId for optional animation: '%s' (did you mean 0 or rbxassetid://0?)",
+				tostring(animId)
+			))
+			-- Fall through to standard validation below, which will treat this as invalid
+		end
 	end
 	
-	-- Same validation as sound IDs for non-optional animations
+	-- Same validation as sound IDs for non-optional or non-zero IDs
 	return isValidSoundId(animId)
 end
 
@@ -109,7 +119,7 @@ end
 -- Validates a table of animation assets and logs errors
 -- @param assetTable: Table of animation asset IDs (can be nested)
 -- @param prefix: String prefix for logging (e.g., "WeaponAnims")
--- @param optionalKeys: Table of keys that are allowed to be rbxassetid://0 (e.g., {"ads"})
+-- @param optionalKeys: Optional table of key names that are optional (e.g., {"ads"})
 -- @return invalidKeys: Table of invalid asset keys for reference
 function AssetValidation.validateAnimationAssets(assetTable, prefix, optionalKeys)
 	if not assetTable or type(assetTable) ~= "table" then
@@ -271,6 +281,7 @@ function AssetValidation.runBootTimeValidation(AssetConfig)
 	
 	-- Validate weapon animations
 	if AssetConfig.Animations and AssetConfig.Animations.WeaponAnimations then
+		-- ADS animations are optional (can be rbxassetid://0 placeholder)
 		local invalid = AssetValidation.validateAnimationAssets(
 			AssetConfig.Animations.WeaponAnimations,
 			"WeaponAnimations",

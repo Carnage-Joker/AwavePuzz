@@ -462,9 +462,13 @@ function GameManager:_hookPlayerDeath(player)
 		-- ✅ NEW: Re-send state snapshot on character respawn for resilience
 		-- Using immediate execution (not task.defer) to ensure snapshot arrives promptly
 		if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
-			local snapshot = self:getStateSnapshotForPlayer(player)
+			local result = self:getStateSnapshotForPlayer(player)
+			local snapshot = result.snapshot
+			local matchInfo = result.matchInfo
+			
 			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-			print(string.format("[Flow] Sent state snapshot to %s on character spawn: %s", player.Name, snapshot.state))
+			print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
+				player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 		end
 		
 		local humanoid = char:WaitForChild("Humanoid", 5)
@@ -587,9 +591,13 @@ function GameManager:onPlayerAdded(player)
 	-- This ensures late-joining players get the current game state regardless of timing
 	-- Using immediate execution (not task.defer) to ensure snapshot arrives before other events
 	if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
-		local snapshot = self:getStateSnapshotForPlayer(player)
+		local result = self:getStateSnapshotForPlayer(player)
+		local snapshot = result.snapshot
+		local matchInfo = result.matchInfo
+		
 		self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-		print(string.format("[Flow] Sent state snapshot to %s: %s", player.Name, snapshot.state))
+		print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
+			player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 	end
 
 	-- Handle title screen and epilogue for new players
@@ -728,26 +736,36 @@ function GameManager:_getPlayerEffectiveState(player)
 end
 
 -- Get current state snapshot for a player (used on join/character spawn)
+-- Returns: { snapshot = {...}, matchInfo = { inMatch = bool, matchId = string|nil } }
 function GameManager:getStateSnapshotForPlayer(player)
 	-- ✅ FIX: Use player-specific effective state instead of global state
 	local effectiveState = self:_getPlayerEffectiveState(player)
 	
-	-- Log for debugging state snap-back issues
+	-- Gather match info once for both snapshot and logging
 	local inMatch = self.portalMatchmakingService and 
 	                self.portalMatchmakingService.matchRegistry and 
 	                self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
-	local matchId = inMatch and self.portalMatchmakingService.matchRegistry.playerToMatch[player.UserId] or "none"
+	local matchId = inMatch and self.portalMatchmakingService.matchRegistry.playerToMatch[player.UserId] or nil
 	
+	-- Log for debugging state snap-back issues
 	print(string.format("[GameManager][StateSnapshot] Player=%s GlobalState=%s EffectiveState=%s InMatch=%s MatchId=%s", 
-		player.Name, self.currentState, effectiveState, tostring(inMatch), tostring(matchId)))
+		player.Name, self.currentState, effectiveState, tostring(inMatch), tostring(matchId or "none")))
 	
-	return {
+	local snapshot = {
 		state = effectiveState, -- ✅ FIX: Use effective state, not global
 		wave = self.currentWave,
 		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,
 		-- Include player-specific data if needed
 		playerId = player.UserId
+	}
+	
+	return {
+		snapshot = snapshot,
+		matchInfo = {
+			inMatch = inMatch or false,
+			matchId = matchId
+		}
 	}
 end
 
