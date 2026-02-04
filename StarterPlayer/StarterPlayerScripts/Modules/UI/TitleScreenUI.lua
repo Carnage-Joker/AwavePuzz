@@ -42,22 +42,38 @@ function TitleScreenUI:bindRemotes(remotes)
 	
 	self.remotes = remotes
 	
-	-- Listen for server commands
+	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
+	if self.remotes.GameStateUpdate then
+		self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+			if stateData and stateData.state == "TitleScreen" then
+				print("[TitleScreenUI] Received GameStateUpdate with state=TitleScreen")
+				self:show()
+			elseif stateData and stateData.state ~= "TitleScreen" then
+				-- Hide if state is not TitleScreen (allows state-driven hiding)
+				if self.isActive then
+					print("[TitleScreenUI] Received GameStateUpdate with state=" .. tostring(stateData.state) .. ", hiding")
+					self:hide()
+				end
+			end
+		end)
+	end
+	
+	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	if self.remotes.ShowTitleScreen then
 		self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
-			print("[TitleScreenUI] Received ShowTitleScreen event")
+			print("[TitleScreenUI] Received ShowTitleScreen event (legacy)")
 			self:show()
 		end)
 	end
 	
 	if self.remotes.HideTitleScreen then
 		self.remotes.HideTitleScreen.OnClientEvent:Connect(function()
-			print("[TitleScreenUI] Received HideTitleScreen event")
+			print("[TitleScreenUI] Received HideTitleScreen event (legacy)")
 			self:hide()
 		end)
 	end
 	
-	print("[TitleScreenUI] Remotes bound and ready")
+	print("[TitleScreenUI] Remotes bound and ready (state-driven + legacy)")
 end
 
 function TitleScreenUI:createUI()
