@@ -76,6 +76,10 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "MapVoteUpdate", Type = "Event"},
 	{Name = "MapVoteEnd", Type = "Event"},
 	{Name = "CastMapVote", Type = "Event"},
+	-- Legacy map voting API (used by LobbyManager) - kept for backward compatibility
+	{Name = "MapVotingState", Type = "Event"},
+	{Name = "MapVoteCast", Type = "Event"},
+	{Name = "MapVotingUpdate", Type = "Event"},
 
 	-- Puzzle and items
 	{Name = "PuzzlePickup", Type = "Event"},
@@ -160,9 +164,14 @@ local function ensureRemote(folder: Folder, name: string, remoteType: "Event" | 
 	local expectedClass = (remoteType == "Event") and "RemoteEvent" or "RemoteFunction"
 
 	if existing then
-		if existing:IsA(expectedClass) then
-			return existing :: any
+		-- Type narrowing: check if it's the correct type
+		if remoteType == "Event" and existing:IsA("RemoteEvent") then
+			return existing :: RemoteEvent
+		elseif remoteType == "Function" and existing:IsA("RemoteFunction") then
+			return existing :: RemoteFunction
 		end
+		
+		-- Wrong type - recreate
 		warn(string.format(
 			"%s '%s' exists but is wrong type (%s, expected %s). Recreating.",
 			LOG_PREFIX,
@@ -173,15 +182,18 @@ local function ensureRemote(folder: Folder, name: string, remoteType: "Event" | 
 		existing:Destroy()
 	end
 
-	local remote: RemoteEvent | RemoteFunction
+	-- Create new remote with proper typing
 	if remoteType == "Event" then
-		remote = Instance.new("RemoteEvent")
+		local remote = Instance.new("RemoteEvent")
+		remote.Name = name
+		remote.Parent = folder
+		return remote
 	else
-		remote = Instance.new("RemoteFunction")
+		local remote = Instance.new("RemoteFunction")
+		remote.Name = name
+		remote.Parent = folder
+		return remote
 	end
-	remote.Name = name
-	remote.Parent = folder
-	return remote
 end
 
 function RemoteRegistry.initializeServer(): RemoteMap
@@ -311,8 +323,11 @@ function RemoteRegistry.getRemote(name: string): RemoteEvent | RemoteFunction
 		error(string.format("%s Remote '%s' not found. Is it defined in RemoteRegistry?", LOG_PREFIX, name))
 	end
 
-	if remoteInst:IsA("RemoteEvent") or remoteInst:IsA("RemoteFunction") then
-		return remoteInst :: any
+	-- Type narrowing with proper checks
+	if remoteInst:IsA("RemoteEvent") then
+		return remoteInst :: RemoteEvent
+	elseif remoteInst:IsA("RemoteFunction") then
+		return remoteInst :: RemoteFunction
 	end
 
 	error(string.format("%s Remote '%s' is not a RemoteEvent/RemoteFunction (got %s)", LOG_PREFIX, name, remoteInst.ClassName))

@@ -454,8 +454,21 @@ function GameManager:_hookPlayerDeath(player)
 		-- Using immediate execution (not task.defer) to ensure snapshot arrives promptly
 		if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
 			local snapshot = self:getStateSnapshotForPlayer(player)
+			local inMatch = false
+			local matchId = nil
+			
+			-- Get match info for debug logging
+			if self.portalMatchmakingService then
+				local matchRegistry = self.portalMatchmakingService:getMatchRegistry()
+				if matchRegistry then
+					matchId = matchRegistry:getPlayerMatch(player)
+					inMatch = matchId ~= nil
+				end
+			end
+			
 			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-			print(string.format("[Flow] Sent state snapshot to %s on character spawn: %s", player.Name, snapshot.state))
+			print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
+				player.Name, snapshot.state, tostring(inMatch), tostring(matchId or "nil")))
 		end
 		
 		local humanoid = char:WaitForChild("Humanoid", 5)
@@ -579,8 +592,21 @@ function GameManager:onPlayerAdded(player)
 	-- Using immediate execution (not task.defer) to ensure snapshot arrives before other events
 	if player and player.Parent and self.remoteEvents and self.remoteEvents.GameStateUpdate then
 		local snapshot = self:getStateSnapshotForPlayer(player)
+		local inMatch = false
+		local matchId = nil
+		
+		-- Get match info for debug logging
+		if self.portalMatchmakingService then
+			local matchRegistry = self.portalMatchmakingService:getMatchRegistry()
+			if matchRegistry then
+				matchId = matchRegistry:getPlayerMatch(player)
+				inMatch = matchId ~= nil
+			end
+		end
+		
 		self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
-		print(string.format("[Flow] Sent state snapshot to %s: %s", player.Name, snapshot.state))
+		print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
+			player.Name, snapshot.state, tostring(inMatch), tostring(matchId or "nil")))
 	end
 
 	-- Handle title screen and epilogue for new players
@@ -680,10 +706,41 @@ function GameManager:setState(newState, payload)
 	print(string.format("[GameManager] State changed to %s", newState))
 end
 
+-- ✅ NEW HELPER: Get player's effective state (match-aware)
+-- This ensures players in active matches get match state, not TitleScreen
+function GameManager:_getPlayerEffectiveState(player)
+	-- Check if player is in an active match via PortalMatchmakingService
+	if self.portalMatchmakingService then
+		local matchRegistry = self.portalMatchmakingService:getMatchRegistry()
+		if matchRegistry then
+			local matchId = matchRegistry:getPlayerMatch(player)
+			if matchId then
+				local match = matchRegistry:getMatch(matchId)
+				if match and match.active then
+					-- Player is in an active match - return the current match state
+					-- This prevents sending TitleScreen to players already in MAP
+					return self.currentState
+				end
+			end
+		end
+	end
+	
+	-- Player not in match
+	-- If TitleScreen hasn't been completed, show TitleScreen
+	if GameConfig.SHOW_TITLE_SCREEN and not self.playersCompletedTitleScreen[player.UserId] then
+		return GameManager.States.TITLE_SCREEN
+	end
+	
+	-- Otherwise return lobby/waiting state
+	return GameManager.States.WAITING
+end
+
 -- Get current state snapshot for a player (used on join/character spawn)
 function GameManager:getStateSnapshotForPlayer(player)
+	local effectiveState = self:_getPlayerEffectiveState(player)
+	
 	return {
-		state = self.currentState,
+		state = effectiveState,
 		wave = self.currentWave,
 		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,
