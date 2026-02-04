@@ -47,8 +47,15 @@ local function isValidAnimationId(animId, isOptional)
 	-- For optional animations, treat 0 or rbxassetid://0 as valid (placeholder)
 	if isOptional then
 		local idStr = tostring(animId)
-		if idStr == "0" or idStr == "rbxassetid://0" or idStr == "" then
+		if idStr == "0" or idStr == "rbxassetid://0" then
 			return true  -- Valid placeholder for optional animation
+		elseif idStr == "" then
+			-- Empty string is likely a configuration error, not an intentional placeholder
+			warn(string.format(
+				"[AssetValidation] Empty AnimationId for optional animation: '%s' (did you mean 0 or rbxassetid://0?)",
+				tostring(animId)
+			))
+			-- Fall through to standard validation below, which will treat this as invalid
 		end
 	end
 	
