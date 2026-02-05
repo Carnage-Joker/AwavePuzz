@@ -33,7 +33,8 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "WaveAnnounce", Type = "Event"},
 	{Name = "WaveUpdate", Type = "Event"},
 	{Name = "GameStateUpdate", Type = "Event"},
-	{Name = "ClientReady", Type = "Event"}, -- Server → Client signal that server systems are ready
+	-- Reserved for future client-server synchronization; currently unused on the client.
+	{Name = "ClientReady", Type = "Event"},
 
 	-- Cure system
 	{Name = "CureUpdate", Type = "Event"},
