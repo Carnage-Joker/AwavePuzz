@@ -64,11 +64,18 @@ if titleScreenModule then
 	end)
 	if success and TitleScreenClass then
 		-- TitleScreenUI.new() creates the UI and sets DisplayOrder=200
-		titleScreenInstance = TitleScreenClass.new()
-		-- Store globally so ClientMainModule can bind remotes later
-		shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
-		print("[BOOT][CLIENT] ✓ TitleScreenUI created immediately with DisplayOrder=200")
-		print("[BOOT][CLIENT] ✓ Title screen ready (remotes will be bound later)")
+		local newSuccess, newResult = pcall(function()
+			return TitleScreenClass.new()
+		end)
+		if newSuccess and newResult then
+			titleScreenInstance = newResult
+			-- Store globally so ClientMainModule can bind remotes later
+			shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
+			print("[BOOT][CLIENT] ✓ TitleScreenUI created immediately with DisplayOrder=200")
+			print("[BOOT][CLIENT] ✓ Title screen ready (remotes will be bound later)")
+		else
+			warn("[BOOT][CLIENT] ✗ Failed to create TitleScreenUI instance:", newResult)
+		end
 	else
 		warn("[BOOT][CLIENT] ✗ Failed to load TitleScreenUI:", TitleScreenClass)
 	end
