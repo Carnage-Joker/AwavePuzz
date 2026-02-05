@@ -1,6 +1,10 @@
 -- Title Screen First Load - Setup Validator
 -- Run this script in Roblox Studio Command Bar to validate setup
 -- This checks that all required files and settings are in place
+--
+-- NOTE: Content validation checks (searching script source code) only work in Edit mode,
+-- not in Play mode. Run this script before starting Play mode for complete validation.
+-- In Play mode, structure checks will still work but content checks will be skipped with warnings.
 
 print("========================================")
 print("Title Screen First Load - Setup Validator")
@@ -45,12 +49,16 @@ local mainServer = ServerScriptService:FindFirstChild("Main.server")
 if mainServer then
 	pass("Main.server.lua exists in ServerScriptService")
 	
-	-- Check for Phase 0 code (basic check)
-	local source = mainServer.Source
-	if source:find("CharacterAutoLoads") then
-		pass("Main.server.lua contains CharacterAutoLoads setup")
+	-- Check for Phase 0 code (requires Edit mode access to Source property)
+	local sourceAccessible, source = pcall(function() return mainServer.Source end)
+	if sourceAccessible and source then
+		if source:find("CharacterAutoLoads") then
+			pass("Main.server.lua contains CharacterAutoLoads setup")
+		else
+			fail("Main.server.lua does not contain CharacterAutoLoads setup")
+		end
 	else
-		fail("Main.server.lua does not contain CharacterAutoLoads setup")
+		warning("Cannot verify Main.server.lua content (Source property not accessible in Play mode)")
 	end
 else
 	fail("Main.server.lua not found in ServerScriptService")
@@ -73,12 +81,16 @@ if starterPlayerScripts then
 	if bootClient then
 		pass("Boot.client.lua exists in StarterPlayerScripts")
 		
-		-- Check for camera control code
-		local source = bootClient.Source
-		if source:find("CameraType") and source:find("Scriptable") then
-			pass("Boot.client.lua contains camera control code")
+		-- Check for camera control code (requires Edit mode access to Source property)
+		local sourceAccessible, source = pcall(function() return bootClient.Source end)
+		if sourceAccessible and source then
+			if source:find("CameraType") and source:find("Scriptable") then
+				pass("Boot.client.lua contains camera control code")
+			else
+				fail("Boot.client.lua missing camera control code")
+			end
 		else
-			fail("Boot.client.lua missing camera control code")
+			warning("Cannot verify Boot.client.lua content (Source property not accessible in Play mode)")
 		end
 	else
 		fail("Boot.client.lua not found in StarterPlayerScripts")
@@ -138,12 +150,16 @@ if sharedFolder then
 		if remoteRegistry then
 			pass("RemoteRegistry module exists")
 			
-			-- Check for ClientReady in REMOTE_DEFINITIONS (basic check)
-			local source = remoteRegistry.Source
-			if source:find("ClientReady") then
-				pass("RemoteRegistry contains ClientReady remote definition")
+			-- Check for ClientReady in REMOTE_DEFINITIONS (requires Edit mode access to Source property)
+			local sourceAccessible, source = pcall(function() return remoteRegistry.Source end)
+			if sourceAccessible and source then
+				if source:find("ClientReady") then
+					pass("RemoteRegistry contains ClientReady remote definition")
+				else
+					fail("RemoteRegistry does not contain ClientReady remote")
+				end
 			else
-				fail("RemoteRegistry does not contain ClientReady remote")
+				warning("Cannot verify RemoteRegistry content (Source property not accessible in Play mode)")
 			end
 		else
 			fail("RemoteRegistry module not found in Shared/Remotes")
@@ -157,12 +173,16 @@ if sharedFolder then
 	if gameConfig then
 		pass("GameConfig module exists")
 		
-		-- Check SHOW_TITLE_SCREEN flag
-		local source = gameConfig.Source
-		if source:find("SHOW_TITLE_SCREEN") then
-			pass("GameConfig contains SHOW_TITLE_SCREEN flag")
+		-- Check SHOW_TITLE_SCREEN flag (requires Edit mode access to Source property)
+		local sourceAccessible, source = pcall(function() return gameConfig.Source end)
+		if sourceAccessible and source then
+			if source:find("SHOW_TITLE_SCREEN") then
+				pass("GameConfig contains SHOW_TITLE_SCREEN flag")
+			else
+				warning("GameConfig missing SHOW_TITLE_SCREEN flag (title screen might not show)")
+			end
 		else
-			warning("GameConfig missing SHOW_TITLE_SCREEN flag (title screen might not show)")
+			warning("Cannot verify GameConfig content (Source property not accessible in Play mode)")
 		end
 	else
 		fail("GameConfig module not found in Shared")
