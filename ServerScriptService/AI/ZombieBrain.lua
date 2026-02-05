@@ -118,6 +118,11 @@ function ZombieBrain.new(zombieModel, stats, baseManager, playerManager, targeti
 	-- Cache base reference for performance
 	self.cachedBase = nil
 
+	-- Nearby zombies cache (optimization to reduce O(n²) performance issue)
+	self._nearbyZombiesCache = {}
+	self._nearbyZombiesCacheCooldown = 0
+	self._nearbyZombiesCacheInterval = 0.5  -- Refresh every 0.5 seconds instead of every frame
+
 	-- Attack system
 	self.attackCooldown = 0
 	self.attackInterval = GameConfig.ZOMBIE_ATTACK_INTERVAL or 1.5
@@ -238,6 +243,12 @@ function ZombieBrain:determineLOD()
 end
 
 function ZombieBrain:getNearbyZombies()
+	-- Return cached result if still valid (reduces O(n²) to O(n) per cache interval)
+	if self._nearbyZombiesCacheCooldown > 0 then
+		return self._nearbyZombiesCache
+	end
+	
+	-- Rebuild cache
 	local nearby = {}
 	local zombiesFolder = workspace:FindFirstChild("Zombies")
 
@@ -255,6 +266,10 @@ function ZombieBrain:getNearbyZombies()
 		end
 	end
 
+	-- Update cache
+	self._nearbyZombiesCache = nearby
+	self._nearbyZombiesCacheCooldown = self._nearbyZombiesCacheInterval
+	
 	return nearby
 end
 
@@ -459,6 +474,9 @@ function ZombieBrain:update(deltaTime)
 			self.repathInterval = auraInterval + (self._repathJitter or 0)
 		end
 	end
+
+	-- Update nearby zombies cache cooldown (performance optimization)
+	self._nearbyZombiesCacheCooldown = math.max(0, self._nearbyZombiesCacheCooldown - deltaTime)
 
 	-- Throttled LOD calc (avoid per-frame all-player scan)
 	self._lodCooldown -= deltaTime
