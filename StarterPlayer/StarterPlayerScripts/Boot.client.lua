@@ -4,11 +4,12 @@
 -- Ensures Title Screen appears before ANY map, lobby, or character is visible
 -- Implements deterministic boot order: UI → Camera → Server Ready → Spawn
 
--- Guard against duplicate execution
-if script:GetAttribute("Initialized") then
+-- Guard against duplicate execution (singleton across all Boot.client.lua instances)
+if shared.__AwavePuzzBootClientInitialized then
 	warn("[BOOT][CLIENT] Already initialized, skipping duplicate execution")
 	return
 end
+shared.__AwavePuzzBootClientInitialized = true
 script:SetAttribute("Initialized", true)
 
 print("=== [BOOT][CLIENT] Boot.client.lua - First Load Entry Point ===")
