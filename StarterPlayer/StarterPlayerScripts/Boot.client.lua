@@ -31,7 +31,7 @@ camera.CameraType = Enum.CameraType.Scriptable
 
 -- Position camera in a neutral/safe position (black void)
 -- This prevents any flash of the default spawn or lobby
-camera.CFrame = CFrame.new(Vector3.new(0, 10000, 0)) -- High above world
+camera.CFrame = CFrame.new(Vector3.new(0, 100000, 0)) -- Far above world to avoid any map/skybox content
 
 -- Disable default Roblox UI during boot
 pcall(function()
