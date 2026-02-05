@@ -49,7 +49,6 @@ print("[BOOT][CLIENT] Phase 2: Loading ClientMainModule...")
 -- Load ClientMainModule to initialize all systems
 -- ClientMainModule will handle:
 -- - Title Screen display
--- - Waiting for server ready signal
 -- - Initializing all game systems
 -- - Restoring camera control
 local ClientMainModule = require(script.Parent:WaitForChild("ClientMainModule"))
