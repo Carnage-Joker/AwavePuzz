@@ -487,13 +487,15 @@ local function bootClient()
 		-- During TitleScreen, keep camera scriptable
 		-- After TitleScreen, restore normal camera control
 		if Camera then
-			if not enableCamera then
-				-- Keep camera scriptable during title/epilogue
-				-- (Boot.client.lua already set it, just maintain it)
-			else
-				-- Re-enable camera control
-				if Camera.enable then
-					Camera.enable()
+			local currentCamera = workspace.CurrentCamera
+			if currentCamera then
+				if not enableCamera then
+					-- Keep camera scriptable during title/epilogue
+					-- (Boot.client.lua already set it, just maintain it)
+					currentCamera.CameraType = Enum.CameraType.Scriptable
+				else
+					-- Re-enable camera control by restoring default camera type
+					currentCamera.CameraType = Enum.CameraType.Custom
 				end
 			end
 		end
