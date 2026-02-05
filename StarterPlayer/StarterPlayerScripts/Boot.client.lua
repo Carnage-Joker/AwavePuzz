@@ -62,7 +62,7 @@ if titleScreenModule then
 		return require(titleScreenModule)
 	end)
 	if success and TitleScreenClass then
-		-- TitleScreenUI.new() creates the UI and sets DisplayOrder=100
+		-- TitleScreenUI.new() creates the UI and sets DisplayOrder=200
 		titleScreenInstance = TitleScreenClass.new()
 		-- Store globally so ClientMainModule can bind remotes later
 		shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
