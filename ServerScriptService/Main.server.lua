@@ -182,17 +182,6 @@ Players.PlayerAdded:Connect(function(player)
 	sprintService:initializePlayer(player)
 	achievementService:initializePlayer(player)
 
-	-- ✅ NEW: Send ClientReady signal to player
-	-- This tells the client that all server systems are initialized
-	-- and the client can proceed with its boot sequence
-	if remotes.ClientReady then
-		-- Small delay to ensure client remotes are bound
-		task.delay(0.5, function()
-			remotes.ClientReady:FireClient(player)
-			print(string.format("[BOOT][SERVER] Sent ClientReady signal to %s", player.Name))
-		end)
-	end
-
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
 		print(string.format("[STATE] Player %s's character loaded", player.Name))
