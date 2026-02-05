@@ -707,14 +707,15 @@ function GameManager:setState(newState, payload)
 		-- end
 		print("[GameManager] Title screen controlled via GameStateUpdate (legacy ShowTitleScreen disabled)")
 	elseif newState == GameManager.States.EPILOGUE then
-		-- if self.remoteEvents.ShowEpilogue then
-		-- 	for _, player in ipairs(Players:GetPlayers()) do
-		-- 		if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
-		-- 			self.remoteEvents.ShowEpilogue:FireClient(player)
-		-- 		end
-		-- 	end
-		-- end
-		print("[GameManager] Epilogue controlled via GameStateUpdate (legacy ShowEpilogue disabled)")
+		-- For consistency, still fire legacy ShowEpilogue for players who are ready and not completed
+		if self.remoteEvents.ShowEpilogue then
+			for _, player in ipairs(Players:GetPlayers()) do
+				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
+					self.remoteEvents.ShowEpilogue:FireClient(player)
+				end
+			end
+		end
+		print("[GameManager] Epilogue controlled via GameStateUpdate and legacy ShowEpilogue (compatibility path)")
 	end
 	
 	print(string.format("[GameManager] State changed to %s", newState))
