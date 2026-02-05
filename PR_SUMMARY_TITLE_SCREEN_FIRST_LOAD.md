@@ -142,7 +142,7 @@ All requirements from the problem statement have been addressed:
 - Positions camera at (0, 10000, 0) - neutral/black/safe state
 - Title Screen enabled and top-most (DisplayOrder = 100)
 - Player movement/input disabled via state management
-- Waits for server "READY" signal (ClientReady event)
+- Designed to integrate with server "READY" signal (ClientReady event); wiring the actual wait into Boot.client.lua is planned as a follow-up
 
 ### ✅ Server Boot
 - Players.CharacterAutoLoads = false
