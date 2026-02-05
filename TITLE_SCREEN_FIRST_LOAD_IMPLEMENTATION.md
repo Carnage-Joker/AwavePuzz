@@ -318,7 +318,7 @@ In Studio Play Solo mode, some timing may differ from published game. Always tes
 On slow connections, the 0.5 second ClientReady delay might not be sufficient. Monitor logs for "remote not found" errors.
 
 ### Camera Restoration
-Camera restoration relies on FirstPersonCamera.enable(). If that module changes, camera control may need adjustment.
+Camera restoration is handled by the FirstPersonCamera module via its current public API. If that module or its API surface changes, the boot flow's camera setup and restoration logic may need adjustment.
 
 ## Future Improvements
 
