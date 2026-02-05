@@ -64,7 +64,7 @@ Contains:
 ## 📊 Audit Statistics
 
 ### Files Analyzed
-- **35** Server-side Lua scripts (ServerScriptService/)
+- **36** Server-side Lua scripts (ServerScriptService/)
 - **20+** Client-side scripts (StarterPlayer/, StarterGui/)
 - **30+** Documentation files
 - **5** Core configuration modules

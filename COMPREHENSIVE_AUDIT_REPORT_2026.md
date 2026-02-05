@@ -82,7 +82,7 @@ function PlayerManager:deductCurrency(player, amount)
         return false
     end
     
-    -- Atomic check-and-deduct
+    -- Atomic check-and-deduct to reduce race condition window
     local newBalance = playerData.currency - amount
     if newBalance < 0 then
         return false  -- Insufficient funds
@@ -93,6 +93,8 @@ function PlayerManager:deductCurrency(player, amount)
     return true
 end
 ```
+
+**Note**: This fix reduces the race condition window significantly but doesn't completely eliminate it. If `sendCurrencyUpdate` yields (which is unlikely in typical implementations), there's still a potential window for concurrent operations. For complete protection, consider implementing a mutex/lock mechanism similar to AllianceGraph's `_edgeMutex` pattern to fully prevent concurrent modifications to the same player's currency.
 
 **Impact**: Low likelihood but could allow players to make purchases with insufficient funds during high server load.
 
@@ -1488,7 +1490,7 @@ end
 
 ## Appendix A: Files Analyzed
 
-### Server Scripts (45 files)
+### Server Scripts (36 files)
 - Main.server.lua
 - GameManager.lua
 - PlayerManager.lua
@@ -1546,7 +1548,7 @@ end
 ## Appendix B: Audit Methodology
 
 ### Tools Used
-1. **Manual Code Review**: 45 server Lua files
+1. **Manual Code Review**: 36 server Lua files
 2. **Pattern Matching**: grep for deprecated APIs, common issues
 3. **Static Analysis**: Logic flow analysis for race conditions
 4. **Architecture Review**: Service dependencies and initialization order
