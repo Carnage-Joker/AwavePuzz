@@ -8,7 +8,7 @@ This guide describes how to test the Title Screen First Load implementation in R
 
 ### Server Changes
 1. **CharacterAutoLoads = false**: Server now disables automatic character spawning
-2. **ClientReady event**: Server signals to clients when all systems are initialized
+2. **ClientReady event (reserved)**: Defined on the server for future use; currently clients do not listen for this signal
 3. **Explicit LoadCharacter()**: Server only spawns character after title screen is completed
 
 ### Client Changes
