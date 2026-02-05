@@ -439,32 +439,38 @@ local function bootClient()
 		
 		local enableMovement = false
 		local enableWeapons = false
+		local enableCamera = true  -- Default: camera is enabled
 		
 		-- Treat any epilogue-like state (e.g. "EpilogueActive", "ShowingEpilogue") as epilogue
 		local isEpilogueState = typeof(stateName) == "string" and string.find(stateName, "Epilogue", 1, true) ~= nil
 		
 		-- Map states to movement/weapon enable flags
 		if stateName == "TitleScreen" or isEpilogueState then
-			-- Title and epilogue: no movement, no weapons
+			-- Title and epilogue: no movement, no weapons, no camera control
 			enableMovement = false
 			enableWeapons = false
+			enableCamera = false
 		elseif stateName == "Lobby" or stateName == "Waiting" then
-			-- Lobby/Waiting: can move, no weapons
+			-- Lobby/Waiting: can move, no weapons, camera enabled
 			enableMovement = true
 			enableWeapons = false
+			enableCamera = true
 		elseif stateName == "Countdown" or stateName == "WaveActive" or stateName == "Intermission" then
-			-- Active gameplay: can move and use weapons
+			-- Active gameplay: can move and use weapons, camera enabled
 			enableMovement = true
 			enableWeapons = true
+			enableCamera = true
 		elseif stateName == "Victory" or stateName == "Defeat" or stateName == "Scoreboard" then
-			-- End states: can move, no weapons
+			-- End states: can move, no weapons, camera enabled
 			enableMovement = true
 			enableWeapons = false
+			enableCamera = true
 		else
 			-- Unknown state: safe defaults (allow movement, disable weapons)
 			warn(string.format("[ClientState] Unknown state '%s', using safe defaults", tostring(stateName)))
 			enableMovement = true
 			enableWeapons = false
+			enableCamera = true
 		end
 		
 		-- Apply movement state
@@ -475,6 +481,21 @@ local function bootClient()
 		-- Apply weapon state
 		if WeaponController and WeaponController.setEnabled then
 			WeaponController.setEnabled(enableWeapons)
+		end
+		
+		-- Apply camera state
+		-- During TitleScreen, keep camera scriptable
+		-- After TitleScreen, restore normal camera control
+		if Camera then
+			if not enableCamera then
+				-- Keep camera scriptable during title/epilogue
+				-- (Boot.client.lua already set it, just maintain it)
+			else
+				-- Re-enable camera control
+				if Camera.enable then
+					Camera.enable()
+				end
+			end
 		end
 	end
 	
@@ -490,8 +511,8 @@ local function bootClient()
 		warn("[BOOT][CLIENT] ✗ GameStateUpdate remote not found")
 	end
 	
-	-- Apply safe initial state
-	applyState("Waiting")
+	-- Apply safe initial state (TitleScreen to disable movement/weapons/camera)
+	applyState("TitleScreen")
 	
 	print("[BOOT][CLIENT] Phase 6.5 complete: Client state router active")
 	

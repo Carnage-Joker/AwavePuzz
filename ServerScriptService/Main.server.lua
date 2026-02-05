@@ -18,6 +18,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 print("=== [BOOT][SERVER] Aether Wave: Convergence Server Starting ===")
 
 ----------------------------------------------------------------
+-- PHASE 0: CHARACTER AUTO-LOAD CONTROL
+----------------------------------------------------------------
+
+print("[BOOT][SERVER] Phase 0: Disabling character auto-load...")
+
+-- CRITICAL: Disable auto character spawning
+-- Characters will only spawn after:
+-- 1. Server is fully ready
+-- 2. Player completes title screen
+-- 3. Server explicitly calls player:LoadCharacter()
+Players.CharacterAutoLoads = false
+
+print("[BOOT][SERVER] Phase 0 complete: CharacterAutoLoads = false")
+
+----------------------------------------------------------------
 -- PHASE 1: Initialize Remote Registry
 ----------------------------------------------------------------
 
@@ -166,6 +181,17 @@ Players.PlayerAdded:Connect(function(player)
 	puzzleService:initializePlayer(player)
 	sprintService:initializePlayer(player)
 	achievementService:initializePlayer(player)
+
+	-- ✅ NEW: Send ClientReady signal to player
+	-- This tells the client that all server systems are initialized
+	-- and the client can proceed with its boot sequence
+	if remotes.ClientReady then
+		-- Small delay to ensure client remotes are bound
+		task.delay(0.5, function()
+			remotes.ClientReady:FireClient(player)
+			print(string.format("[BOOT][SERVER] Sent ClientReady signal to %s", player.Name))
+		end)
+	end
 
 	-- Character lifecycle
 	player.CharacterAdded:Connect(function(character)
