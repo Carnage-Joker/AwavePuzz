@@ -280,6 +280,21 @@ function GameManager:onPlayerPassedTitleScreen(player)
 	print(string.format("[Flow] Player %s passed title screen (TitleScreenContinue)", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
 
+	-- ✅ NEW: Load character for player after title screen completion
+	-- With CharacterAutoLoads = false, we must explicitly load the character
+	if player.Character == nil then
+		-- Set spawn state to waiting/lobby before loading character
+		if self.playerSpawnManager then
+			self.playerSpawnManager.playerSpawnState[player.UserId] = "waiting"
+		end
+		
+		print(string.format("[Flow] Loading character for %s after title screen", player.Name))
+		player:LoadCharacter()
+	else
+		-- Character already exists (shouldn't happen with CharacterAutoLoads=false, but handle it)
+		print(string.format("[Flow] Character already exists for %s", player.Name))
+	end
+
 	-- ✅ FIX: Do NOT show epilogue during title screen (removed lines 257-263)
 	-- Epilogue should only show after rounds complete, not on first join
 	-- Individual players no longer receive epilogue during TITLE_SCREEN state

@@ -262,6 +262,12 @@ function TitleScreenUI:hide()
 	end
 	self.pulseTweens = {}
 	
+	-- ✅ NEW: Re-enable CoreGui when title screen is hidden
+	local StarterGui = game:GetService("StarterGui")
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true)
+	end)
+	
 	-- Fade out animation
 	self:fadeOut()
 end

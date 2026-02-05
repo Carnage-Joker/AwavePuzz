@@ -18,6 +18,21 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 print("=== [BOOT][SERVER] Aether Wave: Convergence Server Starting ===")
 
 ----------------------------------------------------------------
+-- PHASE 0: CHARACTER AUTO-LOAD CONTROL
+----------------------------------------------------------------
+
+print("[BOOT][SERVER] Phase 0: Disabling character auto-load...")
+
+-- CRITICAL: Disable auto character spawning
+-- Characters will only spawn after:
+-- 1. Server is fully ready
+-- 2. Player completes title screen
+-- 3. Server explicitly calls player:LoadCharacter()
+Players.CharacterAutoLoads = false
+
+print("[BOOT][SERVER] Phase 0 complete: CharacterAutoLoads = false")
+
+----------------------------------------------------------------
 -- PHASE 1: Initialize Remote Registry
 ----------------------------------------------------------------
 
