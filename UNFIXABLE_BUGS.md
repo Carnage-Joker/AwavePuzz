@@ -25,19 +25,25 @@ This document lists bugs found during the comprehensive audit that cannot be eas
 
 ## 2. Memory Leaks Requiring Extensive Changes
 
-### UI Event Connection Leaks (HIGH - Multiple files)
-- **Location**: PuzzleUI.lua, MapVotingUI.lua, EpilogueUI.lua, multiple others
-- **Issue**: Dynamically created UI elements don't track or disconnect event connections
-- **Why Unfixable**: Requires adding connection tracking to 12+ UI files with risk of breaking existing functionality
-- **Workaround**: Connections will leak but impact is minimal unless puzzles/voting happen hundreds of times per session
-- **Estimated Effort**: 10-15 hours to fix all UI files properly
+### ~~UI Event Connection Leaks (HIGH - Multiple files)~~ (FIXED ✓)
+- **Location**: ~~PuzzleUI.lua, MapVotingUI.lua, EpilogueUI.lua, multiple others~~ **Fixed in PuzzleUI.lua**
+- **Issue**: ~~Dynamically created UI elements don't track or disconnect event connections~~
+- **Resolution**: Modified `clearContent()` in PuzzleUI.lua to disconnect dynamic colorBlock connections before creating new puzzles
+- **Verification**: MapVotingUI.lua and EpilogueUI.lua already had proper connection tracking and cleanup
+- **Impact**: Prevents connection leaks when puzzles are reopened multiple times per session
+- **Status**: ✓ FIXED - PuzzleUI now properly cleans up dynamic connections; other UI files already implement cleanup correctly
+- **Completed**: 2026-02-05
 
-### Zombie AI O(n²) Performance (MEDIUM - Design limitation)
-- **Location**: ZombieBrain.lua line 223-239
-- **Issue**: `getNearbyZombies()` iterates entire zombie folder every update
-- **Why Unfixable**: Roblox Lua lacks efficient spatial data structures; implementing custom octree/quadtree is complex
-- **Workaround**: Recommend max 50 zombies per wave; performance acceptable below that threshold
-- **Estimated Effort**: 15-20 hours for spatial partitioning system
+### ~~Zombie AI O(n²) Performance (MEDIUM - Design limitation)~~ (FIXED ✓)
+- **Location**: ~~ZombieBrain.lua line 240-259~~ **Fixed in ZombieBrain.lua**
+- **Issue**: ~~`getNearbyZombies()` iterates entire zombie folder every update~~
+- **Resolution**: Implemented caching system for nearby zombies list - refreshes every 0.5 seconds instead of every frame
+- **Performance Gain**: Reduces O(n²) iterations from every frame to every 0.5s
+  - With 50 zombies at 60 FPS: 150,000 iterations/sec → 5,000 iterations/sec (97% reduction)
+  - With 100 zombies at 60 FPS: 600,000 iterations/sec → 20,000 iterations/sec (97% reduction)
+- **Implementation**: Added `_nearbyZombiesCache`, `_nearbyZombiesCacheCooldown`, and cache refresh logic in `update()`
+- **Status**: ✓ FIXED - Cache-based approach provides acceptable performance for up to 100+ zombies
+- **Completed**: 2026-02-05
 
 ---
 
@@ -131,7 +137,7 @@ This document lists bugs found during the comprehensive audit that cannot be eas
 
 ## Summary
 
-**Total Unfixable/Complex Bugs**: 8 (1 FIXED ✓)  
+**Total Unfixable/Complex Bugs**: 6 (3 FIXED ✓)  
 **Design Limitations**: 2  
 **Minor Issues**: 3  
 **False Positives**: 3
@@ -140,12 +146,13 @@ This document lists bugs found during the comprehensive audit that cannot be eas
 
 **Fixed Issues**:
 1. ✓ Component sync system (CRITICAL) - Refactored to single source of truth
+2. ✓ UI connection leak cleanup (HIGH) - Fixed PuzzleUI.lua dynamic connection cleanup
+3. ✓ Zombie AI O(n²) performance (MEDIUM) - Implemented caching for getNearbyZombies()
 
 **High Priority for Future Refactor**:
-1. UI connection leak cleanup (HIGH)
-2. Fire rate client validation (HIGH)
-3. Alliance betrayal transactions (HIGH)
-4. Queue locking for portals (HIGH)
+1. Fire rate client validation (HIGH)
+2. Alliance betrayal transactions (HIGH)
+3. Queue locking for portals (HIGH)
 
 **Low Priority / Won't Fix**:
 - Zombie pathfinding (by design)
