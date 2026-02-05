@@ -83,7 +83,11 @@ else
 	warn("[BOOT][CLIENT] ✗ TitleScreenUI module not found")
 end
 
-print("[BOOT][CLIENT] Phase 0.5 complete: TitleScreenUI created")
+if titleScreenInstance then
+	print("[BOOT][CLIENT] Phase 0.5 complete: TitleScreenUI created")
+else
+	warn("[BOOT][CLIENT] Phase 0.5 complete: TitleScreenUI not created; continuing without title screen")
+end
 
 ----------------------------------------------------------------
 -- PHASE 2: DELEGATE TO CLIENT MAIN MODULE
