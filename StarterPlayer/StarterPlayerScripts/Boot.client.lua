@@ -4,7 +4,8 @@
 -- FIRST LOAD CLIENT ENTRY POINT
 -- Ensures Title Screen appears before ANY map, lobby, or character is visible
 -- Implements deterministic boot order: UI → Camera → Server Ready → Spawn
--- NOTE: RunContext=Legacy prevents duplicate execution warnings in Studio
+-- IMPORTANT: In Roblox Studio, set this LocalScript's RunContext property to "Legacy" in the Properties panel.
+-- The @RunContext tag and this comment are documentation only and do NOT change the RunContext at runtime.
 
 -- Guard against duplicate execution (singleton across all Boot.client.lua instances)
 if shared.__AwavePuzzBootClientInitialized then
