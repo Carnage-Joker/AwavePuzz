@@ -221,8 +221,19 @@ local currentComponentName = nil
 local puzzleStartTime = 0
 local timerConnection = nil
 
--- Helper function to clear content
+-- Helper function to clear content and disconnect dynamic connections
 local function clearContent()
+	-- Disconnect any dynamic connections (e.g., colorBlock connections)
+	for key, connection in pairs(connections) do
+		if type(key) == "string" and key:match("^colorBlock_") then
+			if connection and connection.Connected then
+				connection:Disconnect()
+			end
+			connections[key] = nil
+		end
+	end
+	
+	-- Destroy UI elements
 	for _, child in ipairs(contentFrame:GetChildren()) do
 		if not child:IsA("UICorner") then
 			child:Destroy()
@@ -239,16 +250,7 @@ local function closePuzzle()
 		timerConnection = nil
 	end
 	
-	-- Disconnect dynamic color block connections
-	for key, connection in pairs(connections) do
-		if type(key) == "string" and key:match("^colorBlock_") then
-			if connection and connection.Connected then
-				connection:Disconnect()
-			end
-			connections[key] = nil
-		end
-	end
-	
+	-- clearContent() now handles disconnecting dynamic connections
 	clearContent()
 	currentPuzzle = nil
 	currentComponentName = nil
