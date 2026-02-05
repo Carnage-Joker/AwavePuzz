@@ -629,9 +629,12 @@ function GameManager:onPlayerAdded(player)
 		-- Show title screen to all other joiners (initial + late joiners)
 		-- This keeps late joiners out of active matches and in lobby until next round
 		print(string.format("[Flow] Join -> TitleScreen (showing to %s)", player.Name))
-		if self.remoteEvents.ShowTitleScreen then
-			self.remoteEvents.ShowTitleScreen:FireClient(player)
-		end
+		-- ✅ DISABLED: State-driven system (GameStateUpdate) handles this automatically
+		-- Legacy ShowTitleScreen remote kept for backward compatibility but not used
+		-- if self.remoteEvents.ShowTitleScreen then
+		-- 	self.remoteEvents.ShowTitleScreen:FireClient(player)
+		-- end
+		print("[Flow] TitleScreen will be shown via GameStateUpdate state snapshot")
 	else
 		-- Title screen disabled: mark as ready immediately
 		self.playersReadyForEpilogue[player.UserId] = true
@@ -695,18 +698,23 @@ function GameManager:setState(newState, payload)
 	end
 
 	-- Compatibility: Keep legacy show/hide events for systems that haven't migrated yet
+	-- ✅ DISABLED: State-driven system (GameStateUpdate) is now the primary mechanism
+	-- Legacy events kept in RemoteRegistry for compatibility but not actively used
+	-- TitleScreenUI and EpilogueUI listen to GameStateUpdate primarily
 	if newState == GameManager.States.TITLE_SCREEN then
-		if self.remoteEvents.ShowTitleScreen then
-			self.remoteEvents.ShowTitleScreen:FireAllClients()
-		end
+		-- if self.remoteEvents.ShowTitleScreen then
+		-- 	self.remoteEvents.ShowTitleScreen:FireAllClients()
+		-- end
+		print("[GameManager] Title screen controlled via GameStateUpdate (legacy ShowTitleScreen disabled)")
 	elseif newState == GameManager.States.EPILOGUE then
-		if self.remoteEvents.ShowEpilogue then
-			for _, player in ipairs(Players:GetPlayers()) do
-				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
-					self.remoteEvents.ShowEpilogue:FireClient(player)
-				end
-			end
-		end
+		-- if self.remoteEvents.ShowEpilogue then
+		-- 	for _, player in ipairs(Players:GetPlayers()) do
+		-- 		if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
+		-- 			self.remoteEvents.ShowEpilogue:FireClient(player)
+		-- 		end
+		-- 	end
+		-- end
+		print("[GameManager] Epilogue controlled via GameStateUpdate (legacy ShowEpilogue disabled)")
 	end
 	
 	print(string.format("[GameManager] State changed to %s", newState))

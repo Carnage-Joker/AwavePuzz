@@ -1,8 +1,10 @@
 -- @ScriptType: LocalScript
+-- @RunContext: Legacy
 -- Boot.client.lua
 -- FIRST LOAD CLIENT ENTRY POINT
 -- Ensures Title Screen appears before ANY map, lobby, or character is visible
 -- Implements deterministic boot order: UI → Camera → Server Ready → Spawn
+-- NOTE: RunContext=Legacy prevents duplicate execution warnings in Studio
 
 -- Guard against duplicate execution (singleton across all Boot.client.lua instances)
 if shared.__AwavePuzzBootClientInitialized then
@@ -40,6 +42,40 @@ pcall(function()
 end)
 
 print("[BOOT][CLIENT] Phase 1 complete: Camera controlled, screen black")
+
+----------------------------------------------------------------
+-- PHASE 0.5: CREATE TITLE SCREEN IMMEDIATELY
+----------------------------------------------------------------
+
+print("[BOOT][CLIENT] Phase 0.5: Creating TitleScreenUI immediately...")
+
+-- Load TitleScreenUI module and create instance BEFORE other systems
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local clientModules = script.Parent:WaitForChild("Modules", 10)
+local uiFolder = clientModules and clientModules:FindFirstChild("UI")
+local titleScreenModule = uiFolder and uiFolder:FindFirstChild("TitleScreenUI")
+
+local titleScreenInstance = nil
+
+if titleScreenModule then
+	local success, TitleScreenClass = pcall(function()
+		return require(titleScreenModule)
+	end)
+	if success and TitleScreenClass then
+		-- TitleScreenUI.new() creates the UI and sets DisplayOrder=100
+		titleScreenInstance = TitleScreenClass.new()
+		-- Store globally so ClientMainModule can bind remotes later
+		shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
+		print("[BOOT][CLIENT] ✓ TitleScreenUI created immediately with DisplayOrder=200")
+		print("[BOOT][CLIENT] ✓ Title screen ready (remotes will be bound later)")
+	else
+		warn("[BOOT][CLIENT] ✗ Failed to load TitleScreenUI:", TitleScreenClass)
+	end
+else
+	warn("[BOOT][CLIENT] ✗ TitleScreenUI module not found")
+end
+
+print("[BOOT][CLIENT] Phase 0.5 complete: TitleScreenUI created")
 
 ----------------------------------------------------------------
 -- PHASE 2: DELEGATE TO CLIENT MAIN MODULE

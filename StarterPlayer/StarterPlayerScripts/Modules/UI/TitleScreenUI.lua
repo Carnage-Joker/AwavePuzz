@@ -64,8 +64,15 @@ function TitleScreenUI:bindRemotes(remotes)
 	end
 	
 	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
+	-- NOTE: These are kept for backward compatibility but should not create duplicates
+	-- The state-driven system (GameStateUpdate) is the primary mechanism
 	if self.remotes.ShowTitleScreen then
 		self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
+			-- ✅ GUARD: Prevent duplicate showing if already active from state system
+			if self.isActive then
+				print("[TitleScreenUI] Received ShowTitleScreen event but already active, ignoring (prevents duplication)")
+				return
+			end
 			print("[TitleScreenUI] Received ShowTitleScreen event (legacy)")
 			self:show()
 		end)
@@ -95,7 +102,7 @@ function TitleScreenUI:createUI()
 	self.screenGui = Instance.new("ScreenGui")
 	self.screenGui.Name = "TitleScreenUI"
 	self.screenGui.ResetOnSpawn = false
-	self.screenGui.DisplayOrder = 100 -- High priority to be on top
+	self.screenGui.DisplayOrder = 200 -- HIGHEST priority - must be first visible UI
 	self.screenGui.Enabled = false
 	self.screenGui.Parent = PlayerGui
 	
@@ -195,7 +202,10 @@ function TitleScreenUI:createUI()
 end
 
 function TitleScreenUI:show()
-	if self.isActive then return end
+	if self.isActive then 
+		print("[TitleScreenUI] show() called but already active, ignoring duplicate")
+		return 
+	end
 	
 	-- ✅ NEW: Defensive guard - prevent title screen from showing during active match states
 	-- This prevents the "state snap-back" bug where TitleScreen appears mid-match
