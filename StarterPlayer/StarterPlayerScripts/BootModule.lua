@@ -10,11 +10,9 @@ local BootModule = {}
 function BootModule.run()
 	print("=== [BOOTMODULE] Starting client initialization ===")
 	
-	local Players = game:GetService("Players")
 	local StarterGui = game:GetService("StarterGui")
 	local Workspace = game:GetService("Workspace")
 	
-	local player = Players.LocalPlayer
 	local camera = Workspace.CurrentCamera
 	
 	----------------------------------------------------------------
@@ -44,7 +42,6 @@ function BootModule.run()
 	print("[BOOTMODULE] Phase 0.5: Creating and showing TitleScreenUI immediately...")
 	
 	-- Load TitleScreenUI module and create instance BEFORE other systems
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local clientModules = script.Parent:WaitForChild("Modules", 10)
 	local uiFolder = clientModules and clientModules:FindFirstChild("UI")
 	local titleScreenModule = uiFolder and uiFolder:FindFirstChild("TitleScreenUI")
@@ -63,40 +60,11 @@ function BootModule.run()
 			if newSuccess and newResult then
 				titleScreenInstance = newResult
 				
-				-- CRITICAL: Enable the UI immediately so it's the first visible thing
-				-- We'll bind remotes later, but the UI must be visible NOW
-				if titleScreenInstance.screenGui then
-					titleScreenInstance.screenGui.Enabled = true
-					print("[BOOTMODULE] ✓ TitleScreenUI ScreenGui enabled immediately")
-				end
-				
 				-- Call show() immediately to display the title screen
 				-- This happens BEFORE remotes are bound, which is intentional
-				-- The show will work, and later bindRemotes() will enable interaction
-				if titleScreenInstance.show then
-					-- Use pcall in case show() expects remotes to be bound
-					local showSuccess, showErr = pcall(function()
-						titleScreenInstance.isActive = true
-						titleScreenInstance.hasInteracted = false
-						titleScreenInstance.screenGui.Enabled = true
-						
-						-- Fade in animation
-						if titleScreenInstance.fadeIn then
-							titleScreenInstance:fadeIn()
-						end
-						
-						-- Start prompt pulse animation
-						if titleScreenInstance.startPromptPulse then
-							titleScreenInstance:startPromptPulse()
-						end
-					end)
-					
-					if showSuccess then
-						print("[BOOTMODULE] ✓ TitleScreenUI displayed immediately")
-					else
-						warn("[BOOTMODULE] ⚠ TitleScreenUI show() had issues:", showErr)
-					end
-				end
+				-- The show() method handles this gracefully and will enable interaction later
+				titleScreenInstance:show()
+				print("[BOOTMODULE] ✓ TitleScreenUI displayed immediately")
 				
 				-- Store globally so ClientMainModule can bind remotes later
 				shared.__AwavePuzzTitleScreenInstance = titleScreenInstance

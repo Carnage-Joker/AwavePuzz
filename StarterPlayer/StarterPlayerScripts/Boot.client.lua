@@ -5,12 +5,12 @@
 -- All logic delegated to BootModule to prevent RunContext duplication issues
 
 -- Ultra-simple guard - if this fires, there's a duplicate LocalScript somewhere
-if _G.__AetherBootClientStarted then
+if _G.__AwavePuzzBootClientStarted then
 	warn("[BOOT][CLIENT] CRITICAL: Duplicate Boot.client.lua execution detected!")
 	warn("[BOOT][CLIENT] Check for multiple LocalScripts in StarterPlayerScripts")
 	return
 end
-_G.__AetherBootClientStarted = true
+_G.__AwavePuzzBootClientStarted = true
 
 print("=== [BOOT][CLIENT] Entry point - Delegating to BootModule ===")
 

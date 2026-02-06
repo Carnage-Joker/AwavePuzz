@@ -68,6 +68,22 @@ function TitleScreenUI:bindRemotes(remotes)
 			end
 		end)
 		print("[TitleScreenUI] Input handler connected after remotes bound")
+	elseif self.isActive and self.inputConnection then
+		-- Clean up old connection before creating new one to prevent leak
+		self.inputConnection:Disconnect()
+		self.inputConnection = nil
+		
+		local UserInputService = game:GetService("UserInputService")
+		self.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+			if gameProcessed then return end
+			if self.hasInteracted then return end
+			
+			-- Any key continues
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				self:onContinue()
+			end
+		end)
+		print("[TitleScreenUI] Input handler reconnected after remotes bound")
 	end
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
