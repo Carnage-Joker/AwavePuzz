@@ -24,26 +24,40 @@ local function bootClient()
 	print("=== [BOOT][CLIENT] Aether Wave: Convergence Client Starting ===")
 	print(string.format("[BOOT][CLIENT] Player: %s", player.Name))
 	
+	-- Get LoadingManager instance from shared (initialized in BootModule)
+	local loadingManager = shared.__AwavePuzzLoadingManager
+	if not loadingManager then
+		warn("[BOOT][CLIENT] LoadingManager not found in shared - progress tracking disabled")
+	end
+	
 	----------------------------------------------------------------
 	-- PHASE 1: Wait for Remote Registry
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 1: Waiting for remote registry...")
+	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 0) end
+	
 	local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
 	if not SharedFolder then
 		error("[ClientMain] CRITICAL: Failed to load Shared folder after 10 seconds")
 	end
+	
+	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 30) end
 	
 	local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
 	if not RemotesFolder then
 		error("[ClientMain] CRITICAL: Failed to load Remotes folder after 5 seconds")
 	end
 	
+	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 60) end
+	
 	local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry", 5))
 	local remotes = RemoteRegistry.initializeClient(10)
 	if not remotes then
 		error("[ClientMain] CRITICAL: Failed to initialize remote registry")
 	end
+	
+	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 100) end
 	print("[BOOT][CLIENT] Phase 1 complete: Remote registry ready")
 	
 	----------------------------------------------------------------
@@ -51,11 +65,19 @@ local function bootClient()
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 2: Loading configuration...")
+	if loadingManager then loadingManager:updatePhase("Configuration", 0) end
 	
 	local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig", 5))
+	if loadingManager then loadingManager:updatePhase("Configuration", 25) end
+	
 	local GameConfig = require(SharedFolder:WaitForChild("GameConfig", 5))
+	if loadingManager then loadingManager:updatePhase("Configuration", 50) end
+	
 	local ModalManager = require(SharedFolder:WaitForChild("ModalManager", 5))
+	if loadingManager then loadingManager:updatePhase("Configuration", 75) end
+	
 	local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry", 5))
+	if loadingManager then loadingManager:updatePhase("Configuration", 100) end
 	
 	print("[BOOT][CLIENT] Phase 2 complete: Configuration loaded")
 	
@@ -308,15 +330,34 @@ local function bootClient()
 	end
 	
 	-- Initialize all core systems in order
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 0) end
+	
 	initializeCamera()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 11) end
+	
 	initializeMovement()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 22) end
+	
 	initializeWeapon()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 33) end
+	
 	initializeAnimation()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 44) end
+	
 	initializeAudio()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 55) end
+	
 	initializeMusic()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 66) end
+	
 	initializeMenu()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 77) end
+	
 	initializeStamina()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 88) end
+	
 	initializeVoiceover()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 100) end
 	
 	print("[BOOT][CLIENT] Phase 5 complete: Core systems initialized")
 	
@@ -325,6 +366,7 @@ local function bootClient()
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 6: Initializing UI systems...")
+	if loadingManager then loadingManager:updatePhase("UISystems", 0) end
 	
 	local uiFolder = clientModules:FindFirstChild("UI")
 	if not uiFolder then
@@ -362,7 +404,9 @@ local function bootClient()
 		end
 		
 		local uiCount = 0
-		for _, moduleName in ipairs(uiModules) do
+		local totalUiModules = #uiModules + 2 -- +2 for TitleScreenUI and EpilogueUI
+		
+		for i, moduleName in ipairs(uiModules) do
 			local uiModule = uiFolder:FindFirstChild(moduleName)
 			if uiModule then
 				local success, result = pcall(function()
@@ -386,6 +430,10 @@ local function bootClient()
 					warn(string.format("[BOOT][CLIENT] ✗ UI module %s failed to load: %s", moduleName, tostring(result)))
 				end
 			end
+			
+			-- Update progress after each UI module
+			local progress = math.floor((i / totalUiModules) * 80) -- Reserve 20% for special handling
+			if loadingManager then loadingManager:updatePhase("UISystems", progress) end
 		end
 		
 		-- Special handling for TitleScreenUI - use pre-created instance from Boot.client.lua
@@ -418,6 +466,8 @@ local function bootClient()
 			end
 		end
 		
+		if loadingManager then loadingManager:updatePhase("UISystems", 90) end
+		
 		-- Special handling for EpilogueUI - load module, create instance, bind remotes
 		local epilogueModule = uiFolder:FindFirstChild("EpilogueUI")
 		if epilogueModule then
@@ -438,6 +488,7 @@ local function bootClient()
 		print(string.format("[BOOT][CLIENT] ✓ %d UI systems initialized", uiCount))
 	end
 	
+	if loadingManager then loadingManager:updatePhase("UISystems", 100) end
 	print("[BOOT][CLIENT] Phase 6 complete: UI systems ready")
 	
 	----------------------------------------------------------------
@@ -445,6 +496,7 @@ local function bootClient()
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 6.5: Setting up client state router...")
+	if loadingManager then loadingManager:updatePhase("StateRouter", 0) end
 	
 	-- State-based control for movement and weapons
 	local function applyState(stateName)
@@ -514,6 +566,8 @@ local function bootClient()
 		end
 	end
 	
+	if loadingManager then loadingManager:updatePhase("StateRouter", 50) end
+	
 	-- Connect to server GameStateUpdate
 	if remotes.GameStateUpdate then
 		remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
@@ -529,6 +583,7 @@ local function bootClient()
 	-- Apply safe initial state (TitleScreen to disable movement/weapons/camera)
 	applyState("TitleScreen")
 	
+	if loadingManager then loadingManager:updatePhase("StateRouter", 100) end
 	print("[BOOT][CLIENT] Phase 6.5 complete: Client state router active")
 	
 	----------------------------------------------------------------
@@ -536,6 +591,7 @@ local function bootClient()
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 7: Setting up character lifecycle...")
+	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 0) end
 	
 	local function onCharacterAdded(character)
 		print(string.format("[STATE] Character added: %s", character.Name))
@@ -568,6 +624,8 @@ local function bootClient()
 		end
 	end
 	
+	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 33) end
+	
 	local function onCharacterRemoving()
 		print("[STATE] Character removing")
 		
@@ -599,6 +657,8 @@ local function bootClient()
 		end
 	end
 	
+	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 66) end
+	
 	-- Connect character events
 	player.CharacterAdded:Connect(onCharacterAdded)
 	player.CharacterRemoving:Connect(onCharacterRemoving)
@@ -610,6 +670,7 @@ local function bootClient()
 		end)
 	end
 	
+	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 100) end
 	print("[BOOT][CLIENT] Phase 7 complete: Character handlers connected")
 	
 	----------------------------------------------------------------
@@ -617,6 +678,7 @@ local function bootClient()
 	----------------------------------------------------------------
 	
 	print("[BOOT][CLIENT] Phase 8: Running post-boot diagnostics...")
+	if loadingManager then loadingManager:updatePhase("Diagnostics", 0) end
 	
 	-- Run input action audit after all systems have initialized
 	task.spawn(function()
@@ -625,10 +687,17 @@ local function bootClient()
 	end)
 	
 	print("[BOOT][CLIENT] Phase 8 complete: Diagnostics running")
+	if loadingManager then loadingManager:updatePhase("Diagnostics", 100) end
 	
 	----------------------------------------------------------------
 	-- Client Ready
 	----------------------------------------------------------------
+	
+	-- Mark loading as complete
+	if loadingManager then
+		loadingManager:markComplete()
+		print("[BOOT][CLIENT] ✓ Loading complete - title screen ready for interaction")
+	end
 	
 	print("=== [BOOT][CLIENT] Client Ready ===")
 	print(string.format("[BOOT][CLIENT] Player: %s", player.Name))

@@ -34,6 +34,8 @@ function TitleScreenUI.new()
 	self.pulseTweens = {} -- Store pulse tweens for cleanup
 	self.pulseThread = nil -- Store pulse thread for cleanup
 	self.remotes = nil -- Will be set via bindRemotes()
+	self.loadingComplete = false -- Track loading completion
+	self.currentLoadingProgress = 0 -- Current loading progress (0-100)
 	
 	self:createUI()
 	
@@ -209,7 +211,51 @@ function TitleScreenUI:createUI()
 	subtitleLabel.TextTransparency = 0.3
 	subtitleLabel.Parent = titleContainer
 	
-	-- Prompt (bottom center)
+	-- Loading bar container (bottom center, above prompt)
+	local loadingContainer = Instance.new("Frame")
+	loadingContainer.Name = "LoadingContainer"
+	loadingContainer.Size = UDim2.new(0.5, 0, 0.06, 0)
+	loadingContainer.Position = UDim2.new(0.5, 0, 0.78, 0)
+	loadingContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+	loadingContainer.BackgroundTransparency = 1
+	loadingContainer.Visible = true
+	loadingContainer.Parent = self.frame
+	
+	-- Loading bar background
+	local loadingBarBg = Instance.new("Frame")
+	loadingBarBg.Name = "LoadingBarBackground"
+	loadingBarBg.Size = UDim2.new(1, 0, 0.4, 0)
+	loadingBarBg.Position = UDim2.new(0.5, 0, 0.5, 0)
+	loadingBarBg.AnchorPoint = Vector2.new(0.5, 0.5)
+	loadingBarBg.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+	loadingBarBg.BorderSizePixel = 0
+	loadingBarBg.Parent = loadingContainer
+	
+	-- Loading bar fill
+	local loadingBarFill = Instance.new("Frame")
+	loadingBarFill.Name = "LoadingBarFill"
+	loadingBarFill.Size = UDim2.new(0, 0, 1, 0)
+	loadingBarFill.Position = UDim2.new(0, 0, 0, 0)
+	loadingBarFill.BackgroundColor3 = Color3.fromRGB(100, 200, 255) -- Aether blue
+	loadingBarFill.BorderSizePixel = 0
+	loadingBarFill.Parent = loadingBarBg
+	
+	-- Loading percentage text
+	local loadingText = Instance.new("TextLabel")
+	loadingText.Name = "LoadingText"
+	loadingText.Size = UDim2.new(1, 0, 0.5, 0)
+	loadingText.Position = UDim2.new(0.5, 0, 0, 0)
+	loadingText.AnchorPoint = Vector2.new(0.5, 0)
+	loadingText.BackgroundTransparency = 1
+	loadingText.Font = Enum.Font.Gotham
+	loadingText.Text = "Loading... 0%"
+	loadingText.TextColor3 = Color3.fromRGB(180, 180, 200)
+	loadingText.TextScaled = false
+	loadingText.TextSize = 18
+	loadingText.TextTransparency = 0
+	loadingText.Parent = loadingContainer
+	
+	-- Prompt (bottom center) - initially hidden
 	local promptLabel = Instance.new("TextLabel")
 	promptLabel.Name = "PromptLabel"
 	promptLabel.Size = UDim2.new(0.6, 0, 0.08, 0)
@@ -221,10 +267,14 @@ function TitleScreenUI:createUI()
 	promptLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	promptLabel.TextScaled = true
 	promptLabel.TextSize = 24
-	promptLabel.TextTransparency = 0
+	promptLabel.TextTransparency = 1 -- Start hidden
+	promptLabel.Visible = false -- Hide initially
 	promptLabel.Parent = self.frame
 	
 	self.promptLabel = promptLabel
+	self.loadingContainer = loadingContainer
+	self.loadingBarFill = loadingBarFill
+	self.loadingText = loadingText
 	
 	-- Clickable button overlay for mobile/touch support
 	local clickButton = Instance.new("TextButton")
@@ -276,8 +326,7 @@ function TitleScreenUI:show()
 	-- Fade in animation
 	self:fadeIn()
 	
-	-- Start prompt pulse animation
-	self:startPromptPulse()
+	-- Don't start prompt pulse animation here - it will start after loading completes
 	
 	-- Listen for any key press (only if UserInputService is available)
 	-- Note: This might be called early before remotes are bound, so we skip input setup
@@ -288,8 +337,13 @@ function TitleScreenUI:show()
 			if gameProcessed then return end
 			if self.hasInteracted then return end
 			
-			-- Any key continues (only works if remotes are bound)
+			-- Any key continues (only works if remotes are bound AND loading is complete)
 			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if not self.loadingComplete then
+					print("[TitleScreenUI] Key pressed but loading not complete yet")
+					return
+				end
+				
 				if self.remotes and self.remotes.TitleScreenContinue then
 					self:onContinue()
 				else
@@ -337,6 +391,13 @@ end
 
 function TitleScreenUI:onContinue()
 	if self.hasInteracted then return end
+	
+	-- Don't allow continue if loading is not complete
+	if not self.loadingComplete then
+		print("[TitleScreenUI] Cannot continue - loading not complete yet")
+		return
+	end
+	
 	self.hasInteracted = true
 	
 	print("[TitleScreenUI] Player clicked continue, notifying server")
@@ -353,6 +414,75 @@ function TitleScreenUI:onContinue()
 	
 	-- Hide immediately
 	self:hide()
+end
+
+-- Update loading progress (0-100)
+function TitleScreenUI:updateLoadingProgress(progress, phaseName)
+	if not self.loadingBarFill or not self.loadingText then
+		return
+	end
+	
+	self.currentLoadingProgress = math.clamp(progress, 0, 100)
+	
+	-- Update progress bar fill with smooth tween
+	local targetSize = UDim2.new(self.currentLoadingProgress / 100, 0, 1, 0)
+	local fillTween = TweenService:Create(
+		self.loadingBarFill,
+		TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Size = targetSize }
+	)
+	fillTween:Play()
+	
+	-- Update loading text
+	local displayText = string.format("Loading... %d%%", self.currentLoadingProgress)
+	if phaseName then
+		displayText = string.format("Loading %s... %d%%", phaseName, self.currentLoadingProgress)
+	end
+	self.loadingText.Text = displayText
+	
+	-- Check if loading is complete
+	if self.currentLoadingProgress >= 100 then
+		self:onLoadingComplete()
+	end
+end
+
+-- Called when loading is complete
+function TitleScreenUI:onLoadingComplete()
+	if self.loadingComplete then
+		return
+	end
+	
+	self.loadingComplete = true
+	print("[TitleScreenUI] Loading complete - showing continue prompt")
+	
+	-- Hide loading bar
+	if self.loadingContainer then
+		local hideTween = TweenService:Create(
+			self.loadingContainer,
+			TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+			{ Position = UDim2.new(0.5, 0, 1.2, 0) }
+		)
+		hideTween:Play()
+		hideTween.Completed:Connect(function()
+			self.loadingContainer.Visible = false
+		end)
+	end
+	
+	-- Show and fade in the prompt
+	if self.promptLabel then
+		self.promptLabel.Visible = true
+		local promptTween = TweenService:Create(
+			self.promptLabel,
+			TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+			{ TextTransparency = 0 }
+		)
+		promptTween:Play()
+		
+		-- Start prompt pulse animation after fade in
+		promptTween.Completed:Connect(function()
+			self:startPromptPulse()
+		end)
+	end
 end
 
 function TitleScreenUI:fadeIn()
@@ -382,14 +512,18 @@ function TitleScreenUI:fadeIn()
 	)
 	subtitleTween:Play()
 	
-	-- Fade in prompt
-	self.promptLabel.TextTransparency = 1
-	local promptTween = TweenService:Create(
-		self.promptLabel,
-		TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0.5),
-		{ TextTransparency = 0 }
-	)
-	promptTween:Play()
+	-- Fade in loading bar
+	if self.loadingContainer then
+		self.loadingContainer.Position = UDim2.new(0.5, 0, 0.78, 0)
+		local loadingTween = TweenService:Create(
+			self.loadingText,
+			TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, 0.5),
+			{ TextTransparency = 0 }
+		)
+		loadingTween:Play()
+	end
+	
+	-- Don't fade in prompt here - it will be shown after loading completes
 end
 
 function TitleScreenUI:fadeOut()
