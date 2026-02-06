@@ -18,6 +18,13 @@ local TitleScreenUI = {}
 TitleScreenUI.__index = TitleScreenUI
 
 function TitleScreenUI.new()
+	-- Singleton pattern: prevent duplicate instances
+	-- If an instance already exists globally, return it instead of creating a new one
+	if _G.__AwavePuzzTitleScreenSingleton then
+		warn("[TitleScreenUI] Singleton already exists, returning existing instance (prevents duplication)")
+		return _G.__AwavePuzzTitleScreenSingleton
+	end
+	
 	local self = setmetatable({}, TitleScreenUI)
 	
 	self.isActive = false
@@ -30,6 +37,10 @@ function TitleScreenUI.new()
 	
 	self:createUI()
 	
+	-- Store as singleton
+	_G.__AwavePuzzTitleScreenSingleton = self
+	print("[TitleScreenUI] Singleton instance created and registered")
+	
 	return self
 end
 
@@ -41,6 +52,23 @@ function TitleScreenUI:bindRemotes(remotes)
 	end
 	
 	self.remotes = remotes
+	
+	print("[TitleScreenUI] Remotes bound - setting up input handlers")
+	
+	-- If title screen is already showing (from early boot), reconnect input with proper remote support
+	if self.isActive and not self.inputConnection then
+		local UserInputService = game:GetService("UserInputService")
+		self.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+			if gameProcessed then return end
+			if self.hasInteracted then return end
+			
+			-- Any key continues
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				self:onContinue()
+			end
+		end)
+		print("[TitleScreenUI] Input handler connected after remotes bound")
+	end
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
@@ -235,16 +263,25 @@ function TitleScreenUI:show()
 	-- Start prompt pulse animation
 	self:startPromptPulse()
 	
-	-- Listen for any key press
-	self.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed then return end
-		if self.hasInteracted then return end
-		
-		-- Any key continues
-		if input.UserInputType == Enum.UserInputType.Keyboard then
-			self:onContinue()
-		end
-	end)
+	-- Listen for any key press (only if UserInputService is available)
+	-- Note: This might be called early before remotes are bound, so we skip input setup
+	-- Input will be bound later via bindRemotes() or after user interaction is possible
+	local UserInputService = game:GetService("UserInputService")
+	if UserInputService then
+		self.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+			if gameProcessed then return end
+			if self.hasInteracted then return end
+			
+			-- Any key continues (only works if remotes are bound)
+			if input.UserInputType == Enum.UserInputType.Keyboard then
+				if self.remotes and self.remotes.TitleScreenContinue then
+					self:onContinue()
+				else
+					print("[TitleScreenUI] Key pressed but remotes not yet bound, waiting...")
+				end
+			end
+		end)
+	end
 end
 
 function TitleScreenUI:hide()
@@ -291,6 +328,11 @@ function TitleScreenUI:onContinue()
 	-- Notify server that player wants to continue
 	if self.remotes and self.remotes.TitleScreenContinue then
 		self.remotes.TitleScreenContinue:FireServer()
+	else
+		warn("[TitleScreenUI] Cannot continue - remotes not yet bound!")
+		-- Reset hasInteracted so user can try again
+		self.hasInteracted = false
+		return
 	end
 	
 	-- Hide immediately

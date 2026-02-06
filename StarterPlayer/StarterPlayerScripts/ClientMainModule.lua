@@ -393,10 +393,11 @@ local function bootClient()
 		local titleScreenInstance = shared.__AwavePuzzTitleScreenInstance
 		if titleScreenInstance then
 			-- Bind remotes to the existing instance
+			print("[BOOT][CLIENT] ✓ TitleScreenUI pre-created instance found, binding remotes...")
 			titleScreenInstance:bindRemotes(remotes)
 			UI.TitleScreenUI = titleScreenInstance
 			uiCount = uiCount + 1
-			print("[BOOT][CLIENT] ✓ TitleScreenUI bound to remotes (pre-created in Boot Phase 0.5)")
+			print("[BOOT][CLIENT] ✓ TitleScreenUI remotes bound (instance created in Boot Phase 0.5, now fully interactive)")
 		else
 			-- Fallback: create instance if Boot didn't (shouldn't happen in normal flow)
 			warn("[BOOT][CLIENT] ⚠ TitleScreenUI not found in shared, creating fallback instance")
