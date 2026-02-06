@@ -89,6 +89,20 @@ if starterPlayerScripts then
 			else
 				fail("Boot.client.lua missing camera control code")
 			end
+			
+			-- Check for RunContext = Legacy comment
+			if source:find("@RunContext: Legacy") or source:find("RunContext.*Legacy") then
+				pass("Boot.client.lua has RunContext = Legacy (prevents duplicate execution)")
+			else
+				warning("Boot.client.lua missing @RunContext: Legacy comment (may cause Studio warnings)")
+			end
+			
+			-- Check for TitleScreenUI Phase 0.5 creation
+			if source:find("PHASE 0.5") and source:find("TitleScreenUI") then
+				pass("Boot.client.lua creates TitleScreenUI in Phase 0.5 (before other UI)")
+			else
+				fail("Boot.client.lua missing Phase 0.5 TitleScreenUI creation")
+			end
 		else
 			warning("Cannot verify Boot.client.lua content (Source property not accessible in Play mode)")
 		end

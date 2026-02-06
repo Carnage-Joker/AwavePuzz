@@ -86,24 +86,33 @@ end
 #### 1. Boot.client.lua - New Entry Point
 **Location**: `/StarterPlayer/StarterPlayerScripts/Boot.client.lua`
 
-**Change**: Created new LocalScript that runs before all other client scripts
+**Change**: Created new LocalScript that runs before all other client scripts, with RunContext = Legacy
 ```lua
+-- @RunContext: Legacy
 -- Phase 1: Take immediate camera control
 camera.CameraType = Enum.CameraType.Scriptable
 camera.CFrame = CFrame.new(Vector3.new(0, 10000, 0))
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+
+-- Phase 0.5: Create TitleScreenUI immediately
+local titleScreenInstance = TitleScreenClass.new()
+shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
 
 -- Phase 2: Delegate to ClientMainModule
 local ClientMainModule = require(script.Parent:WaitForChild("ClientMainModule"))
 ClientMainModule.initialize()
 ```
 
-**Why**: Ensures camera is controlled and screen is black before any other systems load.
-
-**Impact**: 
+**Why**: 
+- RunContext = Legacy prevents Studio "duplicate execution" warnings
+- TitleScreenUI created in Phase 0.5 ensures it's first visible UI (DisplayOrder = 200)
 - Camera control happens in first frame
 - Black screen prevents any visual flash
-- ClientMainModule loads after camera is secured
+
+**Impact**: 
+- No more duplicate execution warnings in Studio
+- Title screen appears immediately (before FPSHUD, MapUI, etc.)
+- Stored in shared table for ClientMainModule to bind remotes later
 
 #### 2. ClientMain.client.lua - Disabled
 **Location**: `/StarterPlayer/StarterPlayerScripts/ClientMain.client.lua` → `.disabled`
@@ -120,7 +129,17 @@ ClientMain.client.lua → ClientMain.client.lua.disabled
 #### 3. ClientMainModule - State Management
 **Location**: `/StarterPlayer/StarterPlayerScripts/ClientMainModule.lua`
 
-**Change 1**: Added camera control to `applyState()`
+**Change 1**: TitleScreenUI uses pre-created instance from Boot.client.lua
+```lua
+-- Special handling for TitleScreenUI - use pre-created instance from Boot.client.lua
+local titleScreenInstance = shared.__AwavePuzzTitleScreenInstance
+if titleScreenInstance then
+    titleScreenInstance:bindRemotes(remotes)
+    UI.TitleScreenUI = titleScreenInstance
+end
+```
+
+**Change 2**: Added camera control to `applyState()`
 ```lua
 local function applyState(stateName)
     -- ... existing code ...
@@ -143,20 +162,55 @@ local function applyState(stateName)
 end
 ```
 
-**Change 2**: Changed initial state
+**Change 3**: Changed initial state
 ```lua
 -- Apply safe initial state (TitleScreen to disable movement/weapons/camera)
 applyState("TitleScreen")
 ```
 
-**Why**: Ensures client starts in TitleScreen state with movement, weapons, and camera disabled.
+**Why**: 
+- Reuses TitleScreenUI instance created early in Boot.client.lua
+- Ensures client starts in TitleScreen state with movement, weapons, and camera disabled
+- Binds remotes to existing instance when registry is ready
 
-**Impact**: No player interaction possible until title screen is dismissed.
+**Impact**: 
+- No duplicate TitleScreenUI creation
+- TitleScreenUI appears before Phase 6 UI initialization
+- No player interaction possible until title screen is dismissed
 
-#### 4. TitleScreenUI - CoreGui Restoration
+#### 4. TitleScreenUI - CoreGui Restoration & Duplicate Prevention
 **Location**: `/StarterPlayer/StarterPlayerScripts/Modules/UI/TitleScreenUI.lua`
 
-**Change**: Added CoreGui re-enable to `hide()` method
+**Change 1**: Increased DisplayOrder to 200 (highest priority)
+```lua
+self.screenGui.DisplayOrder = 200 -- HIGHEST priority - must be first visible UI
+```
+
+**Change 2**: Added duplicate prevention guard in show()
+```lua
+function TitleScreenUI:show()
+    if self.isActive then 
+        print("[TitleScreenUI] show() called but already active, ignoring duplicate")
+        return 
+    end
+    -- ... rest of show logic
+end
+```
+
+**Change 3**: Added duplicate prevention in legacy ShowTitleScreen handler
+```lua
+if self.remotes.ShowTitleScreen then
+    self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
+        if self.isActive then
+            print("[TitleScreenUI] Already active, ignoring legacy ShowTitleScreen")
+            return
+        end
+        self:show()
+    end)
+end
+```
+
+**Change 4**: Added CoreGui re-enable to `hide()` method
 ```lua
 function TitleScreenUI:hide()
     -- ... existing code ...
@@ -171,9 +225,38 @@ function TitleScreenUI:hide()
 end
 ```
 
-**Why**: Restores default Roblox UI after title screen is dismissed.
+**Why**: 
+- Higher DisplayOrder ensures title screen appears above all other UI
+- Guards prevent duplicate showing from multiple code paths
+- Restores default Roblox UI after title screen
 
-**Impact**: Players can see their health, chat, etc. after title screen.
+**Impact**: 
+- No duplicate TitleScreenUI instances
+- Players can see their health, chat, etc. after title screen
+- Legacy and state-driven paths work together without conflicts
+
+#### 5. GameManager - Disable Legacy ShowTitleScreen
+**Location**: `/ServerScriptService/GameManager.lua`
+
+**Change**: Disabled legacy ShowTitleScreen remote firing
+```lua
+-- State-driven system (GameStateUpdate) is primary mechanism
+-- Legacy ShowTitleScreen remote kept for compatibility but not actively used
+if newState == GameManager.States.TITLE_SCREEN then
+    -- ShowTitleScreen:FireAllClients() DISABLED
+    print("[GameManager] Title controlled via GameStateUpdate")
+end
+```
+
+**Why**: 
+- Prevents duplicate title screen creation from legacy + state-driven paths
+- GameStateUpdate is the authoritative state mechanism
+- Legacy remotes kept in RemoteRegistry for backward compatibility
+
+**Impact**: 
+- Only one TitleScreenUI creation path (state-driven)
+- No "duplicate TitleScreenUI removed" warnings
+- Cleaner, more predictable title screen lifecycle
 
 ## Boot Sequence
 
@@ -198,18 +281,21 @@ end
 
 #### Client Boot
 ```
-1. Boot.client.lua runs
-   → Set camera to Scriptable at (0, 10000, 0)
+1. Boot.client.lua runs (RunContext = Legacy, no duplicate execution)
+   → Set camera to Scriptable at (0, 100000, 0)
    → Disable CoreGui (black screen)
+   → Phase 0.5: Create TitleScreenUI immediately (DisplayOrder = 200)
+   → Store instance in shared.__AwavePuzzTitleScreenInstance
    → Load ClientMainModule
 2. ClientMainModule.initialize()
    → Load RemoteRegistry
    → Load configuration
    → Initialize core systems (camera, movement, weapons, etc.)
-   → Initialize UI systems (including TitleScreenUI)
+   → Initialize UI systems (FPSHUD, MapUI, ShopUI, etc - after TitleScreenUI)
+   → Bind remotes to pre-created TitleScreenUI instance
    → Set initial state to TitleScreen
 3. TitleScreenUI receives GameStateUpdate
-   → Shows title screen
+   → Shows title screen (already created, just enables it)
 4. Player clicks Continue
    → TitleScreenContinue fired to server
 5. Server calls LoadCharacter()
@@ -223,15 +309,22 @@ end
 
 ### No Visual Flash
 - ✅ Camera controlled in first frame (before any rendering)
-- ✅ Camera positioned far from map/lobby (0, 10000, 0)
+- ✅ Camera positioned far from map/lobby (0, 100000, 0)
 - ✅ CoreGui disabled (no default UI visible)
 - ✅ Character doesn't spawn until after title screen
 
 ### Deterministic Order
-- ✅ Boot.client.lua runs before ClientMainModule
+- ✅ Boot.client.lua runs once with RunContext = Legacy (no Studio warnings)
+- ✅ TitleScreenUI created in Phase 0.5 (before all other UI systems)
 - ✅ Camera control before system initialization
 - ✅ Title screen before character spawn
 - ✅ Server readiness before client progression
+
+### No Duplicates
+- ✅ Boot.client.lua runs once (no duplicate execution warnings)
+- ✅ TitleScreenUI created once in Boot Phase 0.5
+- ✅ Legacy ShowTitleScreen disabled (state-driven only)
+- ✅ No "duplicate TitleScreenUI removed" messages
 
 ### Smooth Transitions
 - ✅ Title screen fades out gracefully
@@ -253,14 +346,25 @@ See `TITLE_SCREEN_FIRST_LOAD_TEST_GUIDE.md` for comprehensive testing instructio
 
 ### Server
 - `/ServerScriptService/Main.server.lua` - Added Phase 0, ClientReady signal
-- `/ServerScriptService/GameManager.lua` - Added character loading on title screen continue
+- `/ServerScriptService/GameManager.lua` - **UPDATED**: Disabled legacy ShowTitleScreen firing (state-driven only)
 - `/ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua` - Added ClientReady remote
 
 ### Client
-- `/StarterPlayer/StarterPlayerScripts/Boot.client.lua` - **NEW** entry point
+- `/StarterPlayer/StarterPlayerScripts/Boot.client.lua` - **UPDATED**: 
+  - Added RunContext = Legacy to prevent duplicate execution warnings
+  - Added Phase 0.5 to create TitleScreenUI immediately
+  - Stores instance in shared table for ClientMainModule
 - `/StarterPlayer/StarterPlayerScripts/ClientMain.client.lua` - **DISABLED** (renamed to .disabled)
-- `/StarterPlayer/StarterPlayerScripts/ClientMainModule.lua` - Updated state management, initial state
-- `/StarterPlayer/StarterPlayerScripts/Modules/UI/TitleScreenUI.lua` - Added CoreGui restoration
+- `/StarterPlayer/StarterPlayerScripts/ClientMainModule.lua` - **UPDATED**: 
+  - Uses pre-created TitleScreenUI instance from Boot.client.lua
+  - Binds remotes to existing instance in Phase 6
+- `/StarterPlayer/StarterPlayerScripts/Modules/UI/TitleScreenUI.lua` - **UPDATED**:
+  - DisplayOrder increased to 200 (highest priority)
+  - Added duplicate prevention guards in show() and legacy handler
+  - Added CoreGui restoration
+
+### Tests
+- `/tests/title_screen_first_load_validator.lua` - **UPDATED**: Added checks for RunContext and Phase 0.5
 
 ## Configuration
 

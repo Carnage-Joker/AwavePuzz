@@ -388,20 +388,32 @@ local function bootClient()
 			end
 		end
 		
-		-- Special handling for TitleScreenUI - load module, create instance, bind remotes
-		local titleScreenModule = uiFolder:FindFirstChild("TitleScreenUI")
-		if titleScreenModule then
-			local success, TitleScreenClass = pcall(function()
-				return require(titleScreenModule)
-			end)
-			if success and TitleScreenClass then
-				local titleScreenInstance = TitleScreenClass.new()
-				titleScreenInstance:bindRemotes(remotes)
-				UI.TitleScreenUI = titleScreenInstance
-				uiCount = uiCount + 1
-				print("[BOOT][CLIENT] ✓ TitleScreenUI instance created and remotes bound")
-			else
-				warn("[BOOT][CLIENT] ✗ TitleScreenUI failed to load")
+		-- Special handling for TitleScreenUI - use pre-created instance from Boot.client.lua
+		-- Boot.client.lua creates TitleScreenUI in Phase 0.5 (before other UI) for immediate display
+		local titleScreenInstance = shared.__AwavePuzzTitleScreenInstance
+		if titleScreenInstance then
+			-- Bind remotes to the existing instance
+			titleScreenInstance:bindRemotes(remotes)
+			UI.TitleScreenUI = titleScreenInstance
+			uiCount = uiCount + 1
+			print("[BOOT][CLIENT] ✓ TitleScreenUI bound to remotes (pre-created in Boot Phase 0.5)")
+		else
+			-- Fallback: create instance if Boot didn't (shouldn't happen in normal flow)
+			warn("[BOOT][CLIENT] ⚠ TitleScreenUI not found in shared, creating fallback instance")
+			local titleScreenModule = uiFolder:FindFirstChild("TitleScreenUI")
+			if titleScreenModule then
+				local success, TitleScreenClass = pcall(function()
+					return require(titleScreenModule)
+				end)
+				if success and TitleScreenClass then
+					titleScreenInstance = TitleScreenClass.new()
+					titleScreenInstance:bindRemotes(remotes)
+					UI.TitleScreenUI = titleScreenInstance
+					uiCount = uiCount + 1
+					print("[BOOT][CLIENT] ✓ TitleScreenUI instance created (fallback) and remotes bound")
+				else
+					warn("[BOOT][CLIENT] ✗ TitleScreenUI failed to load")
+				end
 			end
 		end
 		
