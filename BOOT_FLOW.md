@@ -346,8 +346,10 @@ To revert to map voting:
 
 ### Client
 
-- **ClientMain.client.lua**: `StarterPlayerScripts/ClientMain.client.lua` - **✨ NEW: Client entry point**
-- **TitleScreenUI**: `StarterPlayerScripts/Modules/UI/TitleScreenUI.lua` - Title screen
+- **Boot.client.lua**: `StarterPlayerScripts/Boot.client.lua` - **✨ Client entry point (LocalScript, minimal)**
+- **BootModule.lua**: `StarterPlayerScripts/BootModule.lua` - **✨ Boot logic (ModuleScript, called by Boot.client.lua)**
+- **ClientMainModule.lua**: `StarterPlayerScripts/ClientMainModule.lua` - **✨ Main client initialization (ModuleScript)**
+- **TitleScreenUI**: `StarterPlayerScripts/Modules/UI/TitleScreenUI.lua` - Title screen with singleton pattern
 - **EpilogueUI**: `StarterPlayerScripts/Modules/UI/EpilogueUI.lua` - Epilogue cinematic
 - **PortalQueueUI**: `StarterPlayerScripts/Modules/UI/PortalQueueUI.lua` - Portal queue display
 - **LobbyUI**: `StarterPlayerScripts/Modules/UI/LobbyUI.lua` - Lobby interface
@@ -360,9 +362,9 @@ To revert to map voting:
 
 ---
 
-**Last Updated**: 2026-02-04  
-**AwavePuzz Version**: Modern Luau Refactor - v1.1  
-**Changes**: State-driven UI system, portal contract enforcement, RemoteRegistry cleanup, join-safe sync
+**Last Updated**: 2026-02-06  
+**AwavePuzz Version**: Modern Luau Refactor - v1.1.1  
+**Changes**: Boot duplication fix (LocalScript → ModuleScript pattern), immediate title display, singleton pattern
 
 ## 🆕 Verification Checklist
 
@@ -422,13 +424,17 @@ Use this checklist to verify the boot flow fixes are working correctly in Roblox
 ### Client Execution Verification
 
 1. **ClientMain Boot**:
-   - [ ] Check Output for: "=== [BOOT][CLIENT] Aether Wave: Convergence Client Starting ==="
+   - [ ] Check Output for: "=== [BOOT][CLIENT] Entry point - Delegating to BootModule ==="
+   - [ ] Check Output for: "=== [BOOTMODULE] Starting client initialization ==="
    - [ ] Verify boot sequence completes once (no duplicate execution)
+   - [ ] Check for: "✓ TitleScreenUI displayed immediately"
    - [ ] Check for: "Client initialization complete"
+   - [ ] Verify TitleScreenUI appears before other UI systems log their initialization
 
 2. **No Studio Warnings**:
    - [ ] No warnings about "RunContext" or "multiple execution"
    - [ ] No duplicate UI creation warnings
+   - [ ] No "duplicate TitleScreenUI removed" messages
 
 ### Overall Integration Test
 
