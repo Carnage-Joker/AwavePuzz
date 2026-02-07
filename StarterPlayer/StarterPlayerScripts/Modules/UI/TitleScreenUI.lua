@@ -463,8 +463,15 @@ function TitleScreenUI:onLoadingComplete()
 			{ Position = UDim2.new(0.5, 0, 1.2, 0) }
 		)
 		hideTween:Play()
-		hideTween.Completed:Connect(function()
+		
+		-- One-shot connection: disconnect after firing to avoid keeping closures around
+		local hideConnection
+		hideConnection = hideTween.Completed:Connect(function()
 			self.loadingContainer.Visible = false
+			if hideConnection then
+				hideConnection:Disconnect()
+				hideConnection = nil
+			end
 		end)
 	end
 	
@@ -478,9 +485,14 @@ function TitleScreenUI:onLoadingComplete()
 		)
 		promptTween:Play()
 		
-		-- Start prompt pulse animation after fade in
-		promptTween.Completed:Connect(function()
+		-- One-shot connection: disconnect after firing to avoid keeping closures around
+		local promptConnection
+		promptConnection = promptTween.Completed:Connect(function()
 			self:startPromptPulse()
+			if promptConnection then
+				promptConnection:Disconnect()
+				promptConnection = nil
+			end
 		end)
 	end
 end

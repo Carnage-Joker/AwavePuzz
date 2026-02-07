@@ -130,6 +130,11 @@ function LoadingManager:markComplete()
 	
 	print("[LoadingManager] Loading complete!")
 	
+	-- Notify progress callbacks with final 100% to ensure UI updates
+	for _, callback in ipairs(self.callbacks) do
+		task.spawn(callback, 100, "Complete")
+	end
+	
 	-- Notify complete callbacks
 	if self.completeCallbacks then
 		for _, callback in ipairs(self.completeCallbacks) do
