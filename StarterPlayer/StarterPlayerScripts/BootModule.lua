@@ -83,6 +83,25 @@ function BootModule.run()
 							end
 						end)
 						
+						-- Also listen for explicit loading completion so the title screen
+						-- can deterministically transition to the continue prompt, even if
+						-- progress never lands exactly on 100 or completion is signaled
+						-- via LoadingManager:markComplete().
+						if loadingManager.onLoadingComplete then
+							loadingManager:onLoadingComplete(function(finalPhaseName)
+								if titleScreenInstance then
+									-- Ensure the bar appears fully complete
+									titleScreenInstance:updateLoadingProgress(100, finalPhaseName)
+									
+									-- Notify the title screen that loading is finished so it can
+									-- show the continue prompt or advance its state.
+									if titleScreenInstance.onLoadingComplete then
+										titleScreenInstance:onLoadingComplete()
+									end
+								end
+							end)
+						end
+						
 						-- Store globally so ClientMainModule can use it
 						shared.__AwavePuzzLoadingManager = loadingManager
 						print("[BOOTMODULE] ✓ LoadingManager initialized and connected to TitleScreenUI")
