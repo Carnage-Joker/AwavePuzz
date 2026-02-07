@@ -252,7 +252,7 @@ function TitleScreenUI:createUI()
 	loadingText.TextColor3 = Color3.fromRGB(180, 180, 200)
 	loadingText.TextScaled = false
 	loadingText.TextSize = 18
-	loadingText.TextTransparency = 0
+	loadingText.TextTransparency = 1
 	loadingText.Parent = loadingContainer
 	
 	-- Prompt (bottom center) - initially hidden
