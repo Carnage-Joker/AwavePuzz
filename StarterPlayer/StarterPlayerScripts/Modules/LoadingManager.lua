@@ -83,20 +83,25 @@ function LoadingManager:updatePhase(phaseName, percentComplete)
 		return
 	end
 	
-	-- Calculate progress contribution
-	local phaseContribution = phase.weight * (percentComplete / 100)
-	
-	-- Track phase progress
-	if not self.phaseProgress then
-		self.phaseProgress = {}
+	-- Track per-phase percent progress as integers (0-100)
+	if not self.phasePercents then
+		self.phasePercents = {}
 	end
-	
-	local oldContribution = self.phaseProgress[phaseName] or 0
-	self.phaseProgress[phaseName] = phaseContribution
-	
-	-- Update total progress
-	self.completedWeight = self.completedWeight - oldContribution + phaseContribution
-	self.currentProgress = math.floor((self.completedWeight / self.totalWeight) * 100)
+
+	-- Normalize and clamp the incoming percentage
+	local clampedPercent = math.clamp(math.floor(percentComplete + 0.5), 0, 100)
+	self.phasePercents[phaseName] = clampedPercent
+
+	-- Recompute weighted overall progress using integer math
+	local weightedSum = 0
+	for _, p in ipairs(LOADING_PHASES) do
+		local phasePercent = self.phasePercents[p.name] or 0
+		weightedSum += p.weight * phasePercent
+	end
+
+	-- Convert weighted sum back to an overall percentage, rounding to nearest
+	local overall = weightedSum / self.totalWeight
+	self.currentProgress = math.floor(overall + 0.5)
 	
 	-- Clamp to 0-100
 	self.currentProgress = math.clamp(self.currentProgress, 0, 100)
