@@ -162,23 +162,16 @@ function CureStationInteraction:triggerInteraction()
 	
 	print("[CureStationInteraction] Player interacted with cure station:", self.nearestStation.Name)
 	
-	-- Fire remote event to show puzzle menu
+	-- Fire remote event to request puzzle progress from server
+	-- The server will then send CureUpdate with "show_puzzle_menu" back to the client
 	local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
 	if remoteEvents then
-		local cureUpdate = remoteEvents:FindFirstChild("CureUpdate")
-		if cureUpdate then
-			-- Manually trigger the same event that ProximityPrompt would trigger
-			-- We need to tell the server we're interacting with the cure station
-			local requestPuzzle = remoteEvents:FindFirstChild("RequestPuzzleProgress")
-			if requestPuzzle then
-				requestPuzzle:FireServer()
-			end
-			
-			-- Also trigger the UI directly (client-side shortcut)
-			cureUpdate:FireClient(player, {
-				type = "show_puzzle_menu",
-				message = "Select a component puzzle to attempt"
-			})
+		local requestPuzzle = remoteEvents:FindFirstChild("RequestPuzzleProgress")
+		if requestPuzzle then
+			-- Request puzzle progress from server, which will trigger the puzzle menu UI
+			requestPuzzle:FireServer()
+		else
+			warn("[CureStationInteraction] RequestPuzzleProgress remote event not found")
 		end
 	end
 end
@@ -209,14 +202,6 @@ function CureStationInteraction:initialize()
 	
 	self.enabled = true
 	
-	-- Register with InputActionRegistry with high priority when near cure station
-	-- We'll use 'F' key as primary, since 'E' is used for weapon switching
-	-- However, we also listen for 'E' key when very close to cure station (higher priority context)
-	
-	-- Get InputActionRegistry
-	local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
-	local InputActionRegistry = SharedFolder and require(SharedFolder:FindFirstChild("InputActionRegistry"))
-	
 	-- Connect to keyboard input for 'F' and 'E' keys
 	-- 'F' is the primary interaction key (no conflicts)
 	-- 'E' works as a context-sensitive override when very close to cure station
@@ -233,12 +218,14 @@ function CureStationInteraction:initialize()
 		
 		-- Check for 'E' key press (context-sensitive - only when VERY close)
 		-- This provides convenience for players who expect 'E' to interact
+		-- When within 5 studs of cure station, interaction takes priority
 		if input.KeyCode == Enum.KeyCode.E then
 			-- Only trigger if we're VERY close to cure station (within 5 studs)
-			-- This makes the cure station interaction take priority over weapon switching
 			if self.nearestStation and self.distanceToNearest <= 5 then
-				-- Consume the input to prevent weapon switching
 				self:triggerInteraction()
+				-- Note: We can't fully prevent weapon switching from this hook
+				-- The weapon controller will still process the E key
+				-- However, the puzzle menu will open and may block further input
 			end
 		end
 	end)

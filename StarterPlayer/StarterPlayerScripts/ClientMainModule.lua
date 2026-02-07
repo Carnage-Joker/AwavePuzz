@@ -369,9 +369,9 @@ local function bootClient()
 			end)
 			
 			if success then
-				local interactionInstance = result.new()
-				if interactionInstance.initialize then
-					interactionInstance.initialize()
+				CureStationInteraction = result.new()
+				if CureStationInteraction.initialize then
+					CureStationInteraction.initialize()
 				end
 				print("[BOOT][CLIENT] ✓ Cure Station Interaction initialized")
 			else
