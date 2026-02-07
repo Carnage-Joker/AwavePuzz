@@ -47,6 +47,7 @@ function BootModule.run()
 	local titleScreenModule = uiFolder and uiFolder:FindFirstChild("TitleScreenUI")
 	
 	local titleScreenInstance = nil
+	local loadingManager = nil
 	
 	if titleScreenModule then
 		local success, TitleScreenClass = pcall(function()
@@ -65,6 +66,51 @@ function BootModule.run()
 				-- The show() method handles this gracefully and will enable interaction later
 				titleScreenInstance:show()
 				print("[BOOTMODULE] ✓ TitleScreenUI displayed immediately")
+				
+				-- Initialize LoadingManager and connect to TitleScreenUI
+				local LoadingManagerModule = clientModules and clientModules:FindFirstChild("LoadingManager")
+				if LoadingManagerModule then
+					local lmSuccess, LoadingManagerClass = pcall(function()
+						return require(LoadingManagerModule)
+					end)
+					if lmSuccess and LoadingManagerClass then
+						loadingManager = LoadingManagerClass.new()
+						
+						-- Connect loading progress to TitleScreenUI
+						loadingManager:onProgressChanged(function(progress, phaseName)
+							if titleScreenInstance then
+								titleScreenInstance:updateLoadingProgress(progress, phaseName)
+							end
+						end)
+						
+						-- Also listen for explicit loading completion so the title screen
+						-- can deterministically transition to the continue prompt, even if
+						-- progress never lands exactly on 100 or completion is signaled
+						-- via LoadingManager:markComplete().
+						if loadingManager.onLoadingComplete then
+							loadingManager:onLoadingComplete(function(finalPhaseName)
+								if titleScreenInstance then
+									-- Ensure the bar appears fully complete
+									titleScreenInstance:updateLoadingProgress(100, finalPhaseName)
+									
+									-- Notify the title screen that loading is finished so it can
+									-- show the continue prompt or advance its state.
+									if titleScreenInstance.onLoadingComplete then
+										titleScreenInstance:onLoadingComplete()
+									end
+								end
+							end)
+						end
+						
+						-- Store globally so ClientMainModule can use it
+						shared.__AwavePuzzLoadingManager = loadingManager
+						print("[BOOTMODULE] ✓ LoadingManager initialized and connected to TitleScreenUI")
+					else
+						warn("[BOOTMODULE] ✗ Failed to load LoadingManager:", LoadingManagerClass)
+					end
+				else
+					warn("[BOOTMODULE] ✗ LoadingManager module not found")
+				end
 				
 				-- Store globally so ClientMainModule can bind remotes later
 				shared.__AwavePuzzTitleScreenInstance = titleScreenInstance
