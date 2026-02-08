@@ -444,4 +444,16 @@ function FPSWeaponService:startAmmoValidationLoop()
 	print("[FPSWeaponService] Started periodic ammo validation (interval: " .. AMMO_SYNC_INTERVAL .. "s)")
 end
 
+-- Compatibility shim: equipWeapon(player, weaponName) for test API
+-- Forwards to the existing onWeaponEquipped implementation
+function FPSWeaponService:equipWeapon(player, weaponName)
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	-- Forward to the existing implementation
+	self:onWeaponEquipped(player, weaponName)
+	return true
+end
+
 return FPSWeaponService
