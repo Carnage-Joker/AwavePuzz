@@ -263,6 +263,10 @@ end
 
 -- Compatibility shim: purchaseItem(player, itemId, quantity) for test API
 -- Forwards to the existing attemptPurchase implementation
+-- NOTE: This returns true to indicate the request was PROCESSED (not necessarily successful).
+-- Actual success/failure is communicated to the client via remote events (ShopUpdate).
+-- For test purposes where only method existence is validated, this is acceptable.
+-- For production usage, rely on attemptPurchase directly or monitor remote event responses.
 function ShopService:purchaseItem(player, itemId, quantity)
 	-- Validate inputs
 	if not player or typeof(player) ~= "Instance" then
@@ -278,10 +282,11 @@ function ShopService:purchaseItem(player, itemId, quantity)
 	quantity = quantity or 1
 	
 	-- Forward to existing purchase logic
+	-- Note: attemptPurchase handles all validation and sends results via remote events
 	self:attemptPurchase(player, itemId)
 	
-	-- Note: attemptPurchase sends results via remote events, not return value
-	-- For test API compatibility, we return true to indicate the request was processed
+	-- Return true to indicate request was processed (not necessarily successful)
+	-- Actual success/failure is communicated via ShopUpdate remote event
 	return true
 end
 
