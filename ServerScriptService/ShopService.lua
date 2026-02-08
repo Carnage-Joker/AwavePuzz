@@ -263,10 +263,15 @@ end
 
 -- Compatibility shim: purchaseItem(player, itemId, quantity) for test API
 -- Forwards to the existing attemptPurchase implementation
--- NOTE: This returns true to indicate the request was PROCESSED (not necessarily successful).
--- Actual success/failure is communicated to the client via remote events (ShopUpdate).
--- For test purposes where only method existence is validated, this is acceptable.
--- For production usage, rely on attemptPurchase directly or monitor remote event responses.
+--
+-- IMPORTANT NOTES FOR API CONSUMERS:
+-- 1. quantity parameter is ACCEPTED but IGNORED (attemptPurchase doesn't support it)
+--    - Kept in signature for test API compatibility
+--    - Future enhancement would require modifying attemptPurchase
+-- 2. Return value of TRUE means request was PROCESSED, NOT necessarily successful
+--    - Do NOT rely on this return value for success verification
+--    - Actual success/failure communicated via ShopUpdate remote event
+--    - For production code, use attemptPurchase directly or monitor remote events
 function ShopService:purchaseItem(player, itemId, quantity)
 	-- Validate inputs
 	if not player or typeof(player) ~= "Instance" then
@@ -277,16 +282,13 @@ function ShopService:purchaseItem(player, itemId, quantity)
 		return false
 	end
 	
-	-- Note: quantity parameter accepted for API compatibility but not used
-	-- Current implementation (attemptPurchase) doesn't support quantity parameter
-	-- If quantity support is needed in the future, update attemptPurchase implementation
+	-- quantity parameter accepted for test API compatibility but explicitly ignored
+	-- (attemptPurchase implementation doesn't support quantity parameter)
 	
 	-- Forward to existing purchase logic
-	-- Note: attemptPurchase handles all validation and sends results via remote events
 	self:attemptPurchase(player, itemId)
 	
-	-- Return true to indicate request was processed (not necessarily successful)
-	-- Actual success/failure is communicated via ShopUpdate remote event
+	-- Return true = request processed (NOT success/failure indication)
 	return true
 end
 
