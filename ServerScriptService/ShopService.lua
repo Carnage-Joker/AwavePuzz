@@ -274,7 +274,7 @@ end
 --    - For production code, use attemptPurchase directly or monitor remote events
 function ShopService:purchaseItem(player, itemId, quantity)
 	-- Validate inputs
-	if not player or typeof(player) ~= "Instance" then
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
 		return false
 	end
 	
