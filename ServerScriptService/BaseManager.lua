@@ -183,8 +183,9 @@ function BaseManager:takeDamage(damage, source)
 end
 
 -- Compatibility shim: isDestroyed() method for test API
+-- Delegates to isBaseDestroyed() for single source of truth
 function BaseManager:isDestroyed()
-	return self._destroyed
+	return self:isBaseDestroyed()
 end
 
 function BaseManager:isBaseDestroyed()
