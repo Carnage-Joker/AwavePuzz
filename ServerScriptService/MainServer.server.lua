@@ -15,8 +15,7 @@ script:SetAttribute("Initialized", true)
 print("[MainServer.server] Legacy compatibility marker - actual boot logic in Main.server.lua")
 
 -- Verify the modern entry point exists
-local Main = script.Parent:FindFirstChild("Main")
-if not Main then
+if not script.Parent:FindFirstChild("Main") then
 	error("[MainServer.server] CRITICAL: Main.server.lua not found in ServerScriptService")
 end
 

@@ -277,9 +277,9 @@ function ShopService:purchaseItem(player, itemId, quantity)
 		return false
 	end
 	
-	-- Quantity parameter is optional in test API (default to 1)
-	-- Current implementation doesn't use quantity, so we ignore it
-	quantity = quantity or 1
+	-- Note: quantity parameter accepted for API compatibility but not used
+	-- Current implementation (attemptPurchase) doesn't support quantity parameter
+	-- If quantity support is needed in the future, update attemptPurchase implementation
 	
 	-- Forward to existing purchase logic
 	-- Note: attemptPurchase handles all validation and sends results via remote events
