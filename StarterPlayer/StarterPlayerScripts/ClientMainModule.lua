@@ -102,6 +102,7 @@ local function bootClient()
 	local MusicController = nil
 	local StaminaClient = nil
 	local VoiceoverController = nil
+	local CureStationInteraction = nil
 	
 	-- UI systems
 	local UI = {}
@@ -357,6 +358,32 @@ local function bootClient()
 	if loadingManager then loadingManager:updatePhase("CoreSystems", 88) end
 	
 	initializeVoiceover()
+	if loadingManager then loadingManager:updatePhase("CoreSystems", 94) end
+	
+	-- Cure Station Interaction (with E key support)
+	local function initializeCureStationInteraction()
+		print("[BOOT][CLIENT] Initializing Cure Station Interaction...")
+		local interactionModule = clientModules:FindFirstChild("CureStationInteraction")
+		if interactionModule then
+			local success, result = pcall(function()
+				return require(interactionModule)
+			end)
+			
+			if success then
+				CureStationInteraction = result.new()
+				if CureStationInteraction.initialize then
+					CureStationInteraction:initialize()
+				end
+				print("[BOOT][CLIENT] ✓ Cure Station Interaction initialized")
+			else
+				warn("[BOOT][CLIENT] ✗ Cure Station Interaction failed to load:", result)
+			end
+		else
+			warn("[BOOT][CLIENT] ✗ Cure Station Interaction module not found")
+		end
+	end
+	
+	initializeCureStationInteraction()
 	if loadingManager then loadingManager:updatePhase("CoreSystems", 100) end
 	
 	print("[BOOT][CLIENT] Phase 5 complete: Core systems initialized")
