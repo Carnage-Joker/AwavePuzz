@@ -23,4 +23,3 @@ end
 -- The Main.server.lua script runs automatically as a server script
 -- This shim exists solely to satisfy tests checking for "MainServer" existence
 print("[MainServer.server] Modern entry point verified: Main.server.lua exists")
-
