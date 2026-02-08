@@ -444,4 +444,44 @@ function FPSWeaponService:startAmmoValidationLoop()
 	print("[FPSWeaponService] Started periodic ammo validation (interval: " .. AMMO_SYNC_INTERVAL .. "s)")
 end
 
+-- Compatibility shim: equipWeapon(player, weaponId) for test API
+-- Forwards to the existing onWeaponEquipped implementation
+function FPSWeaponService:equipWeapon(player, weaponId)
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	-- Forward to the existing implementation
+	self:onWeaponEquipped(player, weaponId)
+	return true
+end
+
+-- Compatibility shim: reloadWeapon(player, weaponId) for test API
+-- Forwards to the existing handleReload implementation
+function FPSWeaponService:reloadWeapon(player, weaponId)
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	-- Create payload format expected by handleReload
+	local payload = { weaponId = weaponId }
+	self:handleReload(player, payload)
+	return true
+end
+
+-- Compatibility shim: fireWeapon(player, weaponId) for test API
+-- Validates ammo and consumes it
+function FPSWeaponService:fireWeapon(player, weaponId)
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	-- Validate shot and consume ammo
+	if not self:validateShot(player, weaponId) then
+		return false
+	end
+	
+	return self:consumeAmmo(player, weaponId, 1)
+end
+
 return FPSWeaponService

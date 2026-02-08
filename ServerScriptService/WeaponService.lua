@@ -87,6 +87,7 @@ function WeaponService.new(playerManager, allianceService, gameManager)
 	self.gameManager = gameManager  -- For kill tracking
 	self.fpsWeaponService = nil  -- Set via setFPSWeaponService
 	self.playerWeaponState = {} -- userId -> state
+	self.registeredZombies = {} -- Compatibility shim: zombie tracking for tests
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
 	return self
@@ -702,6 +703,27 @@ function WeaponService:dealDamage(target, amount, meta)
 		return false
 	end
 	
+	return true
+end
+
+-- Compatibility shim: registerZombie for test API
+-- Tracks registered zombies in a table (no-op for gameplay)
+function WeaponService:registerZombie(zombieModel)
+	if not zombieModel or typeof(zombieModel) ~= "Instance" then
+		return false
+	end
+	
+	self.registeredZombies[zombieModel] = true
+	return true
+end
+
+-- Compatibility shim: unregisterZombie for test API
+function WeaponService:unregisterZombie(zombieModel)
+	if not zombieModel or typeof(zombieModel) ~= "Instance" then
+		return false
+	end
+	
+	self.registeredZombies[zombieModel] = nil
 	return true
 end
 

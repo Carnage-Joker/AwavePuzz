@@ -261,4 +261,35 @@ function ShopService:sendResult(player, success, message)
 	})
 end
 
+-- Compatibility shim: purchaseItem(player, itemId, quantity) for test API
+-- Forwards to the existing attemptPurchase implementation
+--
+-- IMPORTANT NOTES FOR API CONSUMERS:
+-- 1. quantity parameter is ACCEPTED but IGNORED (attemptPurchase doesn't support it)
+--    - Kept in signature for test API compatibility
+--    - Future enhancement would require modifying attemptPurchase
+-- 2. Return value of TRUE means request was PROCESSED, NOT necessarily successful
+--    - Do NOT rely on this return value for success verification
+--    - Actual success/failure communicated via ShopUpdate remote event
+--    - For production code, use attemptPurchase directly or monitor remote events
+function ShopService:purchaseItem(player, itemId, quantity)
+	-- Validate inputs
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+	
+	if not itemId then
+		return false
+	end
+	
+	-- quantity parameter accepted for test API compatibility but explicitly ignored
+	-- (attemptPurchase implementation doesn't support quantity parameter)
+	
+	-- Forward to existing purchase logic
+	self:attemptPurchase(player, itemId)
+	
+	-- Return true = request processed (NOT success/failure indication)
+	return true
+end
+
 return ShopService

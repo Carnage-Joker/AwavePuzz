@@ -10,6 +10,9 @@ local WeaponConfig = {}
 
 WeaponConfig.DefaultWeapon = "Pistol"
 
+-- Compatibility constant for test API
+WeaponConfig.RAYCAST_MAX_DISTANCE = 500  -- Maximum raycast distance in studs
+
 WeaponConfig.Weapons = {
 	Pistol = {
 		Name = "Standard Issue Pistol",
