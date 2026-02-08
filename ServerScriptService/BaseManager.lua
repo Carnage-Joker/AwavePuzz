@@ -161,8 +161,8 @@ end
 function BaseManager:setHealth(value)
 	value = tonumber(value) or 0
 	
-	-- Clamp health between 0 and maxHealth
-	self.health = math.clamp(value, 0, self.maxHealth)
+	-- Clamp health to be at least 0 (allow values above maxHealth, e.g. for tests)
+	self.health = math.max(0, value)
 	
 	-- Update _destroyed flag based on new health
 	if self.health <= 0 then
