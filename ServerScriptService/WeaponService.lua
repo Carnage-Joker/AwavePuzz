@@ -719,7 +719,7 @@ end
 
 -- Compatibility shim: unregisterZombie for test API
 function WeaponService:unregisterZombie(zombieModel)
-	if not zombieModel then
+	if not zombieModel or typeof(zombieModel) ~= "Instance" then
 		return false
 	end
 	
