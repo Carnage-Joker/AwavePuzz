@@ -157,10 +157,16 @@ end
 
 -- Trigger cure station interaction (request puzzle menu)
 function CureStationInteraction:triggerInteraction()
-	if not self.nearestStation then return end
-	if self.distanceToNearest > INTERACTION_DISTANCE then return end
+	-- Recompute nearest station and distance at the moment of interaction
+	local station, distance = self:findNearestCureStation()
+	if not station then return end
+	if distance > INTERACTION_DISTANCE then return end
+
+	-- Keep internal state in sync with the most recent calculation
+	self.nearestStation = station
+	self.distanceToNearest = distance
 	
-	print("[CureStationInteraction] Player interacted with cure station:", self.nearestStation.Name)
+	print("[CureStationInteraction] Player interacted with cure station:", station.Name)
 	
 	-- Fire remote event to request puzzle progress from server
 	-- The server will then send CureUpdate with "show_puzzle_menu" back to the client
