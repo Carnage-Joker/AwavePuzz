@@ -172,9 +172,9 @@ function CureStationSetup:initialize()
 				-- Check if player is within range of any cure station
 				local nearestStation = nil
 				local minDistance = math.huge
-				local MAX_INTERACTION_DISTANCE = 20 -- Server-side validation (slightly larger than client)
+				local MAX_INTERACTION_DISTANCE = 20 -- Server-side validation (client uses 15 studs)
 				
-				for _, station in ipairs(cureStationsFolder:GetChildren()) do
+				for _, station in cureStationsFolder:GetChildren() do
 					if station:IsA("BasePart") or station:IsA("Model") then
 						local stationPos
 						if station:IsA("BasePart") then
