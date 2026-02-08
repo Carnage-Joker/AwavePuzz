@@ -168,16 +168,16 @@ function CureStationInteraction:triggerInteraction()
 	
 	print("[CureStationInteraction] Player interacted with cure station:", station.Name)
 	
-	-- Fire remote event to request puzzle progress from server
-	-- The server will then send CureUpdate with "show_puzzle_menu" back to the client
+	-- Fire remote event to request cure station menu opening
+	-- Server validates proximity and sends CureUpdate with "show_puzzle_menu"
 	local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
 	if remoteEvents then
-		local requestPuzzle = remoteEvents:FindFirstChild("RequestPuzzleProgress")
-		if requestPuzzle then
-			-- Request puzzle progress from server, which will trigger the puzzle menu UI
-			requestPuzzle:FireServer()
+		local openMenuEvent = remoteEvents:FindFirstChild("OpenCureStationMenu")
+		if openMenuEvent then
+			-- Request to open the cure station menu - server validates distance
+			openMenuEvent:FireServer()
 		else
-			warn("[CureStationInteraction] RequestPuzzleProgress remote event not found")
+			warn("[CureStationInteraction] OpenCureStationMenu remote event not found")
 		end
 	end
 end

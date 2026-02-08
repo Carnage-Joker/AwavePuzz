@@ -102,6 +102,7 @@ local function bootClient()
 	local MusicController = nil
 	local StaminaClient = nil
 	local VoiceoverController = nil
+	local CureStationInteraction = nil
 	
 	-- UI systems
 	local UI = {}
@@ -371,7 +372,7 @@ local function bootClient()
 			if success then
 				CureStationInteraction = result.new()
 				if CureStationInteraction.initialize then
-					CureStationInteraction.initialize()
+					CureStationInteraction:initialize()
 				end
 				print("[BOOT][CLIENT] ✓ Cure Station Interaction initialized")
 			else

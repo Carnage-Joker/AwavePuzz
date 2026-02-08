@@ -94,6 +94,7 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "RequestPuzzle", Type = "Event"},
 	{Name = "RequestPuzzleProgress", Type = "Event"},
 	{Name = "SubmitPuzzleAnswer", Type = "Event"},
+	{Name = "OpenCureStationMenu", Type = "Event"}, -- Client requests to open cure station menu
 
 	-- Weapons and combat
 	{Name = "WeaponFire", Type = "Event"},

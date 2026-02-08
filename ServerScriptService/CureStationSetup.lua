@@ -150,6 +150,69 @@ function CureStationSetup:initialize()
 	self._initialized = true
 	
 	initializeCureStations()
+	
+	-- Set up handler for manual cure station interaction (F/E key or mobile button)
+	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if remoteEvents then
+		local openMenuEvent = remoteEvents:FindFirstChild("OpenCureStationMenu")
+		if openMenuEvent then
+			openMenuEvent.OnServerEvent:Connect(function(player)
+				-- Validate player exists and has character
+				if not player or not player.Character then return end
+				
+				-- Find nearest cure station to player
+				local character = player.Character
+				local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+				if not humanoidRootPart then return end
+				
+				local playerPos = humanoidRootPart.Position
+				local cureStationsFolder = workspace:FindFirstChild("CureStations")
+				if not cureStationsFolder then return end
+				
+				-- Check if player is within range of any cure station
+				local nearestStation = nil
+				local minDistance = math.huge
+				local MAX_INTERACTION_DISTANCE = 20 -- Server-side validation (slightly larger than client)
+				
+				for _, station in ipairs(cureStationsFolder:GetChildren()) do
+					if station:IsA("BasePart") or station:IsA("Model") then
+						local stationPos
+						if station:IsA("BasePart") then
+							stationPos = station.Position
+						elseif station:IsA("Model") and station.PrimaryPart then
+							stationPos = station.PrimaryPart.Position
+						elseif station:IsA("Model") then
+							stationPos = station:GetPivot().Position
+						end
+						
+						if stationPos then
+							local distance = (playerPos - stationPos).Magnitude
+							if distance < minDistance and distance <= MAX_INTERACTION_DISTANCE then
+								minDistance = distance
+								nearestStation = station
+							end
+						end
+					end
+				end
+				
+				-- If player is near a cure station, send the menu open event
+				if nearestStation then
+					print("[CureStationSetup]", player.Name, "manually opened cure station menu from", nearestStation.Name)
+					local cureUpdate = remoteEvents:FindFirstChild("CureUpdate")
+					if cureUpdate then
+						cureUpdate:FireClient(player, {
+							type = "show_puzzle_menu",
+							message = "Select a component puzzle to attempt"
+						})
+					end
+				else
+					warn("[CureStationSetup]", player.Name, "attempted to open cure station menu but is not near any station")
+				end
+			end)
+			print("[CureStationSetup] Manual interaction handler registered")
+		end
+	end
+	
 	return true
 end
 
