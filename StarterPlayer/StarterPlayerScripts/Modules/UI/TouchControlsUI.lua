@@ -603,19 +603,25 @@ end
 function TouchControls.initialize()
 	-- Only enable on touch devices
 	if not InputManager.isTouch() then
-		print("[TouchControls] Not initializing - not a touch device. Device type:", InputManager.getActiveDevice())
-		print("[TouchControls] TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+		if DEBUG then
+			print("[TouchControls] Not initializing - not a touch device. Device type:", InputManager.getActiveDevice())
+			print("[TouchControls] TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+		end
 		return
 	end
 	
 	-- Prevent double initialization
 	if TouchControls.enabled then
-		print("[TouchControls] Already initialized, skipping")
+		if DEBUG then
+			print("[TouchControls] Already initialized, skipping")
+		end
 		return
 	end
 	
-	print("[TouchControls] Initializing touch controls...")
-	print("[TouchControls] Device detected as touch. TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+	if DEBUG then
+		print("[TouchControls] Initializing touch controls...")
+		print("[TouchControls] Device detected as touch. TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+	end
 	
 	-- Create UI
 	createScreenGui()
@@ -642,7 +648,9 @@ function TouchControls.initialize()
 		TouchControls.enabled = true
 	end
 	
-	print("[TouchControls] Touch controls enabled")
+	if DEBUG then
+		print("[TouchControls] Touch controls enabled")
+	end
 end
 
 function TouchControls.setEnabled(enabled)
@@ -742,15 +750,19 @@ InputActionRegistry.register("InteractGamepad", "TouchControlsUI", {Enum.KeyCode
 -- Auto-initialize on touch devices
 task.spawn(function()
 	task.wait(0.5) -- Wait for InputManager to fully initialize
-	print("[TouchControls] Auto-initialization check starting...")
-	print("[TouchControls] InputManager.isTouch():", InputManager.isTouch())
-	print("[TouchControls] UserInputService.TouchEnabled:", UserInputService.TouchEnabled)
+	if DEBUG then
+		print("[TouchControls] Auto-initialization check starting...")
+		print("[TouchControls] InputManager.isTouch():", InputManager.isTouch())
+		print("[TouchControls] UserInputService.TouchEnabled:", UserInputService.TouchEnabled)
+	end
 	
 	if InputManager.isTouch() then
 		TouchControls.initialize()
 	else
-		print("[TouchControls] Not a touch device, touch controls will not be shown")
-		print("[TouchControls] If you're testing on mobile and don't see controls, they may appear after first touch input (fallback mode)")
+		if DEBUG then
+			print("[TouchControls] Not a touch device, touch controls will not be shown")
+			print("[TouchControls] If you're testing on mobile and don't see controls, they may appear after first touch input (fallback mode)")
+		end
 	end
 end)
 
