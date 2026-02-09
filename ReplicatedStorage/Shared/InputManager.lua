@@ -179,8 +179,17 @@ function InputManager.detectDevice()
 	-- Mobile devices (including those with Bluetooth keyboards): TouchEnabled=true, MouseEnabled=false
 	-- Desktop touchscreens: TouchEnabled=true, MouseEnabled=true, KeyboardEnabled=true
 	if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-		activeDevice = InputManager.DeviceType.TOUCH
+		-- Touch is available on this device
 		touchEnabled = true
+
+		-- If a hardware keyboard is present (e.g. Bluetooth keyboard on mobile),
+		-- classify as KEYBOARD_MOUSE so keyboard bindings still work,
+		-- while still treating touch as available via touchEnabled.
+		if UserInputService.KeyboardEnabled then
+			activeDevice = InputManager.DeviceType.KEYBOARD_MOUSE
+		else
+			activeDevice = InputManager.DeviceType.TOUCH
+		end
 		return activeDevice
 	end
 
