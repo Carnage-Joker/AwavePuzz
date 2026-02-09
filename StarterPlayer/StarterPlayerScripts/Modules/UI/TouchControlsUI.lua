@@ -559,21 +559,20 @@ end
 local function setupTouchInput()
 	-- FIX: Add fallback touch detection
 	-- If touch controls weren't initialized but we receive touch input, initialize them now
-	local fallbackConnection = nil
+	local hasFallbackTriggered = false
 	
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
 		-- Fallback: If touch controls aren't enabled but we got touch input, initialize now
-		if not TouchControls.enabled and fallbackConnection == nil then
+		if not TouchControls.enabled and not hasFallbackTriggered then
 			print("[TouchControls] Touch input detected but controls not initialized - enabling fallback")
-			fallbackConnection = true -- Prevent repeated attempts
+			hasFallbackTriggered = true -- Prevent repeated attempts
 			task.spawn(function()
 				-- Re-detect device
 				if InputManager and InputManager.detectDevice then
 					InputManager.detectDevice()
 				end
-				-- Force initialization
-				TouchControls.enabled = false -- Reset flag
+				-- Force initialization (no need to reset flag, initialize() handles double-init)
 				TouchControls.initialize()
 			end)
 			return
