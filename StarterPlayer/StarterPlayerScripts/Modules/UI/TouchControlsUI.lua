@@ -564,9 +564,10 @@ local function setupTouchInput()
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
 		-- Fallback: If touch controls aren't enabled but we got touch input, initialize now
-		-- Set flag BEFORE spawning task to ensure atomicity and prevent race conditions
+		-- Note: In Roblox Lua, event handlers execute sequentially on the main thread
+		-- Setting flag before task.spawn ensures atomicity since no other handler can run until this one completes
 		if not TouchControls.enabled and not hasFallbackTriggered then
-			hasFallbackTriggered = true -- Set flag immediately to prevent concurrent attempts
+			hasFallbackTriggered = true -- Set flag immediately (atomic in Roblox's single-threaded event model)
 			print("[TouchControls] Touch input detected but controls not initialized - enabling fallback")
 			task.spawn(function()
 				-- Re-detect device
