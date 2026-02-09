@@ -385,9 +385,9 @@ function InputManager.initialize()
 				activeDevice = InputManager.DeviceType.GAMEPAD
 			end
 		elseif input.UserInputType == Enum.UserInputType.Touch then
-			-- FIX: Switch to touch mode on any touch input
-			-- Some mobile devices have keyboards paired but should still use touch controls
-			if UserInputService.TouchEnabled then
+			-- FIX: Switch to touch mode on touch input, but only if MouseEnabled is false
+			-- This prevents desktop touchscreens from switching to touch controls
+			if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
 				touchEnabled = true
 				activeDevice = InputManager.DeviceType.TOUCH
 			end

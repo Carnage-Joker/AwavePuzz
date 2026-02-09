@@ -82,6 +82,9 @@ local joystickTouch = nil
 local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
 
+-- Fallback initialization flag (module-level to prevent race conditions)
+local hasFallbackTriggered = false
+
 -- Weapon tracking for weapon switch button
 local ownedWeapons = {DEFAULT_WEAPON} -- Start with default weapon
 local currentEquippedWeapon = DEFAULT_WEAPON
@@ -557,22 +560,19 @@ end
 --------------------------------------------------------------------------------
 
 local function setupTouchInput()
-	-- FIX: Add fallback touch detection
-	-- If touch controls weren't initialized but we receive touch input, initialize them now
-	local hasFallbackTriggered = false
-	
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
 		-- Fallback: If touch controls aren't enabled but we got touch input, initialize now
+		-- Use module-level flag to prevent race conditions from concurrent touch events
 		if not TouchControls.enabled and not hasFallbackTriggered then
 			print("[TouchControls] Touch input detected but controls not initialized - enabling fallback")
-			hasFallbackTriggered = true -- Prevent repeated attempts
+			hasFallbackTriggered = true -- Prevent concurrent initialization attempts
 			task.spawn(function()
 				-- Re-detect device
 				if InputManager and InputManager.detectDevice then
 					InputManager.detectDevice()
 				end
-				-- Force initialization (no need to reset flag, initialize() handles double-init)
+				-- Force initialization (initialize() handles double-init via its own enabled check)
 				TouchControls.initialize()
 			end)
 			return
