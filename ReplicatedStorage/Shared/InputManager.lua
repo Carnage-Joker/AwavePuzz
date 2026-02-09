@@ -175,9 +175,21 @@ function InputManager.detectDevice()
 	end
 
 	-- Touch (mobile/tablet)
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		activeDevice = InputManager.DeviceType.TOUCH
+	-- FIX: Check TouchEnabled and MouseEnabled to properly detect mobile devices
+	-- Mobile devices (including those with Bluetooth keyboards): TouchEnabled=true, MouseEnabled=false
+	-- Desktop touchscreens: TouchEnabled=true, MouseEnabled=true, KeyboardEnabled=true
+	if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+		-- Touch is available on this device
 		touchEnabled = true
+
+		-- If a hardware keyboard is present (e.g. Bluetooth keyboard on mobile),
+		-- classify as KEYBOARD_MOUSE so keyboard bindings still work,
+		-- while still treating touch as available via touchEnabled.
+		if UserInputService.KeyboardEnabled then
+			activeDevice = InputManager.DeviceType.KEYBOARD_MOUSE
+		else
+			activeDevice = InputManager.DeviceType.TOUCH
+		end
 		return activeDevice
 	end
 
@@ -382,7 +394,9 @@ function InputManager.initialize()
 				activeDevice = InputManager.DeviceType.GAMEPAD
 			end
 		elseif input.UserInputType == Enum.UserInputType.Touch then
-			if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+			-- FIX: Switch to touch mode on touch input, but only if MouseEnabled is false
+			-- This prevents desktop touchscreens from switching to touch controls
+			if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
 				touchEnabled = true
 				activeDevice = InputManager.DeviceType.TOUCH
 			end
@@ -424,7 +438,8 @@ function InputManager.initialize()
 		gamepadConnected = (#pads > 0)
 
 		if not gamepadConnected then
-			if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+			-- FIX: Check for touch first (based on MouseEnabled, not KeyboardEnabled)
+			if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
 				touchEnabled = true
 				activeDevice = InputManager.DeviceType.TOUCH
 			else

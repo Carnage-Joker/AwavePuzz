@@ -82,6 +82,9 @@ local joystickTouch = nil
 local joystickPosition = Vector2.new(0, 0) -- Normalized -1 to 1
 local activeButtons = {}
 
+-- Fallback initialization flag (module-level to prevent race conditions)
+local hasFallbackTriggered = false
+
 -- Weapon tracking for weapon switch button
 local ownedWeapons = {DEFAULT_WEAPON} -- Start with default weapon
 local currentEquippedWeapon = DEFAULT_WEAPON
@@ -107,7 +110,8 @@ local function createScreenGui()
 	screenGui.Name = "TouchControls"
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = false -- Use safe area
-	screenGui.DisplayOrder = 100
+	-- DisplayOrder = 150: Above game HUD (10-50), notifications (100), but below modals (TitleScreen=200, Tutorial=1000)
+	screenGui.DisplayOrder = 150
 	screenGui.Enabled = false -- Will be enabled if touch device detected
 	screenGui.Parent = playerGui
 	
@@ -599,16 +603,25 @@ end
 function TouchControls.initialize()
 	-- Only enable on touch devices
 	if not InputManager.isTouch() then
+		if DEBUG then
+			print("[TouchControls] Not initializing - not a touch device. Device type:", InputManager.getActiveDevice())
+			print("[TouchControls] TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+		end
 		return
 	end
 	
 	-- Prevent double initialization
 	if TouchControls.enabled then
-		print("[TouchControls] Already initialized, skipping")
+		if DEBUG then
+			print("[TouchControls] Already initialized, skipping")
+		end
 		return
 	end
 	
-	print("[TouchControls] Initializing touch controls...")
+	if DEBUG then
+		print("[TouchControls] Initializing touch controls...")
+		print("[TouchControls] Device detected as touch. TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
+	end
 	
 	-- Create UI
 	createScreenGui()
@@ -635,7 +648,9 @@ function TouchControls.initialize()
 		TouchControls.enabled = true
 	end
 	
-	print("[TouchControls] Touch controls enabled")
+	if DEBUG then
+		print("[TouchControls] Touch controls enabled")
+	end
 end
 
 function TouchControls.setEnabled(enabled)
@@ -733,11 +748,22 @@ InputActionRegistry.register("Interact", "TouchControlsUI", {Enum.KeyCode.F}, In
 InputActionRegistry.register("InteractGamepad", "TouchControlsUI", {Enum.KeyCode.ButtonX}, InputActionRegistry.Priority.CORE_GAMEPLAY)
 
 -- Auto-initialize on touch devices
-if InputManager.isTouch() then
-	task.spawn(function()
-		task.wait(0.5) -- Wait for InputManager to fully initialize
+task.spawn(function()
+	task.wait(0.5) -- Wait for InputManager to fully initialize
+	if DEBUG then
+		print("[TouchControls] Auto-initialization check starting...")
+		print("[TouchControls] InputManager.isTouch():", InputManager.isTouch())
+		print("[TouchControls] UserInputService.TouchEnabled:", UserInputService.TouchEnabled)
+	end
+	
+	if InputManager.isTouch() then
 		TouchControls.initialize()
-	end)
-end
+	else
+		if DEBUG then
+			print("[TouchControls] Not a touch device, touch controls will not be shown")
+			print("[TouchControls] If you're testing on mobile and don't see controls, they may appear after first touch input (fallback mode)")
+		end
+	end
+end)
 
 return TouchControls
