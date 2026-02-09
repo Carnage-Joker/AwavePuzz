@@ -107,7 +107,7 @@ local function createScreenGui()
 	screenGui.Name = "TouchControls"
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = false -- Use safe area
-	screenGui.DisplayOrder = 100
+	screenGui.DisplayOrder = 150 -- High priority to ensure visibility above game UI
 	screenGui.Enabled = false -- Will be enabled if touch device detected
 	screenGui.Parent = playerGui
 	
@@ -557,8 +557,28 @@ end
 --------------------------------------------------------------------------------
 
 local function setupTouchInput()
+	-- FIX: Add fallback touch detection
+	-- If touch controls weren't initialized but we receive touch input, initialize them now
+	local fallbackConnection = nil
+	
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
+		-- Fallback: If touch controls aren't enabled but we got touch input, initialize now
+		if not TouchControls.enabled and fallbackConnection == nil then
+			print("[TouchControls] Touch input detected but controls not initialized - enabling fallback")
+			fallbackConnection = true -- Prevent repeated attempts
+			task.spawn(function()
+				-- Re-detect device
+				if InputManager and InputManager.detectDevice then
+					InputManager.detectDevice()
+				end
+				-- Force initialization
+				TouchControls.enabled = false -- Reset flag
+				TouchControls.initialize()
+			end)
+			return
+		end
+		
 		-- Don't check processed for joystick - we want to capture all touches in the area
 		local touchPos = touch.Position
 		
@@ -599,6 +619,8 @@ end
 function TouchControls.initialize()
 	-- Only enable on touch devices
 	if not InputManager.isTouch() then
+		print("[TouchControls] Not initializing - not a touch device. Device type:", InputManager.getActiveDevice())
+		print("[TouchControls] TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
 		return
 	end
 	
@@ -609,6 +631,7 @@ function TouchControls.initialize()
 	end
 	
 	print("[TouchControls] Initializing touch controls...")
+	print("[TouchControls] Device detected as touch. TouchEnabled:", UserInputService.TouchEnabled, "KeyboardEnabled:", UserInputService.KeyboardEnabled, "MouseEnabled:", UserInputService.MouseEnabled)
 	
 	-- Create UI
 	createScreenGui()
@@ -733,11 +756,18 @@ InputActionRegistry.register("Interact", "TouchControlsUI", {Enum.KeyCode.F}, In
 InputActionRegistry.register("InteractGamepad", "TouchControlsUI", {Enum.KeyCode.ButtonX}, InputActionRegistry.Priority.CORE_GAMEPLAY)
 
 -- Auto-initialize on touch devices
-if InputManager.isTouch() then
-	task.spawn(function()
-		task.wait(0.5) -- Wait for InputManager to fully initialize
+task.spawn(function()
+	task.wait(0.5) -- Wait for InputManager to fully initialize
+	print("[TouchControls] Auto-initialization check starting...")
+	print("[TouchControls] InputManager.isTouch():", InputManager.isTouch())
+	print("[TouchControls] UserInputService.TouchEnabled:", UserInputService.TouchEnabled)
+	
+	if InputManager.isTouch() then
 		TouchControls.initialize()
-	end)
-end
+	else
+		print("[TouchControls] Not a touch device, touch controls will not be shown")
+		print("[TouchControls] If you're testing on mobile and don't see controls, they may appear after first touch input (fallback mode)")
+	end
+end)
 
 return TouchControls

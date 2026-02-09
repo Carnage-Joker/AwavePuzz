@@ -175,10 +175,16 @@ function InputManager.detectDevice()
 	end
 
 	-- Touch (mobile/tablet)
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		activeDevice = InputManager.DeviceType.TOUCH
-		touchEnabled = true
-		return activeDevice
+	-- FIX: Only check TouchEnabled, not KeyboardEnabled
+	-- Some mobile devices with Bluetooth keyboards would be misdetected
+	if UserInputService.TouchEnabled then
+		-- Additional check: if mouse is also enabled, likely a desktop with touchscreen
+		-- Only treat as touch device if mouse is NOT enabled OR keyboard is NOT enabled
+		if not UserInputService.MouseEnabled or not UserInputService.KeyboardEnabled then
+			activeDevice = InputManager.DeviceType.TOUCH
+			touchEnabled = true
+			return activeDevice
+		end
 	end
 
 	-- Gamepad
@@ -382,7 +388,9 @@ function InputManager.initialize()
 				activeDevice = InputManager.DeviceType.GAMEPAD
 			end
 		elseif input.UserInputType == Enum.UserInputType.Touch then
-			if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+			-- FIX: Switch to touch mode on any touch input
+			-- Some mobile devices have keyboards paired but should still use touch controls
+			if UserInputService.TouchEnabled then
 				touchEnabled = true
 				activeDevice = InputManager.DeviceType.TOUCH
 			end
@@ -424,7 +432,8 @@ function InputManager.initialize()
 		gamepadConnected = (#pads > 0)
 
 		if not gamepadConnected then
-			if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+			-- FIX: Check for touch first, then keyboard/mouse
+			if UserInputService.TouchEnabled and (not UserInputService.MouseEnabled or not UserInputService.KeyboardEnabled) then
 				touchEnabled = true
 				activeDevice = InputManager.DeviceType.TOUCH
 			else
