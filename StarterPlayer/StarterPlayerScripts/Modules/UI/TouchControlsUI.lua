@@ -110,7 +110,8 @@ local function createScreenGui()
 	screenGui.Name = "TouchControls"
 	screenGui.ResetOnSpawn = false
 	screenGui.IgnoreGuiInset = false -- Use safe area
-	screenGui.DisplayOrder = 150 -- High priority to ensure visibility above game UI
+	-- DisplayOrder = 150: Above game HUD (10-50), notifications (100), but below modals (TitleScreen=200, Tutorial=1000)
+	screenGui.DisplayOrder = 150
 	screenGui.Enabled = false -- Will be enabled if touch device detected
 	screenGui.Parent = playerGui
 	
@@ -563,10 +564,10 @@ local function setupTouchInput()
 	-- Handle joystick touches
 	UserInputService.TouchStarted:Connect(function(touch, processed)
 		-- Fallback: If touch controls aren't enabled but we got touch input, initialize now
-		-- Use module-level flag to prevent race conditions from concurrent touch events
+		-- Set flag BEFORE spawning task to ensure atomicity and prevent race conditions
 		if not TouchControls.enabled and not hasFallbackTriggered then
+			hasFallbackTriggered = true -- Set flag immediately to prevent concurrent attempts
 			print("[TouchControls] Touch input detected but controls not initialized - enabling fallback")
-			hasFallbackTriggered = true -- Prevent concurrent initialization attempts
 			task.spawn(function()
 				-- Re-detect device
 				if InputManager and InputManager.detectDevice then
