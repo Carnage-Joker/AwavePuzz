@@ -66,8 +66,15 @@ function ShopService:handleRequest(player, action, data)
 	if action == "catalog" then
 		self:sendCatalog(player)
 	elseif action == "purchase" then
+		-- SECURITY: Validate purchase data structure and item ID type
 		if typeof(data) ~= "table" or data.itemId == nil then
 			self:sendResult(player, false, "Invalid purchase data")
+			return
+		end
+		
+		if typeof(data.itemId) ~= "string" then
+			warn("[ShopService] SECURITY: Invalid itemId type from " .. player.Name)
+			self:sendResult(player, false, "Invalid item ID")
 			return
 		end
 
