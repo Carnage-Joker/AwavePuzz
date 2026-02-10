@@ -222,9 +222,9 @@ if gameManager._heartbeatConnection then
 end
 
 local lastUpdate = tick()
-local heartbeatConnection
 
-heartbeatConnection = RunService.Heartbeat:Connect(function()
+-- Create and store heartbeat connection for game loop
+gameManager._heartbeatConnection = RunService.Heartbeat:Connect(function()
 	local currentTime = tick()
 	local deltaTime = currentTime - lastUpdate
 	lastUpdate = currentTime
@@ -232,9 +232,6 @@ heartbeatConnection = RunService.Heartbeat:Connect(function()
 	-- GameManager handles waves, timers, and update logic
 	gameManager:update(deltaTime)
 end)
-
--- Store connection for potential cleanup
-gameManager._heartbeatConnection = heartbeatConnection
 
 print("[BOOT][SERVER] Phase 5 complete: Game loop running")
 
