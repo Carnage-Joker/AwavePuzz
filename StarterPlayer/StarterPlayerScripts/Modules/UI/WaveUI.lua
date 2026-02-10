@@ -17,6 +17,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
 	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
@@ -221,7 +224,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Wave Announce
 local waveAnnounceEvent = remoteEvents:WaitForChild("WaveAnnounce")
-waveAnnounceEvent.OnClientEvent:Connect(function(waveData)
+_connections.waveAnnounce = waveAnnounceEvent.OnClientEvent:Connect(function(waveData)
 	local waveNumber = 0
 	local timeLimit = 0
 
@@ -242,7 +245,7 @@ end)
 
 -- Wave Update
 local waveUpdateEvent = remoteEvents:WaitForChild("WaveUpdate")
-waveUpdateEvent.OnClientEvent:Connect(function(updateData)
+_connections.waveUpdate = waveUpdateEvent.OnClientEvent:Connect(function(updateData)
 	if typeof(updateData) ~= "table" then
 		return
 	end
@@ -267,7 +270,7 @@ end)
 
 -- Game State Update
 local gameStateEvent = remoteEvents:WaitForChild("GameStateUpdate")
-gameStateEvent.OnClientEvent:Connect(function(stateData)
+_connections.gameState = gameStateEvent.OnClientEvent:Connect(function(stateData)
 	if typeof(stateData) ~= "table" then
 		return
 	end
@@ -320,4 +323,16 @@ print("WaveUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local WaveUI = {}
+
+-- BUG-007 FIX: Cleanup method
+function WaveUI.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	print("WaveUI cleanup completed")
+end
+
 return WaveUI
