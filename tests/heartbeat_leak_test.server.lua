@@ -47,12 +47,15 @@ print("   PASSED: Heartbeat connection created")
 -- Test 2: Simulated server reload
 print("\n✅ Test 2: Server reload (should disconnect old, create new)")
 local oldConnection = mockGameManager._heartbeatConnection
+local wasConnected = oldConnection and oldConnection.Connected
 setupHeartbeat()
 local newConnection = mockGameManager._heartbeatConnection
 
+assert(wasConnected, "Old heartbeat connection should be connected before reload")
 assert(newConnection ~= nil, "New heartbeat connection should exist")
 assert(newConnection ~= oldConnection, "New connection should be different from old")
-print("   PASSED: Old connection replaced with new one")
+assert(oldConnection and (not oldConnection.Connected), "Old heartbeat connection should be disconnected after reload")
+print("   PASSED: Old connection disconnected and replaced with new one")
 
 -- Test 3: Verify old connection is disconnected
 print("\n✅ Test 3: Verify connection cleanup")
