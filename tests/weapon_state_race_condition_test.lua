@@ -5,9 +5,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Test configuration constants
-local CLIENT_PROCESSING_DELAY = 0.5  -- Time to wait for client to process events
-local RETRY_DELAY_WITH_BUFFER = 1.2  -- Retry delay (1s) + buffer for processing
+-- Test configuration constants (all values in seconds)
+local CLIENT_PROCESSING_DELAY_SECONDS = 0.5  -- Time to wait for client to process events
+local RETRY_DELAY_WITH_BUFFER_SECONDS = 1.2  -- Retry delay (1s) + buffer for processing
 
 print("==============================================")
 print("=== WEAPON STATE RACE CONDITION TEST (BUG-008) ===")
@@ -57,7 +57,7 @@ local function testLateJoinerWeaponState()
 	ammoUpdateEvent:FireClient(testPlayer, testData)
 	
 	-- Wait for client to process the event
-	task.wait(CLIENT_PROCESSING_DELAY)
+	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	print("✅ Test 1 PASSED: Ammo update sent successfully to late joiner")
 	print("   (Client-side validation requires manual verification)")
@@ -102,12 +102,12 @@ local function testWeaponStatsRetryLogic()
 	ammoUpdateEvent:FireClient(testPlayer, testData)
 	
 	-- Wait for initial processing
-	task.wait(CLIENT_PROCESSING_DELAY)
+	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	print("Initial ammo update sent")
 	
 	-- Wait for retry delay (1 second) plus buffer for processing
-	task.wait(RETRY_DELAY_WITH_BUFFER)
+	task.wait(RETRY_DELAY_WITH_BUFFER_SECONDS)
 	
 	print("✅ Test 2 PASSED: Retry logic delay completed")
 	print("   (Verify in client logs that retry occurred if weaponStats was nil)")
@@ -159,7 +159,7 @@ local function testFirstSpawnShooting()
 	}
 	
 	weaponLoadoutUpdateEvent:FireClient(testPlayer, weaponLoadoutData)
-	task.wait(CLIENT_PROCESSING_DELAY)
+	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	-- Send ammo update (simulating late joiner receiving their first ammo state)
 	local ammoData = {
@@ -170,7 +170,7 @@ local function testFirstSpawnShooting()
 	}
 	
 	ammoUpdateEvent:FireClient(testPlayer, ammoData)
-	task.wait(CLIENT_PROCESSING_DELAY)
+	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	print("✅ Test 3 PASSED: Weapon loadout and ammo updates sent to late joiner")
 	print("   MANUAL VERIFICATION REQUIRED:")

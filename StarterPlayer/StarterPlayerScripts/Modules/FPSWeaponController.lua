@@ -21,6 +21,7 @@ local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 -- Constants
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
+local WEAPON_STATS_RETRY_DELAY = 1.0  -- BUG-008 FIX: Seconds to wait before retrying weaponStats fetch for late joiners
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -501,8 +502,8 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 			-- BUG-008 FIX: If still nil, retry after 1 second delay
 			if not weaponStats then
 				if DEBUG_AMMO then
-					warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in 1s for weapon '%s'", 
-						tostring(data.weaponId)))
+					warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in %.1fs for weapon '%s'", 
+						WEAPON_STATS_RETRY_DELAY, tostring(data.weaponId)))
 				end
 				
 				-- Capture the data locally to avoid race conditions with future AmmoUpdate events
@@ -513,8 +514,8 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 					max = data.max
 				}
 				
-				-- Schedule retry with 1 second delay
-				task.delay(1, function()
+				-- Schedule retry with configured delay
+				task.delay(WEAPON_STATS_RETRY_DELAY, function()
 					-- Only retry if we're still using the same weapon
 					if currentWeapon ~= capturedData.weaponId then
 						if DEBUG_AMMO then
