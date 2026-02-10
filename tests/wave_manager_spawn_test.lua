@@ -111,15 +111,30 @@ local function testQueueProcessing()
 	
 	-- Simulate rapid concurrent requests using task.spawn
 	local totalRequests = waveInfo.zombieCount * 3 -- 3x the max zombies
+	local completedRequests = 0
+	local completionMutex = false
 	
 	for i = 1, totalRequests do
 		task.spawn(function()
 			waveManager:spawnZombie()
+			-- Track completion
+			while completionMutex do task.wait() end
+			completionMutex = true
+			completedRequests = completedRequests + 1
+			completionMutex = false
 		end)
 	end
 	
-	-- Wait for all spawns to complete
-	task.wait(0.5)
+	-- Wait for all spawns to complete (deterministic)
+	local maxWaitTime = 5 -- 5 second timeout
+	local startTime = tick()
+	while completedRequests < totalRequests and (tick() - startTime) < maxWaitTime do
+		task.wait(0.1)
+	end
+	
+	if completedRequests < totalRequests then
+		warn(string.format("⚠️ Test 3 timeout: Only %d/%d requests completed", completedRequests, totalRequests))
+	end
 	
 	print(string.format("Total spawn requests: %d", totalRequests))
 	print(string.format("Actual zombies spawned: %d", waveManager.zombiesSpawned))
