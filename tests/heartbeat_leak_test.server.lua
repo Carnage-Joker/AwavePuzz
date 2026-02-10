@@ -3,30 +3,16 @@
 -- This test simulates a server reload scenario to verify no heartbeat accumulation
 
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 print("========================================")
 print("HEARTBEAT LEAK TEST (BUG-010)")
 print("========================================")
 
--- Wait for services to initialize
+-- Wait for services to initialize (kept for consistency with live server timing)
 task.wait(2)
 
--- Get GameManager reference (assuming it's been initialized by Main.server.lua)
-local success, gameManager = pcall(function()
-	-- Try to find GameManager in the running scripts
-	-- In a real scenario, you'd have a proper reference
-	local ServerScriptService = game:GetService("ServerScriptService")
-	local MainScript = ServerScriptService:FindFirstChild("Main.server")
-	
-	if not MainScript then
-		error("Main.server.lua not found - cannot run test")
-	end
-	
-	-- Note: In actual Roblox, we'd need to access the GameManager instance
-	-- This is a simplified test that checks the pattern
-	return nil
-end)
+-- This test is self-contained and uses a mock GameManager instance.
+-- It does not depend on the real Main / GameManager script being present.
 
 print("\n--- Testing Heartbeat Connection Cleanup Pattern ---")
 
