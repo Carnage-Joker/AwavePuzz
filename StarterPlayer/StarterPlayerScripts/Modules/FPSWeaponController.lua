@@ -78,6 +78,7 @@ local weaponLoadoutUpdateEvent = remoteEvents:WaitForChild("WeaponLoadoutUpdate"
 local inputBeganConn = nil
 local inputEndedConn = nil
 local fireConnection = nil
+local heartbeatConnection = nil  -- BUG-014: Store heartbeat connection for cleanup
 
 -- Bindable events for UI and animation communication
 local bindableFolder = playerGui:WaitForChild("BindableEvents", 10)
@@ -546,7 +547,8 @@ end)
 --------------------------------------------------------------------------------
 
 -- Spread recovery
-RunService.Heartbeat:Connect(function(deltaTime)
+-- BUG-014: Store heartbeat connection for cleanup on character death
+heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
 	if weaponStats and tick() - lastShotTime > 0.1 then
 		targetSpread = math.max(0, targetSpread - weaponStats.SpreadRecovery * deltaTime)
 	end
@@ -634,6 +636,11 @@ function FPSWeaponController.onCharacterRemoving()
 	if fireConnection then
 		fireConnection:Disconnect()
 		fireConnection = nil
+	end
+	-- BUG-014: Disconnect heartbeat connection to prevent memory leak
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
 	end
 end
 
