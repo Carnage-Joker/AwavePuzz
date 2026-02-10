@@ -367,6 +367,26 @@ end
 function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	local userId = player.UserId
 	
+	-- SECURITY: Validate componentName is a valid cure component
+	if typeof(componentName) ~= "string" then
+		warn("[PuzzleService] SECURITY: Invalid componentName type from " .. player.Name)
+		return
+	end
+	
+	-- Validate against known component names
+	local isValidComponent = false
+	for _, validName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
+		if componentName == validName then
+			isValidComponent = true
+			break
+		end
+	end
+	
+	if not isValidComponent then
+		warn("[PuzzleService] SECURITY: Unknown componentName '" .. componentName .. "' from " .. player.Name)
+		return
+	end
+	
 	-- BUGFIX (MEDIUM): Initialize player if not found to prevent silent failure
 	if not self.playerPuzzles[userId] then
 		warn("[PuzzleService] Player not initialized:", player.Name, "- initializing now")

@@ -160,7 +160,18 @@ function AllianceServiceV2:removePlayer(player)
 end
 
 function AllianceServiceV2:handleAllianceRequest(requester, target)
+	-- SECURITY: Validate both requester and target are valid Player instances
 	if not requester or not target then
+		return
+	end
+	
+	if typeof(requester) ~= "Instance" or not requester:IsA("Player") then
+		warn("[AllianceServiceV2] SECURITY: Invalid requester type in handleAllianceRequest")
+		return
+	end
+	
+	if typeof(target) ~= "Instance" or not target:IsA("Player") then
+		warn("[AllianceServiceV2] SECURITY: Invalid target type in handleAllianceRequest")
 		return
 	end
 
