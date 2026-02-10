@@ -516,8 +516,22 @@ reloadConfirmEvent.OnClientEvent:Connect(function(data)
 	if typeof(data) ~= "table" then return end
 	
 	-- Validate confirmation matches our pending request
-	if not pendingReloadRequest or pendingReloadRequest.weaponId ~= data.weaponId then
-		-- Not our request or no pending request - ignore
+	local pending = pendingReloadRequest
+	if not pending then
+		-- No pending reload for this client - ignore
+		return
+	end
+
+	-- Weapon must match the weapon we most recently requested a reload for
+	if pending.weaponId ~= data.weaponId then
+		-- Not our weapon - ignore
+		return
+	end
+
+	-- If both client and server are using requestIds, ensure this confirmation
+	-- corresponds to the currently pending reload (guards against stale/out-of-order acks)
+	if pending.requestId ~= nil and data.requestId ~= nil and pending.requestId ~= data.requestId then
+		-- Stale or mismatched reload confirmation - ignore
 		return
 	end
 	
