@@ -166,7 +166,7 @@ When this test passes, you can mark BUG-014 as complete in the checklist.
 ### Test Won't Run
 - Ensure you're in Roblox Studio with the game project loaded
 - Check that RunService is available
-- Verify the script is in ServerScriptService
+- Verify the test script is running as a LocalScript under `StarterPlayer/StarterPlayerScripts` or `StarterGui`, or run it from the **Client** command bar (do **not** place this test in `ServerScriptService`)
 
 ### Manual Verification Issues
 - Make sure you have access to the memory profiler
