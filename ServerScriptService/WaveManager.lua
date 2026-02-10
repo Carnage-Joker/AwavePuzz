@@ -58,28 +58,30 @@ function WaveManager:spawnZombie()
 	end
 	
 	-- Process all queued spawn requests
+	local firstSpawnData = nil
+	local maxZombies = self:calculateZombiesForWave(self.currentWave)
+	
 	while #self._spawnQueue > 0 do
-		table.remove(self._spawnQueue, 1) -- Remove the request we're processing
+		table.remove(self._spawnQueue, 1)
 		
-		local maxZombies = self:calculateZombiesForWave(self.currentWave)
-		if self.zombiesSpawned >= maxZombies then
-			-- Max zombies reached, skip remaining queue items
-			continue
+		-- Spawn one zombie per queued request, up to max
+		if self.zombiesSpawned < maxZombies then
+			self.zombiesSpawned = self.zombiesSpawned + 1
+			self.zombiesAlive = self.zombiesAlive + 1
+			
+			-- Only return data for the first spawn (the one from this call)
+			if not firstSpawnData then
+				firstSpawnData = {
+					health = self:calculateZombieHealthForWave(self.currentWave),
+					damage = GameConfig.ZOMBIE_DAMAGE,
+					speed = GameConfig.ZOMBIE_SPEED,
+					id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
+				}
+			end
 		end
-		
-		self.zombiesSpawned = self.zombiesSpawned + 1
-		self.zombiesAlive = self.zombiesAlive + 1
-		
-		-- Return the first successful spawn
-		return {
-			health = self:calculateZombieHealthForWave(self.currentWave),
-			damage = GameConfig.ZOMBIE_DAMAGE,
-			speed = GameConfig.ZOMBIE_SPEED,
-			id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
-		}
 	end
 	
-	return nil
+	return firstSpawnData
 end
 
 function WaveManager:onZombieDeath()
