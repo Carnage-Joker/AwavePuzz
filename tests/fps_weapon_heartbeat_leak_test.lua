@@ -132,8 +132,3 @@ if heartbeatConnection then
 	heartbeatConnection:Disconnect()
 	heartbeatConnection = nil
 end
-print("   - Connection disconnected on character removal")
-print("   - Connection RECREATED on character respawn")
-print("   - Single heartbeat per character (no accumulation)")
-print("   - No accumulation across respawn cycles")
-print("========================================")
