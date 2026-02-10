@@ -78,11 +78,11 @@ The test includes:
 2. **Died Event Reconnection Test**: Confirms the Died event can be reconnected after each respawn
 
 **Test Commands**:
-```
-Run in Roblox Studio Server Console:
-require(game.ServerStorage.tests.kill_tracking_respawn_test)
-```
 
+1. Open the project in **Roblox Studio**.
+2. Create a `tests` Folder under `ServerScriptService` (if it does not already exist).
+3. Add `tests/kill_tracking_respawn_test.lua` from the repository into `ServerScriptService/tests` as a **Script** named `kill_tracking_respawn_test`.
+4. Start a Play session (e.g. **Test → Start** or **Play Here**). The script will run on the server and print verification output to the **Output** window.
 ### Changes Summary
 
 - **Lines Changed**: 9 lines added in `Main.server.lua`
