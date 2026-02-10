@@ -134,7 +134,8 @@ local function testFirstSpawnShooting()
 	if not testPlayer.Character then
 		print("Loading character for test player...")
 		testPlayer:LoadCharacter()
-		task.wait(CHARACTER_LOAD_DELAY_SECONDS) -- Wait for character to load
+		-- Wait for character spawn and initialization to complete
+		task.wait(CHARACTER_LOAD_DELAY_SECONDS)
 	end
 	
 	if not testPlayer.Character then
@@ -161,6 +162,7 @@ local function testFirstSpawnShooting()
 	}
 	
 	weaponLoadoutUpdateEvent:FireClient(testPlayer, weaponLoadoutData)
+	-- Wait for client to process weapon loadout
 	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	-- Send ammo update (simulating late joiner receiving their first ammo state)
@@ -172,6 +174,7 @@ local function testFirstSpawnShooting()
 	}
 	
 	ammoUpdateEvent:FireClient(testPlayer, ammoData)
+	-- Wait for client to process ammo update
 	task.wait(CLIENT_PROCESSING_DELAY_SECONDS)
 	
 	print("✅ Test 3 PASSED: Weapon loadout and ammo updates sent to late joiner")
