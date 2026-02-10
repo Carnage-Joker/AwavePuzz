@@ -598,15 +598,16 @@ weaponFireEvent:FireServer(fireData)  -- ⚠️ No server validation queue
 
 #### Reproduction (Exploit)
 ```lua
--- Exploit script
-local FPSWeaponController = require(...)
-FPSWeaponController.isReloading = false  -- Bypass reload
-FPSWeaponController.lastFireTime = 0     -- Bypass fire rate
-
-while true do
-    weaponFireEvent:FireServer({...})    -- Rapid fire
-    task.wait(0.01)                      -- 100 shots/sec
-end
+-- High-level pseudocode (not a runnable exploit)
+-- 1. From the client, override local weapon state so that:
+--    - reload is considered "not in progress"
+--    - any client-side fire rate checks are effectively disabled
+--
+-- 2. In a very tight loop, send repeated "fire weapon" requests
+--    to the server with minimal delay between each request.
+--
+-- NOTE: Actual exploit scripts should NOT be stored in this repository.
+-- This pseudocode is for risk documentation only.
 ```
 
 #### Recommended Fix
