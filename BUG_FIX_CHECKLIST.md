@@ -71,14 +71,21 @@ Quick reference for developers working on bug fixes from the audit.
   - **Fix**: Added check to disconnect existing heartbeat connection stored in `shared` table before creating new one, uses Heartbeat's built-in deltaTime
   - **Date**: 2026-02-10
   
-- [ ] **BUG-013**: Fix death tracking table leak (GameManager.lua:163-164)
+- [x] **BUG-013**: Fix death tracking table leak (GameManager.lua:163-164) ✅ **FIXED**
   - Clean up tables in onPlayerRemoving()
   - Test: Tables don't grow after 1000 player joins
+  - **Status**: Already fixed in previous commits - all tables cleaned up properly (lines 667-687)
+  - **Tables cleaned**: _deathDebounce, _deathConnections, _characterAddedConnections, _spectatorCycleCooldown, playersReadyForEpilogue, playersCompletedEpilogue, playerStats
+  - **Test**: tests/death_tracking_table_leak_test.lua validates cleanup
+  - **Date**: 2026-02-10
   
-- [ ] **BUG-014**: Fix RunService heartbeat leak (FPSWeaponController.lua:549)
+- [x] **BUG-014**: Fix RunService heartbeat leak (FPSWeaponController.lua:549) ✅ **FIXED**
   - Store heartbeat connection
   - Disconnect on character death
   - Test: Single heartbeat per alive character
+  - **Fix**: Added heartbeatConnection variable (line 81), stored connection (line 551), added cleanup in onCharacterRemoving() (lines 640-644)
+  - **Test**: tests/fps_weapon_heartbeat_leak_test.lua validates single heartbeat per character
+  - **Date**: 2026-02-10
   
 - [ ] **BUG-015**: Fix input connection leak (Multiple files)
   - Store InputBegan/InputEnded connections
