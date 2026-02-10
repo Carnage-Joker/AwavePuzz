@@ -2,7 +2,8 @@
 -- This test verifies that the FPSWeaponController properly disconnects its heartbeat
 -- connection when the character is removed, preventing memory leaks on respawn/death.
 --
--- Place this in ServerScriptService as a Script to run the test.
+-- Run this as a LocalScript (for example in StarterPlayer > StarterPlayerScripts) or via
+-- the CLIENT Command Bar so it executes in the same context as FPSWeaponController.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
