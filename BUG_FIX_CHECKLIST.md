@@ -18,7 +18,7 @@ Quick reference for developers working on bug fixes from the audit.
   - Test: Rapid fire exploit should be blocked
 
 ### Gameplay Breaking
-- [ ] **BUG-002**: Fix wave spawning race condition (WaveManager.lua:46-69)
+- [x] **BUG-002**: Fix wave spawning race condition (WaveManager.lua:46-69)
   - Replace mutex with queue-based spawning
   - Test: Concurrent spawns don't exceed max count
   

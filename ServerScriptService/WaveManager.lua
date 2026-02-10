@@ -15,7 +15,7 @@ function WaveManager.new()
 	self.zombiesSpawned = 0
 	self.waveActive = false
 	self.intensityMultiplier = 1.0 -- For synthesis system to increase zombie intensity
-	self._spawnMutex = false -- BUGFIX (MEDIUM): Add mutex for thread safety
+	self._spawnQueue = {} -- Queue-based spawning to prevent race conditions
 	return self
 end
 
@@ -33,6 +33,7 @@ function WaveManager:startWave()
 	self.currentWave = self.currentWave + 1
 	self.zombiesSpawned = 0
 	self.waveActive = true
+	self._spawnQueue = {} -- Clear spawn queue when starting new wave
 
 	local zombieCount = self:calculateZombiesForWave(self.currentWave)
 
@@ -48,32 +49,40 @@ function WaveManager:spawnZombie()
 		return nil
 	end
 
-	-- BUGFIX (MEDIUM): Add mutex for thread safety to prevent race condition
-	-- NOTE: Lua mutexes are not truly atomic. This assumes single-threaded execution
-	-- with potential concurrent calls through yielding. For true thread safety,
-	-- a proper semaphore or queue-based approach would be needed.
-	if self._spawnMutex then
-		return nil
-	end
-	self._spawnMutex = true
-
-	local maxZombies = self:calculateZombiesForWave(self.currentWave)
-	if self.zombiesSpawned >= maxZombies then
-		self._spawnMutex = false
-		return nil
-	end
-
-	self.zombiesSpawned = self.zombiesSpawned + 1
-	self.zombiesAlive = self.zombiesAlive + 1
+	-- Queue-based spawning to prevent race conditions
+	-- Add this request to the spawn queue
+	table.insert(self._spawnQueue, true)
 	
-	self._spawnMutex = false
-
-	return {
-		health = self:calculateZombieHealthForWave(self.currentWave),
-		damage = GameConfig.ZOMBIE_DAMAGE,
-		speed = GameConfig.ZOMBIE_SPEED,
-		id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
-	}
+	-- If there are multiple requests in queue, only the first one processes
+	if #self._spawnQueue > 1 then
+		return nil -- Another spawn is already processing
+	end
+	
+	-- Process all queued spawn requests
+	local firstSpawnData = nil
+	local maxZombies = self:calculateZombiesForWave(self.currentWave)
+	
+	while #self._spawnQueue > 0 do
+		table.remove(self._spawnQueue, 1)
+		
+		-- Spawn one zombie per queued request, up to max
+		if self.zombiesSpawned < maxZombies then
+			self.zombiesSpawned = self.zombiesSpawned + 1
+			self.zombiesAlive = self.zombiesAlive + 1
+			
+			-- Only return data for the first spawn (the one from this call)
+			if not firstSpawnData then
+				firstSpawnData = {
+					health = self:calculateZombieHealthForWave(self.currentWave),
+					damage = GameConfig.ZOMBIE_DAMAGE,
+					speed = GameConfig.ZOMBIE_SPEED,
+					id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
+				}
+			end
+		end
+	end
+	
+	return firstSpawnData
 end
 
 function WaveManager:onZombieDeath()
@@ -82,6 +91,7 @@ function WaveManager:onZombieDeath()
 	-- Check if wave is complete
 	if self.zombiesAlive == 0 and self.zombiesSpawned >= self:calculateZombiesForWave(self.currentWave) then
 		self.waveActive = false
+		self._spawnQueue = {} -- Clear spawn queue when wave ends
 		return true -- Wave complete
 	end
 
