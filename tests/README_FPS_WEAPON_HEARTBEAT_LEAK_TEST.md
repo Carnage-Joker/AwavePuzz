@@ -29,12 +29,12 @@ This caused:
 ## The Fix
 The fix stores the connection, disconnects it on character removal, and **recreates it on character respawn**:
 
-**Line 81** - Store the connection:
+**Line 86** - Store the connection:
 ```lua
 local heartbeatConnection = nil  -- BUG-014: Store heartbeat connection for cleanup
 ```
 
-**Lines 549-580** - Helper function to setup/recreate connection:
+**Lines 628-657** - Helper function to setup/recreate connection:
 ```lua
 -- BUG-014: Setup heartbeat connection for spread recovery
 -- This is called on character spawn to ensure connection is recreated after respawn
@@ -52,19 +52,19 @@ local function setupHeartbeatConnection()
 end
 ```
 
-**Line 605** - Called during initialization:
+**Line 682** - Called during initialization:
 ```lua
 -- BUG-014: Setup heartbeat connection for spread recovery
 setupHeartbeatConnection()
 ```
 
-**Line 634** - Called on character respawn to recreate connection:
+**Line 711** - Called on character respawn to recreate connection:
 ```lua
 -- BUG-014: Recreate heartbeat connection on respawn
 setupHeartbeatConnection()
 ```
 
-**Lines 655-659** - Cleanup on character removal:
+**Lines 732-736** - Cleanup on character removal:
 ```lua
 -- BUG-014: Disconnect heartbeat connection to prevent memory leak
 if heartbeatConnection then
