@@ -22,6 +22,7 @@ function SynthesisUI.new()
 	self.isActive = false
 	self.screenGui = nil
 	self.mainFrame = nil
+	self._connections = {}
 	
 	self:createUI()
 	self:setupRemoteEvents()
@@ -38,21 +39,21 @@ function SynthesisUI:setupRemoteEvents()
 	
 	-- Listen for synthesis state updates
 	if self.remoteEvents.SynthesisStateUpdate then
-		self.remoteEvents.SynthesisStateUpdate.OnClientEvent:Connect(function(stateData)
+		self._connections.stateUpdate = self.remoteEvents.SynthesisStateUpdate.OnClientEvent:Connect(function(stateData)
 			self:updateSynthesisState(stateData)
 		end)
 	end
 	
 	-- Listen for synthesis completion
 	if self.remoteEvents.SynthesisComplete then
-		self.remoteEvents.SynthesisComplete.OnClientEvent:Connect(function(data)
+		self._connections.complete = self.remoteEvents.SynthesisComplete.OnClientEvent:Connect(function(data)
 			self:onSynthesisComplete(data)
 		end)
 	end
 	
 	-- Listen for synthesis failure
 	if self.remoteEvents.SynthesisFailed then
-		self.remoteEvents.SynthesisFailed.OnClientEvent:Connect(function(data)
+		self._connections.failed = self.remoteEvents.SynthesisFailed.OnClientEvent:Connect(function(data)
 			self:onSynthesisFailed(data)
 		end)
 	end
@@ -314,6 +315,30 @@ function SynthesisUI:stopWarningPulse()
 	if self.pulseLoop then
 		task.cancel(self.pulseLoop)
 		self.pulseLoop = nil
+	end
+end
+
+function SynthesisUI:cleanup()
+	-- Stop warning pulse
+	self:stopWarningPulse()
+	
+	-- Disconnect all connections
+	for name, connection in pairs(self._connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	self._connections = {}
+	
+	-- Hide UI
+	if self.isActive then
+		self:hide()
+	end
+	
+	-- Clean up GUI
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
 	end
 end
 
