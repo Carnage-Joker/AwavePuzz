@@ -27,7 +27,7 @@ The heartbeat connection created at line 549 was never stored or disconnected, c
    local heartbeatConnection = nil  -- BUG-014: Store heartbeat connection for cleanup
    ```
 
-2. **Lines 549-580**: Created `setupHeartbeatConnection()` helper function that disconnects any existing connection before creating a new one
+2. **Lines 628-657**: Created `setupHeartbeatConnection()` helper function that disconnects any existing connection before creating a new one
    ```lua
    local function setupHeartbeatConnection()
        -- Disconnect existing connection to prevent leaks
@@ -43,11 +43,11 @@ The heartbeat connection created at line 549 was never stored or disconnected, c
    end
    ```
 
-3. **Line 605**: Call `setupHeartbeatConnection()` during initialization
+3. **Line 682**: Call `setupHeartbeatConnection()` during initialization
 
-4. **Line 634**: Call `setupHeartbeatConnection()` in `onCharacterAdded()` to recreate connection on respawn
+4. **Line 711**: Call `setupHeartbeatConnection()` in `onCharacterAdded()` to recreate connection on respawn
 
-5. **Lines 655-659**: Added cleanup in `onCharacterRemoving()` function
+5. **Lines 732-736**: Added cleanup in `onCharacterRemoving()` function
    ```lua
    -- BUG-014: Disconnect heartbeat connection to prevent memory leak
    if heartbeatConnection then
@@ -165,7 +165,11 @@ All death tracking and related tables are properly cleaned up in `onPlayerRemovi
 ## Best Practices Applied
 
 1. **Minimal Changes**: Only modified what was necessary to fix BUG-014
-   - 3 lines changed in FPSWeaponController.lua
+   - Created helper function `setupHeartbeatConnection()` (~30 lines including comments and logic)
+   - Added variable storage at line 86 (1 line)
+   - Added initialization call at line 682 (1 line)
+   - Added respawn recreation call at line 711 (1 line)
+   - Added cleanup in `onCharacterRemoving()` at lines 732-736 (5 lines)
    - No changes needed for BUG-013 (already fixed)
 
 2. **Documentation**: 
