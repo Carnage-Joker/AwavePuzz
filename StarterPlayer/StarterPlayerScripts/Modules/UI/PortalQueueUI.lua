@@ -15,6 +15,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local PortalQueueUI = {}
 
+local _connections = {}
+
 -- Constants
 local REMOTE_EVENT_WAIT_TIMEOUT = 10
 
@@ -209,7 +211,7 @@ end
 
 -- Handle portal queue status updates from server
 if portalQueueStatus then
-	portalQueueStatus.OnClientEvent:Connect(function(status)
+	table.insert(_connections, portalQueueStatus.OnClientEvent:Connect(function(status)
 		if not status then
 			return
 		end
@@ -236,38 +238,55 @@ if portalQueueStatus then
 				PortalQueueUI.updateStatus(status)
 			end
 		end
-	end)
+	end))
 end
 
 -- Handle leave button click
-leaveButton.MouseButton1Click:Connect(function()
+table.insert(_connections, leaveButton.MouseButton1Click:Connect(function()
 	if isInQueue and currentPortalId and portalLeaveQueue then
 		portalLeaveQueue:FireServer()
 		PortalQueueUI.hide()
 	end
-end)
+end))
 
 -- Handle queue join confirmation
 if portalQueueJoined then
-	portalQueueJoined.OnClientEvent:Connect(function(data)
+	table.insert(_connections, portalQueueJoined.OnClientEvent:Connect(function(data)
 		if data and data.portalId then
 			PortalQueueUI.show(data.portalId, data.mapId)
 		end
-	end)
+	end))
 end
 
 -- Handle queue leave notification
 if portalQueueLeft then
-	portalQueueLeft.OnClientEvent:Connect(function(data)
+	table.insert(_connections, portalQueueLeft.OnClientEvent:Connect(function(data)
 		if data and data.portalId == currentPortalId then
 			PortalQueueUI.hide()
 		end
-	end)
+	end))
 end
 
 -- Export functions
 function PortalQueueUI.initialize()
 	print("[PortalQueueUI] Initialized")
+end
+
+function PortalQueueUI.cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	if screenGui then
+		screenGui:Destroy()
+		screenGui = nil
+	end
+	
+	currentPortalId = nil
+	isInQueue = false
 end
 
 return PortalQueueUI

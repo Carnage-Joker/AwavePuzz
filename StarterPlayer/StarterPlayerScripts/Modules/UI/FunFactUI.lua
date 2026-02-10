@@ -16,6 +16,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local FunFactUI = {}
 FunFactUI.__index = FunFactUI
 
+local _connections = {}
+
 -- Display settings
 local FADE_IN_TIME = 0.5
 local DISPLAY_TIME = 5
@@ -46,9 +48,9 @@ function FunFactUI:setupRemoteEvents()
 	
 	-- Listen for facts from server
 	if self.remoteEvents.ShowFunFact then
-		self.remoteEvents.ShowFunFact.OnClientEvent:Connect(function(factData)
+		table.insert(_connections, self.remoteEvents.ShowFunFact.OnClientEvent:Connect(function(factData)
 			self:displayFact(factData)
-		end)
+		end))
 	end
 	
 	print("[FunFactUI] Initialized")
@@ -176,7 +178,7 @@ function FunFactUI:displayFact(factData)
 	fadeOutTween:Play()
 	textFadeOutTween:Play()
 	
-	fadeOutTween.Completed:Connect(function()
+	table.insert(_connections, fadeOutTween.Completed:Connect(function()
 		self.factFrame.Visible = false
 		self.isDisplaying = false
 		
@@ -186,7 +188,7 @@ function FunFactUI:displayFact(factData)
 			self.queuedFact = nil
 			self:displayFact(queued)
 		end
-	end)
+	end))
 end
 
 -- Request a fact from the server
@@ -205,6 +207,25 @@ function FunFactUI:hideImmediately()
 	self.factFrame.Visible = false
 	self.isDisplaying = false
 	self.queuedFact = nil
+end
+
+function FunFactUI:cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	if self.currentTween then
+		self.currentTween:Cancel()
+		self.currentTween = nil
+	end
+	
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
 end
 
 return FunFactUI
