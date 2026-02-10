@@ -711,10 +711,10 @@ function FPSWeaponController.onCharacterAdded(character)
 	setupHeartbeatConnection()
 	
 	-- BUG-015: Reconnect input handlers on respawn
-	if not inputBeganConn then
+	if not inputBeganConn or not inputBeganConn.Connected then
 		inputBeganConn = UserInputService.InputBegan:Connect(onInputBegan)
 	end
-	if not inputEndedConn then
+	if not inputEndedConn or not inputEndedConn.Connected then
 		inputEndedConn = UserInputService.InputEnded:Connect(onInputEnded)
 	end
 	
