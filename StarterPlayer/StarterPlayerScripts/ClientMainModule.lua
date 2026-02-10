@@ -6,6 +6,9 @@
 
 local ClientMainModule = {}
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 local function checkInitialized(script)
 	if script:GetAttribute("Initialized") then
 		warn("[ClientMain] Already initialized, skipping duplicate execution")
@@ -597,7 +600,7 @@ local function bootClient()
 	
 	-- Connect to server GameStateUpdate
 	if remotes.GameStateUpdate then
-		remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
+		_connections.gameStateUpdate = remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
 			if data and data.state then
 				applyState(data.state)
 			end
@@ -687,8 +690,9 @@ local function bootClient()
 	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 66) end
 	
 	-- Connect character events
-	player.CharacterAdded:Connect(onCharacterAdded)
-	player.CharacterRemoving:Connect(onCharacterRemoving)
+	-- BUG-007 FIX: Store character lifecycle connections
+	_connections.characterAdded = player.CharacterAdded:Connect(onCharacterAdded)
+	_connections.characterRemoving = player.CharacterRemoving:Connect(onCharacterRemoving)
 	
 	-- Handle existing character
 	if player.Character then
@@ -735,6 +739,19 @@ end
 function ClientMainModule.initialize()
 	if checkInitialized(script) then return end
 	bootClient()
+end
+
+-- BUG-007 FIX: Cleanup method to disconnect all client connections
+function ClientMainModule.cleanup()
+	-- Disconnect all connections tracked in this module
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	print("[ClientMain] Cleanup completed - all connections disconnected")
 end
 
 return ClientMainModule

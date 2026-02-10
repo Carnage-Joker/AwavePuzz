@@ -80,6 +80,7 @@ local weaponLoadoutUpdateEvent = remoteEvents:WaitForChild("WeaponLoadoutUpdate"
 local reloadConfirmEvent = remoteEvents:WaitForChild("ReloadConfirm")  -- BUG-009 FIX: Server confirmation for reload
 
 -- Connection storage for cleanup
+local _connections = {}
 local inputBeganConn = nil
 local inputEndedConn = nil
 local fireConnection = nil
@@ -431,7 +432,7 @@ end
 --------------------------------------------------------------------------------
 
 -- Ammo updates from server
-ammoUpdateEvent.OnClientEvent:Connect(function(data)
+_connections[#_connections + 1] = ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	-- Debug logging for all ammo updates
 	if DEBUG_AMMO then
 		print(string.format("[FPSWeaponController] AmmoUpdate received - weaponId=%s, current=%s, reserve=%s, max=%s, currentWeapon=%s", 
@@ -526,7 +527,7 @@ end)
 
 -- BUG-009 FIX: Handle server confirmation for reload requests
 -- This implements server-authoritative reload state (prevents rapid fire exploits)
-reloadConfirmEvent.OnClientEvent:Connect(function(data)
+_connections[#_connections + 1] = reloadConfirmEvent.OnClientEvent:Connect(function(data)
 	if typeof(data) ~= "table" then return end
 	
 	-- Validate confirmation matches our pending request
@@ -581,7 +582,7 @@ end)
 
 -- FIX: Listen for server-authoritative weapon loadout updates
 -- This ensures client syncs with server when weapon is equipped (e.g., on spawn or server-forced equip)
-weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
+_connections[#_connections + 1] = weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
 	if typeof(data) == "table" and data.equipped then
 		-- Only update if the equipped weapon differs from current
 		if data.equipped ~= currentWeapon then
@@ -606,7 +607,7 @@ weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
 end)
 
 -- Hit confirmation from server
-hitConfirmEvent.OnClientEvent:Connect(function(data)
+_connections[#_connections + 1] = hitConfirmEvent.OnClientEvent:Connect(function(data)
 	if typeof(data) == "table" then
 		-- Simple hit detection - could be enhanced
 		local isHeadshot = false
@@ -654,6 +655,7 @@ local function setupHeartbeatConnection()
 			consecutiveShots = 0
 		end
 	end)
+	_connections[#_connections + 1] = heartbeatConnection
 end
 
 --------------------------------------------------------------------------------
@@ -676,7 +678,9 @@ local function initialize()
 
 	-- Connect legacy input events (for weapon switching on keyboard)
 	inputBeganConn = UserInputService.InputBegan:Connect(onInputBegan)
+	_connections[#_connections + 1] = inputBeganConn
 	inputEndedConn = UserInputService.InputEnded:Connect(onInputEnded)
+	_connections[#_connections + 1] = inputEndedConn
 
 	-- BUG-014: Setup heartbeat connection for spread recovery
 	setupHeartbeatConnection()
@@ -758,6 +762,34 @@ end
 
 function FPSWeaponController.isEnabled()
 	return _enabled
+end
+
+function FPSWeaponController.cleanup()
+	-- Disconnect all connections in table
+	for _, conn in ipairs(_connections) do
+		if conn and typeof(conn) == "RBXScriptConnection" then
+			conn:Disconnect()
+		end
+	end
+	table.clear(_connections)
+	
+	-- Also disconnect individual connection variables for safety
+	if inputBeganConn then
+		inputBeganConn:Disconnect()
+		inputBeganConn = nil
+	end
+	if inputEndedConn then
+		inputEndedConn:Disconnect()
+		inputEndedConn = nil
+	end
+	if fireConnection then
+		fireConnection:Disconnect()
+		fireConnection = nil
+	end
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
+	end
 end
 
 return FPSWeaponController
