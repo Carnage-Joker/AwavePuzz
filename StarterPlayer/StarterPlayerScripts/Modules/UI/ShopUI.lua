@@ -23,6 +23,8 @@ local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
 local shopRequest = remoteFolder:WaitForChild("ShopRequest")
 local shopUpdate = remoteFolder:WaitForChild("ShopUpdate")
 
+local _connections = {}
+
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
 	return UIScaleManager.scalePixels(baseValue, scaleType or "menuElements")
@@ -93,7 +95,7 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 closeCorner.Parent = closeButton
 
-closeButton.MouseButton1Click:Connect(function()
+_connections.closeButton = closeButton.MouseButton1Click:Connect(function()
 	screenGui.Enabled = false
 	ModalManager.remove("ShopUI")
 end)
@@ -204,7 +206,7 @@ local function updateCanvasSize()
 	list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
 end
 
-layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
+_connections.layoutChanged = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
 
 local function rebuildList(items)
 	-- Preserve layout and padding while clearing entries
@@ -260,7 +262,7 @@ local function rebuildList(items)
 	end
 end
 
-shopUpdate.OnClientEvent:Connect(function(payload)
+_connections.shopUpdate = shopUpdate.OnClientEvent:Connect(function(payload)
 	if typeof(payload) ~= "table" then
 		return
 	end
@@ -277,7 +279,7 @@ shopUpdate.OnClientEvent:Connect(function(payload)
 	end
 end)
 
-UserInputService.InputBegan:Connect(function(input, gpe)
+_connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
 	-- ALWAYS check gameProcessedEvent first
 	if gpe then
 		return
@@ -348,4 +350,18 @@ InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, Inpu
 
 -- Return module table (required for ModuleScript compatibility)
 local ShopUI = {}
+
+function ShopUI.cleanup()
+	for name, conn in pairs(_connections) do
+		if conn and conn.Connected then
+			conn:Disconnect()
+		end
+	end
+	table.clear(_connections)
+	
+	if screenGui then
+		screenGui:Destroy()
+	end
+end
+
 return ShopUI

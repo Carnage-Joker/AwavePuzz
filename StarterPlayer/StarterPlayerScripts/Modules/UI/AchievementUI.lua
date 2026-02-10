@@ -16,6 +16,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local AchievementUI = {}
 AchievementUI.__index = AchievementUI
 
+local _connections = {}
+
 function AchievementUI.new()
 	local self = setmetatable({}, AchievementUI)
 	
@@ -35,10 +37,10 @@ function AchievementUI:setupRemoteEvents()
 	})
 	
 	if self.remoteEvents.AchievementUnlocked then
-		self.remoteEvents.AchievementUnlocked.OnClientEvent:Connect(function(achievementId)
+		table.insert(_connections, self.remoteEvents.AchievementUnlocked.OnClientEvent:Connect(function(achievementId)
 			print("[AchievementUI] Achievement unlocked:", achievementId)
 			self:showAchievement(achievementId)
-		end)
+		end))
 	end
 	
 	print("[AchievementUI] Initialized and ready")
@@ -255,6 +257,14 @@ function AchievementUI:processQueue()
 			task.wait(0.5)
 		end
 	end)
+end
+
+-- Cleanup method
+function AchievementUI.cleanup()
+	for _, connection in ipairs(_connections) do
+		connection:Disconnect()
+	end
+	_connections = {}
 end
 
 -- Initialize
