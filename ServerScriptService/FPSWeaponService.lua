@@ -73,7 +73,8 @@ function FPSWeaponService:setupRemoteEvents()
 	-- Use shared utility to create remote events
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WeaponReload",
-		"AmmoUpdate"
+		"AmmoUpdate",
+		"ReloadConfirm" -- BUG-009 FIX: Server confirmation for reload requests
 	})
 
 	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
@@ -233,6 +234,16 @@ function FPSWeaponService:handleReload(player, payload)
 		reloadStartTime = tick(),
 		weaponId = weaponId,
 	}
+	
+	-- BUG-009 FIX: Send server confirmation to client that reload has started
+	-- This implements server-authoritative reload state (prevents client-side exploits)
+	if self.remoteEvents.ReloadConfirm then
+		self.remoteEvents.ReloadConfirm:FireClient(player, {
+			weaponId = weaponId,
+			reloadTime = reloadTime,
+			success = true
+		})
+	end
 
 	-- Cancel previous reload task if exists
 	if self.activeReloadTasks[userId] then
