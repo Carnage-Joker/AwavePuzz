@@ -195,8 +195,14 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if self.playerManager.equipWeapon then
+		-- FIX: Use WeaponService to properly equip weapon and initialize ammo
+		if self.weaponService and self.weaponService.forceEquip then
+			self.weaponService:forceEquip(player, selectedItem.WeaponId)
+		elseif self.playerManager.equipWeapon then
+			warn(string.format("[ShopService] WeaponService or forceEquip method not available for player %s - falling back to PlayerManager.equipWeapon (ammo initialization will be incomplete)", player.Name))
 			self.playerManager:equipWeapon(player, selectedItem.WeaponId)
+		else
+			warn(string.format("[ShopService] No weapon equip method available for player %s", player.Name))
 		end
 
 		self:sendResult(player, true, tostring(selectedItem.WeaponId) .. " unlocked!")
