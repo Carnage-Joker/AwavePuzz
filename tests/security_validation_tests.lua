@@ -146,21 +146,21 @@ function SecurityTests.testReloadConfirmation()
 	
 	-- Verify ReloadConfirm remote event exists for server-authoritative reload
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
-	local RemoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
 	
 	if RemoteEvents then
-		local ReloadConfirm = RemoteEvents:FindFirstChild("ReloadConfirm")
+		local ReloadConfirm = RemoteEvents:WaitForChild("ReloadConfirm", 5)
 		
 		if ReloadConfirm and ReloadConfirm:IsA("RemoteEvent") then
 			logTest(testName, true)
 			return true
 		else
-			logTest(testName, false, "ReloadConfirm RemoteEvent not found in RemoteEvents")
+			logTest(testName, false, "ReloadConfirm RemoteEvent not found in RemoteEvents (timeout or wrong type)")
 			return false
 		end
 	end
 	
-	logTest(testName, false, "RemoteEvents folder not found")
+	logTest(testName, false, "RemoteEvents folder not found in ReplicatedStorage (timeout)")
 	return false
 end
 
