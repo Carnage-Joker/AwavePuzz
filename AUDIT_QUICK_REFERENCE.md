@@ -19,6 +19,8 @@
 
 **Critical Fix Total: 17.5 hours**
 
+**Note:** BUG-006, BUG-008, and BUG-009 have been downgraded to MEDIUM priority after verification showed existing safeguards or that issues require further investigation.
+
 ---
 
 ## 📊 Bug Distribution
@@ -50,13 +52,10 @@ Client-side:      ███████████ 11 bugs (44%)
 
 ### Phase 1: Security (1-2 days)
 - [ ] BUG-004: Wallhack (2h) - Change dot product to 0.7
-- [ ] BUG-009: Client auth (4h) - Add server confirmation
 
 ### Phase 2: Critical Gameplay (2-3 days)
 - [ ] BUG-002: Wave spawn (3h) - Implement queue-based spawning
 - [ ] BUG-005: Kill tracking (1h) - Clear attribute on respawn
-- [ ] BUG-006: Portal queue (2h) - Add atomic debounce
-- [ ] BUG-008: Weapon state (2h) - Add validation/retry
 
 ### Phase 3: Memory Leaks (1-2 weeks)
 - [ ] BUG-001: Infinite loop (1h) - Add exit condition
@@ -72,9 +71,10 @@ Client-side:      ███████████ 11 bugs (44%)
 ## 🔍 Quick Lookup
 
 ### Find Bug by Number
-- **BUG-001 to BUG-009**: Critical (P0)
-- **BUG-010 to BUG-015**: High (P1)
-- **BUG-016 to BUG-025**: Medium (P2)
+- **BUG-001 to BUG-007**: Critical (P0) - **6 bugs** requiring immediate action
+- **BUG-010 to BUG-015**: High (P1) - **6 bugs**
+- **BUG-016 to BUG-025**: Medium (P2) - **10 bugs**
+- **BUG-006, 008, 009**: Downgraded to Medium after verification - **3 bugs**
 
 ### Find Bug by File
 **WeaponService.lua**: BUG-004, BUG-005, BUG-012  

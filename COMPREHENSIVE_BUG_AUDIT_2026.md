@@ -9,9 +9,9 @@
 ## Executive Summary
 
 This comprehensive audit identified **25 bugs/issues** across the AwavePuzz codebase, categorized into:
-- **6 Critical Production-Breaking Issues** (require immediate fix)
-- **9 High Severity Issues** (gameplay-breaking)
-- **10 Medium/Low Severity Issues** (logic errors, performance)
+- **6 Critical Production-Breaking Issues** (P0 - require immediate fix)
+- **6 High Severity Issues** (P1 - gameplay-breaking)
+- **13 Medium/Low Severity Issues** (P2/P3 - logic errors, performance)
 
 The most severe issues involve **memory leaks**, **race conditions**, **security exploits**, and **improper state synchronization** that could crash servers or enable player exploits in production.
 
@@ -361,71 +361,62 @@ end)
 
 ---
 
-### 🔴 BUG-006: Portal Queue Corruption Race Condition
-**Severity:** CRITICAL (P0)  
-**File:** `ServerScriptService/PortalMatchmakingService.lua:250-300`  
-**Type:** Race Condition
+### 🟡 BUG-006: Portal Queue Race Condition (NEEDS VERIFICATION)
+**Severity:** MEDIUM (P2) - **Requires Verification**  
+**File:** `ServerScriptService/PortalMatchmakingService.lua:339-369`  
+**Type:** Potential Race Condition
 
 #### Description
-Touch events fire multiple times rapidly, debounce is per-player but not per-event:
+The current implementation uses timestamp-based debouncing and queue membership checks:
 
 ```lua
-portal.Touched:Connect(function(hit)
-    local player = getPlayerFromPart(hit)
-    if not player then return end
+-- Lines 339-369
+function PortalMatchmakingService:onPortalTouched(portalId, player)
+    if not player or not player.Parent then return end
     
-    if debounce[player.UserId] then return end  -- ⚠️ Check-then-act race
-    debounce[player.UserId] = true
-    
-    -- Queue join logic
-    addPlayerToQueue(player)  -- ⚠️ Can be called twice
-    
-    task.wait(DEBOUNCE_TIME)
-    debounce[player.UserId] = nil
-end)
-```
-
-#### Impact
-- Player appears in multiple queues simultaneously
-- Queue counts corrupted (`queueSize` becomes inaccurate)
-- Matchmaking broken (8 players → 10+ players matched)
-- Players teleported to wrong servers
-
-#### Reproduction
-1. Stand on portal boundary and wiggle
-2. Touch event fires 2-3 times in rapid succession
-3. Observe player added to queue multiple times
-4. Queue count shows 10/8 players
-
-#### Recommended Fix
-```lua
-local activeTouches = {}  -- Track active touch sequences
-
-portal.Touched:Connect(function(hit)
-    local player = getPlayerFromPart(hit)
-    if not player then return end
-    
-    local touchKey = player.UserId .. "_" .. portal.Name
-    
-    -- Atomic check-and-set
-    if activeTouches[touchKey] then
-        return  -- Already processing this touch
+    -- Debounce check using timestamp
+    local now = tick()
+    local lastTouch = self.touchDebounce[player.UserId]
+    if lastTouch and (now - lastTouch) < self.touchDebounceTime then
+        return
     end
-    activeTouches[touchKey] = true
+    self.touchDebounce[player.UserId] = now
     
-    -- Queue join logic with proper error handling
-    local success, err = pcall(function()
-        addPlayerToQueue(player)
-    end)
-    
-    if not success then
-        warn("Portal queue error:", err)
+    -- Check if player already in match
+    if self.matchRegistry:isPlayerInMatch(player) then
+        return
     end
     
-    task.wait(DEBOUNCE_TIME)
-    activeTouches[touchKey] = nil
-end)
+    -- Check if player already in a queue
+    local existingQueue = self.playerQueues[player.UserId]
+    if existingQueue then
+        if existingQueue.portalId == portalId then
+            return  -- Already queued
+        end
+        self:removePlayerFromQueue(player, existingQueue.portalId)
+    end
+    
+    self:addPlayerToQueue(portalId, player)
+end
 ```
+
+#### Current Status
+The implementation appears to have proper safeguards:
+- Timestamp-based debouncing (not boolean check-then-set)
+- Queue membership check before adding
+- Match registry check to prevent double-joining
+
+#### Potential Issues
+- Very rapid touches (< debounceTime) could still race between timestamp check and update
+- Queue removal + addition not atomic
+
+#### Recommendation
+Monitor in production for actual queue corruption. If issues occur:
+1. Add atomic flag during queue join process
+2. Use proper mutex or queue-based processing
+3. Add logging to detect race conditions
+
+**Status:** May already be adequately protected. Recommend production testing before implementing additional fixes.
 
 ---
 
@@ -507,77 +498,92 @@ return Module
 
 ---
 
-### 🔴 BUG-008: Weapon State Synchronization Race Condition
-**Severity:** CRITICAL (P0)  
-**File:** `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua:506-527`  
-**Type:** Race Condition
+### 🟡 BUG-008: Weapon State Synchronization (NEEDS VERIFICATION)
+**Severity:** MEDIUM (P2) - **Requires Verification**  
+**File:** `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua:506-528`  
+**Type:** Potential Race Condition
 
 #### Description
-`weaponLoadoutUpdateEvent` can arrive before `currentWeapon` is initialized:
+The `weaponLoadoutUpdateEvent` handler synchronizes client weapon state when server sends updates:
 
 ```lua
+-- Lines 506-528
 weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
-    if data.equipped then
-        currentWeapon = data.equipped
-        weaponStats = getWeaponStats(data.equipped)  -- ⚠️ Can return nil
-        
-        -- No validation that weaponStats is valid
-        updateAmmoUI()  -- ⚠️ Crashes if weaponStats is nil
+    if typeof(data) == "table" and data.equipped then
+        if data.equipped ~= currentWeapon then
+            currentWeapon = data.equipped
+            weaponStats = getWeaponStats(data.equipped)  -- May return nil if config not loaded
+            isReloading = false
+            consecutiveShots = 0
+            targetSpread = 0
+            
+            updateWeaponInfo(data.equipped)  -- Has nil guard at line 123
+            refreshWeaponDisplay(data.equipped)
+            
+            weaponEquippedBindable:Fire(data.equipped)
+        end
     end
 end)
 ```
 
-#### Impact
-- Weapon stats silently become `nil` if initialization race occurs
-- Firing fails without error messages
-- Player appears to have weapon but can't shoot
-- Affects 10-15% of players on first spawn
+#### Current Safeguards
+The code has some protection:
+- `updateWeaponInfo()` at line 121-123 has guard: `if not stats then return end`
+- `canFire()` at line 150 checks: `if not currentWeapon or not weaponStats then`
 
-#### Reproduction
-1. Join server during active match
-2. Server sends weapon equip before client modules load
-3. `getWeaponStats()` returns nil (config not loaded)
-4. Weapon is unusable until manual re-equip
+#### Potential Issue
+If `getWeaponStats()` returns nil during initial sync (config not loaded yet), `weaponStats` becomes nil but no retry occurs. Weapon appears equipped but cannot fire until manual re-equip.
 
-#### Recommended Fix
+#### Current Status
+**Needs verification** - Current guards may already handle this adequately. The nil check in `updateWeaponInfo()` and `canFire()` should prevent crashes.
+
+#### Recommended Enhancement (If Issue Confirmed)
 ```lua
 weaponLoadoutUpdateEvent.OnClientEvent:Connect(function(data)
-    if data.equipped then
-        currentWeapon = data.equipped
-        
-        -- Validate stats before using
-        weaponStats = getWeaponStats(data.equipped)
-        
-        if not weaponStats then
-            warn(string.format(
-                "Weapon stats not available for %s, retrying in 1s",
-                tostring(data.equipped)
-            ))
-            
-            -- Retry after brief delay
-            task.wait(1)
+    if typeof(data) == "table" and data.equipped then
+        if data.equipped ~= currentWeapon then
+            currentWeapon = data.equipped
             weaponStats = getWeaponStats(data.equipped)
             
+            -- Validation and retry if stats not available
             if not weaponStats then
-                error("Failed to load weapon stats for " .. tostring(data.equipped))
-                return
+                warn(string.format(
+                    "[FPSWeaponController] Weapon stats not available for %s, retrying...",
+                    tostring(data.equipped)
+                ))
+                
+                task.wait(1)
+                weaponStats = getWeaponStats(data.equipped)
+                
+                if not weaponStats then
+                    error("[FPSWeaponController] Failed to load weapon stats after retry")
+                    return
+                end
             end
+            
+            isReloading = false
+            consecutiveShots = 0
+            targetSpread = 0
+            
+            updateWeaponInfo(data.equipped)
+            refreshWeaponDisplay(data.equipped)
+            weaponEquippedBindable:Fire(data.equipped)
         end
-        
-        updateAmmoUI()
     end
 end)
 ```
+
+**Status:** Existing nil guards may be sufficient. Monitor in production before implementing retry logic.
 
 ---
 
-### 🔴 BUG-009: Client-Side State Authority Exploit
-**Severity:** CRITICAL (P0) - **SECURITY VULNERABILITY**  
+### 🟡 BUG-009: Client State Authority (NEEDS REFRAMING)
+**Severity:** MEDIUM (P2) - **Design Pattern Review Needed**  
 **File:** `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua:195-231`  
-**Type:** Security Exploit
+**Type:** UX Desync / Remote Spam Risk
 
 #### Description
-Client fires events based entirely on local state without server confirmation:
+Client manages local weapon state (reload, firing) and sends events to server without waiting for confirmation:
 
 ```lua
 -- Client trusts its own state
@@ -590,27 +596,30 @@ isReloading = true  -- ⚠️ Client sets own state
 weaponFireEvent:FireServer(fireData)  -- ⚠️ No server validation queue
 ```
 
-#### Impact
-- **Exploiters can bypass reload restrictions** by modifying `isReloading`
-- **Rapid fire exploit** by removing fire rate checks
-- **Infinite ammo exploit** by blocking ammo decrement
-- **ACTIVELY EXPLOITABLE** with basic script executors
+#### Current Server-Side Protections
+The server DOES implement validation:
+- **Fire rate limiting**: Server tracks last shot time and enforces cooldowns
+- **Ammo consumption**: Server maintains authoritative ammo counts
+- **Reload state**: Server tracks reloading state server-side
+- **Direction validation**: Server validates shot direction and origin
 
-#### Reproduction (Exploit)
-```lua
--- High-level pseudocode (not a runnable exploit)
--- 1. From the client, override local weapon state so that:
---    - reload is considered "not in progress"
---    - any client-side fire rate checks are effectively disabled
---
--- 2. In a very tight loop, send repeated "fire weapon" requests
---    to the server with minimal delay between each request.
---
--- NOTE: Actual exploit scripts should NOT be stored in this repository.
--- This pseudocode is for risk documentation only.
-```
+#### Actual Risk
+The primary risks are:
+1. **UX Desynchronization**: Client may show incorrect state if server rejects actions
+2. **Remote Event Spam**: Malicious clients could spam fire/reload requests (though server rate-limits)
+3. **Optimistic UI**: Client animations play before server validation
 
-#### Recommended Fix
+#### Impact (Revised)
+- **NOT a critical security hole** - Server has proper validation
+- **UX issue**: Players may see laggy/incorrect feedback when server rejects shots
+- **Network overhead**: Spam attempts create unnecessary traffic (mitigated by rate limiting)
+
+#### Current Assessment
+The server-authoritative design is **already implemented correctly**. The client state is for **UI/UX purposes only** and the server validates all actual game actions.
+
+#### Recommended Enhancement (Optional - UX Improvement)
+If server rejection feedback is poor, consider:
+
 ```lua
 -- Client sends request, waits for server confirmation
 local pendingActions = {}
@@ -631,6 +640,7 @@ function requestReload()
         if pendingActions.reload and pendingActions.reload.id == requestId then
             warn("Reload request timed out")
             pendingActions.reload = nil
+            -- Show error feedback to player
         end
     end)
 end
@@ -643,6 +653,9 @@ weaponReloadConfirmEvent.OnClientEvent:Connect(function(data)
         -- Play reload animation
     end
 end)
+```
+
+**Status:** Downgraded from CRITICAL to MEDIUM. Server validation exists. Enhancement is optional UX improvement, not security fix.
 ```
 
 ---
@@ -1062,39 +1075,59 @@ end
 
 ### 🟡 BUG-020: Late Joiner State Synchronization
 **Severity:** MEDIUM (P2)  
-**File:** `ServerScriptService/GameManager.lua:608-616`  
+**File:** `ServerScriptService/GameManager.lua:764-794`  
 **Type:** Synchronization Error
 
 #### Description
+The `getStateSnapshotForPlayer()` function creates state snapshots for players but may be missing some fields that late joiners need:
+
 ```lua
-function GameManager:sendStateSnapshot(player)
+function GameManager:getStateSnapshotForPlayer(player)
+    -- Current implementation at lines 764-794
     local snapshot = {
-        waveNumber = self.currentWave,
-        zombiesAlive = self.zombiesAlive,
-        -- ⚠️ Missing waveTimeRemaining
+        state = effectiveState,
+        wave = self.currentWave,
+        baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
+        cureProgress = self.cureProgress,
+        playerId = player.UserId
+        -- ⚠️ Potentially missing: zombiesAlive, waveTimeRemaining, serverTime
     }
-    stateUpdateEvent:FireClient(player, snapshot)
+    return { snapshot = snapshot, matchInfo = {...} }
 end
 ```
 
 #### Impact
-- Late joiners see mismatched wave timer
-- UI shows incorrect time remaining
-- Players confused about wave state
+- Late joiners may see incomplete game state
+- UI could show incorrect wave/zombie counts
+- Timer synchronization issues possible
 
 #### Recommended Fix
 ```lua
-function GameManager:sendStateSnapshot(player)
+function GameManager:getStateSnapshotForPlayer(player)
+    local effectiveState = self:_getPlayerEffectiveState(player)
+    local inMatch = self.portalMatchmakingService and 
+                    self.portalMatchmakingService.matchRegistry and 
+                    self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
+    local matchId = inMatch and self.portalMatchmakingService.matchRegistry.playerToMatch[player.UserId] or nil
+    
     local snapshot = {
-        waveNumber = self.currentWave,
-        zombiesAlive = self.zombiesAlive,
-        waveTimeRemaining = self:getWaveTimeRemaining(),
-        serverTime = tick(),  -- For client-side interpolation
-        baseHealth = self.baseHealth,
-        gameState = self.state
+        state = effectiveState,
+        wave = self.currentWave,
+        zombiesAlive = self.zombiesAlive or 0,  -- Add zombie count
+        baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
+        cureProgress = self.cureProgress,
+        waveTimeRemaining = self:getWaveTimeRemaining and self:getWaveTimeRemaining() or 0,  -- Add timer
+        serverTime = tick(),  -- Add server timestamp for interpolation
+        playerId = player.UserId
     }
     
-    safeFireClient(stateUpdateEvent, player, snapshot)
+    return {
+        snapshot = snapshot,
+        matchInfo = {
+            inMatch = inMatch or false,
+            matchId = matchId
+        }
+    }
 end
 ```
 
@@ -1492,7 +1525,7 @@ end
 
 ## Conclusion
 
-This comprehensive audit identified **25 critical bugs** that pose significant risks to production stability, security, and player experience. The most critical issues involve:
+This comprehensive audit identified **25 bugs/issues** that pose significant risks to production stability, security, and player experience. The most critical issues involve:
 
 1. **Security exploits** that allow wallhacks and rapid-fire cheats
 2. **Memory leaks** causing server/client crashes after extended play
