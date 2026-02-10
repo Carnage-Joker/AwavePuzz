@@ -89,7 +89,7 @@ This ensures:
 - ✅ GameManager update loop runs correctly
 
 ## Related Files
-- `ServerScriptService/Main.server.lua` (lines 217-222) - The fix
+- `ServerScriptService/Main.server.lua` - Heartbeat connection cleanup and update loop for BUG-010
 - `BUG_FIX_CHECKLIST.md` - Bug tracking
 - `COMPREHENSIVE_BUG_AUDIT_2026.md` - Original bug report
 
