@@ -73,14 +73,22 @@ function FPSWeaponService:setupRemoteEvents()
 	-- Use shared utility to create remote events
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"WeaponReload",
-		"AmmoUpdate"
+		"AmmoUpdate",
+		"ReloadConfirm" -- BUG-009 FIX: Server confirmation for reload requests
 	})
 
 	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
 		-- Validate payload structure to prevent client exploits
-		if typeof(payload) ~= "table" or not payload.weaponId then
+		if typeof(payload) ~= "table" then
 			return
 		end
+		
+		-- BUG-009: Send explicit failure confirmation for malformed payloads
+		if not payload.weaponId then
+			self:sendReloadConfirmation(player, nil, false, 0)
+			return
+		end
+		
 		self:handleReload(player, payload)
 	end)
 end
@@ -197,14 +205,22 @@ function FPSWeaponService:handleReload(player, payload)
 
 	local userId = player.UserId
 	local weaponId = payload.weaponId or self.playerManager:getEquippedWeapon(player)
-	if not weaponId then return end
+	if not weaponId then
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
+		return
+	end
 
 	if not self.playerManager:ownsWeapon(player, weaponId) then
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
 		return
 	end
 
 	local equippedWeapon = self.playerManager:getEquippedWeapon(player)
 	if equippedWeapon ~= weaponId then
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
 		return
 	end
 
@@ -212,6 +228,8 @@ function FPSWeaponService:handleReload(player, payload)
 	local reloadState = self.playerReloadState[userId]
 	if reloadState and reloadState.isReloading then
 		-- Reject immediately if already reloading (prevents rapid reload spam)
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
 		return
 	end
 
@@ -219,11 +237,23 @@ function FPSWeaponService:handleReload(player, payload)
 	if not ammo then
 		self:initializeWeaponAmmo(player, weaponId)
 		ammo = self:getAmmo(player, weaponId)
-		if not ammo then return end
+		if not ammo then
+			-- Send failure confirmation
+			self:sendReloadConfirmation(player, weaponId, false, 0)
+			return
+		end
 	end
 
-	if ammo.current >= ammo.max then return end
-	if ammo.reserve <= 0 then return end
+	if ammo.current >= ammo.max then
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
+		return
+	end
+	if ammo.reserve <= 0 then
+		-- Send failure confirmation
+		self:sendReloadConfirmation(player, weaponId, false, 0)
+		return
+	end
 
 	local stats = FPSConfig.getWeaponStats(weaponId)
 	local reloadTime = stats and stats.ReloadTime or 2.0
@@ -233,6 +263,10 @@ function FPSWeaponService:handleReload(player, payload)
 		reloadStartTime = tick(),
 		weaponId = weaponId,
 	}
+	
+	-- BUG-009 FIX: Send server confirmation to client that reload has started
+	-- This implements server-authoritative reload state (prevents client-side exploits)
+	self:sendReloadConfirmation(player, weaponId, true, reloadTime)
 
 	-- Cancel previous reload task if exists
 	if self.activeReloadTasks[userId] then
@@ -310,6 +344,25 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 	if DEBUG_AMMO then
 		print(string.format("[FPSWeaponService] ✓ Sent ammo update to %s: %s (current=%d, reserve=%d, max=%d)", 
 			player.Name, weaponId, ammo.current, ammo.reserve, ammo.max))
+	end
+end
+
+function FPSWeaponService:sendReloadConfirmation(player, weaponId, success, reloadTime)
+	-- BUG-009 FIX: Validate player is still connected before FireClient
+	-- This prevents errors if player disconnects mid-reload
+	if not player or not player.Parent then
+		if DEBUG_AMMO then
+			warn("[FPSWeaponService] Cannot send reload confirmation: player is disconnected")
+		end
+		return
+	end
+	
+	if self.remoteEvents.ReloadConfirm then
+		self.remoteEvents.ReloadConfirm:FireClient(player, {
+			weaponId = weaponId,
+			reloadTime = reloadTime,
+			success = success
+		})
 	end
 end
 
