@@ -44,8 +44,8 @@ The heartbeat connection created at line 549 was never stored or disconnected, c
 **Impact:**
 - ✅ Heartbeat connection now properly stored and tracked
 - ✅ Connection automatically disconnected on character death/removal
-- ✅ Single heartbeat connection per character lifecycle (no accumulation)
-- ✅ No memory leak on respawn
+- ✅ At most one active Heartbeat connection at a time, recreated for each new character lifecycle (no accumulation)
+- ✅ No accumulation of Heartbeat connections across deaths/respawns
 
 **Testing:**
 - Created `tests/fps_weapon_heartbeat_leak_test.lua` - Automated test for heartbeat cleanup
