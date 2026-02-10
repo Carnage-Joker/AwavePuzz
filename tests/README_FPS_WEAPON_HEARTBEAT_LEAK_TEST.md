@@ -53,9 +53,9 @@ end
 
 ### Method 1: Automated Test (Recommended)
 1. Open Roblox Studio with your project
-2. Copy `fps_weapon_heartbeat_leak_test.lua` to ServerScriptService
-3. Run the game (Play Solo or Local Server)
-4. Check the Output window for test results
+2. Copy `fps_weapon_heartbeat_leak_test.lua` into `StarterPlayerScripts` (or `StarterGui`) as a LocalScript so it runs on the client
+3. Run the game in Play mode (Play Solo or Local Server) so the LocalScript executes on the client
+4. Check the client Output window for test results
 
 ### Method 2: Manual Verification
 If you want to manually verify the fix:
