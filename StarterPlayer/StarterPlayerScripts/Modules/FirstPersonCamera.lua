@@ -1,19 +1,21 @@
+--!strict
 -- @ScriptType: ModuleScript
 -- FirstPersonCamera.lua (ModuleScript)
--- First-person camera controller
+-- Production-solid first-person camera controller
 --
--- Features:
--- - First-person camera with mouse lock, FOV transitions, and look smoothing
--- - Character transparency management (hides body in first-person)
--- - Configurable sensitivity, FOV, and mouse smoothing
--- - Recoil application support
--- - Sprint and ADS FOV transitions
+-- Key fixes vs your version:
+-- - Proper lifecycle: Init / Bind / Unbind / Disconnect all connections
+-- - No reliance on BindToRenderStep return value (it returns nothing)
+-- - Robust respawn handling (character connections cleaned up)
+-- - VR yaw/pitch extracted consistently
+-- - Head-relative camera offset
+-- - Framerate-independent smoothing
+-- - Safe mouse lock toggling + state guards
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContextActionService = game:GetService("ContextActionService")
 local VRService = game:GetService("VRService")
 
 local player = Players.LocalPlayer
@@ -22,54 +24,25 @@ local camera = workspace.CurrentCamera
 -- Wait for shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+
+local clamp = MathUtil.clamp
+local lerp = MathUtil.lerp
+
+type Conn = RBXScriptConnection
+
+local FirstPersonCamera = {}
+FirstPersonCamera.__index = FirstPersonCamera
 
 --------------------------------------------------------------------------------
 -- STATE
 --------------------------------------------------------------------------------
 
-local FirstPersonCamera = {}
-FirstPersonCamera.__index = FirstPersonCamera
-
--- Camera state
-local currentFOV = FPSConfig.Camera.DefaultFOV
-local targetFOV = FPSConfig.Camera.DefaultFOV
-local sensitivity = FPSConfig.Camera.DefaultSensitivity
-local invertY = FPSConfig.Camera.InvertY
-
--- Look state
-local lookAngles = Vector2.new(0, 0) -- X = yaw, Y = pitch
-local smoothedLookDelta = Vector2.new(0, 0)
-
--- Character state
-local isSprinting = false
-local isADS = false
-local isCrouching = false
-local isGrounded = true
-
--- Input state
-local mouseLocked = true
-local isMenuOpen = false
-
--- Device state
-local deviceType = "KeyboardMouse"
-local isVRMode = false
-local gamepadLookVector = Vector2.new(0, 0)
-
--- Character parts to hide
-local hiddenParts = {}
-local originalTransparency = {}
-
--- Initialization state
 local initialized = false
-local renderStepConnection = nil
+local bound = false
 
---------------------------------------------------------------------------------
--- USER SETTINGS (can be modified at runtime)
---------------------------------------------------------------------------------
-
+-- user settings (runtime adjustable)
 local userSettings = {
 	sensitivity = FPSConfig.Camera.DefaultSensitivity,
 	invertY = FPSConfig.Camera.InvertY,
@@ -77,25 +50,74 @@ local userSettings = {
 	mouseSmoothing = FPSConfig.Camera.MouseSmoothing,
 }
 
+-- camera state
+local currentFOV = userSettings.fov
+local targetFOV = userSettings.fov
+
+-- look state (degrees)
+local lookAngles = Vector2.new(0, 0) -- X=yaw, Y=pitch
+local smoothedLookDelta = Vector2.new(0, 0)
+
+-- gameplay state
+local isSprinting = false
+local isADS = false
+local isCrouching = false
+local isGrounded = true
+local isMenuOpen = false
+
+-- device state
+local deviceType = "KeyboardMouse"
+local isVRMode = false
+local gamepadLookVector = Vector2.new(0, 0)
+
+-- transparency state
+local hiddenParts: {Instance} = {}
+local originalTransparency: {[Instance]: number} = {}
+
+-- connection management
+local globalConnections: {Conn} = {}
+local characterConnections: {Conn} = {}
+
+-- renderstep name
+local RENDERSTEP_NAME = "FirstPersonCamera"
+
 --------------------------------------------------------------------------------
--- UTILITY FUNCTIONS
+-- INTERNAL: CONNECTION UTILS
 --------------------------------------------------------------------------------
 
--- Use shared utility functions
-local clamp = MathUtil.clamp
-local lerp = MathUtil.lerp
+local function disconnectAll(list: {Conn})
+	for _, c in ipairs(list) do
+		if c.Connected then
+			c:Disconnect()
+		end
+	end
+	table.clear(list)
+end
+
+local function bindConn(list: {Conn}, c: Conn)
+	table.insert(list, c)
+end
 
 --------------------------------------------------------------------------------
 -- CHARACTER TRANSPARENCY
 --------------------------------------------------------------------------------
 
-local function hideCharacterParts(character)
-	if not character then return end
+local function hideCharacterParts(character: Model)
+	-- Clear any previous cached parts first (in case of mis-order)
+	for _, inst in ipairs(hiddenParts) do
+		if inst and inst.Parent then
+			if inst:IsA("BasePart") then
+				inst.LocalTransparencyModifier = originalTransparency[inst] or 0
+			elseif inst:IsA("Decal") or inst:IsA("Texture") then
+				inst.Transparency = originalTransparency[inst] or 0
+			end
+		end
+	end
+	table.clear(hiddenParts)
+	table.clear(originalTransparency)
 
-	-- Store original transparency and hide parts
 	for _, descendant in ipairs(character:GetDescendants()) do
 		if descendant:IsA("BasePart") then
-			-- Don't hide the HumanoidRootPart (needed for physics)
 			if descendant.Name ~= "HumanoidRootPart" then
 				originalTransparency[descendant] = descendant.LocalTransparencyModifier
 				descendant.LocalTransparencyModifier = 1
@@ -110,17 +132,17 @@ local function hideCharacterParts(character)
 end
 
 local function showCharacterParts()
-	for _, part in ipairs(hiddenParts) do
-		if part and part.Parent then
-			if part:IsA("BasePart") then
-				part.LocalTransparencyModifier = originalTransparency[part] or 0
-			elseif part:IsA("Decal") or part:IsA("Texture") then
-				part.Transparency = originalTransparency[part] or 0
+	for _, inst in ipairs(hiddenParts) do
+		if inst and inst.Parent then
+			if inst:IsA("BasePart") then
+				inst.LocalTransparencyModifier = originalTransparency[inst] or 0
+			elseif inst:IsA("Decal") or inst:IsA("Texture") then
+				inst.Transparency = originalTransparency[inst] or 0
 			end
 		end
 	end
-	hiddenParts = {}
-	originalTransparency = {}
+	table.clear(hiddenParts)
+	table.clear(originalTransparency)
 end
 
 --------------------------------------------------------------------------------
@@ -130,38 +152,44 @@ end
 local function lockMouse()
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	UserInputService.MouseIconEnabled = false
-	mouseLocked = true
 end
 
 local function unlockMouse()
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	UserInputService.MouseIconEnabled = true
-	mouseLocked = false
+end
+
+local function applyMouseLockForState()
+	if isMenuOpen then
+		unlockMouse()
+	else
+		lockMouse()
+	end
 end
 
 --------------------------------------------------------------------------------
--- CAMERA SETUP
+-- CAMERA SETUP / RESET
 --------------------------------------------------------------------------------
 
-local function setupCamera()
+local function ensureCamera()
 	if not camera then
 		camera = workspace.CurrentCamera
 	end
+end
 
+local function setupCamera()
+	ensureCamera()
 	camera.CameraType = Enum.CameraType.Scriptable
 	currentFOV = userSettings.fov
 	targetFOV = userSettings.fov
 	camera.FieldOfView = currentFOV
-
-	lockMouse()
+	applyMouseLockForState()
 end
 
 local function resetCamera()
-	if camera then
-		camera.CameraType = Enum.CameraType.Custom
-		camera.FieldOfView = 70
-	end
-
+	ensureCamera()
+	camera.CameraType = Enum.CameraType.Custom
+	camera.FieldOfView = 70
 	unlockMouse()
 	showCharacterParts()
 end
@@ -170,24 +198,18 @@ end
 -- FOV MANAGEMENT
 --------------------------------------------------------------------------------
 
-local function setTargetFOV(fov)
-	targetFOV = clamp(fov, FPSConfig.Camera.MinFOV, FPSConfig.Camera.MaxFOV)
-end
-
-local function updateFOV(deltaTime)
-	-- Determine target FOV based on state
+local function updateFOV(dt: number)
 	local desiredFOV = userSettings.fov
-
 	if isADS then
 		desiredFOV = FPSConfig.Camera.ADSFOV
 	elseif isSprinting then
 		desiredFOV = FPSConfig.Camera.SprintFOV
 	end
 
-	targetFOV = desiredFOV
+	targetFOV = clamp(desiredFOV, FPSConfig.Camera.MinFOV, FPSConfig.Camera.MaxFOV)
 
-	-- Smooth FOV transition
-	local speed = FPSConfig.Camera.FOVTransitionSpeed * deltaTime
+	-- smooth transition (lerp speed scales with dt)
+	local speed = FPSConfig.Camera.FOVTransitionSpeed * dt
 	currentFOV = lerp(currentFOV, targetFOV, speed)
 	camera.FieldOfView = currentFOV
 end
@@ -196,68 +218,54 @@ end
 -- LOOK INPUT
 --------------------------------------------------------------------------------
 
-local function processLookInput(deltaTime)
-	if not mouseLocked or isMenuOpen then
-		return Vector2.new(0, 0)
+local function getLookDelta(dt: number): Vector2
+	if isMenuOpen then
+		return Vector2.zero
 	end
 
-	local delta = Vector2.new(0, 0)
-
-	-- VR mode: Use head tracking
+	-- VR head tracking (direct angles; no delta)
 	if isVRMode and UserInputService.VREnabled then
 		local headCFrame = VRService:GetUserCFrame(Enum.UserCFrame.Head)
-		local headRotation = headCFrame.Rotation
-
-		-- Extract yaw and pitch from VR headset rotation
-		local _, yaw, _ = headRotation:ToEulerAnglesYXZ()
-		local pitch, _, _ = headRotation:ToEulerAnglesXYZ()
-
-		-- Update look angles directly from VR headset
+		local rot = headCFrame.Rotation
+		local pitch, yaw, _ = rot:ToEulerAnglesYXZ()
 		lookAngles = Vector2.new(math.deg(yaw), math.deg(pitch))
-
-		-- Don't apply sensitivity or smoothing in VR - use direct head tracking
-		return Vector2.new(0, 0)
+		return Vector2.zero
 	end
 
-	-- Gamepad mode: Use right stick
+	-- Gamepad/VR stick look
 	if deviceType == "Gamepad" or deviceType == "VR" then
-		-- Gamepad look is updated via InputManager callback
 		local gamepadSens = FPSConfig.getSensitivityForDevice("Gamepad")
-		delta = gamepadLookVector * gamepadSens * 50 * deltaTime
-
-		-- Apply deadzone
+		local delta = gamepadLookVector * gamepadSens * 50 * dt
 		if delta.Magnitude < 0.1 then
-			delta = Vector2.new(0, 0)
+			return Vector2.zero
 		end
-	else
-		-- Keyboard/Mouse mode: Use mouse delta
-		delta = UserInputService:GetMouseDelta()
-
-		-- Apply sensitivity
-		local sens = userSettings.sensitivity * 0.5
-		delta = delta * sens
+		return delta
 	end
 
-	-- Apply invert Y
+	-- Mouse delta
+	local delta = UserInputService:GetMouseDelta()
+	local sens = userSettings.sensitivity * 0.5
+	delta = delta * sens
+
 	if userSettings.invertY then
 		delta = Vector2.new(delta.X, -delta.Y)
 	end
 
-	-- Apply mouse smoothing if enabled (not for gamepad/VR)
-	if userSettings.mouseSmoothing and deviceType == "KeyboardMouse" then
-		local smoothFactor = FPSConfig.Camera.SmoothingFactor
-		smoothedLookDelta = smoothedLookDelta:Lerp(delta, 1 - smoothFactor)
-		delta = smoothedLookDelta
+	-- Framerate-independent smoothing
+	if userSettings.mouseSmoothing then
+		local strength = FPSConfig.Camera.SmoothingStrength or 18 -- add this to FPSConfig if you want
+		local alpha = 1 - math.exp(-strength * dt)
+		smoothedLookDelta = smoothedLookDelta:Lerp(delta, alpha)
+		return smoothedLookDelta
 	end
 
 	return delta
 end
 
-local function updateLookAngles(delta)
-	-- Update yaw (horizontal rotation) - no clamping needed
+local function applyLookDelta(delta: Vector2)
 	lookAngles = Vector2.new(
 		lookAngles.X - delta.X,
-		clamp(lookAngles.Y - delta.Y, -89, 89) -- Clamp pitch to prevent flipping
+		clamp(lookAngles.Y - delta.Y, -89, 89)
 	)
 end
 
@@ -265,84 +273,145 @@ end
 -- CAMERA UPDATE
 --------------------------------------------------------------------------------
 
-local function updateCamera(deltaTime)
+local function updateCamera(dt: number)
 	local character = player.Character
 	if not character then return end
 
-	local humanoid = character:FindFirstChild("Humanoid")
-	local head = character:FindFirstChild("Head")
-	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	local head = character:FindFirstChild("Head") :: BasePart?
+	local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
 
-	if not humanoid or not head or not rootPart then return end
+	if not humanoid or not root then return end
+	if not head then
+		-- fallback for edge cases
+		head = root
+	end
 
-	-- Process mouse input
-	local lookDelta = processLookInput(deltaTime)
-	updateLookAngles(lookDelta)
+	-- input
+	local lookDelta = getLookDelta(dt)
+	if lookDelta ~= Vector2.zero then
+		applyLookDelta(lookDelta)
+	end
 
-	-- Calculate camera CFrame
-	local cameraOffset = FPSConfig.Camera.FirstPersonOffset
-	local cameraPosition = head.Position + cameraOffset
+	-- head-relative camera position
+	local offset = FPSConfig.Camera.FirstPersonOffset
+	local cameraPos = (head.CFrame * CFrame.new(offset)).Position
 
-	-- Create rotation from look angles
-	local rotation = CFrame.Angles(0, math.rad(lookAngles.X), 0) * 
-		CFrame.Angles(math.rad(lookAngles.Y), 0, 0)
+	-- rotation: yaw then pitch (your original order kept)
+	local rot = CFrame.Angles(0, math.rad(lookAngles.X), 0) * CFrame.Angles(math.rad(lookAngles.Y), 0, 0)
 
-	-- Set camera CFrame
-	camera.CFrame = CFrame.new(cameraPosition) * rotation
+	ensureCamera()
+	camera.CFrame = CFrame.new(cameraPos) * rot
 
-	-- Update character rotation to match yaw
-	rootPart.CFrame = CFrame.new(rootPart.Position) * CFrame.Angles(0, math.rad(lookAngles.X), 0)
+	-- rotate character to match yaw (server-auth games may want to gate this)
+	root.CFrame = CFrame.new(root.Position) * CFrame.Angles(0, math.rad(lookAngles.X), 0)
 
-	-- Update FOV
-	updateFOV(deltaTime)
+	updateFOV(dt)
+end
+
+local function bindRenderStep()
+	if bound then return end
+	RunService:BindToRenderStep(RENDERSTEP_NAME, Enum.RenderPriority.Camera.Value, updateCamera)
+	bound = true
+end
+
+local function unbindRenderStep()
+	if not bound then return end
+	RunService:UnbindFromRenderStep(RENDERSTEP_NAME)
+	bound = false
 end
 
 --------------------------------------------------------------------------------
--- STATE UPDATES (called from other systems)
+-- CHARACTER HANDLING
 --------------------------------------------------------------------------------
 
-function FirstPersonCamera.setADS(ads)
+local function onCharacterAdded(character: Model)
+	disconnectAll(characterConnections)
+
+	-- Reset angles per spawn
+	lookAngles = Vector2.zero
+	smoothedLookDelta = Vector2.zero
+
+	-- Hide body in first person
+	hideCharacterParts(character)
+	setupCamera()
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		bindConn(characterConnections, humanoid.Died:Connect(function()
+			showCharacterParts()
+		end))
+	end
+
+	-- Keep new accessories/tools hidden
+	bindConn(characterConnections, character.DescendantAdded:Connect(function(desc)
+		task.defer(function()
+			-- only hide while we are controlling first-person
+			if not initialized then return end
+			if not player.Character or desc.Parent == nil then return end
+
+			if desc:IsA("BasePart") then
+				if desc.Name ~= "HumanoidRootPart" then
+					originalTransparency[desc] = desc.LocalTransparencyModifier
+					desc.LocalTransparencyModifier = 1
+					table.insert(hiddenParts, desc)
+				end
+			elseif desc:IsA("Decal") or desc:IsA("Texture") then
+				originalTransparency[desc] = desc.Transparency
+				desc.Transparency = 1
+				table.insert(hiddenParts, desc)
+			end
+		end)
+	end))
+end
+
+local function onCharacterRemoving()
+	disconnectAll(characterConnections)
+	showCharacterParts()
+end
+
+--------------------------------------------------------------------------------
+-- PUBLIC API: STATE UPDATES
+--------------------------------------------------------------------------------
+
+function FirstPersonCamera.setADS(ads: boolean)
 	isADS = ads
 end
 
-function FirstPersonCamera.setSprinting(sprinting)
+function FirstPersonCamera.setSprinting(sprinting: boolean)
 	isSprinting = sprinting
 end
 
-function FirstPersonCamera.setCrouching(crouching)
+function FirstPersonCamera.setCrouching(crouching: boolean)
 	isCrouching = crouching
 end
 
-function FirstPersonCamera.setGrounded(grounded)
+function FirstPersonCamera.setGrounded(grounded: boolean)
 	isGrounded = grounded
 end
 
-function FirstPersonCamera.setMenuOpen(open)
+function FirstPersonCamera.setMenuOpen(open: boolean)
 	isMenuOpen = open
-	if open then
-		unlockMouse()
-	else
-		lockMouse()
-	end
+	applyMouseLockForState()
 end
 
 --------------------------------------------------------------------------------
--- SETTINGS
+-- PUBLIC API: SETTINGS
 --------------------------------------------------------------------------------
 
-function FirstPersonCamera.setSensitivity(sens)
+function FirstPersonCamera.setSensitivity(sens: number)
 	userSettings.sensitivity = clamp(sens, FPSConfig.Camera.MinSensitivity, FPSConfig.Camera.MaxSensitivity)
 end
 
-function FirstPersonCamera.setInvertY(invert)
+function FirstPersonCamera.setInvertY(invert: boolean)
 	userSettings.invertY = invert
 end
 
-function FirstPersonCamera.setFOV(fov)
+function FirstPersonCamera.setFOV(fov: number)
 	userSettings.fov = clamp(fov, FPSConfig.Camera.MinFOV, FPSConfig.Camera.MaxFOV)
 end
 
-function FirstPersonCamera.setMouseSmoothing(enabled)
+function FirstPersonCamera.setMouseSmoothing(enabled: boolean)
 	userSettings.mouseSmoothing = enabled
 end
 
@@ -356,11 +425,10 @@ function FirstPersonCamera.getSettings()
 end
 
 --------------------------------------------------------------------------------
--- RECOIL APPLICATION (called from weapon system)
+-- PUBLIC API: RECOIL
 --------------------------------------------------------------------------------
 
-function FirstPersonCamera.applyRecoil(verticalDegrees, horizontalDegrees)
-	-- Apply recoil to look angles
+function FirstPersonCamera.applyRecoil(verticalDegrees: number, horizontalDegrees: number)
 	lookAngles = Vector2.new(
 		lookAngles.X + horizontalDegrees,
 		clamp(lookAngles.Y + verticalDegrees, -89, 89)
@@ -368,14 +436,16 @@ function FirstPersonCamera.applyRecoil(verticalDegrees, horizontalDegrees)
 end
 
 --------------------------------------------------------------------------------
--- GET LOOK DIRECTION (for aiming/shooting)
+-- PUBLIC API: LOOK INFO
 --------------------------------------------------------------------------------
 
 function FirstPersonCamera.getLookDirection()
+	ensureCamera()
 	return camera.CFrame.LookVector
 end
 
 function FirstPersonCamera.getLookCFrame()
+	ensureCamera()
 	return camera.CFrame
 end
 
@@ -384,56 +454,7 @@ function FirstPersonCamera.getLookAngles()
 end
 
 --------------------------------------------------------------------------------
--- CHARACTER HANDLING
---------------------------------------------------------------------------------
-
-function FirstPersonCamera.onCharacterAdded(character)
-	-- Wait for character to load
-	local head = character:WaitForChild("Head", 5)
-	if not head then
-		warn("[FirstPersonCamera] Head not found in time; binding to HumanoidRootPart instead")
-		head = character:FindFirstChild("HumanoidRootPart")
-		if not head then return end
-	end
-
-	-- Reset look angles
-	lookAngles = Vector2.new(0, 0)
-
-	-- Hide character parts for first person view
-	hideCharacterParts(character)
-
-	-- Setup camera
-	setupCamera()
-
-	-- Connect humanoid events
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid.Died:Connect(function()
-			showCharacterParts()
-		end)
-	end
-
-	-- Re-hide parts when new accessories/tools are added
-	character.DescendantAdded:Connect(function(descendant)
-		task.wait() -- Wait for properties to be set
-		if descendant:IsA("BasePart") and descendant.Name ~= "HumanoidRootPart" then
-			originalTransparency[descendant] = descendant.LocalTransparencyModifier
-			descendant.LocalTransparencyModifier = 1
-			table.insert(hiddenParts, descendant)
-		elseif descendant:IsA("Decal") or descendant:IsA("Texture") then
-			originalTransparency[descendant] = descendant.Transparency
-			descendant.Transparency = 1
-			table.insert(hiddenParts, descendant)
-		end
-	end)
-end
-
-function FirstPersonCamera.onCharacterRemoving()
-	showCharacterParts()
-end
-
---------------------------------------------------------------------------------
--- INITIALIZATION
+-- INITIALIZATION / CLEANUP
 --------------------------------------------------------------------------------
 
 function FirstPersonCamera.initialize()
@@ -441,73 +462,53 @@ function FirstPersonCamera.initialize()
 		warn("[FirstPersonCamera] Already initialized")
 		return
 	end
+	initialized = true
 
-	-- Initialize InputManager
+	-- Input
 	InputManager.initialize()
-
-	-- Detect device type
 	deviceType = InputManager.getActiveDevice()
 	isVRMode = InputManager.isVR()
 
-	-- Set appropriate sensitivity for device
-	local deviceSens = FPSConfig.getSensitivityForDevice(deviceType)
-	userSettings.sensitivity = deviceSens
+	userSettings.sensitivity = FPSConfig.getSensitivityForDevice(deviceType)
 
-	-- Setup InputManager callbacks for gamepad/VR look
-	InputManager.bindAxis("Look", function(lookVector)
-		gamepadLookVector = lookVector
+	InputManager.bindAxis("Look", function(v: Vector2)
+		gamepadLookVector = v
 	end)
 
-	-- VR-specific setup
-	if isVRMode then
-		print("[FirstPersonCamera] VR mode enabled")
-		local vrSettings = FPSConfig.Device.VR
+	-- Character lifecycle
+	bindConn(globalConnections, player.CharacterAdded:Connect(onCharacterAdded))
+	bindConn(globalConnections, player.CharacterRemoving:Connect(onCharacterRemoving))
 
-		-- Apply VR-specific camera settings
-		if vrSettings.VRCameraSmoothing then
-			userSettings.mouseSmoothing = true
-			FPSConfig.Camera.SmoothingFactor = vrSettings.VRCameraSmoothing
-		end
-
-		-- Set VR UI distance if needed
-		-- (VR UI positioning would be handled by UI scripts)
-	end
-
-	-- Setup camera when character exists
-	if player.Character then
-		FirstPersonCamera.onCharacterAdded(player.Character)
-	end
-
-	-- Main update loop
-	renderStepConnection = RunService:BindToRenderStep("FirstPersonCamera", Enum.RenderPriority.Camera.Value, function(deltaTime)
-		updateCamera(deltaTime)
-	end)
-
-	-- Handle window focus (only for desktop)
+	-- Window focus handling (desktop)
 	if deviceType == "KeyboardMouse" then
-		UserInputService.WindowFocused:Connect(function()
+		bindConn(globalConnections, UserInputService.WindowFocused:Connect(function()
 			if not isMenuOpen then
 				lockMouse()
 			end
-		end)
-
-		UserInputService.WindowFocusReleased:Connect(function()
-			-- Don't unlock on focus loss to prevent camera issues
-		end)
+		end))
 	end
 
-	initialized = true
-	print("[FirstPersonCamera] Initialized - Device:", deviceType)
+	-- Setup existing character
+	if player.Character then
+		onCharacterAdded(player.Character)
+	end
+
+	bindRenderStep()
+
+	print(("[FirstPersonCamera] Initialized - Device: %s (VR=%s)"):format(deviceType, tostring(isVRMode)))
 end
 
--- Cleanup function
 function FirstPersonCamera.cleanup()
-	if renderStepConnection then
-		RunService:UnbindFromRenderStep("FirstPersonCamera")
-		renderStepConnection = nil
-	end
+	if not initialized then return end
+
+	unbindRenderStep()
+	disconnectAll(characterConnections)
+	disconnectAll(globalConnections)
+
 	resetCamera()
+
 	initialized = false
+	print("[FirstPersonCamera] Cleaned up")
 end
 
 return FirstPersonCamera
