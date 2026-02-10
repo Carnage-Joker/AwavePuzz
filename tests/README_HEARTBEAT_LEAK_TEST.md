@@ -1,12 +1,12 @@
 # Heartbeat Leak Test (BUG-010)
 
 ## Purpose
-This test validates the fix for BUG-010: Heartbeat accumulation memory leak in Main.server.lua.
+This test validates the heartbeat connection cleanup pattern used in the fix for BUG-010 (heartbeat accumulation memory leak in Main.server.lua).
 
 ## What It Tests
-1. **Initial Connection**: Verifies a heartbeat connection can be created
-2. **Server Reload Simulation**: Tests that old connections are properly disconnected before creating new ones
-3. **Connection Cleanup**: Confirms the Disconnect() method works correctly
+1. **Initial Connection**: Verifies a mocked heartbeat connection can be created
+2. **Server Reload Simulation**: Tests that old mocked connections are properly disconnected before creating new ones
+3. **Connection Cleanup**: Confirms the mocked Disconnect()-based cleanup pattern behaves as expected
 
 ## How to Run
 
