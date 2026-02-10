@@ -172,9 +172,9 @@ local function runLeakTest()
 end
 
 -- Run the test
-local success, error = pcall(runLeakTest)
+local success, errorMessage = pcall(runLeakTest)
 
 if not success then
 	print("\n❌ TEST ERROR:")
-	print(error)
+	print(errorMessage)
 end
