@@ -21,12 +21,12 @@ local VERBOSE = true
 
 local function logTest(testName, passed, message)
 	if passed then
-		TESTS_PASSED += 1
+		TESTS_PASSED = TESTS_PASSED + 1
 		if VERBOSE then
 			print(string.format("✅ PASS: %s", testName))
 		end
 	else
-		TESTS_FAILED += 1
+		TESTS_FAILED = TESTS_FAILED + 1
 		warn(string.format("❌ FAIL: %s - %s", testName, message or "No details"))
 	end
 end

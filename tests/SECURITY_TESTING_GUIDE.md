@@ -15,11 +15,13 @@ This guide describes how to manually test security fixes for BUG-004 (Wallhack) 
 ### Running the Automated Tests
 
 1. Open Roblox Studio with the AwavePuzz project
-2. Open the Command Bar (View → Command Bar)
-3. Paste and run:
+2. Copy the `tests/security_validation_tests.lua` file into `ReplicatedStorage` (create a `tests` folder inside ReplicatedStorage)
+3. Open the Command Bar (View → Command Bar)
+4. Paste and run:
 
 ```lua
-local SecurityTests = require(game.ServerStorage.Parent.tests.security_validation_tests)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SecurityTests = require(ReplicatedStorage.tests.security_validation_tests)
 SecurityTests.runAll()
 ```
 
