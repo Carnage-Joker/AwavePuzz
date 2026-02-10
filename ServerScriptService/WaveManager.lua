@@ -50,7 +50,7 @@ function WaveManager:spawnZombie()
 
 	-- Queue-based spawning to prevent race conditions
 	-- Add this request to the spawn queue
-	table.insert(self._spawnQueue, tick())
+	table.insert(self._spawnQueue, true)
 	
 	-- If there are multiple requests in queue, only the first one processes
 	if #self._spawnQueue > 1 then

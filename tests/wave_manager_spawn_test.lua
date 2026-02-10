@@ -103,13 +103,12 @@ local function testQueueProcessing()
 	local waveInfo = waveManager:startWave()
 	
 	-- Simulate rapid concurrent requests using task.spawn
-	local spawnTasks = {}
 	local totalRequests = waveInfo.zombieCount * 3 -- 3x the max zombies
 	
 	for i = 1, totalRequests do
-		table.insert(spawnTasks, task.spawn(function()
+		task.spawn(function()
 			waveManager:spawnZombie()
-		end))
+		end)
 	end
 	
 	-- Wait for all spawns to complete
