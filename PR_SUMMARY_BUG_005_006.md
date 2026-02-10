@@ -139,11 +139,14 @@ Both bugs have comprehensive automated test coverage:
 - Rapid touch simulation
 - Portal switching functionality
 
-**Test Commands**:
+**How to Run Automated Tests in Studio**:
 ```lua
--- In Roblox Studio Server Console:
-require(game.ServerStorage.tests.kill_tracking_respawn_test)
-require(game.ServerStorage.tests.portal_queue_corruption_test)
+-- In Roblox Studio:
+-- 1. Locate the following server Scripts in the Explorer:
+--    - kill_tracking_respawn_test
+--    - portal_queue_corruption_test
+-- 2. Place them under ServerScriptService (for example, in a ServerScriptService/tests Folder).
+-- 3. Press Play; the tests will execute automatically as part of the server.
 ```
 
 ### Manual Testing Required
