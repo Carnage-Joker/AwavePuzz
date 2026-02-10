@@ -487,6 +487,42 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 	
 	-- Require at least current and reserve data (max can be derived if missing)
 	if data.current ~= nil and data.reserve ~= nil then
+		-- BUG-008 FIX: Validate weaponStats before using to prevent race condition
+		-- For late joiners, weaponStats may not be loaded yet
+		if not weaponStats then
+			if DEBUG_AMMO then
+				warn(string.format("[FPSWeaponController] ⚠ weaponStats nil at ammo update, attempting to fetch for weapon '%s'", 
+					tostring(data.weaponId)))
+			end
+			
+			-- Try to fetch weaponStats
+			weaponStats = getWeaponStats(data.weaponId)
+			
+			-- BUG-008 FIX: If still nil, retry after 1 second delay
+			if not weaponStats then
+				if DEBUG_AMMO then
+					warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in 1s for weapon '%s'", 
+						tostring(data.weaponId)))
+				end
+				
+				-- Schedule retry with 1 second delay
+				task.delay(1, function()
+					weaponStats = getWeaponStats(data.weaponId)
+					if weaponStats then
+						if DEBUG_AMMO then
+							print(string.format("[FPSWeaponController] ✓ weaponStats loaded on retry for weapon '%s'", 
+								tostring(data.weaponId)))
+						end
+						-- Update weapon info now that stats are available
+						updateWeaponInfo(data.weaponId)
+					else
+						warn(string.format("[FPSWeaponController] ✗ weaponStats still nil after retry for weapon '%s'", 
+							tostring(data.weaponId)))
+					end
+				end)
+			end
+		end
+		
 		-- Use provided max, or derive from weapon stats, or use default
 		local maxAmmo = data.max
 		if not maxAmmo and weaponStats and weaponStats.MagSize then
