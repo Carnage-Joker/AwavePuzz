@@ -717,34 +717,27 @@ end
 
 ---
 
-### 🟠 BUG-012: Ammo Validation Ordering Bug
-**Severity:** HIGH (P1)  
-**File:** `ServerScriptService/WeaponService.lua:345-361`  
-**Type:** Logic Error
+### 🟠 BUG-012: Ammo Validation Ordering Bug (Legacy – Resolved)
+**Status:** Resolved in current codebase (kept for historical reference)  
+**Original Location (Legacy):** `ServerScriptService/WeaponService.lua`  
+**Type:** Logic Error (ammo consumed before shot validation)
 
-#### Description
-```lua
--- Ammo consumed BEFORE damage validation
-weaponData.currentAmmo = weaponData.currentAmmo - 1
+#### Updated Verification (2026 Audit)
+The original report for BUG-012 described a server-side bug where `weaponData.currentAmmo` was decremented **before** validating the shot, allowing ammo counts to desynchronize from actual, validated hits.  
 
--- Later...
-if not validateShot(player, target) then
-    return  -- ⚠️ Ammo already deducted!
-end
-```
+As of the current 2026 audit, the implementation in `ServerScriptService/WeaponService.lua` has been refactored:
+- There is no longer a `weaponData.currentAmmo` path at the referenced location.
+- Firing now routes through `fpsWeaponService:validateShot()` and only consumes ammo via `consumeAmmo()` **after** weapon/equipped checks and shot validation.
 
-#### Impact
-- Players bypass ammo limits by rapid-firing
-- Shots that miss still consume ammo incorrectly
-- Economy broken (ammo purchases not required)
+Because the live code already validates shots before consuming ammo, the original BUG-012 behavior is no longer reproducible and should not be treated as an active defect.
 
-#### Recommended Fix
-```lua
--- Validate FIRST, consume LAST
-if not validateShot(player, target) then
-    return
-end
+#### Action Taken
+- Mark BUG-012 as **legacy / resolved** rather than an open HIGH (P1) issue.
+- Remove outdated code examples and line references that no longer match the current `WeaponService.lua`.
+- Retain this entry solely to document that an ammo ordering bug existed historically and has since been fixed in the authoritative weapon service.
 
+#### No Further Changes Required
+No additional code changes are needed for BUG-012 at this time. Future modifications to weapon firing logic should preserve the pattern of **validate first, then consume ammo** on the server.
 if weaponData.currentAmmo <= 0 then
     return
 end
