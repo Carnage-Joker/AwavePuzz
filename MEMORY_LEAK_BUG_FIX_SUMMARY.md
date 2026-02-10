@@ -129,9 +129,9 @@ All death tracking and related tables are properly cleaned up in `onPlayerRemovi
 ## Verification Steps
 
 ### For BUG-014 (FPS Weapon Heartbeat):
-1. Copy `tests/fps_weapon_heartbeat_leak_test.lua` to ServerScriptService in Roblox Studio
-2. Run the game in Studio (Play Solo or Local Server)
-3. Check Output window for test results
+1. In Roblox Studio, create a LocalScript under `StarterPlayer > StarterPlayerScripts` (or under `StarterGui`), and paste in the contents of `tests/fps_weapon_heartbeat_leak_test.lua` (alternatively, run the script via the client command bar).
+2. Run the game in Studio (Play Solo or Local Server) so the LocalScript executes on the client.
+3. Check the client Output window for test results.
 4. Expected: "✅ All tests PASSED"
 
 ### For BUG-013 (Death Tracking Tables):
