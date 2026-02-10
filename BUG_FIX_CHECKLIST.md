@@ -23,7 +23,7 @@ Quick reference for developers working on bug fixes from the audit.
   - Test: Concurrent spawns don't exceed max count
   
 - [x] **BUG-005**: Fix kill tracking after respawn (WeaponService.lua:454-491) ✅ **FIXED**
-  - Clear "KilledByPlayer" attribute on CharacterAdded
+  - Clear WeaponServiceDiedConnected, LastAttackerUserId, and LastVictimUserId attributes on CharacterAdded
   - Test: Kill same player 3 times, rewards granted each time
   - **Fix**: Added cleanup in Main.server.lua CharacterAdded to clear WeaponServiceDiedConnected, LastAttackerUserId, and LastVictimUserId attributes
   - **Date**: 2026-02-10
