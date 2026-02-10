@@ -4,15 +4,14 @@
 This test verifies that the memory leak fix for BUG-013 is working correctly by simulating 1000 player join/leave cycles and ensuring no table growth occurs.
 
 ## What It Tests
-The test checks that the following tables in `GameManager.lua` are properly cleaned up when players leave:
+This automated test checks that the following tables in `GameManager.lua` are properly cleaned up when players leave:
 - `playerStats` - Player kill/death statistics
 - `_deathDebounce` - Death event debouncing
-- `_deathConnections` - Death event connections
 - `_spectatorCycleCooldown` - Spectator mode cooldowns
 - `playersReadyForEpilogue` - Epilogue readiness tracking
 - `playersCompletedEpilogue` - Epilogue completion tracking
-- `_characterAddedConnections` - CharacterAdded event connections
 
+Note: The BUG-013 fix also includes cleanup for `_deathConnections` (death event connections) and `_characterAddedConnections` (CharacterAdded event connections), but the current `death_tracking_table_leak_test.lua` script does not populate those tables and therefore does not directly validate their cleanup. Use Method 2 (Manual Verification) below if you need to inspect those tables explicitly.
 ## How to Run in Roblox Studio
 
 ### Method 1: Direct Test (Recommended)
