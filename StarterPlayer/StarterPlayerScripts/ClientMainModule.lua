@@ -649,6 +649,16 @@ local function bootClient()
 		if StaminaClient and StaminaClient.onCharacterAdded then
 			StaminaClient.onCharacterAdded(character)
 		end
+		
+		-- BUG-015: Reinitialize menu controller on respawn
+		if MenuController and MenuController.onCharacterAdded then
+			MenuController.onCharacterAdded(character)
+		end
+		
+		-- BUG-015: Reinitialize cure station interaction on respawn
+		if CureStationInteraction and CureStationInteraction.initialize then
+			CureStationInteraction:initialize()
+		end
 	end
 	
 	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 33) end
@@ -681,6 +691,16 @@ local function bootClient()
 		
 		if StaminaClient and StaminaClient.onCharacterRemoving then
 			StaminaClient.onCharacterRemoving()
+		end
+		
+		-- BUG-015: Cleanup menu controller input connections
+		if MenuController and MenuController.onCharacterRemoving then
+			MenuController.onCharacterRemoving()
+		end
+		
+		-- BUG-015: Cleanup cure station interaction connections
+		if CureStationInteraction and CureStationInteraction.cleanup then
+			CureStationInteraction:cleanup()
 		end
 	end
 	
