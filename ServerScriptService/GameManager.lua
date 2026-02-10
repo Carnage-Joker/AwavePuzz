@@ -671,11 +671,20 @@ function GameManager:onPlayerRemoving(player)
 		end
 		self._deathConnections[player.UserId] = nil
 	end
+	
+	-- BUG-013: Cleanup CharacterAdded connections to prevent memory leak
+	if self._characterAddedConnections and self._characterAddedConnections[player.UserId] then
+		self._characterAddedConnections[player.UserId]:Disconnect()
+		self._characterAddedConnections[player.UserId] = nil
+	end
 
 	self._deathDebounce[player.UserId] = nil
 	self._spectatorCycleCooldown[player.UserId] = nil
 	self.playersReadyForEpilogue[player.UserId] = nil
 	self.playersCompletedEpilogue[player.UserId] = nil
+	
+	-- BUG-013: Clean up playerStats to prevent memory leak
+	self.playerStats[player.UserId] = nil
 end
 
 function GameManager:setState(newState, payload)
