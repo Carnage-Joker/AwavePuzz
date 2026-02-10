@@ -45,6 +45,9 @@ function FPSWeaponService.new(playerManager, weaponService)
 	
 	-- Security: Track last ammo sync time per player
 	self.lastAmmoSync = {} -- userId -> timestamp
+	
+	-- BUG-001: Flag to control validation loop lifecycle
+	self._isRunning = false
 
 	self.remoteEvents = {}
 	self:setupRemoteEvents()
@@ -468,9 +471,22 @@ end
 
 -- Security: Periodic ammo validation to detect client-side manipulation
 function FPSWeaponService:startAmmoValidationLoop()
+	-- BUG-001: Prevent duplicate validation loops
+	if self._isRunning then
+		warn("[FPSWeaponService] Validation loop already running, skipping duplicate start")
+		return
+	end
+	
+	self._isRunning = true
+	
 	task.spawn(function()
-		while true do
+		while self._isRunning do
 			task.wait(AMMO_SYNC_INTERVAL)
+			
+			-- BUG-001: Check flag again after wait to allow clean shutdown
+			if not self._isRunning then
+				break
+			end
 			
 			for _, player in ipairs(Players:GetPlayers()) do
 				local userId = player.UserId
@@ -492,6 +508,8 @@ function FPSWeaponService:startAmmoValidationLoop()
 				end
 			end
 		end
+		
+		print("[FPSWeaponService] Ammo validation loop stopped")
 	end)
 	
 	print("[FPSWeaponService] Started periodic ammo validation (interval: " .. AMMO_SYNC_INTERVAL .. "s)")
@@ -535,6 +553,35 @@ function FPSWeaponService:fireWeapon(player, weaponId)
 	end
 	
 	return self:consumeAmmo(player, weaponId, 1)
+end
+
+-- BUG-001: Cleanup method to stop validation loop and prevent orphaned threads
+function FPSWeaponService:cleanup()
+	print("[FPSWeaponService] Cleanup initiated")
+	
+	-- Stop the validation loop
+	self._isRunning = false
+	
+	-- Disconnect player removing connection
+	if self.playerRemovingConn then
+		self.playerRemovingConn:Disconnect()
+		self.playerRemovingConn = nil
+	end
+	
+	-- Cancel all active reload tasks
+	for userId, taskHandle in pairs(self.activeReloadTasks) do
+		if taskHandle then
+			task.cancel(taskHandle)
+		end
+	end
+	
+	-- Clear all state
+	self.activeReloadTasks = {}
+	self.playerAmmo = {}
+	self.playerReloadState = {}
+	self.lastAmmoSync = {}
+	
+	print("[FPSWeaponService] Cleanup completed")
 end
 
 return FPSWeaponService
