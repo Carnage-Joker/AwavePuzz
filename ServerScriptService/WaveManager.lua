@@ -55,14 +55,15 @@ function WaveManager:spawnZombie()
 	-- Add this request to the spawn queue first
 	table.insert(self._spawnQueue, true)
 	
-	-- Atomic check-and-set: Check if another thread is already processing
-	-- In Lua, this is atomic as long as there's no yield point between operations
+	-- Atomic check-and-set pattern: CRITICAL - No yield points between check and set!
+	-- In Roblox Luau, operations are atomic until a yield point (task.wait, wait, etc.)
+	-- Since there are NO yield points between line 60-66, this check-and-set is atomic
 	if self._isProcessingQueue then
 		-- Another thread is processing, it will handle our queued request
 		return nil
 	end
 	
-	-- Claim exclusive queue processing rights
+	-- Claim exclusive queue processing rights (still no yield, remains atomic)
 	self._isProcessingQueue = true
 	
 	-- Process all queued spawn requests (including those added during processing)
