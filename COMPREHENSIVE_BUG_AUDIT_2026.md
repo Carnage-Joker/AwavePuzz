@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This comprehensive audit identified **25 critical bugs** across the AwavePuzz codebase, categorized into:
+This comprehensive audit identified **25 bugs/issues** across the AwavePuzz codebase, categorized into:
 - **6 Critical Production-Breaking Issues** (require immediate fix)
 - **9 High Severity Issues** (gameplay-breaking)
 - **10 Medium/Low Severity Issues** (logic errors, performance)
