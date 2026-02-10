@@ -195,7 +195,10 @@ function ShopService:attemptPurchase(player, itemId)
 			return
 		end
 
-		if self.playerManager.equipWeapon then
+		-- FIX: Use WeaponService to properly equip weapon and initialize ammo
+		if self.weaponService and self.weaponService.forceEquip then
+			self.weaponService:forceEquip(player, selectedItem.WeaponId)
+		elseif self.playerManager.equipWeapon then
 			self.playerManager:equipWeapon(player, selectedItem.WeaponId)
 		end
 
