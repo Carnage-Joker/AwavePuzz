@@ -234,6 +234,11 @@ local function startReload()
 	-- BUG-009 FIX: Don't set isReloading immediately - wait for server confirmation
 	-- This prevents client-side state manipulation exploits
 	
+	-- Prevent duplicate reload requests while one is pending
+	if pendingReloadRequest then
+		return
+	end
+	
 	-- Send reload request to server
 	weaponReloadEvent:FireServer({
 		weaponId = currentWeapon
@@ -290,6 +295,9 @@ local function equipWeapon(weaponId)
 		fireConnection:Disconnect()
 		fireConnection = nil
 	end
+	
+	-- Clear pending reload request when switching weapons
+	pendingReloadRequest = nil
 
 	currentWeapon = weaponId
 	weaponStats = getWeaponStats(weaponId)
@@ -525,6 +533,14 @@ reloadConfirmEvent.OnClientEvent:Connect(function(data)
 	-- Weapon must match the weapon we most recently requested a reload for
 	if pending.weaponId ~= data.weaponId then
 		-- Not our weapon - ignore
+		return
+	end
+	
+	-- Also verify this matches our currently equipped weapon to prevent stale confirmations
+	-- This handles the case where weapon was switched after reload request was sent
+	if currentWeapon ~= data.weaponId then
+		-- Weapon was switched after reload request - ignore stale confirmation
+		pendingReloadRequest = nil
 		return
 	end
 
