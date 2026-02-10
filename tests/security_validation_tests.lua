@@ -1,13 +1,16 @@
 -- @ScriptType: ModuleScript
 
 --[[
-	Security Validation Test Suite
+	Security Configuration Test Suite
 	Tests for BUG-004 (Wallhack) and BUG-009 (Client Authority)
 	
 	This test suite validates that:
-	1. Anti-wallhack protection prevents shots from impossible positions
-	2. Server-authoritative design prevents client-side manipulation
-	3. All critical game state is validated server-side
+	1. Security configuration exists for anti-wallhack protection
+	2. Server-authoritative services have required validation methods
+	3. Critical security modules are present and loadable
+	
+	Note: These are configuration/presence checks, not behavior-level tests.
+	For runtime behavior testing, use manual exploit testing in Roblox Studio.
 	
 	Usage: Run this script in Roblox Studio's command bar or as part of automated testing
 ]]
@@ -36,10 +39,10 @@ end
 -- ============================================================================
 
 function SecurityTests.testWallhackOriginDistanceValidation()
-	local testName = "Wallhack - Origin Distance Validation"
+	local testName = "Config Check - Origin Distance Validation"
 	
-	-- Test should verify that WeaponService rejects shots from >15 studs away
-	-- This test validates the configuration exists
+	-- This test validates that the origin distance configuration exists
+	-- Runtime behavior must be tested manually in Roblox Studio
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 	
@@ -57,9 +60,10 @@ function SecurityTests.testWallhackOriginDistanceValidation()
 end
 
 function SecurityTests.testWallhackDirectionValidation()
-	local testName = "Wallhack - Direction Alignment Validation"
+	local testName = "Config Check - Direction Alignment Validation"
 	
-	-- Test verifies that direction validation configuration exists
+	-- This test validates that direction validation configuration exists
+	-- Runtime behavior must be tested manually in Roblox Studio
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
 	
@@ -76,9 +80,11 @@ function SecurityTests.testWallhackDirectionValidation()
 end
 
 function SecurityTests.testWeaponServiceNaNProtection()
-	local testName = "Wallhack - NaN Protection"
+	local testName = "Config Check - NaN Protection Module"
 	
-	-- Verify WeaponService exists and has the handleWeaponFire method
+	-- This test verifies WeaponService module exists and can be loaded
+	-- Actual NaN handling behavior must be tested manually in Roblox Studio
+	-- (See SECURITY_TESTING_GUIDE.md for runtime NaN exploit testing)
 	local ServerScriptService = game:GetService("ServerScriptService")
 	local WeaponService = ServerScriptService:FindFirstChild("WeaponService")
 	
@@ -204,15 +210,15 @@ function SecurityTests.testShopValidation()
 		end)
 		
 		if success and module then
-			-- Check for purchase handling method
-			local hasPurchaseHandler = typeof(module.handlePurchase) == "function" or 
-									   typeof(module.onShopAction) == "function"
+			-- Check for the actual server entry point used in ShopService
+			local hasPurchaseHandler = typeof(module.handleRequest) == "function" or 
+									   typeof(module.attemptPurchase) == "function"
 			
 			if hasPurchaseHandler then
 				logTest(testName, true)
 				return true
 			else
-				logTest(testName, false, "ShopService missing purchase handler")
+				logTest(testName, false, "ShopService missing handleRequest or attemptPurchase method")
 				return false
 			end
 		end
@@ -334,21 +340,22 @@ end
 
 function SecurityTests.runAll()
 	print("\n" .. string.rep("=", 60))
-	print("SECURITY VALIDATION TEST SUITE")
-	print("Testing BUG-004 (Wallhack) and BUG-009 (Client Authority)")
+	print("SECURITY CONFIGURATION TEST SUITE")
+	print("Configuration checks for BUG-004 & BUG-009")
+	print("(For behavior tests, see SECURITY_TESTING_GUIDE.md)")
 	print(string.rep("=", 60) .. "\n")
 	
 	TESTS_PASSED = 0
 	TESTS_FAILED = 0
 	
-	-- BUG-004: Wallhack Protection Tests
-	print("--- BUG-004: Wallhack Protection Tests ---")
+	-- BUG-004: Wallhack Protection Configuration Checks
+	print("--- BUG-004: Wallhack Protection Config Checks ---")
 	SecurityTests.testWallhackOriginDistanceValidation()
 	SecurityTests.testWallhackDirectionValidation()
 	SecurityTests.testWeaponServiceNaNProtection()
 	
-	-- BUG-009: Client Authority Tests
-	print("\n--- BUG-009: Client Authority Tests ---")
+	-- BUG-009: Client Authority Configuration Checks
+	print("\n--- BUG-009: Client Authority Config Checks ---")
 	SecurityTests.testServerAmmoConsumption()
 	SecurityTests.testCurrencyServerAuthority()
 	SecurityTests.testDamageServerAuthority()

@@ -1,20 +1,29 @@
 # Security Tests - Phase 1
 
-This directory contains comprehensive security testing infrastructure for Phase 1 security fixes (BUG-004 and BUG-009).
+This directory contains security testing infrastructure for Phase 1 security fixes (BUG-004 and BUG-009).
 
 ## Files Overview
 
 ### Test Implementation
-- **`security_validation_tests.lua`** - Automated test suite (11 tests)
+- **`security_validation_tests.lua`** - Automated configuration checks (11 tests)
 - **`run_security_tests.lua`** - Quick test runner for Roblox Studio
 
 ### Documentation
 - **`SECURITY_TEST_RESULTS.md`** - Detailed test results and analysis
-- **`SECURITY_TESTING_GUIDE.md`** - Manual testing procedures
+- **`SECURITY_TESTING_GUIDE.md`** - Manual behavior testing procedures
+
+## Important Note
+
+The automated test suite (`security_validation_tests.lua`) performs **configuration and presence checks**, not behavior-level exploit testing. These tests verify that:
+- Security configuration exists and is reasonable
+- Required server-side validation methods are present
+- Critical security modules can be loaded
+
+For actual exploit prevention behavior testing (e.g., testing that shots from >15 studs away are rejected), see `SECURITY_TESTING_GUIDE.md` for manual testing procedures in Roblox Studio.
 
 ## Quick Start
 
-### Running Automated Tests
+### Running Automated Configuration Checks
 
 1. In Roblox Studio, copy `security_validation_tests.lua` to `ReplicatedStorage/tests/`
 2. Open Command Bar (View → Command Bar)
@@ -27,16 +36,17 @@ SecurityTests.runAll()
 ### Expected Output
 ```
 ============================================================
-SECURITY VALIDATION TEST SUITE
-Testing BUG-004 (Wallhack) and BUG-009 (Client Authority)
+SECURITY CONFIGURATION TEST SUITE
+Configuration checks for BUG-004 & BUG-009
+(For behavior tests, see SECURITY_TESTING_GUIDE.md)
 ============================================================
 
---- BUG-004: Wallhack Protection Tests ---
-✅ PASS: Wallhack - Origin Distance Validation
-✅ PASS: Wallhack - Direction Alignment Validation
-✅ PASS: Wallhack - NaN Protection
+--- BUG-004: Wallhack Protection Config Checks ---
+✅ PASS: Config Check - Origin Distance Validation
+✅ PASS: Config Check - Direction Alignment Validation
+✅ PASS: Config Check - NaN Protection Module
 
---- BUG-009: Client Authority Tests ---
+--- BUG-009: Client Authority Config Checks ---
 ✅ PASS: Client Authority - Server Ammo Consumption
 ✅ PASS: Client Authority - Currency Server Authority
 ✅ PASS: Client Authority - Damage Server Authority

@@ -367,18 +367,25 @@ end
 function PuzzleService:handlePuzzleAnswer(player, componentName, answer)
 	local userId = player.UserId
 	
-	-- SECURITY: Validate componentName is a valid cure component
+	-- SECURITY: Validate componentName is a valid cure component or FinalSynthesis
 	if typeof(componentName) ~= "string" then
 		warn("[PuzzleService] SECURITY: Invalid componentName type from " .. player.Name)
 		return
 	end
 	
-	-- Validate against known component names
+	-- Validate against known component names + FinalSynthesis
 	local isValidComponent = false
-	for _, validName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
-		if componentName == validName then
-			isValidComponent = true
-			break
+	
+	-- Check if it's FinalSynthesis (special case)
+	if componentName == "FinalSynthesis" then
+		isValidComponent = true
+	else
+		-- Check against the list of cure components
+		for _, validName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
+			if componentName == validName then
+				isValidComponent = true
+				break
+			end
 		end
 	end
 	
