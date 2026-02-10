@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Test configuration constants (all values in seconds)
 local CLIENT_PROCESSING_DELAY_SECONDS = 0.5  -- Time to wait for client to process events
 local RETRY_DELAY_WITH_BUFFER_SECONDS = 1.2  -- Retry delay (1s) + buffer for processing
+local CHARACTER_LOAD_DELAY_SECONDS = 2.0     -- Time to wait for character to load
+local TEST_SEPARATION_DELAY_SECONDS = 1.0    -- Delay between test executions
 
 print("==============================================")
 print("=== WEAPON STATE RACE CONDITION TEST (BUG-008) ===")
@@ -132,7 +134,7 @@ local function testFirstSpawnShooting()
 	if not testPlayer.Character then
 		print("Loading character for test player...")
 		testPlayer:LoadCharacter()
-		task.wait(2) -- Wait for character to load
+		task.wait(CHARACTER_LOAD_DELAY_SECONDS) -- Wait for character to load
 	end
 	
 	if not testPlayer.Character then
@@ -187,9 +189,9 @@ print("RUNNING TESTS...")
 print(string.rep("=", 46))
 
 local test1 = testLateJoinerWeaponState()
-task.wait(1)
+task.wait(TEST_SEPARATION_DELAY_SECONDS)
 local test2 = testWeaponStatsRetryLogic()
-task.wait(1)
+task.wait(TEST_SEPARATION_DELAY_SECONDS)
 local test3 = testFirstSpawnShooting()
 
 -- Summary
