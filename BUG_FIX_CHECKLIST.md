@@ -11,7 +11,7 @@ Quick reference for developers working on bug fixes from the audit.
   - Change dot product threshold from -0.5 to 0.7
   - Add raycast validation for line-of-sight
   - Test: Try shooting 90° off-target, should fail
-  - **Fix**: Changed dot product threshold from -0.5 to 0.7 (restricts to ~45 degree cone), added raycast line-of-sight validation from player's head to shot origin
+  - **Fix**: Changed dot product threshold from -0.5 to 0.7 (restricts to ~45-degree cone), added raycast line-of-sight validation from player's head to shot origin
   - **Date**: 2026-02-10
   
 - [x] **BUG-009**: Fix client state authority (FPSWeaponController.lua:195-231) ✅ **FIXED**
