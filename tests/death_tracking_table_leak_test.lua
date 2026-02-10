@@ -41,7 +41,10 @@ local function runLeakTest()
 	
 	-- Create a new GameManager instance for testing
 	local gm = GameManager.new()
-	gm:initialize()
+	-- Some GameManager implementations may not define an explicit :initialize() method
+	if gm.initialize then
+		gm:initialize()
+	end
 	
 	-- Track table sizes before test
 	local initialStats = {
