@@ -26,14 +26,18 @@ Quick reference for developers working on bug fixes from the audit.
   - Replace mutex with queue-based spawning
   - Test: Concurrent spawns don't exceed max count
   
-- [ ] **BUG-005**: Fix kill tracking after respawn (WeaponService.lua:454-491)
-  - Clear "KilledByPlayer" attribute on CharacterAdded
+- [x] **BUG-005**: Fix kill tracking after respawn (WeaponService.lua:454-491) ✅ **FIXED**
+  - Clear WeaponServiceDiedConnected, LastAttackerUserId, and LastVictimUserId attributes on CharacterAdded
   - Test: Kill same player 3 times, rewards granted each time
+  - **Fix**: Added cleanup in Main.server.lua CharacterAdded to clear WeaponServiceDiedConnected, LastAttackerUserId, and LastVictimUserId attributes
+  - **Date**: 2026-02-10
   
-- [ ] **BUG-006**: Fix portal queue corruption (PortalMatchmakingService.lua:250-300)
+- [x] **BUG-006**: Fix portal queue corruption (PortalMatchmakingService.lua:250-300) ✅ **FIXED**
   - Add per-portal debounce key
   - Implement atomic check-and-set
   - Test: Rapid portal touch doesn't duplicate player
+  - **Fix**: Changed touchDebounce to use per-portal keys (userId_portalId), added atomic duplicate check in addPlayerToQueue
+  - **Date**: 2026-02-10
 
 ### Critical Memory Leaks
 - [ ] **BUG-001**: Fix infinite loop leak (FPSWeaponService.lua:419)

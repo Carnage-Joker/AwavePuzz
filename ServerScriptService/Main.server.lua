@@ -188,6 +188,15 @@ Players.PlayerAdded:Connect(function(player)
 
 		-- Initialize sprint service for new character
 		sprintService:onCharacterAdded(player, character)
+		
+		-- BUG-005 FIX: Clear kill tracking attributes on respawn
+		-- This ensures kill rewards are granted on each death, not just the first
+		local humanoid = character:WaitForChild("Humanoid", 5)
+		if humanoid then
+			humanoid:SetAttribute("WeaponServiceDiedConnected", nil)
+			humanoid:SetAttribute("LastAttackerUserId", nil)
+			humanoid:SetAttribute("LastVictimUserId", nil)
+		end
 	end)
 end)
 

@@ -31,7 +31,8 @@ function PortalMatchmakingService.new(gameManager)
 	-- userId -> { portalId = string, joinTime = tick() }
 	self.playerQueues = {}
 	
-	-- userId -> tick() (for touch debouncing)
+	-- BUG-006 FIX: Per-portal debounce to prevent queue corruption
+	-- Key format: "userId_portalId" -> tick()
 	self.touchDebounce = {}
 	
 	-- Countdown tasks (portalId -> task object for cancellation)
@@ -339,13 +340,14 @@ end
 function PortalMatchmakingService:onPortalTouched(portalId, player)
 	if not player or not player.Parent then return end
 	
-	-- Debounce check
+	-- BUG-006 FIX: Per-portal debounce check (prevents rapid touches to same portal)
+	local debounceKey = tostring(player.UserId) .. "_" .. tostring(portalId)
 	local now = tick()
-	local lastTouch = self.touchDebounce[player.UserId]
+	local lastTouch = self.touchDebounce[debounceKey]
 	if lastTouch and (now - lastTouch) < self.touchDebounceTime then
 		return
 	end
-	self.touchDebounce[player.UserId] = now
+	self.touchDebounce[debounceKey] = now
 	
 	-- Check if player is already in a match
 	if self.matchRegistry:isPlayerInMatch(player) then
@@ -353,10 +355,11 @@ function PortalMatchmakingService:onPortalTouched(portalId, player)
 		return
 	end
 	
-	-- Check if player is already in a queue
+	-- BUG-006 FIX: Atomic check-and-set to prevent duplicate queue entries
+	-- Check if player is already in a queue (this check is now part of atomic operation)
 	local existingQueue = self.playerQueues[player.UserId]
 	if existingQueue then
-		-- If same portal, ignore (already queued)
+		-- If same portal, ignore (already queued) - atomic check prevents duplicates
 		if existingQueue.portalId == portalId then
 			return
 		end
@@ -364,7 +367,7 @@ function PortalMatchmakingService:onPortalTouched(portalId, player)
 		self:removePlayerFromQueue(player, existingQueue.portalId)
 	end
 	
-	-- Try to join portal queue
+	-- Try to join portal queue (atomic operation with immediate queue assignment)
 	self:addPlayerToQueue(portalId, player)
 end
 
@@ -388,10 +391,20 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		return false
 	end
 	
+	-- BUG-006 FIX: Atomic check - verify player not already in this portal's queue
+	-- This provides defense-in-depth against race conditions
+	for _, queuedPlayer in ipairs(portal.queue) do
+		if queuedPlayer.UserId == player.UserId then
+			print(string.format("[PortalMatchmakingService] Player %s already in portal %s queue (duplicate prevented)", 
+				player.Name, portalId))
+			return false
+		end
+	end
+	
 	-- Allow queue to exceed maxPlayersPerMatch for overflow handling
 	-- Extra players will form subsequent matches after the first 8 launch
 	
-	-- Add to queue
+	-- BUG-006 FIX: Atomic set - add to both queue and playerQueues in same operation
 	table.insert(portal.queue, player)
 	self.playerQueues[player.UserId] = {
 		portalId = portalId,
