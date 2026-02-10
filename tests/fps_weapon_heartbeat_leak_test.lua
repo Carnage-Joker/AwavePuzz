@@ -1,21 +1,24 @@
--- FPS Weapon Controller Heartbeat Leak Test (BUG-014)
--- This test verifies that the FPSWeaponController properly disconnects its heartbeat
--- connection when the character is removed, preventing memory leaks on respawn/death.
+-- FPS Weapon Controller Heartbeat Leak Pattern Test (BUG-014)
+-- This script demonstrates the heartbeat disconnection pattern used by FPSWeaponController
+-- when the character is removed, helping to prevent memory leaks on respawn/death.
 --
 -- Run this as a LocalScript (for example in StarterPlayer > StarterPlayerScripts) or via
 -- the CLIENT Command Bar so it executes in the same context as FPSWeaponController.
+-- NOTE: This script uses a MockWeaponController and does not directly require/call the
+--       production FPSWeaponController module. It is intended as a pattern demonstration.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 print("========================================")
-print("FPS WEAPON HEARTBEAT LEAK TEST (BUG-014)")
+print("FPS WEAPON HEARTBEAT LEAK PATTERN TEST (BUG-014)")
 print("========================================")
 
 -- This test simulates the client-side pattern used in FPSWeaponController
 -- It validates that heartbeat connections are properly managed across character lifecycles
+-- within this mock controller, serving as a regression guard for the pattern itself.
 
-print("\n--- Testing FPSWeaponController Heartbeat Pattern ---")
+print("\n--- Testing Mock FPSWeaponController Heartbeat Pattern (pattern demonstration) ---")
 
 -- Mock the connection pattern used in FPSWeaponController
 local MockWeaponController = {}
