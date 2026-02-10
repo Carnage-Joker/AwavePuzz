@@ -94,20 +94,82 @@ Due to the client-side nature of the fix, manual verification is required:
 
 ## Implementation Details
 
-The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 490-524:
+The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 490-566:
 
 ```lua
 -- BUG-008 FIX: Validate weaponStats before using to prevent race condition
+-- For late joiners, weaponStats may not be loaded yet
 if not weaponStats then
+    if DEBUG_AMMO then
+        warn(string.format("[FPSWeaponController] ⚠ weaponStats nil at ammo update, attempting to fetch for weapon '%s'", 
+            tostring(data.weaponId)))
+    end
+    
     -- Try to fetch weaponStats
     weaponStats = getWeaponStats(data.weaponId)
     
-    -- If still nil, retry after 1 second delay
+    -- BUG-008 FIX: If still nil, retry after 1 second delay
     if not weaponStats then
+        if DEBUG_AMMO then
+            warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in 1s for weapon '%s'", 
+                tostring(data.weaponId)))
+        end
+        
+        -- Capture the data locally to avoid race conditions with future AmmoUpdate events
+        local capturedData = {
+            weaponId = data.weaponId,
+            current = data.current,
+            reserve = data.reserve,
+            max = data.max
+        }
+        
+        -- Schedule retry with 1 second delay
         task.delay(1, function()
-            weaponStats = getWeaponStats(data.weaponId)
-            if weaponStats then
-                updateWeaponInfo(data.weaponId)
+            -- Only retry if we're still using the same weapon
+            if currentWeapon ~= capturedData.weaponId then
+                if DEBUG_AMMO then
+                    print(string.format("[FPSWeaponController] Skipping retry - weapon changed from '%s' to '%s'", 
+                        tostring(capturedData.weaponId), tostring(currentWeapon)))
+                end
+                return
+            end
+            
+            local retryStats = getWeaponStats(capturedData.weaponId)
+            if retryStats then
+                -- Update the module-level weaponStats
+                weaponStats = retryStats
+                
+                if DEBUG_AMMO then
+                    print(string.format("[FPSWeaponController] ✓ weaponStats loaded on retry for weapon '%s'", 
+                        tostring(capturedData.weaponId)))
+                end
+                
+                -- Update weapon info now that stats are available
+                updateWeaponInfo(capturedData.weaponId)
+                
+                -- Re-apply the ammo values with newly loaded weaponStats
+                local maxAmmo = capturedData.max
+                if not maxAmmo and retryStats.MagSize then
+                    maxAmmo = retryStats.MagSize
+                end
+                if not maxAmmo then
+                    maxAmmo = DEFAULT_MAGAZINE_SIZE
+                end
+                
+                ammoUpdateBindable:Fire({
+                    current = capturedData.current,
+                    reserve = capturedData.reserve,
+                    max = maxAmmo,
+                    isReloading = false
+                })
+                
+                if DEBUG_AMMO then
+                    print(string.format("[FPSWeaponController] ✓ Ammo re-applied on retry: %s (current=%d, reserve=%d, max=%d)", 
+                        capturedData.weaponId, capturedData.current, capturedData.reserve, maxAmmo))
+                end
+            else
+                warn(string.format("[FPSWeaponController] ✗ weaponStats still nil after retry for weapon '%s'", 
+                    tostring(capturedData.weaponId)))
             end
         end)
     end
