@@ -160,6 +160,11 @@ local function canFire()
 	if isReloading then
 		return false
 	end
+	
+	-- BUG-009: Block firing during pending reload request to match server state
+	if pendingReloadRequest then
+		return false
+	end
 
 	local now = tick()
 	if now - lastFireTime < weaponStats.FireRate then
@@ -544,13 +549,6 @@ reloadConfirmEvent.OnClientEvent:Connect(function(data)
 		pendingReloadRequest = nil
 		return
 	end
-
-	-- If both client and server are using requestIds, ensure this confirmation
-	-- corresponds to the currently pending reload (guards against stale/out-of-order acks)
-	if pending.requestId ~= nil and data.requestId ~= nil and pending.requestId ~= data.requestId then
-		-- Stale or mismatched reload confirmation - ignore
-		return
-	end
 	
 	-- Clear pending request
 	pendingReloadRequest = nil
@@ -736,6 +734,9 @@ function FPSWeaponController.onCharacterRemoving()
 		heartbeatConnection:Disconnect()
 		heartbeatConnection = nil
 	end
+	
+	-- BUG-009: Clear pending reload request to prevent stale state across respawns
+	pendingReloadRequest = nil
 end
 
 -- Enable or disable weapon controller (used by state manager)

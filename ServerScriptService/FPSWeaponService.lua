@@ -79,9 +79,16 @@ function FPSWeaponService:setupRemoteEvents()
 
 	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
 		-- Validate payload structure to prevent client exploits
-		if typeof(payload) ~= "table" or not payload.weaponId then
+		if typeof(payload) ~= "table" then
 			return
 		end
+		
+		-- BUG-009: Send explicit failure confirmation for malformed payloads
+		if not payload.weaponId then
+			self:sendReloadConfirmation(player, nil, false, 0)
+			return
+		end
+		
 		self:handleReload(player, payload)
 	end)
 end
