@@ -57,9 +57,11 @@ Quick reference for developers working on bug fixes from the audit.
 ## 🟠 HIGH PRIORITY - Next Sprint
 
 ### Memory Leaks
-- [ ] **BUG-010**: Fix heartbeat accumulation (Main.server.lua:220-230)
+- [x] **BUG-010**: Fix heartbeat accumulation (Main.server.lua:217-222) ✅ **FIXED**
   - Disconnect old heartbeat before creating new
   - Test: Single heartbeat after server reload
+  - **Fix**: Added check to disconnect existing `gameManager._heartbeatConnection` before creating new one
+  - **Date**: 2026-02-10
   
 - [ ] **BUG-013**: Fix death tracking table leak (GameManager.lua:163-164)
   - Clean up tables in onPlayerRemoving()

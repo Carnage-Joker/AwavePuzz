@@ -214,6 +214,13 @@ print("[BOOT][SERVER] Phase 4 complete: Player handlers connected")
 
 print("[BOOT][SERVER] Phase 5: Starting main game loop...")
 
+-- Disconnect old heartbeat connection if it exists (prevents memory leak on server reload)
+if gameManager._heartbeatConnection then
+	gameManager._heartbeatConnection:Disconnect()
+	gameManager._heartbeatConnection = nil
+	print("[BOOT][SERVER] Disconnected old heartbeat connection")
+end
+
 local lastUpdate = tick()
 local heartbeatConnection
 
