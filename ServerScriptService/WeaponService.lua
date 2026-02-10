@@ -150,6 +150,8 @@ function WeaponService:initializePlayer(player)
 	-- FIX: Notify FPSWeaponService for ammo tracking
 	if self.fpsWeaponService then
 		self.fpsWeaponService:onWeaponEquipped(player, startingWeapon)
+	else
+		warn(string.format("[WeaponService] fpsWeaponService not initialized for player %s - ammo will not be tracked", player.Name))
 	end
 end
 
