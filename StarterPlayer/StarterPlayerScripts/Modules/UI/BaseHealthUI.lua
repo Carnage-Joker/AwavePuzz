@@ -19,6 +19,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 local DEFAULT_MAX_HEALTH = GameConfig.BASE_HEALTH or 1000
 
 -- Helper functions
@@ -200,7 +203,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 -- 1) Direct BaseHealthUpdate event (if server fires it)
 local baseHealthEvent = remoteEvents:FindFirstChild("BaseHealthUpdate")
 if baseHealthEvent and baseHealthEvent:IsA("RemoteEvent") then
-	baseHealthEvent.OnClientEvent:Connect(function(health, max)
+	_connections.baseHealthUpdate = baseHealthEvent.OnClientEvent:Connect(function(health, max)
 		updateHealthBar(health, max or DEFAULT_MAX_HEALTH)
 	end)
 end
@@ -208,7 +211,7 @@ end
 -- 2) GameStateUpdate snapshot (expects .baseHealth in the payload)
 local gameStateEvent = remoteEvents:FindFirstChild("GameStateUpdate")
 if gameStateEvent and gameStateEvent:IsA("RemoteEvent") then
-	gameStateEvent.OnClientEvent:Connect(function(stateData)
+	_connections.gameStateUpdate = gameStateEvent.OnClientEvent:Connect(function(stateData)
 		if stateData and stateData.baseHealth then
 			-- Use config max health unless server sends a max
 			local max = stateData.baseHealthMax or DEFAULT_MAX_HEALTH
@@ -234,7 +237,7 @@ task.spawn(function()
 		currentHealth = healthValue.Value
 		updateHealthBar(currentHealth, maxHealth)
 
-		healthValue:GetPropertyChangedSignal("Value"):Connect(function()
+		_connections.healthValueChanged = healthValue:GetPropertyChangedSignal("Value"):Connect(function()
 			updateHealthBar(healthValue.Value, maxHealth)
 		end)
 	end
@@ -250,4 +253,16 @@ print("BaseHealthUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local BaseHealthUI = {}
+
+-- BUG-007 FIX: Cleanup method
+function BaseHealthUI.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	print("BaseHealthUI cleanup completed")
+end
+
 return BaseHealthUI

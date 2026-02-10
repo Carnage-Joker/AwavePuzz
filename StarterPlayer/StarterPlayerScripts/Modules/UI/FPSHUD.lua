@@ -22,6 +22,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 -- Constants
 local DEFAULT_MAGAZINE_SIZE = 30  -- Fallback magazine size when weapon config is unavailable
 
@@ -537,7 +540,22 @@ local function setupBindableConnections()
 		ammoEvent.Name = "AmmoUpdate"
 		ammoEvent.Parent = bindableFolder
 	end
-	ammoEvent.Event:Connect(function(data)
+	-- BUG-007 FIX: Store all bindable event connections
+	_connections.ammo = ammoEvent.Event:Connect(function(data)
+		if DEBUG_AMMO then
+			print(string.format("[FPSHUD] AmmoUpdate bindable event received - data type=%s", typeof(data)))
+			if typeof(data) == "table" then
+				print(string.format("[FPSHUD] AmmoUpdate data - current=%s, reserve=%s, max=%s, isReloading=%s",
+					tostring(data.current), tostring(data.reserve), tostring(data.max), tostring(data.isReloading)))
+			end
+		end
+		
+		if typeof(data) == "table" then
+			updateAmmoDisplay(data.current, data.reserve, data.max, data.isReloading)
+		elseif DEBUG_AMMO then
+			print("[FPSHUD] ✗ AmmoUpdate received invalid data type")
+		end
+	end)
 		if DEBUG_AMMO then
 			print(string.format("[FPSHUD] AmmoUpdate bindable event received - data type=%s", typeof(data)))
 			if typeof(data) == "table" then
@@ -560,7 +578,7 @@ local function setupBindableConnections()
 		hitmarkerEvent.Name = "Hitmarker"
 		hitmarkerEvent.Parent = bindableFolder
 	end
-	hitmarkerEvent.Event:Connect(function(data)
+	_connections.hitmarker = hitmarkerEvent.Event:Connect(function(data)
 		if typeof(data) == "table" then
 			showHitmarker(data.isHeadshot, data.isKill)
 		end
@@ -573,7 +591,7 @@ local function setupBindableConnections()
 		crosshairEvent.Name = "CrosshairUpdate"
 		crosshairEvent.Parent = bindableFolder
 	end
-	crosshairEvent.Event:Connect(function(data)
+	_connections.crosshair = crosshairEvent.Event:Connect(function(data)
 		if typeof(data) == "table" then
 			updateCrosshairSpread(data.spread or 0)
 			-- Hide crosshair when ADS
@@ -588,7 +606,7 @@ local function setupBindableConnections()
 		weaponInfoEvent.Name = "WeaponInfoUpdate"
 		weaponInfoEvent.Parent = bindableFolder
 	end
-	weaponInfoEvent.Event:Connect(function(data)
+	_connections.weaponInfo = weaponInfoEvent.Event:Connect(function(data)
 		if typeof(data) == "table" then
 			updateWeaponInfo(data.weaponName or data.weaponId, data.fireMode)
 		end
@@ -601,7 +619,7 @@ local function setupBindableConnections()
 		damageEvent.Name = "DamageTaken"
 		damageEvent.Parent = bindableFolder
 	end
-	damageEvent.Event:Connect(function(data)
+	_connections.damage = damageEvent.Event:Connect(function(data)
 		if typeof(data) == "table" then
 			flashDamageIndicator(data.intensity or 0.3)
 		elseif typeof(data) == "number" then
@@ -619,7 +637,7 @@ end
 local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
 local healthEvent = remoteEventsFolder:FindFirstChild("PlayerHealthUpdate")
 if healthEvent then
-	healthEvent.OnClientEvent:Connect(function(data)
+	_connections.health = healthEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" then
 			local healthPercent = ((data.current or 100) / (data.max or 100)) * 100
 			updateLowHealthVignette(healthPercent)
@@ -635,7 +653,7 @@ end
 local AMMO_STALE_THRESHOLD = 5.0  -- Seconds before ammo data is considered stale
 local lastStaleWarning = 0
 
-RunService.RenderStepped:Connect(function(deltaTime)
+_connections.renderStep = RunService.RenderStepped:Connect(function(deltaTime)
 	-- Smooth crosshair spread animation
 	if crosshairConfig.DynamicCrosshair ~= false then
 		currentCrosshairGap = currentCrosshairGap + (targetCrosshairGap - currentCrosshairGap) * 0.2
@@ -681,7 +699,18 @@ end
 local Module = {}
 
 function Module.initialize()
-initialize()
+	initialize()
+end
+
+-- BUG-007 FIX: Cleanup method
+function Module.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	print("[FPSHUD] cleanup completed")
 end
 
 return Module
