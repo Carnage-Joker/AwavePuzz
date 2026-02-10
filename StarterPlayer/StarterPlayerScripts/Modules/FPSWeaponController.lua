@@ -544,13 +544,6 @@ reloadConfirmEvent.OnClientEvent:Connect(function(data)
 		pendingReloadRequest = nil
 		return
 	end
-
-	-- If both client and server are using requestIds, ensure this confirmation
-	-- corresponds to the currently pending reload (guards against stale/out-of-order acks)
-	if pending.requestId ~= nil and data.requestId ~= nil and pending.requestId ~= data.requestId then
-		-- Stale or mismatched reload confirmation - ignore
-		return
-	end
 	
 	-- Clear pending request
 	pendingReloadRequest = nil
