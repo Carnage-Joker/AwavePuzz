@@ -146,6 +146,11 @@ function WeaponService:initializePlayer(player)
 
 	-- Give them the visual weapon on spawn
 	self:_equipVisualWeapon(player, startingWeapon)  -- NEW
+	
+	-- FIX: Notify FPSWeaponService for ammo tracking
+	if self.fpsWeaponService then
+		self.fpsWeaponService:onWeaponEquipped(player, startingWeapon)
+	end
 end
 
 
