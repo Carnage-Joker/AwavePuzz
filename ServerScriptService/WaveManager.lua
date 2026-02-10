@@ -16,6 +16,7 @@ function WaveManager.new()
 	self.waveActive = false
 	self.intensityMultiplier = 1.0 -- For synthesis system to increase zombie intensity
 	self._spawnQueue = {} -- Queue-based spawning to prevent race conditions
+	self._isProcessingQueue = false -- Atomic flag to prevent concurrent queue processing
 	return self
 end
 
@@ -34,6 +35,7 @@ function WaveManager:startWave()
 	self.zombiesSpawned = 0
 	self.waveActive = true
 	self._spawnQueue = {} -- Clear spawn queue when starting new wave
+	self._isProcessingQueue = false -- Reset processing flag
 
 	local zombieCount = self:calculateZombiesForWave(self.currentWave)
 
@@ -50,19 +52,25 @@ function WaveManager:spawnZombie()
 	end
 
 	-- Queue-based spawning to prevent race conditions
-	-- Add this request to the spawn queue
+	-- Add this request to the spawn queue first
 	table.insert(self._spawnQueue, true)
 	
-	-- If there are multiple requests in queue, only the first one processes
-	if #self._spawnQueue > 1 then
-		return nil -- Another spawn is already processing
+	-- Atomic check-and-set: Check if another thread is already processing
+	-- In Lua, this is atomic as long as there's no yield point between operations
+	if self._isProcessingQueue then
+		-- Another thread is processing, it will handle our queued request
+		return nil
 	end
 	
-	-- Process all queued spawn requests
+	-- Claim exclusive queue processing rights
+	self._isProcessingQueue = true
+	
+	-- Process all queued spawn requests (including those added during processing)
 	local firstSpawnData = nil
 	local maxZombies = self:calculateZombiesForWave(self.currentWave)
 	
 	while #self._spawnQueue > 0 do
+		-- Remove one request from queue
 		table.remove(self._spawnQueue, 1)
 		
 		-- Spawn one zombie per queued request, up to max
@@ -70,7 +78,7 @@ function WaveManager:spawnZombie()
 			self.zombiesSpawned = self.zombiesSpawned + 1
 			self.zombiesAlive = self.zombiesAlive + 1
 			
-			-- Only return data for the first spawn (the one from this call)
+			-- Only return data for the first spawn (the one from the original call)
 			if not firstSpawnData then
 				firstSpawnData = {
 					health = self:calculateZombieHealthForWave(self.currentWave),
@@ -82,6 +90,9 @@ function WaveManager:spawnZombie()
 		end
 	end
 	
+	-- Release queue processing lock to allow next batch
+	self._isProcessingQueue = false
+	
 	return firstSpawnData
 end
 
@@ -92,6 +103,7 @@ function WaveManager:onZombieDeath()
 	if self.zombiesAlive == 0 and self.zombiesSpawned >= self:calculateZombiesForWave(self.currentWave) then
 		self.waveActive = false
 		self._spawnQueue = {} -- Clear spawn queue when wave ends
+		self._isProcessingQueue = false -- Reset processing flag
 		return true -- Wave complete
 	end
 
