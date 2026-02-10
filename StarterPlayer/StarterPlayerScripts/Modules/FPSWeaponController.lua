@@ -533,10 +533,11 @@ reloadConfirmEvent.OnClientEvent:Connect(function(data)
 	-- Server confirmed reload - now set isReloading state
 	isReloading = true
 	
-	-- Fire reload animation event
-	local reloadTime = data.reloadTime or 2.0
-	if weaponStats and weaponStats.ReloadTime then
-		reloadTime = weaponStats.ReloadTime
+	-- Use server-provided reload time (server is authority)
+	-- Fall back to weaponStats or default if server didn't provide it
+	local reloadTime = data.reloadTime
+	if not reloadTime then
+		reloadTime = (weaponStats and weaponStats.ReloadTime) or 2.0
 	end
 	reloadStartedBindable:Fire({
 		weaponId = data.weaponId,
