@@ -310,10 +310,10 @@ function WeaponService:handleWeaponFire(player, payload)
 			local dotProduct = direction:Dot(referenceVector)
 			
 			-- Allow shots within a reasonable angle of look direction
-			-- Default -0.5 allows ~120 degree cone (shots roughly in front half of player)
-			-- This prevents backward shots while allowing FPS camera freedom
-			-- For stricter validation, configure MIN_WEAPON_FIRE_DOT_PRODUCT to 0.3 (70 degrees) or higher
-			local minDotProduct = -0.5  -- Allow wide arc for FPS gameplay
+			-- BUG-004 FIX: Changed threshold from -0.5 to 0.7 to prevent wallhack exploit
+			-- This restricts shots to ~45 degree cone (forward-facing only)
+			-- This prevents backward shots and significantly limits wallhack potential
+			local minDotProduct = 0.7  -- Strict validation for anti-wallhack (45-degree cone)
 			if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
 				minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
 			end
@@ -328,6 +328,28 @@ function WeaponService:handleWeaponFire(player, payload)
 					humanoidRootPart.Position.X, humanoidRootPart.Position.Y, humanoidRootPart.Position.Z,
 					referenceVector.X, referenceVector.Y, referenceVector.Z))
 				return
+			end
+			
+			-- BUG-004 FIX: Add raycast validation for line-of-sight (anti-wallhack)
+			-- Verify that the player has a clear line of sight from their camera/head to the shot origin
+			-- This prevents shooting through walls by validating the origin is actually visible
+			local head = character:FindFirstChild("Head")
+			if head then
+				local losParams = RaycastParams.new()
+				losParams.FilterDescendantsInstances = {character}
+				losParams.FilterType = Enum.RaycastFilterType.Exclude
+				losParams.IgnoreWater = true
+				
+				-- Cast ray from player's head to the claimed origin point
+				local losDirection = origin - head.Position
+				local losResult = Workspace:Raycast(head.Position, losDirection, losParams)
+				
+				-- If raycast hits something before reaching the origin, the origin is behind a wall
+				if losResult and losResult.Distance < losDirection.Magnitude - 1 then
+					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin not in line-of-sight (blocked by %s at %.1f studs)", 
+						player.Name, losResult.Instance:GetFullName(), losResult.Distance))
+					return
+				end
 			end
 		end
 	end

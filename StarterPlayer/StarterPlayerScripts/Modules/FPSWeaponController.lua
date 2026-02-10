@@ -55,6 +55,10 @@ local currentSpread = 0
 local targetSpread = 0
 local _enabled = true -- Weapon controller enabled/disabled state
 
+-- BUG-009 FIX: Request-response pattern for reload with timeout
+local pendingReloadRequest = nil -- Track pending reload request for timeout handling
+local RELOAD_CONFIRM_TIMEOUT = 2.0 -- Seconds to wait for server confirmation
+
 -- Helper: Check if gameplay input should be blocked by modal state
 local function shouldBlockGameplay()
 	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
@@ -73,6 +77,7 @@ local weaponReloadEvent = remoteEvents:WaitForChild("WeaponReload")
 local ammoUpdateEvent = remoteEvents:WaitForChild("AmmoUpdate")
 local hitConfirmEvent = remoteEvents:WaitForChild("WeaponHitConfirm")
 local weaponLoadoutUpdateEvent = remoteEvents:WaitForChild("WeaponLoadoutUpdate")  -- FIX: Added for server sync
+local reloadConfirmEvent = remoteEvents:WaitForChild("ReloadConfirm")  -- BUG-009 FIX: Server confirmation for reload
 
 -- Connection storage for cleanup
 local inputBeganConn = nil
@@ -225,27 +230,36 @@ local function startReload()
 	end
 	
 	if not currentWeapon or isReloading then return end
-
+	
+	-- BUG-009 FIX: Don't set isReloading immediately - wait for server confirmation
+	-- This prevents client-side state manipulation exploits
+	
+	-- Prevent duplicate reload requests while one is pending
+	if pendingReloadRequest then
+		return
+	end
+	
+	-- Send reload request to server
 	weaponReloadEvent:FireServer({
 		weaponId = currentWeapon
 	})
-
-	isReloading = true
-
-	-- Fire reload animation event
-	local reloadTime = 2.0
-	if weaponStats and weaponStats.ReloadTime then
-		reloadTime = weaponStats.ReloadTime
-	end
-	reloadStartedBindable:Fire({
-		weaponId = currentWeapon,
-		duration = reloadTime
-	})
-
-	ammoUpdateBindable:Fire({
-		weaponId = currentWeapon,
-		isReloading = true
-	})
+	
+	-- Track pending request for timeout handling
+	local requestTime = tick()
+	local requestWeapon = currentWeapon
+	pendingReloadRequest = {
+		weaponId = requestWeapon,
+		requestTime = requestTime
+	}
+	
+	-- Set up timeout to cancel request if server doesn't respond
+	task.delay(RELOAD_CONFIRM_TIMEOUT, function()
+		if pendingReloadRequest and pendingReloadRequest.requestTime == requestTime then
+			-- Server didn't respond within timeout - clear pending request
+			warn("[FPSWeaponController] Reload request timed out for weapon: " .. tostring(requestWeapon))
+			pendingReloadRequest = nil
+		end
+	end)
 end
 
 local function cancelReload()
@@ -281,6 +295,9 @@ local function equipWeapon(weaponId)
 		fireConnection:Disconnect()
 		fireConnection = nil
 	end
+	
+	-- Clear pending reload request when switching weapons
+	pendingReloadRequest = nil
 
 	currentWeapon = weaponId
 	weaponStats = getWeaponStats(weaponId)
@@ -499,6 +516,68 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 		print(string.format("[FPSWeaponController] ✗ Dropped update: missing required data (current=%s, reserve=%s)",
 			tostring(data.current), tostring(data.reserve)))
 	end
+end)
+
+-- BUG-009 FIX: Handle server confirmation for reload requests
+-- This implements server-authoritative reload state (prevents rapid fire exploits)
+reloadConfirmEvent.OnClientEvent:Connect(function(data)
+	if typeof(data) ~= "table" then return end
+	
+	-- Validate confirmation matches our pending request
+	local pending = pendingReloadRequest
+	if not pending then
+		-- No pending reload for this client - ignore
+		return
+	end
+
+	-- Weapon must match the weapon we most recently requested a reload for
+	if pending.weaponId ~= data.weaponId then
+		-- Not our weapon - ignore
+		return
+	end
+	
+	-- Also verify this matches our currently equipped weapon to prevent stale confirmations
+	-- This handles the case where weapon was switched after reload request was sent
+	if currentWeapon ~= data.weaponId then
+		-- Weapon was switched after reload request - ignore stale confirmation
+		pendingReloadRequest = nil
+		return
+	end
+
+	-- If both client and server are using requestIds, ensure this confirmation
+	-- corresponds to the currently pending reload (guards against stale/out-of-order acks)
+	if pending.requestId ~= nil and data.requestId ~= nil and pending.requestId ~= data.requestId then
+		-- Stale or mismatched reload confirmation - ignore
+		return
+	end
+	
+	-- Clear pending request
+	pendingReloadRequest = nil
+	
+	-- Only proceed if reload was successful
+	if not data.success then
+		warn("[FPSWeaponController] Server rejected reload request")
+		return
+	end
+	
+	-- Server confirmed reload - now set isReloading state
+	isReloading = true
+	
+	-- Use server-provided reload time (server is authority)
+	-- Fall back to weaponStats or default if server didn't provide it
+	local reloadTime = data.reloadTime
+	if not reloadTime then
+		reloadTime = (weaponStats and weaponStats.ReloadTime) or 2.0
+	end
+	reloadStartedBindable:Fire({
+		weaponId = data.weaponId,
+		duration = reloadTime
+	})
+	
+	ammoUpdateBindable:Fire({
+		weaponId = data.weaponId,
+		isReloading = true
+	})
 end)
 
 -- FIX: Listen for server-authoritative weapon loadout updates

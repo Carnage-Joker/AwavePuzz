@@ -141,6 +141,29 @@ function SecurityTests.testServerAmmoConsumption()
 	return false
 end
 
+function SecurityTests.testReloadConfirmation()
+	local testName = "Client Authority - Reload Server Confirmation (BUG-009)"
+	
+	-- Verify ReloadConfirm remote event exists for server-authoritative reload
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local RemoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
+	
+	if RemoteEvents then
+		local ReloadConfirm = RemoteEvents:WaitForChild("ReloadConfirm", 5)
+		
+		if ReloadConfirm and ReloadConfirm:IsA("RemoteEvent") then
+			logTest(testName, true)
+			return true
+		else
+			logTest(testName, false, "ReloadConfirm RemoteEvent not found in RemoteEvents (timeout or wrong type)")
+			return false
+		end
+	end
+	
+	logTest(testName, false, "RemoteEvents folder not found in ReplicatedStorage (timeout)")
+	return false
+end
+
 function SecurityTests.testCurrencyServerAuthority()
 	local testName = "Client Authority - Currency Server Authority"
 	
@@ -357,6 +380,7 @@ function SecurityTests.runAll()
 	-- BUG-009: Client Authority Configuration Checks
 	print("\n--- BUG-009: Client Authority Config Checks ---")
 	SecurityTests.testServerAmmoConsumption()
+	SecurityTests.testReloadConfirmation()
 	SecurityTests.testCurrencyServerAuthority()
 	SecurityTests.testDamageServerAuthority()
 	SecurityTests.testShopValidation()
