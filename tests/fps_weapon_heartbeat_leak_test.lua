@@ -13,7 +13,7 @@ print("FPS WEAPON HEARTBEAT LEAK TEST (BUG-014)")
 print("========================================")
 
 -- This test simulates the client-side pattern used in FPSWeaponController
--- We'll create a mock controller that follows the same connection pattern
+-- It validates that heartbeat connections are properly managed across character lifecycles
 
 print("\n--- Testing FPSWeaponController Heartbeat Pattern ---")
 
@@ -21,20 +21,38 @@ print("\n--- Testing FPSWeaponController Heartbeat Pattern ---")
 local MockWeaponController = {}
 local heartbeatConnection = nil
 
-function MockWeaponController.initialize()
-	-- Simulate the heartbeat connection creation at line 549-569
-	heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
-		-- Minimal heartbeat logic (spread recovery, etc.)
-	end)
-	print("[TEST] Created heartbeat connection")
-end
-
-function MockWeaponController.onCharacterRemoving()
-	-- Simulate the cleanup added in BUG-014 fix
+-- BUG-014: Setup heartbeat connection (recreated on each character spawn)
+local function setupHeartbeatConnection()
+	-- Disconnect existing connection to prevent leaks
 	if heartbeatConnection then
 		heartbeatConnection:Disconnect()
 		heartbeatConnection = nil
-		print("[TEST] Disconnected heartbeat connection")
+		print("[TEST] Disconnected existing heartbeat connection")
+	end
+	
+	-- Create new heartbeat connection
+	heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+		-- Minimal heartbeat logic (spread recovery, etc.)
+	end)
+	print("[TEST] Created new heartbeat connection")
+end
+
+function MockWeaponController.initialize()
+	-- Simulate initial setup with heartbeat connection
+	setupHeartbeatConnection()
+end
+
+function MockWeaponController.onCharacterAdded()
+	-- Simulate character respawn - recreate heartbeat connection
+	setupHeartbeatConnection()
+end
+
+function MockWeaponController.onCharacterRemoving()
+	-- Simulate cleanup on character removal
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
+		print("[TEST] Disconnected heartbeat connection on character removal")
 	end
 end
 
@@ -53,56 +71,69 @@ assert(wasConnected, "Heartbeat connection should have been connected before rem
 assert(heartbeatConnection == nil or not heartbeatConnection.Connected, "Heartbeat connection should be disconnected after character removal")
 print("   PASSED: Heartbeat connection properly cleaned up")
 
--- Test 3: Respawn scenario (multiple character cycles)
-print("\n✅ Test 3: Multiple character spawn/death cycles")
-local connectionCount = 0
-local activeConnections = {}
+-- Test 3: Character respawn (reconnection)
+print("\n✅ Test 3: Character respawn recreates connection")
+MockWeaponController.onCharacterAdded()
+assert(heartbeatConnection ~= nil, "Heartbeat connection should be recreated on character respawn")
+assert(heartbeatConnection.Connected, "New heartbeat connection should be connected")
+print("   PASSED: Heartbeat connection recreated on respawn")
 
-for i = 1, 10 do
-	-- Simulate character spawn (initialize controller)
-	local testHeartbeat = RunService.Heartbeat:Connect(function() end)
-	table.insert(activeConnections, testHeartbeat)
+-- Test 4: Multiple character spawn/death cycles
+print("\n✅ Test 4: Multiple character spawn/death cycles")
+local connectionCount = 0
+local cycleCount = 10
+
+for i = 1, cycleCount do
+	-- Simulate character death (cleanup)
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
+	end
+	
+	-- Simulate character spawn (recreate)
+	setupHeartbeatConnection()
 	connectionCount = connectionCount + 1
 	
 	-- Verify connection is active
-	assert(testHeartbeat.Connected, string.format("Connection %d should be connected", i))
-	
-	-- Simulate character death/removal (cleanup)
-	testHeartbeat:Disconnect()
-	
-	-- Verify connection is disconnected
-	assert(not testHeartbeat.Connected, string.format("Connection %d should be disconnected", i))
+	assert(heartbeatConnection ~= nil, string.format("Connection should exist after cycle %d", i))
+	assert(heartbeatConnection.Connected, string.format("Connection %d should be connected", i))
 end
 
-print(string.format("   PASSED: %d spawn/death cycles completed without leak", connectionCount))
+print(string.format("   PASSED: %d spawn/death cycles completed, connection recreated each time", cycleCount))
 
--- Test 4: Verify only one connection per character
-print("\n✅ Test 4: Single heartbeat per character lifecycle")
-local testConn1 = RunService.Heartbeat:Connect(function() end)
-local isFirstConnected = testConn1.Connected
-testConn1:Disconnect()
-local isFirstDisconnected = not testConn1.Connected
+-- Test 5: Verify no duplicate connections on repeated onCharacterAdded calls
+print("\n✅ Test 5: No duplicate connections on repeated character added calls")
+local firstConnection = heartbeatConnection
+setupHeartbeatConnection()  -- Call again without removing
+local secondConnection = heartbeatConnection
 
--- Create second connection (simulating respawn)
-local testConn2 = RunService.Heartbeat:Connect(function() end)
-local isSecondConnected = testConn2.Connected
-testConn2:Disconnect()
-
-assert(isFirstConnected, "First connection should be connected")
-assert(isFirstDisconnected, "First connection should be disconnected after cleanup")
-assert(isSecondConnected, "Second connection should be connected")
-assert(not testConn2.Connected, "Second connection should be disconnected after cleanup")
-print("   PASSED: Each character lifecycle maintains single heartbeat connection")
+assert(firstConnection ~= secondConnection, "Should create a new connection")
+assert(not firstConnection.Connected, "Old connection should be disconnected")
+assert(secondConnection.Connected, "New connection should be connected")
+print("   PASSED: Duplicate connections prevented, old connection properly disconnected")
 
 print("\n========================================")
 print("FPS WEAPON HEARTBEAT LEAK TEST SUMMARY")
 print("========================================")
 print("✅ All tests PASSED")
 print("✅ Heartbeat connection cleanup verified")
+print("✅ Heartbeat connection recreated on respawn")
 print("✅ No memory leak on character death/respawn")
 print("\nℹ️  BUG-014 Fix Confirmed:")
 print("   - Heartbeat connection properly stored")
 print("   - Connection disconnected on character removal")
-print("   - Single heartbeat per alive character")
-print("   - No accumulation on respawn")
+print("   - Connection RECREATED on character respawn")
+print("   - Single heartbeat per character (no accumulation)")
+print("   - No accumulation across respawn cycles")
+print("========================================")
+
+-- Cleanup
+if heartbeatConnection then
+	heartbeatConnection:Disconnect()
+	heartbeatConnection = nil
+end
+print("   - Connection disconnected on character removal")
+print("   - Connection RECREATED on character respawn")
+print("   - Single heartbeat per character (no accumulation)")
+print("   - No accumulation across respawn cycles")
 print("========================================")

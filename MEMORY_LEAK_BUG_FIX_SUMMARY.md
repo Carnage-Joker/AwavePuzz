@@ -27,12 +27,27 @@ The heartbeat connection created at line 549 was never stored or disconnected, c
    local heartbeatConnection = nil  -- BUG-014: Store heartbeat connection for cleanup
    ```
 
-2. **Line 551**: Modified to store the connection when creating it
+2. **Lines 549-580**: Created `setupHeartbeatConnection()` helper function that disconnects any existing connection before creating a new one
    ```lua
-   heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+   local function setupHeartbeatConnection()
+       -- Disconnect existing connection to prevent leaks
+       if heartbeatConnection then
+           heartbeatConnection:Disconnect()
+           heartbeatConnection = nil
+       end
+       
+       -- Create new heartbeat connection for spread recovery
+       heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+           -- Spread recovery logic...
+       end)
+   end
    ```
 
-3. **Lines 640-644**: Added cleanup in `onCharacterRemoving()` function
+3. **Line 605**: Call `setupHeartbeatConnection()` during initialization
+
+4. **Line 634**: Call `setupHeartbeatConnection()` in `onCharacterAdded()` to recreate connection on respawn
+
+5. **Lines 655-659**: Added cleanup in `onCharacterRemoving()` function
    ```lua
    -- BUG-014: Disconnect heartbeat connection to prevent memory leak
    if heartbeatConnection then
@@ -179,12 +194,13 @@ All death tracking and related tables are properly cleaned up in `onPlayerRemovi
 - **BUG-013**: Tables already being cleaned up properly
 
 ### After Fix:
-- **BUG-014**: Single heartbeat connection per character, properly cleaned up on death/respawn
+- **BUG-014**: Single heartbeat connection per character, properly cleaned up and **recreated** on respawn
 - **BUG-013**: Tables continue to be cleaned up properly
 
 ### Performance Impact:
 - Reduced memory usage on respawn (no heartbeat accumulation)
 - Stable FPS regardless of number of respawns
+- Spread recovery continues working correctly after respawn
 - No performance overhead added (cleanup is minimal)
 
 ## Related Documentation

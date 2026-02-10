@@ -625,29 +625,38 @@ end)
 -- UPDATE LOOPS
 --------------------------------------------------------------------------------
 
--- Spread recovery
--- BUG-014: Store heartbeat connection for cleanup on character death
-heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
-	if weaponStats and tick() - lastShotTime > 0.1 then
-		targetSpread = math.max(0, targetSpread - weaponStats.SpreadRecovery * deltaTime)
+-- BUG-014: Setup heartbeat connection for spread recovery
+-- This is called on character spawn to ensure connection is recreated after respawn
+local function setupHeartbeatConnection()
+	-- Disconnect existing connection to prevent leaks
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
 	end
+	
+	-- Create new heartbeat connection for spread recovery
+	heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+		if weaponStats and tick() - lastShotTime > 0.1 then
+			targetSpread = math.max(0, targetSpread - weaponStats.SpreadRecovery * deltaTime)
+		end
 
-	-- Smooth spread animation
-	currentSpread = currentSpread + (targetSpread - currentSpread) * 0.1
+		-- Smooth spread animation
+		currentSpread = currentSpread + (targetSpread - currentSpread) * 0.1
 
-	-- Update crosshair if needed
-	if math.abs(currentSpread - targetSpread) > 0.1 then
-		crosshairBindable:Fire({
-			spread = currentSpread,
-			isADS = isAiming
-		})
-	end
+		-- Update crosshair if needed
+		if math.abs(currentSpread - targetSpread) > 0.1 then
+			crosshairBindable:Fire({
+				spread = currentSpread,
+				isADS = isAiming
+			})
+		end
 
-	-- Reset consecutive shots after delay
-	if tick() - lastShotTime > 1.0 then
-		consecutiveShots = 0
-	end
-end)
+		-- Reset consecutive shots after delay
+		if tick() - lastShotTime > 1.0 then
+			consecutiveShots = 0
+		end
+	end)
+end
 
 --------------------------------------------------------------------------------
 -- INITIALIZATION
@@ -670,6 +679,9 @@ local function initialize()
 	-- Connect legacy input events (for weapon switching on keyboard)
 	inputBeganConn = UserInputService.InputBegan:Connect(onInputBegan)
 	inputEndedConn = UserInputService.InputEnded:Connect(onInputEnded)
+
+	-- BUG-014: Setup heartbeat connection for spread recovery
+	setupHeartbeatConnection()
 
 	-- Equip default weapon
 	equipWeapon(WeaponConfig.DefaultWeapon)
@@ -696,6 +708,9 @@ function FPSWeaponController.onCharacterAdded(character)
 		-- Refresh weapon display (name, fire mode), actual ammo comes from server events
 		refreshWeaponDisplay(currentWeapon)
 	end
+	
+	-- BUG-014: Recreate heartbeat connection on respawn
+	setupHeartbeatConnection()
 	
 	if DEBUG_AMMO then
 		print(string.format("[FPSWeaponController] Character added, currentWeapon: %s", tostring(currentWeapon)))

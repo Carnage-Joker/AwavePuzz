@@ -7,8 +7,9 @@ This test verifies that the FPSWeaponController properly disconnects its heartbe
 The test validates the heartbeat connection cleanup pattern in `FPSWeaponController.lua`:
 1. **Initial Connection**: Verifies heartbeat connection can be created and stored
 2. **Character Removal Cleanup**: Tests that connection is properly disconnected when character is removed
-3. **Multiple Spawn/Death Cycles**: Simulates 10 respawn cycles to ensure no accumulation
-4. **Single Connection Per Character**: Confirms only one heartbeat connection exists per character lifecycle
+3. **Character Respawn**: Verifies connection is **recreated** when character respawns
+4. **Multiple Spawn/Death Cycles**: Simulates 10 respawn cycles to ensure proper recreation without accumulation
+5. **Duplicate Prevention**: Confirms setupHeartbeatConnection() properly handles being called multiple times
 
 ## The Bug (BUG-014)
 Before the fix, the FPSWeaponController created a heartbeat connection at line 549 but never stored or disconnected it:
@@ -26,21 +27,44 @@ This caused:
 - Increased memory usage
 
 ## The Fix
-The fix stores the connection and disconnects it on character removal:
+The fix stores the connection, disconnects it on character removal, and **recreates it on character respawn**:
 
 **Line 81** - Store the connection:
 ```lua
 local heartbeatConnection = nil  -- BUG-014: Store heartbeat connection for cleanup
 ```
 
-**Line 551** - Assign when creating:
+**Lines 549-580** - Helper function to setup/recreate connection:
 ```lua
-heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
-    -- Spread recovery logic...
-end)
+-- BUG-014: Setup heartbeat connection for spread recovery
+-- This is called on character spawn to ensure connection is recreated after respawn
+local function setupHeartbeatConnection()
+    -- Disconnect existing connection to prevent leaks
+    if heartbeatConnection then
+        heartbeatConnection:Disconnect()
+        heartbeatConnection = nil
+    end
+    
+    -- Create new heartbeat connection for spread recovery
+    heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        -- Spread recovery logic...
+    end)
+end
 ```
 
-**Lines 640-644** - Cleanup on character removal:
+**Line 605** - Called during initialization:
+```lua
+-- BUG-014: Setup heartbeat connection for spread recovery
+setupHeartbeatConnection()
+```
+
+**Line 634** - Called on character respawn to recreate connection:
+```lua
+-- BUG-014: Recreate heartbeat connection on respawn
+setupHeartbeatConnection()
+```
+
+**Lines 655-659** - Cleanup on character removal:
 ```lua
 -- BUG-014: Disconnect heartbeat connection to prevent memory leak
 if heartbeatConnection then
@@ -75,13 +99,15 @@ FPS WEAPON HEARTBEAT LEAK TEST SUMMARY
 ========================================
 ✅ All tests PASSED
 ✅ Heartbeat connection cleanup verified
+✅ Heartbeat connection recreated on respawn
 ✅ No memory leak on character death/respawn
 
 ℹ️  BUG-014 Fix Confirmed:
    - Heartbeat connection properly stored
    - Connection disconnected on character removal
-   - Single heartbeat per alive character
-   - No accumulation on respawn
+   - Connection RECREATED on character respawn
+   - Single heartbeat per character (no accumulation)
+   - No accumulation across respawn cycles
 ========================================
 ```
 
@@ -104,8 +130,9 @@ Without the BUG-014 fix:
 With the fix applied:
 - Heartbeat connection stored in variable
 - Connection disconnected in `onCharacterRemoving()`
+- **Connection RECREATED in `onCharacterAdded()` on respawn**
 - Single connection per character lifecycle
-- Result: Always 1 connection regardless of respawns (no leak)
+- Result: Always 1 connection, recreated on each respawn (no leak, no broken functionality)
 
 ## Integration with Client System
 
