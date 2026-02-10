@@ -60,7 +60,7 @@ Quick reference for developers working on bug fixes from the audit.
 - [x] **BUG-010**: Fix heartbeat accumulation (Main.server.lua - heartbeat setup block) ✅ **FIXED**
   - Disconnect old heartbeat before creating new
   - Test: Single heartbeat after server reload
-  - **Fix**: Added check to disconnect existing `gameManager._heartbeatConnection` before creating new one
+  - **Fix**: Added check to disconnect existing heartbeat connection stored in `shared` table before creating new one, uses Heartbeat's built-in deltaTime
   - **Date**: 2026-02-10
   
 - [ ] **BUG-013**: Fix death tracking table leak (GameManager.lua:163-164)

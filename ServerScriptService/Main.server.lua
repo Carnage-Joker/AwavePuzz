@@ -215,23 +215,27 @@ print("[BOOT][SERVER] Phase 4 complete: Player handlers connected")
 print("[BOOT][SERVER] Phase 5: Starting main game loop...")
 
 -- Disconnect old heartbeat connection if it exists (prevents memory leak on server reload)
-if gameManager._heartbeatConnection then
-	gameManager._heartbeatConnection:Disconnect()
-	gameManager._heartbeatConnection = nil
-	print("[BOOT][SERVER] Disconnected old heartbeat connection")
+-- Store in shared table to persist across script reloads
+if not shared.AwavePuzzHeartbeat then
+	shared.AwavePuzzHeartbeat = {}
 end
 
-local lastUpdate = tick()
+if shared.AwavePuzzHeartbeat.connection then
+	shared.AwavePuzzHeartbeat.connection:Disconnect()
+	shared.AwavePuzzHeartbeat.connection = nil
+	print("[BOOT][SERVER] Disconnected old heartbeat connection from previous reload")
+end
 
 -- Create and store heartbeat connection for game loop
-gameManager._heartbeatConnection = RunService.Heartbeat:Connect(function()
-	local currentTime = tick()
-	local deltaTime = currentTime - lastUpdate
-	lastUpdate = currentTime
-
+-- Use Heartbeat's built-in deltaTime parameter instead of manual calculation
+local heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
 	-- GameManager handles waves, timers, and update logic
 	gameManager:update(deltaTime)
 end)
+
+-- Store connection in both shared (for reload persistence) and gameManager (for runtime access)
+shared.AwavePuzzHeartbeat.connection = heartbeatConnection
+gameManager._heartbeatConnection = heartbeatConnection
 
 print("[BOOT][SERVER] Phase 5 complete: Game loop running")
 
