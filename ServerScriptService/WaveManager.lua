@@ -33,6 +33,7 @@ function WaveManager:startWave()
 	self.currentWave = self.currentWave + 1
 	self.zombiesSpawned = 0
 	self.waveActive = true
+	self._spawnQueue = {} -- Clear spawn queue when starting new wave
 
 	local zombieCount = self:calculateZombiesForWave(self.currentWave)
 
@@ -90,6 +91,7 @@ function WaveManager:onZombieDeath()
 	-- Check if wave is complete
 	if self.zombiesAlive == 0 and self.zombiesSpawned >= self:calculateZombiesForWave(self.currentWave) then
 		self.waveActive = false
+		self._spawnQueue = {} -- Clear spawn queue when wave ends
 		return true -- Wave complete
 	end
 

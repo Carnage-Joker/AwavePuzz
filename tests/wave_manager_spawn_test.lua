@@ -2,7 +2,6 @@
 -- Test script to verify WaveManager queue-based spawning prevents race conditions
 -- Run this in Roblox Studio Server console to test concurrent spawn behavior
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 -- Load WaveManager
@@ -23,20 +22,28 @@ local function testConcurrentSpawning()
 	print(string.format("Started Wave %d, Max Zombies: %d", waveInfo.waveNumber, waveInfo.zombieCount))
 	
 	-- Simulate concurrent spawn requests
-	local spawnResults = {}
 	local successfulSpawns = 0
+	local spawnMutex = false
 	
-	-- Fire multiple spawn requests rapidly (simulating race condition)
+	-- Fire multiple spawn requests concurrently (simulating race condition)
 	for i = 1, waveInfo.zombieCount + 10 do -- Try to spawn more than max
-		local result = waveManager:spawnZombie()
-		table.insert(spawnResults, result)
-		if result ~= nil then
-			successfulSpawns = successfulSpawns + 1
-		end
+		task.spawn(function()
+			local result = waveManager:spawnZombie()
+			if result ~= nil then
+				-- Use atomic-like increment
+				while spawnMutex do task.wait() end
+				spawnMutex = true
+				successfulSpawns = successfulSpawns + 1
+				spawnMutex = false
+			end
+		end)
 	end
 	
+	-- Allow all spawn tasks to complete before verification
+	task.wait(0.5)
+	
 	-- Verify results
-	print(string.format("Spawn requests: %d", #spawnResults))
+	print(string.format("Spawn requests: %d", waveInfo.zombieCount + 10))
 	print(string.format("Successful spawns: %d", successfulSpawns))
 	print(string.format("Expected max zombies: %d", waveInfo.zombieCount))
 	print(string.format("Actual zombies spawned: %d", waveManager.zombiesSpawned))
@@ -118,12 +125,12 @@ local function testQueueProcessing()
 	print(string.format("Actual zombies spawned: %d", waveManager.zombiesSpawned))
 	print(string.format("Expected max zombies: %d", waveInfo.zombieCount))
 	
-	local test3Pass = waveManager.zombiesSpawned <= waveInfo.zombieCount
+	local test3Pass = waveManager.zombiesSpawned == waveInfo.zombieCount
 	if test3Pass then
 		print("✅ Test 3 PASSED: Queue prevented over-spawning under load")
 	else
-		warn(string.format("❌ Test 3 FAILED: Spawned %d zombies, exceeded max of %d", 
-			waveManager.zombiesSpawned, waveInfo.zombieCount))
+		warn(string.format("❌ Test 3 FAILED: Expected %d zombies, got %d", 
+			waveInfo.zombieCount, waveManager.zombiesSpawned))
 	end
 	
 	return test3Pass
