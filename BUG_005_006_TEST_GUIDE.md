@@ -10,21 +10,18 @@ Both bugs have automated test scripts that can be run in Roblox Studio.
 
 ### Running the Tests
 
-1. Open the project in Roblox Studio
-2. Open the Server Console (View → Output)
-3. Run the test commands below
+1. Open the project in Roblox Studio.
+2. Open the Output window (View → Output) so you can see test logs.
+3. For each test below, copy its test Script into `ServerScriptService` and press **Play** to run it.
 
 #### Test BUG-005 (Kill Tracking After Respawn)
 
-**Command:**
-```lua
-dofile(game.ServerScriptService.Parent.Parent.tests.kill_tracking_respawn_test)
-```
+**How to Run:**
 
-Or if tests are in ServerStorage:
-```lua
-require(game.ServerStorage.tests.kill_tracking_respawn_test)
-```
+1. In the Explorer, locate the `tests` folder in the project and find the `kill_tracking_respawn_test` Script.
+2. Copy (or move) `kill_tracking_respawn_test` into `ServerScriptService` as a **Script**.
+3. Press **Play** in Roblox Studio.
+4. Watch the **Output** window for the log shown below.
 
 **Expected Output:**
 ```
