@@ -556,20 +556,6 @@ local function setupBindableConnections()
 			print("[FPSHUD] ✗ AmmoUpdate received invalid data type")
 		end
 	end)
-		if DEBUG_AMMO then
-			print(string.format("[FPSHUD] AmmoUpdate bindable event received - data type=%s", typeof(data)))
-			if typeof(data) == "table" then
-				print(string.format("[FPSHUD] AmmoUpdate data - current=%s, reserve=%s, max=%s, isReloading=%s",
-					tostring(data.current), tostring(data.reserve), tostring(data.max), tostring(data.isReloading)))
-			end
-		end
-		
-		if typeof(data) == "table" then
-			updateAmmoDisplay(data.current, data.reserve, data.max, data.isReloading)
-		elseif DEBUG_AMMO then
-			print("[FPSHUD] ✗ AmmoUpdate received invalid data type")
-		end
-	end)
 
 	-- Hitmarker
 	local hitmarkerEvent = bindableFolder:FindFirstChild("Hitmarker")
