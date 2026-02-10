@@ -94,7 +94,7 @@ Due to the client-side nature of the fix, manual verification is required:
 
 ## Implementation Details
 
-The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 490-566:
+The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 493-567:
 
 ```lua
 -- BUG-008 FIX: Validate weaponStats before using to prevent race condition
@@ -108,11 +108,11 @@ if not weaponStats then
     -- Try to fetch weaponStats
     weaponStats = getWeaponStats(data.weaponId)
     
-    -- BUG-008 FIX: If still nil, retry after 1 second delay
+    -- BUG-008 FIX: If still nil, retry after configured delay
     if not weaponStats then
         if DEBUG_AMMO then
-            warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in 1s for weapon '%s'", 
-                tostring(data.weaponId)))
+            warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in %.1fs for weapon '%s'", 
+                WEAPON_STATS_RETRY_DELAY, tostring(data.weaponId)))
         end
         
         -- Capture the data locally to avoid race conditions with future AmmoUpdate events
@@ -123,8 +123,8 @@ if not weaponStats then
             max = data.max
         }
         
-        -- Schedule retry with 1 second delay
-        task.delay(1, function()
+        -- Schedule retry with configured delay
+        task.delay(WEAPON_STATS_RETRY_DELAY, function()
             -- Only retry if we're still using the same weapon
             if currentWeapon ~= capturedData.weaponId then
                 if DEBUG_AMMO then
