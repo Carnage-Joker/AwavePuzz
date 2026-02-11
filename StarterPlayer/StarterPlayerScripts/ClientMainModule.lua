@@ -656,7 +656,8 @@ local function bootClient()
 		end
 		
 		-- BUG-015: Reinitialize cure station interaction on respawn
-		if CureStationInteraction and CureStationInteraction.initialize then
+		-- Guard against double-initialization; Phase 5 already initializes this
+		if CureStationInteraction and CureStationInteraction.initialize and not CureStationInteraction.enabled then
 			CureStationInteraction:initialize()
 		end
 	end
