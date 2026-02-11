@@ -5,6 +5,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 10)
 if not Shared then
@@ -15,6 +16,12 @@ local GameConfig = require(Shared:WaitForChild("GameConfig", 5))
 local MapConfig = require(Shared:WaitForChild("MapConfig", 5))
 
 local MatchRegistry = require(script.Parent:WaitForChild("MatchRegistry", 5))
+local SessionState = require(script.Parent:WaitForChild("SessionState", 5))
+
+-- Server-only validation
+if not RunService:IsServer() then
+	error("[PortalMatchmakingService] This module can only be required on the server")
+end
 
 local PortalMatchmakingService = {}
 PortalMatchmakingService.__index = PortalMatchmakingService
@@ -24,6 +31,7 @@ function PortalMatchmakingService.new(gameManager)
 	
 	self.gameManager = gameManager
 	self.matchRegistry = MatchRegistry.new()
+	self.sessionState = SessionState.getInstance()
 	
 	-- portalId -> { queue = {players}, countdown = number, locked = bool, config = {} }
 	self.portals = {}
@@ -34,6 +42,9 @@ function PortalMatchmakingService.new(gameManager)
 	-- BUG-006 FIX: Per-portal debounce to prevent queue corruption
 	-- Key format: "userId_portalId" -> tick()
 	self.touchDebounce = {}
+	
+	-- Rate limiting for remote calls (userId -> lastCallTime)
+	self.remoteRateLimits = {}
 	
 	-- Countdown tasks (portalId -> task object for cancellation)
 	self.countdownTasks = {}
@@ -54,6 +65,9 @@ function PortalMatchmakingService.new(gameManager)
 	-- Cleanup accumulator for throttled cleanup
 	self._cleanupAccumulator = 0
 	
+	-- Last queue validation time per portal (for periodic validation)
+	self._lastQueueValidation = {}
+	
 	print("[PortalMatchmakingService] Initialized")
 	
 	return self
@@ -70,8 +84,23 @@ function PortalMatchmakingService:setupRemoteEvents()
 		"PortalQueueLeft"
 	})
 	
-	-- Hook client requests to leave queue
+	-- Hook client requests to leave queue with rate limiting
 	self.remoteEvents.PortalLeaveQueue.OnServerEvent:Connect(function(player)
+		-- Rate limit: 0.5s cooldown per player
+		local now = tick()
+		local lastCall = self.remoteRateLimits[player.UserId]
+		if lastCall and (now - lastCall) < 0.5 then
+			warn(string.format("[PortalMatchmakingService] SECURITY: Rate limit exceeded for player %s", player.Name))
+			return
+		end
+		self.remoteRateLimits[player.UserId] = now
+		
+		-- Validate player is actually queued
+		if not self.playerQueues[player.UserId] then
+			warn(string.format("[PortalMatchmakingService] SECURITY: Player %s tried to leave queue but wasn't queued", player.Name))
+			return
+		end
+		
 		self:onPlayerLeaveQueue(player)
 	end)
 	
@@ -411,6 +440,9 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		joinTime = tick()
 	}
 	
+	-- Update SessionState to track queue membership
+	self.sessionState:setQueued(player, portalId)
+	
 	print(string.format("[PortalMatchmakingService] Player %s joined portal %s queue (%d/%d)", 
 		player.Name, portalId, #portal.queue, self.maxPlayersPerMatch))
 	
@@ -456,8 +488,9 @@ function PortalMatchmakingService:removePlayerFromQueue(player, portalId)
 		end
 	end
 	
-	-- Remove player queue mapping
+	-- Remove player queue mapping and SessionState
 	self.playerQueues[player.UserId] = nil
+	self.sessionState:setQueued(player, nil)
 	
 	-- Send leave notification to player
 	if player and player.Parent then
@@ -542,15 +575,19 @@ function PortalMatchmakingService:runCountdown(portalId)
 	local portal = self.portals[portalId]
 	if not portal then return end
 	
+	-- Calculate effective cancel threshold once (consistent rule)
+	local effectiveCancelThreshold = math.min(portal.config.minPlayers, self.countdownCancelThreshold)
+	
 	while portal.countdown > 0 do
 		task.wait(1)
 		
 		portal.countdown = portal.countdown - 1
 		
-		-- Check if we still have enough players
-		if #portal.queue < self.countdownCancelThreshold then
+		-- Check if we still have enough players (use consistent threshold)
+		if #portal.queue < effectiveCancelThreshold then
 			portal.countdown = 0
-			print(string.format("[PortalMatchmakingService] Countdown cancelled for portal %s", portalId))
+			print(string.format("[PortalMatchmakingService] Countdown cancelled for portal %s (queue %d < required %d)", 
+				portalId, #portal.queue, effectiveCancelThreshold))
 			self:broadcastQueueStatus(portalId)
 			return
 		end
@@ -599,6 +636,8 @@ function PortalMatchmakingService:launchMatch(portalId)
 		table.remove(portal.queue, i)
 		if player then
 			self.playerQueues[player.UserId] = nil
+			-- Clear queue status in SessionState
+			self.sessionState:setQueued(player, nil)
 		end
 	end
 	
@@ -640,6 +679,8 @@ function PortalMatchmakingService:launchMatch(portalId)
 						portalId = portalId,
 						joinTime = tick()
 					}
+					-- Restore queue status in SessionState
+					self.sessionState:setQueued(player, portalId)
 				end
 			end
 			self:broadcastQueueStatus(portalId)
@@ -661,6 +702,8 @@ function PortalMatchmakingService:launchMatch(portalId)
 					portalId = portalId,
 					joinTime = tick()
 				}
+				-- Restore queue status in SessionState
+				self.sessionState:setQueued(player, portalId)
 			end
 		end
 		self:broadcastQueueStatus(portalId)
@@ -683,6 +726,8 @@ function PortalMatchmakingService:launchMatch(portalId)
 						portalId = portalId,
 						joinTime = tick()
 					}
+					-- Restore queue status in SessionState
+					self.sessionState:setQueued(player, portalId)
 				end
 			end
 			self:broadcastQueueStatus(portalId)
@@ -788,6 +833,65 @@ function PortalMatchmakingService:update(dt)
 	if self._cleanupAccumulator >= CLEANUP_INTERVAL then
 		self._cleanupAccumulator = 0
 		self.matchRegistry:cleanupInactiveMatches()
+	end
+	
+	-- Periodic queue validation (fallback for unreliable TouchEnded)
+	-- Check every 1-2 seconds per portal
+	local now = tick()
+	for portalId, portal in pairs(self.portals) do
+		local lastValidation = self._lastQueueValidation[portalId] or 0
+		if (now - lastValidation) >= 2 then
+			self._lastQueueValidation[portalId] = now
+			self:validatePortalQueue(portalId)
+		end
+	end
+end
+
+-- Validate portal queue: remove players who are invalid
+-- (no character, too far from portal, left game, already in match)
+function PortalMatchmakingService:validatePortalQueue(portalId)
+	local portal = self.portals[portalId]
+	if not portal then return end
+	
+	-- Don't validate during active countdown/launch
+	if portal.locked or portal.countdown > 0 then
+		return
+	end
+	
+	local toRemove = {}
+	
+	for i, player in ipairs(portal.queue) do
+		-- Player left game
+		if not player or not player.Parent then
+			table.insert(toRemove, i)
+		-- Player has no character
+		elseif not player.Character then
+			table.insert(toRemove, i)
+		-- Player is already in a match (shouldn't happen, but defensive)
+		elseif self.matchRegistry:isPlayerInMatch(player) then
+			table.insert(toRemove, i)
+		-- Player moved far from portal (optional: could add distance check)
+		-- For now, we trust TouchEnded for this case
+		end
+	end
+	
+	-- Remove invalid players (iterate backwards to maintain indices)
+	for i = #toRemove, 1, -1 do
+		local idx = toRemove[i]
+		local player = portal.queue[idx]
+		table.remove(portal.queue, idx)
+		if player and player.UserId then
+			self.playerQueues[player.UserId] = nil
+			self.sessionState:setQueued(player, nil)
+			print(string.format("[PortalMatchmakingService] Removed invalid player %s from portal %s queue (validation)", 
+				player.Name or "Unknown", portalId))
+		end
+	end
+	
+	-- If we removed anyone, update UI and check countdown
+	if #toRemove > 0 then
+		self:broadcastQueueStatus(portalId)
+		self:checkCancelCountdown(portalId)
 	end
 end
 
