@@ -240,7 +240,16 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-_connections.scaleChanged = UIScaleManager.onScaleChanged(updateUIScaling)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			-- UIScaleManager is expected to return an unsubscribe callback
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end,
+}
 
 -- State
 local cureProgress = 0
