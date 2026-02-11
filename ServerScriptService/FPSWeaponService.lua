@@ -479,7 +479,8 @@ function FPSWeaponService:startAmmoValidationLoop()
 	
 	self._isRunning = true
 	
-	task.spawn(function()
+	-- BUG-001: Store the spawned task handle for immediate cancellation during cleanup
+	self._ammoValidationTask = task.spawn(function()
 		while self._isRunning do
 			task.wait(AMMO_SYNC_INTERVAL)
 			
@@ -561,6 +562,12 @@ function FPSWeaponService:cleanup()
 	
 	-- Stop the validation loop
 	self._isRunning = false
+	
+	-- Cancel the validation loop task immediately for responsive termination
+	if self._ammoValidationTask then
+		task.cancel(self._ammoValidationTask)
+		self._ammoValidationTask = nil
+	end
 	
 	-- Disconnect player removing connection
 	if self.playerRemovingConn then
