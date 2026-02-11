@@ -494,16 +494,27 @@ function WeaponService:handleWeaponFire(player, payload)
 			local hitDirection = result.Position - head.Position
 			local hitLosResult = Workspace:Raycast(head.Position, hitDirection, hitLosParams)
 			
-			-- If we hit something before the target, it's likely a wall shot
+			-- If we hit something before the target, it's likely a wall shot.
+			-- However, allow the LOS ray to intersect other parts of the same target model.
 			if hitLosResult and hitLosResult.Instance ~= result.Instance then
 				local distanceToTarget = hitDirection.Magnitude
 				local distanceToObstacle = hitLosResult.Distance
 				
-				-- Allow small tolerance for edge cases
-				if (distanceToObstacle + 2) < distanceToTarget then
-					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - no LOS to hit position (blocked by %s)", 
-						player.Name, hitLosResult.Instance:GetFullName()))
-					return
+				-- Determine if the obstacle belongs to the same model as the original hit
+				local targetInstance = result.Instance
+				local targetModel = targetInstance and targetInstance:FindFirstAncestorOfClass("Model")
+				local obstacleInstance = hitLosResult.Instance
+				local obstacleModel = obstacleInstance and obstacleInstance:FindFirstAncestorOfClass("Model")
+				local isSameTargetModel = targetModel ~= nil and targetModel == obstacleModel
+				
+				-- Only treat this as blocked LOS when the obstacle is not part of the target model
+				if not isSameTargetModel then
+					-- Allow small tolerance for edge cases
+					if (distanceToObstacle + 2) < distanceToTarget then
+						warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - no LOS to hit position (blocked by %s)", 
+							player.Name, hitLosResult.Instance:GetFullName()))
+						return
+					end
 				end
 			end
 		end
