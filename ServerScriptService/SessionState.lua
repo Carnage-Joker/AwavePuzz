@@ -5,11 +5,16 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Server-only validation
 if not RunService:IsServer() then
 	error("[SessionState] This module can only be required on the server")
 end
+
+-- Load GameConfig for DEBUG flag
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
+local GameConfig = SharedFolder and require(SharedFolder:WaitForChild("GameConfig", 5))
 
 local SessionState = {}
 SessionState.__index = SessionState
@@ -35,7 +40,9 @@ function SessionState.new()
 		self:onPlayerRemoving(player)
 	end)
 	
-	print("[SessionState] Initialized")
+	if GameConfig and GameConfig.DEBUG then
+		print("[SessionState] Initialized")
+	end
 	
 	return self
 end
@@ -54,7 +61,9 @@ function SessionState:initializePlayer(player)
 	
 	-- Don't override existing context if player reconnects
 	if self._sessions[userId] then
-		print(string.format("[SessionState] Player %s (%d) already has session context", player.Name, userId))
+		if GameConfig and GameConfig.DEBUG then
+			print(string.format("[SessionState] Player %s (%d) already has session context", player.Name, userId))
+		end
 		return
 	end
 	
@@ -69,7 +78,9 @@ function SessionState:initializePlayer(player)
 		lastUpdate = tick()
 	}
 	
-	print(string.format("[SessionState] Initialized session for %s (%d)", player.Name, userId))
+	if GameConfig and GameConfig.DEBUG then
+		print(string.format("[SessionState] Initialized session for %s (%d)", player.Name, userId))
+	end
 end
 
 --[[
@@ -105,7 +116,9 @@ function SessionState:setPassedTitle(player, passed)
 	context.passedTitle = passed
 	context.lastUpdate = tick()
 	
-	print(string.format("[SessionState] %s passedTitle = %s", player.Name, tostring(passed)))
+	if GameConfig and GameConfig.DEBUG then
+		print(string.format("[SessionState] %s passedTitle = %s", player.Name, tostring(passed)))
+	end
 	return true
 end
 
@@ -124,10 +137,12 @@ function SessionState:setQueued(player, portalId)
 	context.portalId = portalId
 	context.lastUpdate = tick()
 	
-	if portalId then
-		print(string.format("[SessionState] %s queued for portal %s", player.Name, portalId))
-	else
-		print(string.format("[SessionState] %s left queue", player.Name))
+	if GameConfig and GameConfig.DEBUG then
+		if portalId then
+			print(string.format("[SessionState] %s queued for portal %s", player.Name, portalId))
+		else
+			print(string.format("[SessionState] %s left queue", player.Name))
+		end
 	end
 	
 	return true
@@ -150,11 +165,13 @@ function SessionState:setMatch(player, matchId, participant)
 	context.isParticipant = participant or false
 	context.lastUpdate = tick()
 	
-	if matchId then
-		print(string.format("[SessionState] %s in match %s (participant=%s)", 
-			player.Name, matchId, tostring(participant)))
-	else
-		print(string.format("[SessionState] %s left match", player.Name))
+	if GameConfig and GameConfig.DEBUG then
+		if matchId then
+			print(string.format("[SessionState] %s in match %s (participant=%s)", 
+				player.Name, matchId, tostring(participant)))
+		else
+			print(string.format("[SessionState] %s left match", player.Name))
+		end
 	end
 	
 	return true
@@ -220,7 +237,9 @@ function SessionState:onPlayerRemoving(player)
 	local userId = player.UserId
 	
 	if self._sessions[userId] then
-		print(string.format("[SessionState] Cleaning up session for %s (%d)", player.Name, userId))
+		if GameConfig and GameConfig.DEBUG then
+			print(string.format("[SessionState] Cleaning up session for %s (%d)", player.Name, userId))
+		end
 		self._sessions[userId] = nil
 	end
 end

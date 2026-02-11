@@ -101,6 +101,10 @@ function WeaponService.new(playerManager, allianceService, gameManager)
 	self.FIRE_RATE_WINDOW = 1 -- 1 second window
 	self.MAX_FIRES_PER_WINDOW = 20 -- Max 20 fires per second (prevents spam)
 	
+	-- Security warning throttling: prevent log flooding from intentional spam
+	self.securityWarnings = {} -- userId -> { lastWarn = tick(), warnType = string }
+	self.SECURITY_WARN_COOLDOWN = 5 -- Only warn once per 5 seconds per player per type
+	
 	self:setupRemoteEvents()
 	return self
 end
@@ -169,7 +173,10 @@ end
 
 
 function WeaponService:removePlayer(player)
-	self.playerWeaponState[player.UserId] = nil
+	local userId = player.UserId
+	self.playerWeaponState[userId] = nil
+	self.fireRateLimit[userId] = nil
+	self.securityWarnings[userId] = nil
 end
 
 function WeaponService:handleEquipRequest(player, weaponId)
@@ -250,6 +257,30 @@ function WeaponService:getModifiedStats(player, weaponId)
 	return modified
 end
 
+-- Helper: Throttled security warning to prevent log flooding from intentional exploits
+-- Only warns once per player per warning type within cooldown period
+function WeaponService:_throttledSecurityWarn(userId, warnType, message)
+	-- Only enable in debug mode or gate behind security telemetry
+	if not GameConfig.DEBUG then
+		return
+	end
+	
+	local now = tick()
+	local warnData = self.securityWarnings[userId]
+	local key = tostring(userId) .. "_" .. warnType
+	
+	if not warnData then
+		self.securityWarnings[userId] = {}
+		warnData = self.securityWarnings[userId]
+	end
+	
+	local lastWarn = warnData[key]
+	if not lastWarn or (now - lastWarn) >= self.SECURITY_WARN_COOLDOWN then
+		warn(message)
+		warnData[key] = now
+	end
+end
+
 function WeaponService:handleWeaponFire(player, payload)
 	if typeof(payload) ~= "table" then
 		warn("[WeaponService] Invalid payload from " .. player.Name)
@@ -278,8 +309,9 @@ function WeaponService:handleWeaponFire(player, payload)
 			
 			-- Check if exceeded limit
 			if rateLimitData.count > self.MAX_FIRES_PER_WINDOW then
-				warn(string.format("[WeaponService] SECURITY: Rate limit exceeded for player %s (%d fires in %ds)", 
-					player.Name, rateLimitData.count, self.FIRE_RATE_WINDOW))
+				self:_throttledSecurityWarn(userId, "rate_limit", 
+					string.format("[WeaponService] SECURITY: Rate limit exceeded for player %s (%d fires in %ds)", 
+						player.Name, rateLimitData.count, self.FIRE_RATE_WINDOW))
 				return
 			end
 		end
@@ -342,8 +374,9 @@ function WeaponService:handleWeaponFire(player, payload)
 	local requiredDelay = math.max(weaponFireRate, MINIMUM_FIRE_DELAY)
 	
 	if timeSinceLastShot < requiredDelay then
-		warn(string.format("[WeaponService] SECURITY: Shot too fast from %s (%.3fs since last, required %.3fs)", 
-			player.Name, timeSinceLastShot, requiredDelay))
+		self:_throttledSecurityWarn(userId, "fire_too_fast",
+			string.format("[WeaponService] SECURITY: Shot too fast from %s (%.3fs since last, required %.3fs)", 
+				player.Name, timeSinceLastShot, requiredDelay))
 		return
 	end
 	

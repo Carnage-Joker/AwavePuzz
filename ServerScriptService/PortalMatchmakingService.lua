@@ -903,8 +903,9 @@ function PortalMatchmakingService:onPlayerDisconnect(player)
 	-- Remove from any match
 	self.matchRegistry:removePlayerFromMatch(player)
 	
-	-- Clear debounce
+	-- Clear debounce and rate limits
 	self.touchDebounce[player.UserId] = nil
+	self.remoteRateLimits[player.UserId] = nil
 end
 
 -- Get match registry
