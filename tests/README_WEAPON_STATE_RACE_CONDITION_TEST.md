@@ -74,7 +74,7 @@ Due to the client-side nature of the fix, manual verification is required:
 4. **Check UI**:
    - Ammo counter should display correctly
    - Weapon name should be visible
-   - Max ammo should be correct (not default value)
+   - Max ammo should update to the correct value after retry (may briefly show default value while weaponStats loads)
 
 ## Expected Results
 
