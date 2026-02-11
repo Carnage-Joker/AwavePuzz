@@ -99,9 +99,9 @@ local mainCloseCorner = Instance.new("UICorner")
 mainCloseCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 mainCloseCorner.Parent = mainCloseButton
 
-mainCloseButton.MouseButton1Click:Connect(function()
+table.insert(_connections, mainCloseButton.MouseButton1Click:Connect(function()
 	mainFrame.Visible = false
-end)
+end))
 
 -- Player List (ScrollingFrame)
 local playerList = Instance.new("ScrollingFrame")
@@ -261,12 +261,24 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- NOTE: Must store unsubscribe function after _connections is declared below
 
 -- State
 local myAlliances = {}
 local pendingRequest = nil
 local allyHighlights = {} -- Track highlight objects for allies
+local _connections = {}
+
+-- Now register scale changes with proper cleanup tracking
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 -- Functions
 local function showNotification(message, duration)
@@ -439,7 +451,7 @@ end
 
 -- Toggle UI with H key (Team/Help) - Changed from LeftShift to avoid Sprint conflict
 local UserInputService = game:GetService("UserInputService")
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+table.insert(_connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
 
@@ -456,7 +468,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			ModalManager.remove("AllianceUI")
 		end
 	end
-end)
+end))
 
 -- Register input action with InputActionRegistry
 InputActionRegistry.register("AllianceToggle", "AllianceUI", {Enum.KeyCode.H}, InputActionRegistry.Priority.TOGGLE_UI)
@@ -466,7 +478,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Alliance Update
 local allianceUpdateEvent = remoteEvents:WaitForChild("AllianceUpdate")
-allianceUpdateEvent.OnClientEvent:Connect(function(data)
+table.insert(_connections, allianceUpdateEvent.OnClientEvent:Connect(function(data)
 	if data.type == "request" then
 		-- Show alliance request
 		pendingRequest = data.from
@@ -512,21 +524,21 @@ allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		-- Error occurred
 		showNotification(data.message, 3)
 	end
-end)
+end))
 
 -- Betrayal Started Event
 local betrayalStartedEvent = remoteEvents:WaitForChild("BetrayalStarted")
-betrayalStartedEvent.OnClientEvent:Connect(function(data)
+table.insert(_connections, betrayalStartedEvent.OnClientEvent:Connect(function(data)
 	if data.type == "betrayer" then
 		showNotification("Betrayal initiated! Eliminate " .. data.victim .. " in " .. data.duration .. "s!", 5)
 	elseif data.type == "victim" then
 		showNotification("You've been betrayed by " .. data.betrayer .. "! Survive " .. data.duration .. "s!", 5)
 	end
-end)
+end))
 
 -- Betrayal Outcome Event
 local betrayalOutcomeEvent = remoteEvents:WaitForChild("BetrayalOutcome")
-betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
+table.insert(_connections, betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
 	if data.type == "success" then
 		showNotification(data.message, 5)
 	elseif data.type == "victory" then
@@ -536,10 +548,10 @@ betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
 	elseif data.type == "stalemate_victim" then
 		showNotification(data.message, 5)
 	end
-end)
+end))
 
 -- Accept button handler
-acceptButton.MouseButton1Click:Connect(function()
+table.insert(_connections, acceptButton.MouseButton1Click:Connect(function()
 	if pendingRequest then
 		local respondEvent = remoteEvents:FindFirstChild("RespondAlliance")
 		if respondEvent then
@@ -548,10 +560,10 @@ acceptButton.MouseButton1Click:Connect(function()
 		pendingRequest = nil
 		requestFrame.Visible = false
 	end
-end)
+end))
 
 -- Decline button handler
-declineButton.MouseButton1Click:Connect(function()
+table.insert(_connections, declineButton.MouseButton1Click:Connect(function()
 	if pendingRequest then
 		local respondEvent = remoteEvents:FindFirstChild("RespondAlliance")
 		if respondEvent then
@@ -560,10 +572,10 @@ declineButton.MouseButton1Click:Connect(function()
 		pendingRequest = nil
 		requestFrame.Visible = false
 	end
-end)
+end))
 
 -- Listen for player changes
-Players.PlayerAdded:Connect(function(newPlayer)
+table.insert(_connections, Players.PlayerAdded:Connect(function(newPlayer)
 	task.wait(0.5)
 	if mainFrame.Visible then
 		updatePlayerList()
@@ -572,15 +584,15 @@ Players.PlayerAdded:Connect(function(newPlayer)
 	if myAlliances[newPlayer.UserId] then
 		addAllyHighlight(newPlayer)
 	end
-end)
+end))
 
-Players.PlayerRemoving:Connect(function(removedPlayer)
+table.insert(_connections, Players.PlayerRemoving:Connect(function(removedPlayer)
 	myAlliances[removedPlayer.UserId] = nil
 	removeAllyHighlight(removedPlayer)
 	if mainFrame.Visible then
 		updatePlayerList()
 	end
-end)
+end))
 
 -- Initial update
 updatePlayerList()
@@ -592,4 +604,13 @@ print("AllianceUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local AllianceUI = {}
+
+-- Cleanup method
+function AllianceUI.cleanup()
+	for _, connection in ipairs(_connections) do
+		connection:Disconnect()
+	end
+	_connections = {}
+end
+
 return AllianceUI

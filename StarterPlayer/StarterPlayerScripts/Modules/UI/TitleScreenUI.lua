@@ -36,6 +36,7 @@ function TitleScreenUI.new()
 	self.remotes = nil -- Will be set via bindRemotes()
 	self.loadingComplete = false -- Track loading completion
 	self.currentLoadingProgress = 0 -- Current loading progress (0-100)
+	self._connections = {} -- Track all event connections for cleanup
 	
 	self:createUI()
 	
@@ -90,7 +91,7 @@ function TitleScreenUI:bindRemotes(remotes)
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
-		self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+		local conn = self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
 			-- ✅ NEW: Track current state for defensive guards
 			if stateData and stateData.state then
 				self._currentState = stateData.state
@@ -107,13 +108,14 @@ function TitleScreenUI:bindRemotes(remotes)
 				end
 			end
 		end)
+		table.insert(self._connections, conn)
 	end
 	
 	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	-- NOTE: These are kept for backward compatibility but should not create duplicates
 	-- The state-driven system (GameStateUpdate) is the primary mechanism
 	if self.remotes.ShowTitleScreen then
-		self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
+		local conn = self.remotes.ShowTitleScreen.OnClientEvent:Connect(function()
 			-- ✅ GUARD: Prevent duplicate showing if already active from state system
 			if self.isActive then
 				print("[TitleScreenUI] Received ShowTitleScreen event but already active, ignoring (prevents duplication)")
@@ -122,13 +124,15 @@ function TitleScreenUI:bindRemotes(remotes)
 			print("[TitleScreenUI] Received ShowTitleScreen event (legacy)")
 			self:show()
 		end)
+		table.insert(self._connections, conn)
 	end
 	
 	if self.remotes.HideTitleScreen then
-		self.remotes.HideTitleScreen.OnClientEvent:Connect(function()
+		local conn = self.remotes.HideTitleScreen.OnClientEvent:Connect(function()
 			print("[TitleScreenUI] Received HideTitleScreen event (legacy)")
 			self:hide()
 		end)
+		table.insert(self._connections, conn)
 	end
 	
 	print("[TitleScreenUI] Remotes bound and ready (state-driven + legacy)")
@@ -626,6 +630,47 @@ function TitleScreenUI:startPromptPulse()
 		-- Final cleanup
 		self.pulseTweens = {}
 	end)
+end
+
+-- Cleanup all connections and resources
+function TitleScreenUI:cleanup()
+	print("[TitleScreenUI] Cleaning up all connections and resources")
+	
+	-- Disconnect input connection
+	if self.inputConnection then
+		self.inputConnection:Disconnect()
+		self.inputConnection = nil
+	end
+	
+	-- Disconnect all tracked RemoteEvent connections
+	for _, conn in ipairs(self._connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	self._connections = {}
+	
+	-- Cancel pulse thread
+	if self.pulseThread then
+		task.cancel(self.pulseThread)
+		self.pulseThread = nil
+	end
+	
+	-- Cancel pulse tweens
+	for _, tween in ipairs(self.pulseTweens) do
+		if tween then
+			tween:Cancel()
+		end
+	end
+	self.pulseTweens = {}
+	
+	-- Destroy ScreenGui
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
+	
+	self.isActive = false
 end
 
 -- Module interface

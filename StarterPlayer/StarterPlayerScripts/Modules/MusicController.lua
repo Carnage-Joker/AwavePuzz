@@ -21,6 +21,7 @@ function MusicController.new()
 
 	self.currentTrack = nil
 	self.tracks = {}
+	self._connections = {}
 
 	self:createTracks()
 	self:setupRemoteEvents()
@@ -61,16 +62,16 @@ function MusicController:setupRemoteEvents()
 
 	-- Listen for game state changes
 	if self.remoteEvents.GameStateUpdate then
-		self.remoteEvents.GameStateUpdate.OnClientEvent:Connect(function(data)
+		table.insert(self._connections, self.remoteEvents.GameStateUpdate.OnClientEvent:Connect(function(data)
 			self:onGameStateChange(data.state)
-		end)
+		end))
 	end
 
 	-- Listen for wave changes for intensity
 	if self.remoteEvents.WaveAnnounce then
-		self.remoteEvents.WaveAnnounce.OnClientEvent:Connect(function(data)
+		table.insert(self._connections, self.remoteEvents.WaveAnnounce.OnClientEvent:Connect(function(data)
 			self:onWaveStart(data.waveNumber)
-		end)
+		end))
 	end
 end
 
@@ -217,6 +218,17 @@ function MusicController:unmuteAll()
 			end
 		end
 	end
+end
+
+function MusicController:cleanup()
+	-- Disconnect all connections
+	for _, connection in ipairs(self._connections) do
+		connection:Disconnect()
+	end
+	self._connections = {}
+
+	-- Stop all tracks
+	self:stopAllTracks(0)
 end
 
 --------------------------------------------------------------------------------

@@ -31,6 +31,9 @@ local SoundAssets = AssetConfig.Sounds
 
 local FPSAudioController = {}
 
+-- Connection tracking for cleanup
+local _connections = {}
+
 -- Volume settings (0-1)
 local volumes = {
 	master = FPSConfig.Audio.MasterVolume,
@@ -343,8 +346,8 @@ end
 if player.Character then
 	onCharacterAdded(player.Character)
 end
-player.CharacterAdded:Connect(onCharacterAdded)
-player.CharacterRemoving:Connect(onCharacterRemoving)
+table.insert(_connections, player.CharacterAdded:Connect(onCharacterAdded))
+table.insert(_connections, player.CharacterRemoving:Connect(onCharacterRemoving))
 --------------------------------------------------------------------------------
 -- UI SOUNDS
 --------------------------------------------------------------------------------
@@ -398,53 +401,53 @@ local function setupBindableConnections()
 	-- Weapon fired
 	local weaponFiredEvent = bindableFolder:FindFirstChild("WeaponFired")
 	if weaponFiredEvent then
-		weaponFiredEvent.Event:Connect(function(data)
+		table.insert(_connections, weaponFiredEvent.Event:Connect(function(data)
 			if typeof(data) == "table" then
 				FPSAudioController.playFireSound(data.weaponId)
 			end
-		end)
+		end))
 	end
 
 	-- Reload
 	local reloadStartedEvent = bindableFolder:FindFirstChild("ReloadStarted")
 	if reloadStartedEvent then
-		reloadStartedEvent.Event:Connect(function(data)
+		table.insert(_connections, reloadStartedEvent.Event:Connect(function(data)
 			if typeof(data) == "table" then
 				FPSAudioController.playReloadSound(data.weaponId)
 			end
-		end)
+		end))
 	end
 
 	-- Empty click
 	local emptyClickEvent = bindableFolder:FindFirstChild("EmptyClick")
 	if emptyClickEvent then
-		emptyClickEvent.Event:Connect(function()
+		table.insert(_connections, emptyClickEvent.Event:Connect(function()
 			FPSAudioController.playEmptyClick()
-		end)
+		end))
 	end
 
 	-- Hitmarker
 	local hitmarkerEvent = bindableFolder:FindFirstChild("Hitmarker")
 	if hitmarkerEvent then
-		hitmarkerEvent.Event:Connect(function(data)
+		table.insert(_connections, hitmarkerEvent.Event:Connect(function(data)
 			if typeof(data) == "table" then
 				FPSAudioController.playHitmarkerSound(data.isHeadshot, data.isKill)
 			end
-		end)
+		end))
 	end
 
 	-- Damage taken
 	local damageTakenEvent = bindableFolder:FindFirstChild("DamageTaken")
 	if damageTakenEvent then
-		damageTakenEvent.Event:Connect(function()
+		table.insert(_connections, damageTakenEvent.Event:Connect(function()
 			FPSAudioController.playDamageSound()
-		end)
+		end))
 	end
 
 	-- Settings changed
 	local settingsEvent = bindableFolder:FindFirstChild("SettingsChanged")
 	if settingsEvent then
-		settingsEvent.Event:Connect(function(data)
+		table.insert(_connections, settingsEvent.Event:Connect(function(data)
 			if typeof(data) == "table" then
 				if data.masterVolume then
 					FPSAudioController.setMasterVolume(data.masterVolume)
@@ -456,7 +459,7 @@ local function setupBindableConnections()
 					FPSAudioController.setMusicVolume(data.musicVolume)
 				end
 			end
-		end)
+		end))
 	end
 end
 
@@ -467,22 +470,22 @@ end
 local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
 local healthEvent = remoteEventsFolder:FindFirstChild("PlayerHealthUpdate")
 if healthEvent then
-	healthEvent.OnClientEvent:Connect(function(data)
+	table.insert(_connections, healthEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" then
 			local healthPercent = ((data.current or 100) / (data.max or 100)) * 100
 			local isLow = healthPercent <= FPSConfig.HUD.LowHealthThreshold
 			FPSAudioController.setLowHealth(isLow)
 		end
-	end)
+	end))
 end
 
 --------------------------------------------------------------------------------
 -- UPDATE LOOP
 --------------------------------------------------------------------------------
 
-RunService.Heartbeat:Connect(function(deltaTime)
+table.insert(_connections, RunService.Heartbeat:Connect(function(deltaTime)
 	updateFootsteps()
-end)
+end))
 
 --------------------------------------------------------------------------------
 -- INITIALIZATION
@@ -517,6 +520,26 @@ end
 
 function FPSAudioController.onCharacterRemoving()
 	-- Cleanup
+end
+
+function FPSAudioController.cleanup()
+	-- Disconnect all connections
+	for _, connection in ipairs(_connections) do
+		connection:Disconnect()
+	end
+	table.clear(_connections)
+	
+	-- Cleanup heartbeat sound
+	cleanupHeartbeatSound()
+	
+	-- Cleanup active sounds
+	for _, sound in pairs(activeSounds) do
+		if sound and sound:IsA("Sound") then
+			sound:Stop()
+			sound:Destroy()
+		end
+	end
+	table.clear(activeSounds)
 end
 
 return FPSAudioController

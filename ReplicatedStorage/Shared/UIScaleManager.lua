@@ -248,10 +248,24 @@ function UIScaleManager.applyScaling(guiElement, options)
 end
 
 -- Register a callback to be called when screen size changes
+-- Returns an unsubscribe function to remove the callback
 function UIScaleManager.onScaleChanged(callback)
 	if type(callback) == "function" then
 		table.insert(updateCallbacks, callback)
+		
+		-- Return unsubscribe function
+		return function()
+			for i, cb in ipairs(updateCallbacks) do
+				if cb == callback then
+					table.remove(updateCallbacks, i)
+					break
+				end
+			end
+		end
 	end
+	
+	-- Return no-op function if callback is invalid
+	return function() end
 end
 
 -- Check if current device is mobile
