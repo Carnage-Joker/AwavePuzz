@@ -6,6 +6,9 @@
 
 local ClientMainModule = {}
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 local function checkInitialized(script)
 	if script:GetAttribute("Initialized") then
 		warn("[ClientMain] Already initialized, skipping duplicate execution")
@@ -597,7 +600,7 @@ local function bootClient()
 	
 	-- Connect to server GameStateUpdate
 	if remotes.GameStateUpdate then
-		remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
+		_connections.gameStateUpdate = remotes.GameStateUpdate.OnClientEvent:Connect(function(data)
 			if data and data.state then
 				applyState(data.state)
 			end
@@ -708,8 +711,9 @@ local function bootClient()
 	if loadingManager then loadingManager:updatePhase("CharacterHandlers", 66) end
 	
 	-- Connect character events
-	player.CharacterAdded:Connect(onCharacterAdded)
-	player.CharacterRemoving:Connect(onCharacterRemoving)
+	-- BUG-007 FIX: Store character lifecycle connections
+	_connections.characterAdded = player.CharacterAdded:Connect(onCharacterAdded)
+	_connections.characterRemoving = player.CharacterRemoving:Connect(onCharacterRemoving)
 	
 	-- Handle existing character
 	if player.Character then
@@ -751,11 +755,57 @@ local function bootClient()
 	print(string.format("[BOOT][CLIENT] Player: %s", player.Name))
 	print(string.format("[BOOT][CLIENT] Version: %s", RemoteRegistry.VERSION))
 	print("=== [BOOT][CLIENT] Client initialization complete ===")
+	
+	-- BUG-007 FIX: Setup cleanup orchestration
+	-- Call cleanup when player leaves to prevent memory leaks
+	Players.LocalPlayer.AncestryChanged:Connect(function(_, parent)
+		if parent == nil then
+			-- Player is leaving, cleanup all modules
+			print("[BOOT][CLIENT] Player leaving, initiating cleanup...")
+			
+			-- Cleanup core modules
+			if Camera and Camera.cleanup then pcall(Camera.cleanup) end
+			if Movement and Movement.cleanup then pcall(Movement.cleanup) end
+			if WeaponController and WeaponController.cleanup then pcall(WeaponController.cleanup) end
+			if AnimationController and AnimationController.cleanup then pcall(AnimationController.cleanup) end
+			if AudioController and AudioController.cleanup then pcall(AudioController.cleanup) end
+			if MenuController and MenuController.cleanup then pcall(MenuController.cleanup) end
+			if MusicController and MusicController.cleanup then pcall(MusicController.cleanup) end
+			if StaminaClient and StaminaClient.cleanup then pcall(StaminaClient.cleanup) end
+			if VoiceoverController and VoiceoverController.cleanup then pcall(VoiceoverController.cleanup) end
+			if CureStationInteraction and CureStationInteraction.cleanup then pcall(CureStationInteraction.cleanup) end
+			
+			-- Cleanup UI modules
+			for moduleName, module in pairs(UI) do
+				if type(module) == "table" and module.cleanup then
+					pcall(module.cleanup)
+				end
+			end
+			
+			-- Cleanup ClientMainModule's own connections
+			ClientMainModule.cleanup()
+			
+			print("[BOOT][CLIENT] Cleanup complete")
+		end
+	end)
 end
 
 function ClientMainModule.initialize()
 	if checkInitialized(script) then return end
 	bootClient()
+end
+
+-- BUG-007 FIX: Cleanup method to disconnect all client connections
+function ClientMainModule.cleanup()
+	-- Disconnect all connections tracked in this module
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	print("[ClientMain] Cleanup completed - all connections disconnected")
 end
 
 return ClientMainModule

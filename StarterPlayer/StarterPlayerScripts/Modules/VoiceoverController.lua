@@ -29,6 +29,7 @@ function VoiceoverController.new()
 	self.isPlaying = false
 	self.currentSound = nil
 	self.currentTween = nil
+	self._connections = {}
 	
 	self.screenGui = nil
 	self.subtitleFrame = nil
@@ -48,16 +49,16 @@ function VoiceoverController:setupRemoteEvents()
 	
 	-- Listen for voiceover playback requests
 	if self.remoteEvents.PlayVoiceover then
-		self.remoteEvents.PlayVoiceover.OnClientEvent:Connect(function(voiceoverData)
+		table.insert(self._connections, self.remoteEvents.PlayVoiceover.OnClientEvent:Connect(function(voiceoverData)
 			self:playVoiceover(voiceoverData)
-		end)
+		end))
 	end
 	
 	-- Listen for voiceover stop requests
 	if self.remoteEvents.StopVoiceover then
-		self.remoteEvents.StopVoiceover.OnClientEvent:Connect(function()
+		table.insert(self._connections, self.remoteEvents.StopVoiceover.OnClientEvent:Connect(function()
 			self:stopVoiceover()
-		end)
+		end))
 	end
 	
 	print("[VoiceoverController] Initialized")
@@ -261,6 +262,20 @@ function VoiceoverController:hideImmediately()
 	end
 	
 	self.subtitleFrame.Visible = false
+end
+
+function VoiceoverController:cleanup()
+	self:hideImmediately()
+	
+	for _, connection in ipairs(self._connections) do
+		connection:Disconnect()
+	end
+	self._connections = {}
+	
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
 end
 
 return VoiceoverController

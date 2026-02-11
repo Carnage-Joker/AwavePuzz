@@ -22,6 +22,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- BUG-007 FIX: Connection tracking
+local _connections = {}
+
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
 	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
@@ -178,7 +181,7 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 closeCorner.Parent = closeButton
 
-closeButton.MouseButton1Click:Connect(function()
+_connections.closeButton = closeButton.MouseButton1Click:Connect(function()
 	detailFrame.Visible = false
 end)
 
@@ -237,7 +240,16 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			-- UIScaleManager is expected to return an unsubscribe callback
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end,
+}
 
 -- State
 local cureProgress = 0
@@ -379,7 +391,7 @@ local function updateComponentsList()
 end
 
 -- Show detail frame on click/touch
-progressFrame.InputBegan:Connect(function(input)
+_connections.progressFrameInput = progressFrame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		detailFrame.Visible = not detailFrame.Visible
 		if detailFrame.Visible then
@@ -396,7 +408,7 @@ local isPooledWithAllies = false
 
 -- Cure Update
 local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
-cureUpdateEvent.OnClientEvent:Connect(function(data)
+_connections.cureUpdate = cureUpdateEvent.OnClientEvent:Connect(function(data)
 	local dataType = typeof(data)
 
 	if dataType == "number" then
@@ -437,7 +449,7 @@ end)
 
 -- Player Cure Progress Update (per-player progress with alliance pooling)
 local playerCureProgressEvent = remoteEvents:WaitForChild("PlayerCureProgressUpdate")
-playerCureProgressEvent.OnClientEvent:Connect(function(data)
+_connections.playerCureProgress = playerCureProgressEvent.OnClientEvent:Connect(function(data)
 	if type(data) ~= "table" then
 		return
 	end
@@ -564,7 +576,7 @@ warningLabel.Parent = synthesisOverlay
 -- Synthesis state update handler
 local synthesisStateUpdateEvent = remoteEvents:WaitForChild("SynthesisStateUpdate", 5)
 if synthesisStateUpdateEvent then
-	synthesisStateUpdateEvent.OnClientEvent:Connect(function(stateData)
+	_connections.synthesisStateUpdate = synthesisStateUpdateEvent.OnClientEvent:Connect(function(stateData)
 		if type(stateData) ~= "table" then
 			return
 		end
@@ -602,7 +614,7 @@ end
 -- Synthesis complete handler
 local synthesisCompleteEvent = remoteEvents:WaitForChild("SynthesisComplete", 5)
 if synthesisCompleteEvent then
-	synthesisCompleteEvent.OnClientEvent:Connect(function()
+	_connections.synthesisComplete = synthesisCompleteEvent.OnClientEvent:Connect(function()
 		-- Hide synthesis overlay
 		synthesisOverlay.Visible = false
 		print("[CureUI] Synthesis complete!")
@@ -614,7 +626,7 @@ end
 -- Synthesis failed handler
 local synthesisFailedEvent = remoteEvents:WaitForChild("SynthesisFailed", 5)
 if synthesisFailedEvent then
-	synthesisFailedEvent.OnClientEvent:Connect(function(payload)
+	_connections.synthesisFailed = synthesisFailedEvent.OnClientEvent:Connect(function(payload)
 		-- Hide synthesis overlay
 		synthesisOverlay.Visible = false
 		
@@ -648,4 +660,16 @@ print("CureUI initialized with synthesis UI integration")
 
 -- Return module table (required for ModuleScript compatibility)
 local CureUI = {}
+
+-- BUG-007 FIX: Cleanup method
+function CureUI.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	print("CureUI cleanup completed")
+end
+
 return CureUI

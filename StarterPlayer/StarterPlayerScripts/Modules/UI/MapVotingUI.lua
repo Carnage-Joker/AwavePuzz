@@ -17,7 +17,7 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local REMOTE_EVENT_WAIT_TIMEOUT = 10
 
 -- Connection tracking for cleanup
-local connections = {}
+local _connections = {}
 
 -- Prevent duplicate UI instances
 local existing = playerGui:FindFirstChild("MapVotingUI")
@@ -186,7 +186,7 @@ local function createMapCard(mapData, layoutOrder)
 			BackgroundColor3 = Color3.fromRGB(70, 180, 70)
 		}):Play()
 	end)
-	table.insert(connections, hoverEnter)
+	table.insert(_connections, hoverEnter)
 
 	local hoverLeave = voteButton.MouseLeave:Connect(function()
 		if currentVote == mapData.id then
@@ -199,7 +199,7 @@ local function createMapCard(mapData, layoutOrder)
 			}):Play()
 		end
 	end)
-	table.insert(connections, hoverLeave)
+	table.insert(_connections, hoverLeave)
 
 	-- Store reference
 	mapButtons[mapData.id] = {
@@ -254,12 +254,12 @@ end
 -- Function to clear map cards
 local function clearMapCards()
 	-- Disconnect all tracked connections
-	for i = #connections, 1, -1 do
-		local connection = connections[i]
+	for i = #_connections, 1, -1 do
+		local connection = _connections[i]
 		if connection and connection.Connected then
 			connection:Disconnect()
 		end
-		connections[i] = nil
+		_connections[i] = nil
 	end
 	
 	-- Clean up map buttons
@@ -298,7 +298,7 @@ end
 -- Handle voting start
 local mapVoteStartEvent = remoteEvents:WaitForChild("MapVoteStart", REMOTE_EVENT_WAIT_TIMEOUT)
 if mapVoteStartEvent then
-	mapVoteStartEvent.OnClientEvent:Connect(function(data)
+	_connections.mapVoteStart = mapVoteStartEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
 
 		-- Clear existing cards
@@ -315,7 +315,7 @@ if mapVoteStartEvent then
 				buttonData.connection = buttonData.button.MouseButton1Click:Connect(function()
 					castVote(mapData.id)
 				end)
-				table.insert(connections, buttonData.connection)
+				table.insert(_connections, buttonData.connection)
 			end
 		end
 
@@ -336,7 +336,7 @@ end
 -- Handle vote updates
 local mapVoteUpdateEvent = remoteEvents:WaitForChild("MapVoteUpdate", REMOTE_EVENT_WAIT_TIMEOUT)
 if mapVoteUpdateEvent then
-	mapVoteUpdateEvent.OnClientEvent:Connect(function(data)
+	_connections.mapVoteUpdate = mapVoteUpdateEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
 
 		updateVotes(data.votes or {}, data.timeRemaining)
@@ -346,7 +346,7 @@ end
 -- Handle voting end
 local mapVoteEndEvent = remoteEvents:WaitForChild("MapVoteEnd", REMOTE_EVENT_WAIT_TIMEOUT)
 if mapVoteEndEvent then
-	mapVoteEndEvent.OnClientEvent:Connect(function(data)
+	_connections.mapVoteEnd = mapVoteEndEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
 
 		-- Show selected map
@@ -389,4 +389,20 @@ print("MapVotingUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local MapVotingUI = {}
+
+function MapVotingUI.cleanup()
+	for key, connection in pairs(_connections) do
+		if typeof(connection) == "RBXScriptConnection" and connection.Connected then
+			connection:Disconnect()
+		end
+	end
+	table.clear(_connections)
+	
+	clearMapCards()
+	
+	if screenGui then
+		screenGui:Destroy()
+	end
+end
+
 return MapVotingUI

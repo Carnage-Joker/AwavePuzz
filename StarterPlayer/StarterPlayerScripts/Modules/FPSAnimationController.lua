@@ -558,4 +558,12 @@ end
 function FPSAnimationController.onCharacterAdded(character) end
 function FPSAnimationController.onCharacterRemoving() end
 
+function FPSAnimationController.cleanup()
+	for _, connection in ipairs(FPSAnimationController._connections) do
+		connection:Disconnect()
+	end
+	table.clear(FPSAnimationController._connections)
+	print("[FPSAnimationController] Cleanup complete")
+end
+
 return FPSAnimationController

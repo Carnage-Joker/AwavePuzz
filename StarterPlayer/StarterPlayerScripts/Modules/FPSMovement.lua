@@ -59,6 +59,9 @@ local FPSMovementController = {}
 -- internal bindable reference for stamina → HUD
 FPSMovementController._staminaBindable = nil
 
+-- Connection tracking for cleanup
+local _connections = {}
+
 -- Movement state
 local isSprinting = false
 local isCrouching = false
@@ -384,7 +387,7 @@ end
 
 local staminaUpdateEvent = remoteEventsFolder:FindFirstChild("StaminaUpdate")
 if staminaUpdateEvent then
-	staminaUpdateEvent.OnClientEvent:Connect(function(data)
+	table.insert(_connections, staminaUpdateEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) == "table" then
 			currentStamina = data.current or currentStamina
 			maxStamina = data.max or maxStamina
@@ -399,7 +402,7 @@ if staminaUpdateEvent then
 				})
 			end
 		end
-	end)
+	end))
 end
 
 --------------------------------------------------------------------------------
@@ -504,19 +507,19 @@ local function initialize()
 	setupInputCallbacks()
 
 	-- Connect legacy input events (for keyboard fallback)
-	inputBeganConnection = UserInputService.InputBegan:Connect(onInputBegan)
-	inputEndedConnection = UserInputService.InputEnded:Connect(onInputEnded)
+	table.insert(_connections, UserInputService.InputBegan:Connect(onInputBegan))
+	table.insert(_connections, UserInputService.InputEnded:Connect(onInputEnded))
 
 	-- Connect character events
 	if player.Character then
 		onCharacterAdded(player.Character)
 	end
-	player.CharacterAdded:Connect(onCharacterAdded)
+	table.insert(_connections, player.CharacterAdded:Connect(onCharacterAdded))
 
 	-- Main update loop
-	heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+	table.insert(_connections, RunService.Heartbeat:Connect(function(deltaTime)
 		updateMovement(deltaTime)
-	end)
+	end))
 
 	-- Create bindable events folder
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -594,6 +597,25 @@ function FPSMovementController.onCharacterRemoving()
 		heartbeatConnection:Disconnect()
 		heartbeatConnection = nil
 	end
+end
+
+function FPSMovementController.cleanup()
+	-- Disconnect all tracked connections
+	for _, connection in ipairs(_connections) do
+		if connection and connection.Connected then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	-- Reset state
+	isSprinting = false
+	isCrouching = false
+	wantsToSprint = false
+	wantsToCrouch = false
+	isMoving = false
+	
+	print("[FPSMovementController] Cleaned up")
 end
 
 return FPSMovementController

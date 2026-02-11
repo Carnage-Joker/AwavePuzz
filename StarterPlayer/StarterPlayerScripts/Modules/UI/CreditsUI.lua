@@ -16,6 +16,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local CreditsUI = {}
 CreditsUI.__index = CreditsUI
 
+local _connections = {}
+
 function CreditsUI.new()
 	local self = setmetatable({}, CreditsUI)
 	
@@ -37,17 +39,17 @@ function CreditsUI:setupRemoteEvents()
 	})
 	
 	if self.remoteEvents.ShowCredits then
-		self.remoteEvents.ShowCredits.OnClientEvent:Connect(function(survivorData)
+		table.insert(_connections, self.remoteEvents.ShowCredits.OnClientEvent:Connect(function(survivorData)
 			print("[CreditsUI] Received ShowCredits event")
 			self:show(survivorData)
-		end)
+		end))
 	end
 	
 	if self.remoteEvents.HideCredits then
-		self.remoteEvents.HideCredits.OnClientEvent:Connect(function()
+		table.insert(_connections, self.remoteEvents.HideCredits.OnClientEvent:Connect(function()
 			print("[CreditsUI] Received HideCredits event")
 			self:hide()
-		end)
+		end))
 	end
 	
 	print("[CreditsUI] Initialized and ready")
@@ -124,9 +126,9 @@ function CreditsUI:createUI()
 	skipButton.TextSize = 18
 	skipButton.Parent = background
 	
-	skipButton.MouseButton1Click:Connect(function()
+	table.insert(_connections, skipButton.MouseButton1Click:Connect(function()
 		self:hide()
-	end)
+	end))
 end
 
 function CreditsUI:show(survivorData)
@@ -391,6 +393,25 @@ function CreditsUI:fadeOut()
 	task.delay(fadeTime, function()
 		self.screenGui.Enabled = false
 	end)
+end
+
+function CreditsUI:cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	if self.scrollThread then
+		task.cancel(self.scrollThread)
+		self.scrollThread = nil
+	end
+	
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
 end
 
 -- Initialize

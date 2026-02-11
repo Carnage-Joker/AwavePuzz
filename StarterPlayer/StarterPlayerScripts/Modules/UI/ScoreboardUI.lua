@@ -17,6 +17,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- State variables for scoreboard visibility
 local tabHeld = false
 local isEndOfRoundDisplay = false
+local _connections = {}
 
 -- Load UI scaling utilities
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
@@ -139,9 +140,9 @@ listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.Parent = playerList
 
 -- Update canvas size when content changes
-listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+table.insert(_connections, listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 	playerList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + getScaledValue(10, "padding"))
-end)
+end))
 
 -- Function to update UI scaling when screen size changes
 local function updateUIScaling()
@@ -171,8 +172,16 @@ local function updateUIScaling()
 	listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
 end
 
--- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 -- Function to create a player row
 local function createPlayerRow(playerStats, layoutOrder)
@@ -238,7 +247,7 @@ local function updateScoreboard(data)
 end
 
 -- Toggle scoreboard with TAB key
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+table.insert(_connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
 
@@ -254,9 +263,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			end, ModalManager.Priority.PANEL)
 		end
 	end
-end)
+end))
 
-UserInputService.InputEnded:Connect(function(input)
+table.insert(_connections, UserInputService.InputEnded:Connect(function(input)
 	if input.KeyCode == Enum.KeyCode.Tab then
 		tabHeld = false
 		-- Don't hide if end of round display is active
@@ -265,7 +274,7 @@ UserInputService.InputEnded:Connect(function(input)
 			ModalManager.remove("ScoreboardUI")
 		end
 	end
-end)
+end))
 
 -- Register input action with InputActionRegistry
 InputActionRegistry.register("ScoreboardToggle", "ScoreboardUI", {Enum.KeyCode.Tab}, InputActionRegistry.Priority.TOGGLE_UI)
@@ -277,17 +286,17 @@ local scoreboardUpdateEvent = remoteEvents:WaitForChild("ScoreboardUpdate", REMO
 if not scoreboardUpdateEvent then
 	warn("ScoreboardUpdate event not found - scoreboard will not receive updates")
 else
-	scoreboardUpdateEvent.OnClientEvent:Connect(function(data)
+	table.insert(_connections, scoreboardUpdateEvent.OnClientEvent:Connect(function(data)
 		if type(data) == "table" then
 			updateScoreboard(data)
 		end
-	end)
+	end))
 end
 
 -- Handle end of round scoreboard display
 local showScoreboardEvent = remoteEvents:WaitForChild("ShowScoreboard", REMOTE_EVENT_WAIT_TIMEOUT)
 if showScoreboardEvent then
-	showScoreboardEvent.OnClientEvent:Connect(function(data)
+	table.insert(_connections, showScoreboardEvent.OnClientEvent:Connect(function(data)
 		if typeof(data) ~= "table" then return end
 
 		isEndOfRoundDisplay = true
@@ -309,13 +318,13 @@ if showScoreboardEvent then
 		TweenService:Create(scoreboardFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Position = UDim2.new(0.5, -250, 0.5, -200)
 		}):Play()
-	end)
+	end))
 end
 
 -- Handle hiding end of round scoreboard
 local hideScoreboardEvent = remoteEvents:WaitForChild("HideScoreboard", REMOTE_EVENT_WAIT_TIMEOUT)
 if hideScoreboardEvent then
-	hideScoreboardEvent.OnClientEvent:Connect(function()
+	table.insert(_connections, hideScoreboardEvent.OnClientEvent:Connect(function()
 		isEndOfRoundDisplay = false
 
 		-- Reset title
@@ -335,7 +344,7 @@ if hideScoreboardEvent then
 			-- Reset position for next time
 			scoreboardFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
 		end)
-	end)
+	end))
 end
 
 -- Show hint
@@ -363,4 +372,13 @@ print("ScoreboardUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local ScoreboardUI = {}
+
+-- Cleanup method
+function ScoreboardUI.cleanup()
+	for _, connection in ipairs(_connections) do
+		connection:Disconnect()
+	end
+	_connections = {}
+end
+
 return ScoreboardUI

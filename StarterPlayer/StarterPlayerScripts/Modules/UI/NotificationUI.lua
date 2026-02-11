@@ -16,6 +16,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local NotificationUI = {}
 NotificationUI.__index = NotificationUI
 
+local _connections = {}
+
 -- Color schemes for different message types
 local MESSAGE_COLORS = {
 	info = Color3.fromRGB(100, 180, 255),     -- Blue
@@ -44,7 +46,7 @@ function NotificationUI:setupRemoteEvents()
 	})
 	
 	if self.remoteEvents.ShowNotification then
-		self.remoteEvents.ShowNotification.OnClientEvent:Connect(function(notificationData)
+		table.insert(_connections, self.remoteEvents.ShowNotification.OnClientEvent:Connect(function(notificationData)
 			if notificationData and notificationData.message then
 				self:showNotification(
 					notificationData.message, 
@@ -52,7 +54,7 @@ function NotificationUI:setupRemoteEvents()
 					notificationData.duration or 3
 				)
 			end
-		end)
+		end))
 	end
 	
 	print("[NotificationUI] Initialized and ready")
@@ -200,6 +202,24 @@ function NotificationUI:processQueue()
 			task.wait(0.2)
 		end
 	end)
+end
+
+function NotificationUI:cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	self.notificationQueue = {}
+	self.isShowingNotification = false
+	self.isProcessingQueue = false
+	
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
 end
 
 -- Initialize the UI immediately

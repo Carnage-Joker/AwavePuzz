@@ -17,6 +17,8 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local ControlsTutorialUI = {}
 
+local _connections = {}
+
 -- State
 local screenGui = nil
 local tutorialActive = false
@@ -245,9 +247,9 @@ local function createTutorialUI()
 	end
 	
 	-- Update canvas size
-	listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	table.insert(_connections, listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
-	end)
+	end))
 	scrollFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
 	
 	-- Tips section
@@ -302,22 +304,22 @@ local function createTutorialUI()
 	buttonCorner.Parent = gotItButton
 	
 	-- Button click effect
-	gotItButton.MouseButton1Click:Connect(function()
+	table.insert(_connections, gotItButton.MouseButton1Click:Connect(function()
 		ControlsTutorialUI.hide()
-	end)
+	end))
 	
 	-- Hover effect
-	gotItButton.MouseEnter:Connect(function()
+	table.insert(_connections, gotItButton.MouseEnter:Connect(function()
 		TweenService:Create(gotItButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(60, 180, 60)
 		}):Play()
-	end)
+	end))
 	
-	gotItButton.MouseLeave:Connect(function()
+	table.insert(_connections, gotItButton.MouseLeave:Connect(function()
 		TweenService:Create(gotItButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 		}):Play()
-	end)
+	end))
 	
 	return screenGui
 end
@@ -394,13 +396,13 @@ function ControlsTutorialUI.initialize()
 		if remoteEvents then
 			local waveAnnounceEvent = remoteEvents:WaitForChild("WaveAnnounce", 10)
 			if waveAnnounceEvent then
-				waveAnnounceEvent.OnClientEvent:Connect(function(waveNum)
+				table.insert(_connections, waveAnnounceEvent.OnClientEvent:Connect(function(waveNum)
 					-- Show tutorial before wave 1 for first-time players
 					if waveNum == 1 and ControlsTutorialUI.shouldShow() then
 						task.wait(0.5) -- Small delay for loading
 						ControlsTutorialUI.show()
 					end
-				end)
+				end))
 			else
 				warn("[ControlsTutorialUI] Failed to find RemoteEvents.WaveAnnounce within 10 seconds; controls tutorial will not auto-show.")
 			end
@@ -410,6 +412,22 @@ function ControlsTutorialUI.initialize()
 	end)
 	
 	print("[ControlsTutorialUI] Initialized")
+end
+
+function ControlsTutorialUI.cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	_connections = {}
+	
+	if screenGui then
+		screenGui:Destroy()
+		screenGui = nil
+	end
+	
+	tutorialActive = false
 end
 
 return ControlsTutorialUI

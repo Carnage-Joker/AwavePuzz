@@ -11,6 +11,8 @@ local player = Players.LocalPlayer
 local StaminaClient = {}
 StaminaClient.__index = StaminaClient
 
+local _connections = {}
+
 -- Shared state (simple + compatible with existing UI modules)
 _G.__AWAVE_STAMINA = _G.__AWAVE_STAMINA or {
 	current = 100,
@@ -59,7 +61,7 @@ function StaminaClient.initialize()
 		return
 	end
 
-	StaminaUpdate.OnClientEvent:Connect(function(payload)
+	table.insert(_connections, StaminaUpdate.OnClientEvent:Connect(function(payload)
 		if typeof(payload) ~= "table" then return end
 
 		local cur = tonumber(payload.current)
@@ -71,15 +73,24 @@ function StaminaClient.initialize()
 		_G.__AWAVE_STAMINA.isSprinting = sprinting
 
 		staminaChanged:Fire(_G.__AWAVE_STAMINA)
-	end)
+	end))
 
 	-- Optional: reset values on respawn (keeps HUD sane)
-	player.CharacterAdded:Connect(function()
+	table.insert(_connections, player.CharacterAdded:Connect(function()
 		-- don’t hard reset max; server will send fresh value anyway
 		_G.__AWAVE_STAMINA.isSprinting = false
-	end)
+	end))
 
 	print("[StaminaClient] ✓ Bound StaminaUpdate listener")
+end
+
+function StaminaClient.cleanup()
+	for _, conn in ipairs(_connections) do
+		if conn and conn.Connected then
+			conn:Disconnect()
+		end
+	end
+	table.clear(_connections)
 end
 
 return StaminaClient

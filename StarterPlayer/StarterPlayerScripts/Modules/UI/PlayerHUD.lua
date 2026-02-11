@@ -18,6 +18,9 @@ local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 -- Initialize scale manager
 UIScaleManager.initialize()
 
+-- BUG-007 FIX: Connection tracking for cleanup
+local _connections = {}
+
 -- Remote event
 local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
 local healthEvent = remoteEventsFolder:WaitForChild("PlayerHealthUpdate") :: RemoteEvent
@@ -263,8 +266,16 @@ local function updateUIScaling()
 	resourceMarkerCorner.CornerRadius = UDim.new(0, getScaledValue(3, "padding"))
 end
 
--- Register for scale changes and immediately apply once
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes and immediately apply once (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 updateUIScaling()
 
 -- ========== HEALTH HANDLING ==========
@@ -294,7 +305,7 @@ local function updateHealthUI()
 	end
 end
 
-healthEvent.OnClientEvent:Connect(function(data)
+_connections.healthUpdate = healthEvent.OnClientEvent:Connect(function(data)
 	if typeof(data) ~= "table" then
 		return
 	end
@@ -348,7 +359,8 @@ local function setupStaminaListener()
 		staminaEvent.Parent = bindableFolder
 	end
 
-	staminaEvent.Event:Connect(function(data)
+	-- BUG-007 FIX: Store stamina connection for cleanup
+	_connections.staminaUpdate = staminaEvent.Event:Connect(function(data)
 		if typeof(data) ~= "table" then
 			return
 		end
@@ -465,7 +477,7 @@ end
 
 -- ========== UPDATE LOOP ==========
 
-RunService.RenderStepped:Connect(function()
+_connections.renderStep = RunService.RenderStepped:Connect(function()
 	local root = getCharacterRoot()
 	if not root then
 		zombieMarker.Visible = false
@@ -509,4 +521,16 @@ end)
 
 -- Return module table (required for ModuleScript compatibility)
 local PlayerHUD = {}
+
+-- BUG-007 FIX: Cleanup method
+function PlayerHUD.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection then
+			connection:Disconnect()
+		end
+	end
+	_connections = {}
+	print("PlayerHUD cleanup completed")
+end
+
 return PlayerHUD

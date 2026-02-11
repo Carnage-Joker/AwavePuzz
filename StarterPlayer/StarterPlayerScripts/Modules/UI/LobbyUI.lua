@@ -14,6 +14,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local LobbyUI = {}
+local _connections = {}
 
 -- Constants
 local REMOTE_EVENT_WAIT_TIMEOUT = 10
@@ -224,23 +225,23 @@ end
 -- Handle lobby players update
 local lobbyPlayersUpdate = remoteEvents:WaitForChild("LobbyPlayersUpdate", REMOTE_EVENT_WAIT_TIMEOUT)
 if lobbyPlayersUpdate then
-	lobbyPlayersUpdate.OnClientEvent:Connect(function(data)
+	table.insert(_connections, lobbyPlayersUpdate.OnClientEvent:Connect(function(data)
 		updatePlayerStatus(data)
-	end)
+	end))
 end
 
 -- Handle map vote start (show lobby UI)
 local mapVoteStart = remoteEvents:WaitForChild("MapVoteStart", REMOTE_EVENT_WAIT_TIMEOUT)
 if mapVoteStart then
-	mapVoteStart.OnClientEvent:Connect(function(data)
+	table.insert(_connections, mapVoteStart.OnClientEvent:Connect(function(data)
 		LobbyUI.show()
-	end)
+	end))
 end
 
 -- Handle map vote end (hide lobby UI after delay)
 local mapVoteEnd = remoteEvents:WaitForChild("MapVoteEnd", REMOTE_EVENT_WAIT_TIMEOUT)
 if mapVoteEnd then
-	mapVoteEnd.OnClientEvent:Connect(function(data)
+	table.insert(_connections, mapVoteEnd.OnClientEvent:Connect(function(data)
 		task.wait(3) -- Wait a bit before hiding
 		LobbyUI.hide()
 		
@@ -248,11 +249,11 @@ if mapVoteEnd then
 		isReady = false
 		isWaiting = false
 		updateButtonStates()
-	end)
+	end))
 end
 
 -- Ready button click handler
-readyButton.MouseButton1Click:Connect(function()
+table.insert(_connections, readyButton.MouseButton1Click:Connect(function()
 	isReady = not isReady
 	if isReady then
 		isWaiting = false
@@ -264,10 +265,10 @@ readyButton.MouseButton1Click:Connect(function()
 	if playerReadyEvent then
 		playerReadyEvent:FireServer(isReady)
 	end
-end)
+end))
 
 -- Waiting button click handler
-waitingButton.MouseButton1Click:Connect(function()
+table.insert(_connections, waitingButton.MouseButton1Click:Connect(function()
 	isWaiting = not isWaiting
 	if isWaiting then
 		isReady = false
@@ -279,52 +280,60 @@ waitingButton.MouseButton1Click:Connect(function()
 	if playerWaitingEvent then
 		playerWaitingEvent:FireServer(isWaiting)
 	end
-end)
+end))
 
 -- Switch server button click handler
-switchButton.MouseButton1Click:Connect(function()
+table.insert(_connections, switchButton.MouseButton1Click:Connect(function()
 	local switchServerEvent = remoteEvents:FindFirstChild("SwitchServer")
 	if switchServerEvent then
 		switchServerEvent:FireServer()
 	end
-end)
+end))
 
 -- Button hover effects
-readyButton.MouseEnter:Connect(function()
+table.insert(_connections, readyButton.MouseEnter:Connect(function()
 	if not isReady then
 		TweenService:Create(readyButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(70, 180, 70)
 		}):Play()
 	end
-end)
+end))
 
-readyButton.MouseLeave:Connect(function()
+table.insert(_connections, readyButton.MouseLeave:Connect(function()
 	updateButtonStates()
-end)
+end))
 
-waitingButton.MouseEnter:Connect(function()
+table.insert(_connections, waitingButton.MouseEnter:Connect(function()
 	if not isWaiting then
 		TweenService:Create(waitingButton, TweenInfo.new(0.2), {
 			BackgroundColor3 = Color3.fromRGB(180, 120, 60)
 		}):Play()
 	end
-end)
+end))
 
-waitingButton.MouseLeave:Connect(function()
+table.insert(_connections, waitingButton.MouseLeave:Connect(function()
 	updateButtonStates()
-end)
+end))
 
-switchButton.MouseEnter:Connect(function()
+table.insert(_connections, switchButton.MouseEnter:Connect(function()
 	TweenService:Create(switchButton, TweenInfo.new(0.2), {
 		BackgroundColor3 = Color3.fromRGB(120, 120, 150)
 	}):Play()
-end)
+end))
 
-switchButton.MouseLeave:Connect(function()
+table.insert(_connections, switchButton.MouseLeave:Connect(function()
 	TweenService:Create(switchButton, TweenInfo.new(0.2), {
 		BackgroundColor3 = Color3.fromRGB(100, 100, 120)
 	}):Play()
-end)
+end))
+
+-- Cleanup method
+function LobbyUI.cleanup()
+	for _, connection in ipairs(_connections) do
+		connection:Disconnect()
+	end
+	_connections = {}
+end
 
 print("[LobbyUI] Initialized")
 

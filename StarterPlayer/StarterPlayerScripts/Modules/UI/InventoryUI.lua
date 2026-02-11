@@ -20,6 +20,8 @@ local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
 local inventoryEvent = remoteFolder:WaitForChild("InventoryUpdate")
 local currencyEvent = remoteFolder:WaitForChild("CurrencyUpdate")
 
+local _connections = {}
+
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
 	return UIScaleManager.scalePixels(baseValue, scaleType or "hudElements")
@@ -121,8 +123,16 @@ local function updateUIScaling()
 	componentsLabel.TextSize = getScaledTextSize(13)
 end
 
--- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 local function formatInventory(inventory)
 	local parts = {}
@@ -146,7 +156,7 @@ local function formatInventory(inventory)
 	return "Components: " .. table.concat(parts, ", ")
 end
 
-inventoryEvent.OnClientEvent:Connect(function(payload)
+_connections.inventoryUpdate = inventoryEvent.OnClientEvent:Connect(function(payload)
 	if type(payload) ~= "table" then
 		return
 	end
@@ -154,7 +164,7 @@ inventoryEvent.OnClientEvent:Connect(function(payload)
 	componentsLabel.Text = formatInventory(payload.inventory)
 end)
 
-currencyEvent.OnClientEvent:Connect(function(payload)
+_connections.currencyUpdate = currencyEvent.OnClientEvent:Connect(function(payload)
 	if type(payload) ~= "table" then
 		return
 	end
@@ -165,7 +175,7 @@ end)
 
 -- Toggle inventory display using InputManager
 -- Bind to INVENTORY action which supports both keyboard (I) and gamepad (DPadUp)
-InputManager.bindAction(InputManager.Action.INVENTORY, function(active)
+_connections.inventoryToggle = InputManager.bindAction(InputManager.Action.INVENTORY, function(active)
 	if active then
 		screenGui.Enabled = not screenGui.Enabled
 	end
@@ -177,4 +187,18 @@ InputActionRegistry.register("InventoryToggleGamepad", "InventoryUI", {Enum.KeyC
 
 -- Return module table (required for ModuleScript compatibility)
 local InventoryUI = {}
+
+function InventoryUI.cleanup()
+	for name, connection in pairs(_connections) do
+		if connection and typeof(connection) == "RBXScriptConnection" then
+			connection:Disconnect()
+		end
+	end
+	table.clear(_connections)
+	
+	if screenGui then
+		screenGui:Destroy()
+	end
+end
+
 return InventoryUI
