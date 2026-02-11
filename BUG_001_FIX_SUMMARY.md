@@ -9,7 +9,7 @@
 
 ## Problem Description
 
-The `startAmmoValidationLoop()` method in `FPSWeaponService.lua` (line 419) used an infinite `while true` loop with no mechanism to stop it. This created orphaned threads that persisted even after server restart, leading to:
+The `startAmmoValidationLoop()` method in `FPSWeaponService.lua` used an infinite `while true` loop with no mechanism to stop it. This created orphaned threads that persisted even after server restart, leading to:
 
 - Memory leaks from accumulated threads
 - Potential resource exhaustion
