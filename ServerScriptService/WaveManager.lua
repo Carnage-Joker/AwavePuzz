@@ -51,50 +51,59 @@ function WaveManager:spawnZombie()
 		return nil
 	end
 
-	-- Queue-based spawning to prevent race conditions
+	-- Queue-based spawning to serialize spawn requests
 	-- Add this request to the spawn queue first
 	table.insert(self._spawnQueue, true)
 	
-	-- Atomic check-and-set pattern: CRITICAL - No yield points between check and set!
-	-- In Roblox Luau, operations are atomic until a yield point (task.wait, wait, etc.)
-	-- Since there are NO yield points between line 60-66, this check-and-set is atomic
+	-- Check if another call is already processing the queue
+	-- CRITICAL: Do not yield between this check and setting the flag below
 	if self._isProcessingQueue then
 		-- Another thread is processing, it will handle our queued request
 		return nil
 	end
 	
-	-- Claim exclusive queue processing rights (still no yield, remains atomic)
+	-- Claim exclusive queue processing rights
 	self._isProcessingQueue = true
 	
-	-- Process all queued spawn requests (including those added during processing)
-	local firstSpawnData = nil
-	local maxZombies = self:calculateZombiesForWave(self.currentWave)
-	
-	while #self._spawnQueue > 0 do
-		-- Remove one request from queue
-		table.remove(self._spawnQueue, 1)
+	-- Process all currently queued spawn requests in this batch
+	-- Wrap in pcall to ensure flag is always reset even if an error occurs
+	local success, result = pcall(function()
+		local firstSpawnData = nil
+		local maxZombies = self:calculateZombiesForWave(self.currentWave)
 		
-		-- Spawn one zombie per queued request, up to max
-		if self.zombiesSpawned < maxZombies then
-			self.zombiesSpawned = self.zombiesSpawned + 1
-			self.zombiesAlive = self.zombiesAlive + 1
+		while #self._spawnQueue > 0 do
+			-- Remove one request from queue
+			table.remove(self._spawnQueue, 1)
 			
-			-- Only return data for the first spawn (the one from the original call)
-			if not firstSpawnData then
-				firstSpawnData = {
-					health = self:calculateZombieHealthForWave(self.currentWave),
-					damage = GameConfig.ZOMBIE_DAMAGE,
-					speed = GameConfig.ZOMBIE_SPEED,
-					id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
-				}
+			-- Spawn one zombie per queued request, up to max
+			if self.zombiesSpawned < maxZombies then
+				self.zombiesSpawned = self.zombiesSpawned + 1
+				self.zombiesAlive = self.zombiesAlive + 1
+				
+				-- Only return data for the first spawn (the one from the original call)
+				if not firstSpawnData then
+					firstSpawnData = {
+						health = self:calculateZombieHealthForWave(self.currentWave),
+						damage = GameConfig.ZOMBIE_DAMAGE,
+						speed = GameConfig.ZOMBIE_SPEED,
+						id = "zombie_" .. self.currentWave .. "_" .. self.zombiesSpawned
+					}
+				end
 			end
 		end
-	end
+		
+		return firstSpawnData
+	end)
 	
-	-- Release queue processing lock to allow next batch
+	-- Always release queue processing lock, even if an error occurred
 	self._isProcessingQueue = false
 	
-	return firstSpawnData
+	-- Re-throw the error if one occurred
+	if not success then
+		error(result)
+	end
+	
+	return result
 end
 
 function WaveManager:onZombieDeath()
