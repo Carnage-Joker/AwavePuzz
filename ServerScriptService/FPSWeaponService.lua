@@ -568,6 +568,14 @@ function FPSWeaponService:cleanup()
 		self.playerRemovingConn = nil
 	end
 	
+	-- Disconnect any other RemoteEvent / signal connections stored on this service
+	for key, value in pairs(self) do
+		if typeof(value) == "RBXScriptConnection" then
+			value:Disconnect()
+			self[key] = nil
+		end
+	end
+	
 	-- Cancel all active reload tasks
 	for userId, taskHandle in pairs(self.activeReloadTasks) do
 		if taskHandle then
