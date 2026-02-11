@@ -497,6 +497,11 @@ end
 -- INITIALIZATION
 --------------------------------------------------------------------------------
 
+-- Store input connections for cleanup
+local inputBeganConnection = nil
+local inputEndedConnection = nil
+local heartbeatConnection = nil
+
 local function initialize()
 	-- Setup InputManager callbacks
 	setupInputCallbacks()
@@ -563,10 +568,35 @@ end
 
 function FPSMovementController.onCharacterAdded(character)
 	onCharacterAdded(character)
+	
+	-- BUG-015: Reconnect input handlers on respawn
+	if not inputBeganConnection or not inputBeganConnection.Connected then
+		inputBeganConnection = UserInputService.InputBegan:Connect(onInputBegan)
+	end
+	if not inputEndedConnection or not inputEndedConnection.Connected then
+		inputEndedConnection = UserInputService.InputEnded:Connect(onInputEnded)
+	end
+	if not heartbeatConnection or not heartbeatConnection.Connected then
+		heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
+			updateMovement(deltaTime)
+		end)
+	end
 end
 
 function FPSMovementController.onCharacterRemoving()
-	-- Cleanup if needed
+	-- BUG-015: Cleanup input connections to prevent memory leaks
+	if inputBeganConnection then
+		inputBeganConnection:Disconnect()
+		inputBeganConnection = nil
+	end
+	if inputEndedConnection then
+		inputEndedConnection:Disconnect()
+		inputEndedConnection = nil
+	end
+	if heartbeatConnection then
+		heartbeatConnection:Disconnect()
+		heartbeatConnection = nil
+	end
 end
 
 function FPSMovementController.cleanup()

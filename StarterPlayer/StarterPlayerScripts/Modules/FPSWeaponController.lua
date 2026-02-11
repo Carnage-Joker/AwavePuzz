@@ -793,13 +793,21 @@ function FPSWeaponController.onCharacterAdded(character)
 	-- BUG-014: Recreate heartbeat connection on respawn
 	setupHeartbeatConnection()
 	
+	-- BUG-015: Reconnect input handlers on respawn
+	if not inputBeganConn or not inputBeganConn.Connected then
+		inputBeganConn = UserInputService.InputBegan:Connect(onInputBegan)
+	end
+	if not inputEndedConn or not inputEndedConn.Connected then
+		inputEndedConn = UserInputService.InputEnded:Connect(onInputEnded)
+	end
+	
 	if DEBUG_AMMO then
 		print(string.format("[FPSWeaponController] Character added, currentWeapon: %s", tostring(currentWeapon)))
 	end
 end
 
 function FPSWeaponController.onCharacterRemoving()
-	-- Cleanup connections to prevent memory leaks
+	-- BUG-015: Cleanup input connections to prevent memory leaks
 	if inputBeganConn then
 		inputBeganConn:Disconnect()
 		inputBeganConn = nil

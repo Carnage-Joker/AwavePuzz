@@ -430,6 +430,9 @@ end
 -- INPUT HANDLING
 --------------------------------------------------------------------------------
 
+-- BUG-015: Store input connection for cleanup
+local inputBeganConnection = nil
+
 local function handleInput(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 
@@ -466,7 +469,7 @@ local function handleInput(input, gameProcessedEvent)
 	end
 end
 
-UserInputService.InputBegan:Connect(handleInput)
+inputBeganConnection = UserInputService.InputBegan:Connect(handleInput)
 
 -- Register PAUSE action with InputActionRegistry
 -- Phase 3 spec requires P key, but the menu handler (line 436) already responds to FPSConfig.Controls.PauseKey (Escape)
@@ -581,7 +584,19 @@ function FPSMenuController.initialize()
 	initialize()
 end
 
-function FPSMenuController.onCharacterAdded(character) end
-function FPSMenuController.onCharacterRemoving() end
+function FPSMenuController.onCharacterAdded(character)
+	-- BUG-015: Reconnect input handler on respawn
+	if not inputBeganConnection or not inputBeganConnection.Connected then
+		inputBeganConnection = UserInputService.InputBegan:Connect(handleInput)
+	end
+end
+
+function FPSMenuController.onCharacterRemoving()
+	-- BUG-015: Cleanup input connection to prevent memory leaks
+	if inputBeganConnection then
+		inputBeganConnection:Disconnect()
+		inputBeganConnection = nil
+	end
+end
 
 return FPSMenuController
