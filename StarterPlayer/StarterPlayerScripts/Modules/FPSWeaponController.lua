@@ -499,7 +499,7 @@ ammoUpdateEvent.OnClientEvent:Connect(function(data)
 			-- Try to fetch weaponStats
 			weaponStats = getWeaponStats(data.weaponId)
 			
-			-- BUG-008 FIX: If still nil, retry after 1 second delay
+			-- BUG-008 FIX: If still nil, retry after configured delay
 			if not weaponStats then
 				if DEBUG_AMMO then
 					warn(string.format("[FPSWeaponController] ⚠ weaponStats still nil, scheduling retry in %.1fs for weapon '%s'", 
