@@ -34,6 +34,8 @@ For experienced Roblox developers:
 4. Configure spawn points and workspace elements
 5. Test in multiplayer
 
+> **Important Note on File Naming**: All Lua files use only `.lua` extension without additional dots (e.g., `MainServerScript.lua` NOT `Main.server.lua`). This prevents issues with Roblox sync tools like Rojo and GitSync.
+
 ---
 
 ## Complete File Structure Reference
@@ -72,27 +74,54 @@ game
 │   └── 📁 Zombies (Folder) - Created at runtime for active zombies
 │
 ├── ServerScriptService
-│   ├── 📜 MainServer.lua (Script) - Main entry point, initializes all services
+│   ├── 📜 MainServerScript.lua (Script) - Main entry point, initializes all services
 │   ├── 📦 GameManager.lua (ModuleScript) - Orchestrates game state, waves, win/lose
-│   ├── 📦 GameServer.lua (ModuleScript) - Core game controller
 │   ├── 📦 PlayerManager.lua (ModuleScript) - Player data, inventory, currency
 │   ├── 📦 WaveManager.lua (ModuleScript) - Wave timing and zombie counts
 │   ├── 📦 BaseManager.lua (ModuleScript) - Base health and damage tracking
 │   ├── 📦 Spawner.lua (ModuleScript) - Zombie spawning and AI initialization
 │   ├── 📦 CureService.lua (ModuleScript) - Cure progress and component tracking
-│   ├── 📦 CureCraftingManager.lua (ModuleScript) - Legacy cure crafting system
+│   ├── 📦 CureSynthesisService.lua (ModuleScript) - Cure synthesis system
 │   ├── 📦 PuzzleService.lua (ModuleScript) - Puzzle generation and validation
-│   ├── 📦 AllianceService.lua (ModuleScript) - Player alliance management
+│   ├── 📦 AllianceServiceV2.lua (ModuleScript) - Player alliance management
 │   ├── 📦 WeaponService.lua (ModuleScript) - Server-authoritative weapon handling
 │   ├── 📦 FPSWeaponService.lua (ModuleScript) - FPS ammo and reload management
+│   ├── 📦 FPSAnimationService.lua (ModuleScript) - FPS animation synchronization
 │   ├── 📦 ShopService.lua (ModuleScript) - In-game shop and purchases
 │   ├── 📦 MapManager.lua (ModuleScript) - Multi-map loading system
 │   ├── 📦 LobbyManager.lua (ModuleScript) - Pre-round lobby and map voting
 │   ├── 📦 SpectatorManager.lua (ModuleScript) - Dead player spectator system
 │   ├── 📦 ResourceSpawner.lua (ModuleScript) - Cure component spawning
 │   ├── 📦 SprintService.lua (ModuleScript) - Server-authoritative stamina
-│   └── 📁 AIScripts (Folder)
-│       └── 📦 ZombieBrain.lua (ModuleScript) - Zombie AI and pathfinding
+│   ├── 📦 AchievementService.lua (ModuleScript) - Achievement tracking
+│   ├── 📦 VoiceoverService.lua (ModuleScript) - Story voiceover system
+│   ├── 📦 FunFactService.lua (ModuleScript) - Fun fact display service
+│   ├── 📦 PortalMatchmakingService.lua (ModuleScript) - Portal matchmaking
+│   ├── 📦 PlayerSpawnManager.lua (ModuleScript) - Player spawn handling
+│   ├── 📦 ItemSpawner.lua (ModuleScript) - Item spawning system
+│   ├── 📦 RemoteEventsBootstrap.lua (ModuleScript) - RemoteEvent initialization
+│   ├── 📦 SessionState.lua (ModuleScript) - Session state management
+│   ├── 📦 MatchRegistry.lua (ModuleScript) - Match tracking registry
+│   ├── 📦 MapValidator.lua (ModuleScript) - Map validation utilities
+│   ├── 📦 BaseCampSetup.lua (ModuleScript) - Base camp initialization
+│   ├── 📦 CureStationSetup.lua (ModuleScript) - Cure station setup
+│   ├── 📦 LobbySetup.lua (ModuleScript) - Lobby initialization
+│   ├── 📦 IntelligentSpawnGenerator.lua (ModuleScript) - Intelligent spawn point generation
+│   ├── 📦 SpawnPointVisualizer.lua (ModuleScript) - Spawn point visualization
+│   ├── 📦 ClientReady.lua (ModuleScript) - Client ready signal handling
+│   ├── 📦 BootValidationTest.lua (ModuleScript) - Boot validation utilities
+│   ├── 📁 AI (Folder)
+│   │   ├── 📦 ZombieBrain.lua (ModuleScript) - Zombie AI and pathfinding
+│   │   ├── 📦 AIDirector.lua (ModuleScript) - AI director system
+│   │   ├── 📦 TargetingService.lua (ModuleScript) - Zombie targeting logic
+│   │   ├── 📦 SpitterController.lua (ModuleScript) - Spitter zombie controller
+│   │   ├── 📦 BossAuraService.lua (ModuleScript) - Boss aura effects
+│   │   └── 📦 SurroundService.lua (ModuleScript) - Zombie surround mechanics
+│   └── 📁 Alliance (Folder)
+│       ├── 📦 AllianceGraph.lua (ModuleScript) - Alliance graph structure
+│       ├── 📦 BetrayalService.lua (ModuleScript) - Betrayal mechanics
+│       ├── 📦 InventoryLedger.lua (ModuleScript) - Inventory ledger tracking
+│       └── 📦 PoolCalculator.lua (ModuleScript) - Alliance pool calculations
 │
 ├── ReplicatedStorage
 │   ├── 📁 Shared (Folder)
@@ -101,50 +130,83 @@ game
 │   │   ├── 📦 WaveConfig.lua (ModuleScript) - Wave progression settings
 │   │   ├── 📦 ZombieTypes.lua (ModuleScript) - Zombie stats and types
 │   │   ├── 📦 WeaponConfig.lua (ModuleScript) - Weapon definitions
+│   │   ├── 📦 WeaponValues.lua (ModuleScript) - Weapon stat values
 │   │   ├── 📦 FPSConfig.lua (ModuleScript) - FPS camera and controls
 │   │   ├── 📦 MapConfig.lua (ModuleScript) - Available maps configuration
 │   │   ├── 📦 PuzzleConfig.lua (ModuleScript) - Puzzle definitions
 │   │   ├── 📦 UIScaleConfig.lua (ModuleScript) - UI scaling breakpoints
 │   │   ├── 📦 UIScaleManager.lua (ModuleScript) - Responsive UI utilities
-│   │   └── 📦 CureStationSetup.lua (ModuleScript) - Cure station initialization
-│   └── 📁 RemoteEvents (Folder) - Created automatically by services
+│   │   ├── 📦 AssetConfig.lua (ModuleScript) - Asset ID configuration
+│   │   ├── 📦 AssetValidation.lua (ModuleScript) - Asset validation utilities
+│   │   ├── 📦 FunFactConfig.lua (ModuleScript) - Fun fact definitions
+│   │   ├── 📦 StoryConfig.lua (ModuleScript) - Story and lore configuration
+│   │   ├── 📦 PortalConfig.lua (ModuleScript) - Portal system configuration
+│   │   ├── 📦 InputActionRegistry.lua (ModuleScript) - Input action definitions
+│   │   ├── 📦 InputManager.lua (ModuleScript) - Input management utilities
+│   │   ├── 📦 ModalManager.lua (ModuleScript) - Modal dialog management
+│   │   ├── 📦 MathUtil.lua (ModuleScript) - Math utility functions
+│   │   ├── 📦 RemoteEventUtil.lua (ModuleScript) - RemoteEvent utilities
+│   │   ├── 📦 UIDebugConfig.lua (ModuleScript) - UI debugging configuration
+│   │   └── 📁 Remotes (Folder)
+│   │       └── 📦 RemoteRegistry.lua (ModuleScript) - Remote event registry
+│   └── 📁 RemoteEvents (Folder) - Created automatically at runtime by RemoteEventsBootstrap
 │       ├── WaveAnnounce (RemoteEvent)
 │       ├── WaveUpdate (RemoteEvent)
 │       ├── GameStateUpdate (RemoteEvent)
 │       ├── CureUpdate (RemoteEvent)
 │       ├── BaseHealthUpdate (RemoteEvent)
 │       ├── PlayerHealthUpdate (RemoteEvent)
+│       ├── PlayerCureProgressUpdate (RemoteEvent)
 │       ├── WeaponFire (RemoteEvent)
 │       ├── WeaponEquip (RemoteEvent)
 │       ├── WeaponReload (RemoteEvent)
 │       ├── WeaponLoadoutUpdate (RemoteEvent)
 │       ├── WeaponHitConfirm (RemoteEvent)
-│       ├── ShopCatalog (RemoteEvent)
-│       ├── ShopPurchase (RemoteEvent)
-│       ├── AllianceRequest (RemoteEvent)
-│       ├── AllianceResponse (RemoteEvent)
+│       ├── ShopRequest (RemoteEvent)
+│       ├── ShopUpdate (RemoteEvent)
+│       ├── RequestAlliance (RemoteEvent)
+│       ├── RespondAlliance (RemoteEvent)
 │       ├── AllianceUpdate (RemoteEvent)
-│       ├── BetrayalNotify (RemoteEvent)
-│       ├── ComponentCollected (RemoteEvent)
+│       ├── BreakAlliance (RemoteEvent)
 │       ├── RequestPuzzle (RemoteEvent)
-│       ├── PuzzleStart (RemoteEvent)
-│       ├── PuzzleSubmit (RemoteEvent)
-│       ├── PuzzleResult (RemoteEvent)
+│       ├── RequestPuzzleProgress (RemoteEvent)
+│       ├── OpenPuzzleUI (RemoteEvent)
+│       ├── SubmitPuzzleAnswer (RemoteEvent)
+│       ├── PuzzleUpdate (RemoteEvent)
+│       ├── PuzzleCompleted (RemoteEvent)
+│       ├── PuzzleFailed (RemoteEvent)
 │       ├── SprintRequest (RemoteEvent)
 │       ├── StaminaUpdate (RemoteEvent)
+│       ├── CastMapVote (RemoteEvent)
 │       ├── MapVoteStart (RemoteEvent)
 │       ├── MapVoteUpdate (RemoteEvent)
 │       ├── MapVoteEnd (RemoteEvent)
 │       ├── MapUpdate (RemoteEvent)
-│       ├── SpectatorEnter (RemoteEvent)
-│       ├── SpectatorExit (RemoteEvent)
+│       ├── EnterSpectatorMode (RemoteEvent)
+│       ├── ExitSpectatorMode (RemoteEvent)
+│       ├── SpectatorCycleTarget (RemoteEvent)
 │       ├── SpectatorTargetUpdate (RemoteEvent)
-│       ├── SpectatorAliveList (RemoteEvent)
+│       ├── SpectatorStateUpdate (RemoteEvent)
 │       ├── ScoreboardUpdate (RemoteEvent)
 │       ├── ShowScoreboard (RemoteEvent)
 │       ├── HideScoreboard (RemoteEvent)
 │       ├── InventoryUpdate (RemoteEvent)
-│       └── AmmoUpdate (RemoteEvent)
+│       ├── CurrencyUpdate (RemoteEvent)
+│       ├── AmmoUpdate (RemoteEvent)
+│       ├── LobbyStateUpdate (RemoteEvent)
+│       ├── ShowTitleScreen (RemoteEvent)
+│       ├── HideTitleScreen (RemoteEvent)
+│       ├── TitleScreenContinue (RemoteEvent)
+│       ├── ShowEpilogue (RemoteEvent)
+│       ├── HideEpilogue (RemoteEvent)
+│       ├── EpilogueComplete (RemoteEvent)
+│       ├── AchievementUnlocked (RemoteEvent)
+│       ├── AnimationFire (RemoteEvent)
+│       ├── AnimationFireReplicate (RemoteEvent)
+│       ├── AnimationADS (RemoteEvent)
+│       ├── AnimationADSReplicate (RemoteEvent)
+│       ├── AnimationSprint (RemoteEvent)
+│       └── AnimationSprintReplicate (RemoteEvent)
 │
 ├── ServerStorage
 │   ├── 📁 Maps (Folder) - Optional custom maps
@@ -160,79 +222,118 @@ game
 │
 ├── StarterPlayer
 │   └── StarterPlayerScripts
-│       ├── 📦 ClientController.lua (ModuleScript) - Client game state
-│       ├── 📄 WeaponController.client.lua (LocalScript) - Basic weapon input
-│       ├── 📄 FPSWeaponController.client.lua (LocalScript) - Full FPS weapon system
-│       ├── 📄 FirstPersonCamera.client.lua (LocalScript) - FPS camera controller
-│       ├── 📄 FPSMovementController.client.lua (LocalScript) - Movement with crouch/sprint
-│       ├── 📄 FPSAudioController.client.lua (LocalScript) - Weapon and footstep sounds
-│       ├── 📄 FPSMenuController.client.lua (LocalScript) - Controller-friendly menus
-│       ├── 📄 SprintController.client.lua (LocalScript) - Sprint input handler
+│       ├── 📄 BootClient.lua (LocalScript) - Client boot entry point
+│       ├── 📦 BootModule.lua (ModuleScript) - Boot module implementation
+│       ├── 📦 ClientMainModule.lua (ModuleScript) - Client main module
+│       ├── 📁 Modules (Folder)
+│       │   ├── 📦 CureStationInteraction.lua (ModuleScript) - Cure station interaction handler
+│       │   ├── 📦 FPSAnimationController.lua (ModuleScript) - FPS animation controller
+│       │   ├── 📦 FPSAudioController.lua (ModuleScript) - FPS audio controller
+│       │   ├── 📦 FPSMenuController.lua (ModuleScript) - FPS menu controller
+│       │   ├── 📦 FPSMovement.lua (ModuleScript) - FPS movement controller
+│       │   ├── 📦 FPSWeaponController.lua (ModuleScript) - FPS weapon controller
+│       │   ├── 📦 FirstPersonCamera.lua (ModuleScript) - First-person camera module
+│       │   ├── 📦 LoadingManager.lua (ModuleScript) - Loading screen manager
+│       │   ├── 📦 MusicController.lua (ModuleScript) - Music playback controller
+│       │   ├── 📦 StaminaClient.lua (ModuleScript) - Client stamina handler
+│       │   ├── 📦 ViewModelController.lua (ModuleScript) - Weapon view model controller
+│       │   ├── 📦 VoiceoverController.lua (ModuleScript) - Voiceover playback controller
+│       │   └── 📁 UI (Folder)
+│       │       ├── 📦 AchievementUI.lua (ModuleScript) - Achievement UI
+│       │       ├── 📦 AllianceUI.lua (ModuleScript) - Alliance interface
+│       │       ├── 📦 BaseHealthUI.lua (ModuleScript) - Base health bar
+│       │       ├── 📦 ControlsTutorialUI.lua (ModuleScript) - Controls tutorial overlay
+│       │       ├── 📦 CreditsUI.lua (ModuleScript) - Credits screen
+│       │       ├── 📦 CureUI.lua (ModuleScript) - Cure progress display
+│       │       ├── 📦 EpilogueUI.lua (ModuleScript) - Epilogue screen
+│       │       ├── 📦 FPSHUD.lua (ModuleScript) - FPS HUD (crosshair, ammo)
+│       │       ├── 📦 FunFactUI.lua (ModuleScript) - Fun fact display
+│       │       ├── 📦 InventoryUI.lua (ModuleScript) - Player inventory
+│       │       ├── 📦 LobbyUI.lua (ModuleScript) - Lobby interface
+│       │       ├── 📦 MapUI.lua (ModuleScript) - Map display
+│       │       ├── 📦 MapVotingUI.lua (ModuleScript) - Map voting interface
+│       │       ├── 📦 NotificationUI.lua (ModuleScript) - Notification system
+│       │       ├── 📦 PlayerHUD.lua (ModuleScript) - Player health and status
+│       │       ├── 📦 PortalQueueUI.lua (ModuleScript) - Portal queue interface
+│       │       ├── 📦 PuzzleMenuUI.lua (ModuleScript) - Puzzle selection menu
+│       │       ├── 📦 PuzzleUI.lua (ModuleScript) - Puzzle minigame interface
+│       │       ├── 📦 ScoreboardUI.lua (ModuleScript) - Player scoreboard
+│       │       ├── 📦 ShopUI.lua (ModuleScript) - In-game shop
+│       │       ├── 📦 SpectatorUI.lua (ModuleScript) - Spectator controls
+│       │       ├── 📦 SynthesisUI.lua (ModuleScript) - Cure synthesis interface
+│       │       ├── 📦 TitleScreenUI.lua (ModuleScript) - Title screen
+│       │       ├── 📦 TouchControlsUI.lua (ModuleScript) - Mobile touch controls
+│       │       └── 📦 WaveUI.lua (ModuleScript) - Wave number and time display
 │       └── 📁 FPS (Folder)
-│           ├── 📦 FirstPersonCamera.lua (ModuleScript) - Camera module
-│           └── 📄 FirstPersonController.client.lua (LocalScript) - Camera bootstrap
+│           └── 📁 Archived (Folder) - Archived FPS implementations
 │
 └── StarterGui
-    ├── 📄 WaveUI.client.lua (LocalScript) - Wave number and time display
-    ├── 📄 BaseHealthUI.client.lua (LocalScript) - Base health bar
-    ├── 📄 CureUI.client.lua (LocalScript) - Cure progress display
-    ├── 📄 AllianceUI.client.lua (LocalScript) - Alliance interface
-    ├── 📄 ShopUI.client.lua (LocalScript) - In-game shop
-    ├── 📄 InventoryUI.client.lua (LocalScript) - Player inventory
-    ├── 📄 PlayerHUD.client.lua (LocalScript) - Health bar and compass
-    ├── 📄 FPSHUD.client.lua (LocalScript) - Crosshair, ammo counter
-    ├── 📄 PuzzleUI.client.lua (LocalScript) - Puzzle minigame interface
-    ├── 📄 PuzzleMenuUI.client.lua (LocalScript) - Puzzle selection menu
-    ├── 📄 MapVotingUI.client.lua (LocalScript) - Map voting in lobby
-    ├── 📄 SpectatorUI.client.lua (LocalScript) - Spectator controls
-    └── 📄 ScoreboardUI.client.lua (LocalScript) - Player scoreboard
+    └── (UI scripts are now in StarterPlayerScripts/Modules/UI as ModuleScripts)
 ```
+
+> **Note on UI Scripts**: All UI scripts are now ModuleScripts located in `StarterPlayerScripts/Modules/UI/` and are loaded by the BootClient system. They are no longer placed directly in StarterGui as LocalScripts.
 
 ---
 
 ### Repository to Roblox Location Mapping
 
-| Repository File | Roblox Location | Script Type |
-|-----------------|-----------------|-------------|
-| **Server Scripts** |||
-| `ServerScriptService/MainServer.lua` | ServerScriptService.MainServer | Script |
-| `ServerScriptService/GameManager.lua` | ServerScriptService.GameManager | ModuleScript |
-| `ServerScriptService/GameServer.lua` | ServerScriptService.GameServer | ModuleScript |
-| `ServerScriptService/PlayerManager.lua` | ServerScriptService.PlayerManager | ModuleScript |
-| `ServerScriptService/WaveManager.lua` | ServerScriptService.WaveManager | ModuleScript |
-| `ServerScriptService/BaseManager.lua` | ServerScriptService.BaseManager | ModuleScript |
-| `ServerScriptService/Spawner.lua` | ServerScriptService.Spawner | ModuleScript |
-| `ServerScriptService/CureService.lua` | ServerScriptService.CureService | ModuleScript |
-| `ServerScriptService/CureCraftingManager.lua` | ServerScriptService.CureCraftingManager | ModuleScript |
-| `ServerScriptService/PuzzleService.lua` | ServerScriptService.PuzzleService | ModuleScript |
-| `ServerScriptService/AllianceServiceV2.lua` | ServerScriptService.AllianceServiceV2 | ModuleScript |
-| `ServerScriptService/WeaponService.lua` | ServerScriptService.WeaponService | ModuleScript |
-| `ServerScriptService/FPSWeaponService.lua` | ServerScriptService.FPSWeaponService | ModuleScript |
-| `ServerScriptService/ShopService.lua` | ServerScriptService.ShopService | ModuleScript |
-| `ServerScriptService/MapManager.lua` | ServerScriptService.MapManager | ModuleScript |
-| `ServerScriptService/LobbyManager.lua` | ServerScriptService.LobbyManager | ModuleScript |
-| `ServerScriptService/SpectatorManager.lua` | ServerScriptService.SpectatorManager | ModuleScript |
-| `ServerScriptService/ResourceSpawner.lua` | ServerScriptService.ResourceSpawner | ModuleScript |
-| `ServerScriptService/SprintService.lua` | ServerScriptService.SprintService | ModuleScript |
-| `ServerScriptService/AI/ZombieBrain.lua` | ServerScriptService.AI.ZombieBrain | ModuleScript |
-| **Shared Scripts** |||
-| `ReplicatedStorage/Shared/GameConfig.lua` | ReplicatedStorage.Shared.GameConfig | ModuleScript |
-| `ReplicatedStorage/Shared/GameState.lua` | ReplicatedStorage.Shared.GameState | ModuleScript |
-| `ReplicatedStorage/Shared/WaveConfig.lua` | ReplicatedStorage.Shared.WaveConfig | ModuleScript |
-| `ReplicatedStorage/Shared/ZombieTypes.lua` | ReplicatedStorage.Shared.ZombieTypes | ModuleScript |
-| `ReplicatedStorage/Shared/WeaponConfig.lua` | ReplicatedStorage.Shared.WeaponConfig | ModuleScript |
-| `ReplicatedStorage/Shared/FPSConfig.lua` | ReplicatedStorage.Shared.FPSConfig | ModuleScript |
-| `ReplicatedStorage/Shared/MapConfig.lua` | ReplicatedStorage.Shared.MapConfig | ModuleScript |
-| `ReplicatedStorage/Shared/PuzzleConfig.lua` | ReplicatedStorage.Shared.PuzzleConfig | ModuleScript |
-| `ReplicatedStorage/Shared/UIScaleConfig.lua` | ReplicatedStorage.Shared.UIScaleConfig | ModuleScript |
-| `ReplicatedStorage/Shared/UIScaleManager.lua` | ReplicatedStorage.Shared.UIScaleManager | ModuleScript |
-| **Client Scripts** |||
-| `StarterPlayer/StarterPlayerScripts/Modules/ClientController.lua` | StarterPlayerScripts.Modules.ClientController | ModuleScript |
-| `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` | StarterPlayerScripts.Modules.FPSWeaponController | ModuleScript |
-| `StarterPlayer/StarterPlayerScripts/Modules/FPSMovement.lua` | StarterPlayerScripts.Modules.FPSMovement | ModuleScript |
-| `StarterPlayer/StarterPlayerScripts/FPS/FirstPersonCamera.lua` | StarterPlayerScripts.FPS.FirstPersonCamera | ModuleScript |
-| **UI Scripts** |||
-| `StarterGui/*` (LocalScript files) | StarterGui (create as LocalScripts) | LocalScript |
+> **Important**: All file names use only the `.lua` extension. No additional dots like `.server.lua` or `.client.lua` are used to avoid sync tool compatibility issues.
+
+| Repository File | Roblox Location | Script Type | Notes |
+|-----------------|-----------------|-------------|-------|
+| **Server Scripts** ||||
+| `ServerScriptService/MainServerScript.lua` | ServerScriptService.MainServerScript | Script | Main entry point |
+| `ServerScriptService/GameManager.lua` | ServerScriptService.GameManager | ModuleScript | |
+| `ServerScriptService/PlayerManager.lua` | ServerScriptService.PlayerManager | ModuleScript | |
+| `ServerScriptService/WaveManager.lua` | ServerScriptService.WaveManager | ModuleScript | |
+| `ServerScriptService/BaseManager.lua` | ServerScriptService.BaseManager | ModuleScript | |
+| `ServerScriptService/Spawner.lua` | ServerScriptService.Spawner | ModuleScript | |
+| `ServerScriptService/CureService.lua` | ServerScriptService.CureService | ModuleScript | |
+| `ServerScriptService/CureSynthesisService.lua` | ServerScriptService.CureSynthesisService | ModuleScript | |
+| `ServerScriptService/PuzzleService.lua` | ServerScriptService.PuzzleService | ModuleScript | |
+| `ServerScriptService/AllianceServiceV2.lua` | ServerScriptService.AllianceServiceV2 | ModuleScript | |
+| `ServerScriptService/WeaponService.lua` | ServerScriptService.WeaponService | ModuleScript | |
+| `ServerScriptService/FPSWeaponService.lua` | ServerScriptService.FPSWeaponService | ModuleScript | |
+| `ServerScriptService/FPSAnimationService.lua` | ServerScriptService.FPSAnimationService | ModuleScript | |
+| `ServerScriptService/ShopService.lua` | ServerScriptService.ShopService | ModuleScript | |
+| `ServerScriptService/MapManager.lua` | ServerScriptService.MapManager | ModuleScript | |
+| `ServerScriptService/LobbyManager.lua` | ServerScriptService.LobbyManager | ModuleScript | |
+| `ServerScriptService/SpectatorManager.lua` | ServerScriptService.SpectatorManager | ModuleScript | |
+| `ServerScriptService/ResourceSpawner.lua` | ServerScriptService.ResourceSpawner | ModuleScript | |
+| `ServerScriptService/SprintService.lua` | ServerScriptService.SprintService | ModuleScript | |
+| `ServerScriptService/AchievementService.lua` | ServerScriptService.AchievementService | ModuleScript | |
+| `ServerScriptService/VoiceoverService.lua` | ServerScriptService.VoiceoverService | ModuleScript | |
+| `ServerScriptService/FunFactService.lua` | ServerScriptService.FunFactService | ModuleScript | |
+| `ServerScriptService/RemoteEventsBootstrap.lua` | ServerScriptService.RemoteEventsBootstrap | ModuleScript | |
+| `ServerScriptService/AI/ZombieBrain.lua` | ServerScriptService.AI.ZombieBrain | ModuleScript | |
+| `ServerScriptService/AI/AIDirector.lua` | ServerScriptService.AI.AIDirector | ModuleScript | |
+| `ServerScriptService/AI/TargetingService.lua` | ServerScriptService.AI.TargetingService | ModuleScript | |
+| `ServerScriptService/AI/SpitterController.lua` | ServerScriptService.AI.SpitterController | ModuleScript | |
+| `ServerScriptService/AI/BossAuraService.lua` | ServerScriptService.AI.BossAuraService | ModuleScript | |
+| `ServerScriptService/AI/SurroundService.lua` | ServerScriptService.AI.SurroundService | ModuleScript | |
+| **Shared Scripts** ||||
+| `ReplicatedStorage/Shared/GameConfig.lua` | ReplicatedStorage.Shared.GameConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/GameState.lua` | ReplicatedStorage.Shared.GameState | ModuleScript | |
+| `ReplicatedStorage/Shared/WaveConfig.lua` | ReplicatedStorage.Shared.WaveConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/ZombieTypes.lua` | ReplicatedStorage.Shared.ZombieTypes | ModuleScript | |
+| `ReplicatedStorage/Shared/WeaponConfig.lua` | ReplicatedStorage.Shared.WeaponConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/WeaponValues.lua` | ReplicatedStorage.Shared.WeaponValues | ModuleScript | |
+| `ReplicatedStorage/Shared/FPSConfig.lua` | ReplicatedStorage.Shared.FPSConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/MapConfig.lua` | ReplicatedStorage.Shared.MapConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/PuzzleConfig.lua` | ReplicatedStorage.Shared.PuzzleConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/UIScaleConfig.lua` | ReplicatedStorage.Shared.UIScaleConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/UIScaleManager.lua` | ReplicatedStorage.Shared.UIScaleManager | ModuleScript | |
+| `ReplicatedStorage/Shared/AssetConfig.lua` | ReplicatedStorage.Shared.AssetConfig | ModuleScript | |
+| `ReplicatedStorage/Shared/AssetValidation.lua` | ReplicatedStorage.Shared.AssetValidation | ModuleScript | |
+| `ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua` | ReplicatedStorage.Shared.Remotes.RemoteRegistry | ModuleScript | |
+| **Client Scripts** ||||
+| `StarterPlayer/StarterPlayerScripts/BootClient.lua` | StarterPlayerScripts.BootClient | LocalScript | Client entry point |
+| `StarterPlayer/StarterPlayerScripts/BootModule.lua` | StarterPlayerScripts.BootModule | ModuleScript | |
+| `StarterPlayer/StarterPlayerScripts/ClientMainModule.lua` | StarterPlayerScripts.ClientMainModule | ModuleScript | |
+| `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` | StarterPlayerScripts.Modules.FPSWeaponController | ModuleScript | |
+| `StarterPlayer/StarterPlayerScripts/Modules/FPSMovement.lua` | StarterPlayerScripts.Modules.FPSMovement | ModuleScript | |
+| `StarterPlayer/StarterPlayerScripts/Modules/FirstPersonCamera.lua` | StarterPlayerScripts.Modules.FirstPersonCamera | ModuleScript | |
+| `StarterPlayer/StarterPlayerScripts/Modules/UI/*` | StarterPlayerScripts.Modules.UI.* | ModuleScript | All UI modules |
 
 > **Note**: The repository structure now matches Roblox Studio exactly. Simply copy folders directly without reorganization.
 
@@ -240,37 +341,21 @@ game
 
 ## Detailed Setup
 
-### Step 1: Create or Open a Roblox Place
+### Step 1: Create Roblox Place
 
-1. Launch **Roblox Studio**
-2. Choose one of:
-   - **New Place**: File → New → Baseplate
-   - **Existing Place**: Open from your games
+1. Launch Roblox Studio
+2. File → New → Baseplate (or open existing place)
 
-### Step 2: Create Workspace Structure
+### Step 2: Create Workspace Elements
 
-Before importing scripts, set up the required Workspace elements:
+**Required Setup in Workspace:**
 
-1. **Create the Base** (Part or Model)
-   - Add a Part or Model named `Base` to Workspace
-   - Position it centrally in your map
-   - This represents what players defend from zombies
+1. **Base** - Part or Model named "Base" (what players defend)
+2. **ZombieSpawnPoints** - Folder with Part children positioned around map edges
+3. **ResourceSpawnPoints** - Folder with Part children distributed across map
 
-2. **Create ZombieSpawnPoints folder**
-   - In Workspace, create a Folder named `ZombieSpawnPoints`
-   - Add Part instances inside (name them SpawnPoint1, SpawnPoint2, etc.)
-   - Position around the perimeter of your play area
-   - Zombies will spawn at these locations
-
-3. **Create ResourceSpawnPoints folder**
-   - In Workspace, create a Folder named `ResourceSpawnPoints`
-   - Add Part instances inside (name them ResourcePoint1, ResourcePoint2, etc.)
-   - Distribute throughout the map
-   - Cure components will appear at these locations
-
-4. **Create CureStations folder** (Optional)
-   - In Workspace, create a Folder named `CureStations`
-   - Add Part instances with ProximityPrompts for puzzle interaction
+**Optional:**
+4. **CureStations** - Folder with Parts that have ProximityPrompts for puzzle interaction
 
 ### Step 3: Import Server Scripts to ServerScriptService
 
@@ -278,31 +363,39 @@ Create the following scripts in **ServerScriptService**:
 
 | Script Name | Type | Repository File |
 |-------------|------|-----------------|
-| MainServer | **Script** | `ServerScriptService/MainServer.lua` |
+| MainServerScript | **Script** | `ServerScriptService/MainServerScript.lua` |
 | GameManager | ModuleScript | `ServerScriptService/GameManager.lua` |
-| GameServer | ModuleScript | `ServerScriptService/GameServer.lua` |
 | PlayerManager | ModuleScript | `ServerScriptService/PlayerManager.lua` |
 | WaveManager | ModuleScript | `ServerScriptService/WaveManager.lua` |
 | BaseManager | ModuleScript | `ServerScriptService/BaseManager.lua` |
 | Spawner | ModuleScript | `ServerScriptService/Spawner.lua` |
 | CureService | ModuleScript | `ServerScriptService/CureService.lua` |
-| CureCraftingManager | ModuleScript | `ServerScriptService/CureCraftingManager.lua` |
+| CureSynthesisService | ModuleScript | `ServerScriptService/CureSynthesisService.lua` |
 | PuzzleService | ModuleScript | `ServerScriptService/PuzzleService.lua` |
 | AllianceServiceV2 | ModuleScript | `ServerScriptService/AllianceServiceV2.lua` |
 | WeaponService | ModuleScript | `ServerScriptService/WeaponService.lua` |
 | FPSWeaponService | ModuleScript | `ServerScriptService/FPSWeaponService.lua` |
+| FPSAnimationService | ModuleScript | `ServerScriptService/FPSAnimationService.lua` |
 | ShopService | ModuleScript | `ServerScriptService/ShopService.lua` |
 | MapManager | ModuleScript | `ServerScriptService/MapManager.lua` |
 | LobbyManager | ModuleScript | `ServerScriptService/LobbyManager.lua` |
 | SpectatorManager | ModuleScript | `ServerScriptService/SpectatorManager.lua` |
 | ResourceSpawner | ModuleScript | `ServerScriptService/ResourceSpawner.lua` |
 | SprintService | ModuleScript | `ServerScriptService/SprintService.lua` |
+| AchievementService | ModuleScript | `ServerScriptService/AchievementService.lua` |
+| VoiceoverService | ModuleScript | `ServerScriptService/VoiceoverService.lua` |
+| FunFactService | ModuleScript | `ServerScriptService/FunFactService.lua` |
+| RemoteEventsBootstrap | ModuleScript | `ServerScriptService/RemoteEventsBootstrap.lua` |
 
 **AI Folder:**
 1. Copy the `AI` folder from `ServerScriptService/AI/` to game.ServerScriptService
-2. Contains: `ZombieBrain` (ModuleScript) and other AI modules
+2. Contains: `ZombieBrain`, `AIDirector`, `TargetingService`, `SpitterController`, `BossAuraService`, `SurroundService` (all ModuleScripts)
 
-> **⚠️ Important**: Only `MainServer` should be a **Script**. All others are **ModuleScripts**.
+**Alliance Folder:**
+1. Copy the `Alliance` folder from `ServerScriptService/Alliance/` to game.ServerScriptService
+2. Contains: `AllianceGraph`, `BetrayalService`, `InventoryLedger`, `PoolCalculator` (all ModuleScripts)
+
+> **⚠️ Important**: Only `MainServerScript` should be a **Script**. All others are **ModuleScripts**.
 
 ### Step 4: Import Shared Scripts to ReplicatedStorage
 
@@ -316,93 +409,94 @@ Create the following scripts in **ServerScriptService**:
 | WaveConfig | ModuleScript | `ReplicatedStorage/Shared/WaveConfig.lua` |
 | ZombieTypes | ModuleScript | `ReplicatedStorage/Shared/ZombieTypes.lua` |
 | WeaponConfig | ModuleScript | `ReplicatedStorage/Shared/WeaponConfig.lua` |
+| WeaponValues | ModuleScript | `ReplicatedStorage/Shared/WeaponValues.lua` |
 | FPSConfig | ModuleScript | `ReplicatedStorage/Shared/FPSConfig.lua` |
 | MapConfig | ModuleScript | `ReplicatedStorage/Shared/MapConfig.lua` |
 | PuzzleConfig | ModuleScript | `ReplicatedStorage/Shared/PuzzleConfig.lua` |
 | UIScaleConfig | ModuleScript | `ReplicatedStorage/Shared/UIScaleConfig.lua` |
 | UIScaleManager | ModuleScript | `ReplicatedStorage/Shared/UIScaleManager.lua` |
+| AssetConfig | ModuleScript | `ReplicatedStorage/Shared/AssetConfig.lua` |
+| AssetValidation | ModuleScript | `ReplicatedStorage/Shared/AssetValidation.lua` |
+| FunFactConfig | ModuleScript | `ReplicatedStorage/Shared/FunFactConfig.lua` |
+| StoryConfig | ModuleScript | `ReplicatedStorage/Shared/StoryConfig.lua` |
+| PortalConfig | ModuleScript | `ReplicatedStorage/Shared/PortalConfig.lua` |
+| InputActionRegistry | ModuleScript | `ReplicatedStorage/Shared/InputActionRegistry.lua` |
+| InputManager | ModuleScript | `ReplicatedStorage/Shared/InputManager.lua` |
+| ModalManager | ModuleScript | `ReplicatedStorage/Shared/ModalManager.lua` |
+| MathUtil | ModuleScript | `ReplicatedStorage/Shared/MathUtil.lua` |
+| RemoteEventUtil | ModuleScript | `ReplicatedStorage/Shared/RemoteEventUtil.lua` |
+| UIDebugConfig | ModuleScript | `ReplicatedStorage/Shared/UIDebugConfig.lua` |
+
+**Remotes Folder:**
+1. Copy the `Remotes` folder from `ReplicatedStorage/Shared/Remotes/` to game.ReplicatedStorage.Shared
+2. Contains: `RemoteRegistry.lua` (ModuleScript)
 
 ### Step 5: Import Client Scripts to StarterPlayerScripts
 
 Copy the `StarterPlayer/StarterPlayerScripts/` folders from the repository to game.StarterPlayer.StarterPlayerScripts:
 
-| Folder/Script Name | Type | Repository Path |
-|--------------------|------|-----------------|
-| Modules/ | Folder | `StarterPlayer/StarterPlayerScripts/Modules/` |
-| FPS/ | Folder | `StarterPlayer/StarterPlayerScripts/FPS/` |
-
-Key files include:
-- `Modules/ClientController.lua` (ModuleScript)
-- `Modules/FPSWeaponController.lua` (ModuleScript)
-- `Modules/FPSMovement.lua` (ModuleScript)
-- `FPS/FirstPersonCamera.lua` (ModuleScript)
-
-### Step 6: Import UI Scripts to StarterGui
-
-Copy LocalScripts from `StarterGui/` in the repository to game.StarterGui. Each `.lua` file should be created as a **LocalScript** instance:
-
+**Root Level:**
 | Script Name | Type | Repository File |
 |-------------|------|-----------------|
-| (All UI scripts) | LocalScript | `StarterGui/*.lua` |
+| BootClient | **LocalScript** | `StarterPlayer/StarterPlayerScripts/BootClient.lua` |
+| BootModule | ModuleScript | `StarterPlayer/StarterPlayerScripts/BootModule.lua` |
+| ClientMainModule | ModuleScript | `StarterPlayer/StarterPlayerScripts/ClientMainModule.lua` |
 
-The repository contains ready-to-use UI scripts. Simply copy them as LocalScript instances in StarterGui.
+**Modules Folder:**
+1. Copy the `Modules` folder from `StarterPlayer/StarterPlayerScripts/Modules/` to game.StarterPlayer.StarterPlayerScripts
+2. Contains all client-side controller modules and UI modules
 
-### Step 7: Create ServerStorage Structure
+Key files include:
+- `Modules/FPSWeaponController.lua` (ModuleScript)
+- `Modules/FPSMovement.lua` (ModuleScript)
+- `Modules/FirstPersonCamera.lua` (ModuleScript)
+- `Modules/FPSAnimationController.lua` (ModuleScript)
+- `Modules/FPSAudioController.lua` (ModuleScript)
+- `Modules/LoadingManager.lua` (ModuleScript)
+- `Modules/MusicController.lua` (ModuleScript)
+- `Modules/ViewModelController.lua` (ModuleScript)
+- `Modules/VoiceoverController.lua` (ModuleScript)
+- `Modules/UI/*` (All UI ModuleScripts)
 
-1. In **ServerStorage**, create a Folder named `Maps`
-   - (Optional) Add custom map Models to the Maps folder
-   - Each map Model should contain:
-     - `ZombieSpawnPoints` (Folder with Part spawn locations)
-     - `ResourceSpawnPoints` (Folder with Part spawn locations)
-   - The game will use the default Workspace map if none are provided
+> **Note**: All UI scripts are now ModuleScripts in the `Modules/UI/` folder, loaded by the boot system. They are no longer placed directly in StarterGui.
 
-2. Create a Folder named `ZombieModels` (Optional)
-   - Add R15 or R6 character Models with Humanoid and HumanoidRootPart
-   - Name them: `Walker`, `Runner`, `Brute`, `Spitter`, `Boss`
-   - The game will create basic zombies procedurally if none are provided
+### Step 6: StarterGui Setup
+
+**No manual setup required for StarterGui**. All UI scripts are now ModuleScripts located in `StarterPlayer/StarterPlayerScripts/Modules/UI/` and are loaded automatically by the boot system.
+
+If you copied the `Modules/UI/` folder in Step 5, you're all set. The boot system will handle loading and initializing all UI components.
+
+### Step 7: ServerStorage Setup (Optional)
+
+**Maps Folder:**
+- Create `ServerStorage/Maps` folder
+- Add custom map Models with `ZombieSpawnPoints` and `ResourceSpawnPoints` folders
+- Game uses Workspace map if none provided
+
+**ZombieModels Folder:**
+- Create `ServerStorage/ZombieModels` folder
+- Add R15/R6 Models named: Walker, Runner, Brute, Spitter, Boss
+- Must have Humanoid and HumanoidRootPart
+- Game creates basic zombies if none provided
 
 ### Step 8: Verify RemoteEvents Folder
 
-The RemoteEvents folder in ReplicatedStorage is created automatically by the server scripts when the game starts. You don't need to create these manually, but if you want to pre-create them:
+The RemoteEvents folder in ReplicatedStorage is created automatically by `RemoteEventsBootstrap.lua` when the game starts. You don't need to create these manually.
 
-1. In **ReplicatedStorage**, create a Folder named `RemoteEvents`
-2. The following RemoteEvents will be used (created automatically if missing):
+**Automatic Creation**: When `MainServerScript` runs, it calls `RemoteEventsBootstrap` which creates all necessary RemoteEvent instances in `ReplicatedStorage/RemoteEvents/`. This includes all game state, player, weapon, shop, alliance, puzzle, sprint, map/lobby, spectator, and scoreboard events.
 
-**Game State Events:**
-- WaveAnnounce, WaveUpdate, GameStateUpdate, CureUpdate, BaseHealthUpdate
+### Step 9: Verify Script Names and Types
 
-**Player Events:**
-- PlayerHealthUpdate, InventoryUpdate
+All scripts use proper Roblox service imports and are ready to use. **Important naming convention**:
 
-**Weapon Events:**
-- WeaponFire, WeaponEquip, WeaponReload, WeaponLoadoutUpdate, WeaponHitConfirm, AmmoUpdate
+- **Server Scripts**: Regular `.lua` extension only (e.g., `MainServerScript.lua` NOT `Main.server.lua`)
+- **Client Scripts**: Regular `.lua` extension only (e.g., `BootClient.lua` NOT `Boot.client.lua`)
+- **Module Scripts**: Regular `.lua` extension only (e.g., `GameManager.lua`)
 
-**Shop Events:**
-- ShopCatalog, ShopPurchase
-
-**Alliance Events:**
-- AllianceRequest, AllianceResponse, AllianceUpdate, BetrayalNotify
-
-**Puzzle Events:**
-- ComponentCollected, RequestPuzzle, PuzzleStart, PuzzleSubmit, PuzzleResult
-
-**Sprint Events:**
-- SprintRequest, StaminaUpdate
-
-**Map/Lobby Events:**
-- MapVoteStart, MapVoteUpdate, MapVoteEnd, MapUpdate
-
-**Spectator Events:**
-- SpectatorEnter, SpectatorExit, SpectatorTargetUpdate, SpectatorAliveList
-
-**Scoreboard Events:**
-- ScoreboardUpdate, ShowScoreboard, HideScoreboard
-
-### Step 9: Verify Script Import Patterns
-
-All scripts use proper Roblox service imports and are ready to use:
+This naming convention prevents compatibility issues with Roblox sync tools like Rojo and GitSync.
 
 ```lua
+-- Example imports in scripts:
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
@@ -420,96 +514,41 @@ No changes needed - the repository structure matches Roblox Studio exactly. Simp
 
 ## Map Configuration
 
-### Creating the Base
+### Required Workspace Setup
 
-1. In **Workspace**, create a Part or Model named "Base"
-2. Position it in the center of your map
-3. Add a Script to the Base to handle damage visualization (optional)
+1. **Base** - Part/Model in center of map (players defend this)
+2. **ZombieSpawnPoints** - Folder with Parts around map perimeter
+3. **ResourceSpawnPoints** - Folder with Parts distributed across map
 
-### Setting Up Zombie Spawn Points
+### Layout Tips
 
-1. In **Workspace**, create a Folder named "ZombieSpawnPoints"
-2. Add multiple Parts (or just use their Position)
-3. Name them "SpawnPoint1", "SpawnPoint2", etc.
-4. Position them around the perimeter of your play area
-5. These mark where zombies will spawn
-
-### Setting Up Resource Spawn Points
-
-1. In **Workspace**, create a Folder named "ResourceSpawnPoints"
-2. Add multiple Parts
-3. Name them "ResourcePoint1", "ResourcePoint2", etc.
-4. Position them throughout the map
-5. Players will find cure components at these locations
-
-### Recommended Map Layout
-
-```
-+-----------------------------------+
-|                                   |
-|  [Zombie]      [Resource]        |
-|                                   |
-|         [Resource]                |
-|  [Zombie]         [BASE]  [Zombie]|
-|                   [Resource]      |
-|                                   |
-|  [Resource]               [Zombie]|
-|                                   |
-+-----------------------------------+
-```
-
-**Tips:**
-- Keep the base centrally located
-- Distribute spawn points evenly around edges
-- Place resources at varying distances from base
+- Keep base centrally located
+- Distribute 6-12 zombie spawn points around edges
+- Place 8-15 resource points at varying distances from base
 - Add cover and obstacles for tactical gameplay
 
 ---
 
 ## Testing
 
-### Local Testing (Single Player)
+### Single Player Test
+1. Click **Play** in Roblox Studio
+2. Verify: Wave spawning, player health, base health, component collection
 
-1. Click **Play** button in Roblox Studio
-2. Game should start automatically
-3. Test basic functionality:
-   - Wave spawning
-   - Player health
-   - Base health tracking
-   - Component collection
+### Multiplayer Test  
+1. Click Play dropdown → Select 2-8 players → Start
+2. Verify: Alliances, betrayal, component sharing, cooperative defense
 
-### Multiplayer Testing
-
-1. Click dropdown next to Play button
-2. Select number of players (2-8)
-3. Click **Start**
-4. Test with multiple clients:
-   - Alliance formation
-   - Betrayal mechanics
-   - Component sharing
-   - Cooperative defense
-
-### Testing Checklist
-
-- [ ] Game starts correctly
-- [ ] Players can join (up to 8)
-- [ ] Lobby and map voting works
-- [ ] Waves spawn zombies
-- [ ] Zombies attack players and base
-- [ ] Player health system works
-- [ ] Base health system works
-- [ ] FPS weapon system works (shooting, reloading, ADS)
-- [ ] Sprint and stamina system works
-- [ ] Components can be collected
-- [ ] Puzzle minigames can be completed
-- [ ] Cure progress updates
-- [ ] Alliances can be formed/broken
-- [ ] Shop purchases work
-- [ ] Spectator mode works when player dies
-- [ ] Scoreboard displays correctly (press TAB)
-- [ ] Victory condition works (cure completed)
-- [ ] Defeat conditions work (base destroyed / all dead)
-- [ ] Round restarts after victory/defeat
+### Key Features to Test
+- Title screen and lobby system
+- Wave spawning and zombie AI
+- FPS weapons (shooting, reloading, ADS)
+- Sprint and stamina
+- Puzzle minigames and cure synthesis
+- Alliance system
+- Spectator mode on death
+- Scoreboard (TAB key)
+- Victory (cure 100%) and defeat (base destroyed) conditions
 
 ---
 
@@ -517,129 +556,74 @@ No changes needed - the repository structure matches Roblox Studio exactly. Simp
 
 ### Common Issues
 
-#### Issue: "Script is not a ModuleScript"
-**Solution:** Make sure you created ModuleScripts, not regular Scripts, for the modules.
+**"Script is not a ModuleScript"**  
+Make sure you created ModuleScripts (not Scripts) for all modules. Only `MainServerScript` and `BootClient` should be Scripts/LocalScripts.
 
-#### Issue: "Attempt to index nil value"
-**Solution:** Check your `require()` paths are correct. Use absolute paths like `game.ReplicatedStorage.Shared.GameConfig`.
+**"Attempt to index nil value"**  
+Check `require()` paths. Use: `require(game.ReplicatedStorage.Shared.GameConfig)`
 
-#### Issue: "Player not being added"
-**Solution:** Ensure PlayerManager is properly initialized before players join.
+**"Waves not starting"**  
+Verify `MainServerScript` is a Script (not ModuleScript) in ServerScriptService and is enabled.
 
-#### Issue: "Waves not starting"
-**Solution:** Check that MainServer script is running and calling `gameServer:startGame()`.
+**"Components not spawning"**  
+Ensure ResourceSpawnPoints folder exists in Workspace with Part children positioned on the map.
 
-#### Issue: "Components not spawning"
-**Solution:** 
-- Verify ResourceSpawnPoints folder exists in Workspace
-- Ensure spawn points are properly positioned
-- Check ResourceSpawner is initialized in GameServer
+### Debugging Tips
 
-### Debug Output
-
-Add print statements to track game flow:
-
-```lua
--- In MainServer.lua
-print("Game server initialized")
-
--- When wave starts
-print("Wave " .. waveNumber .. " started!")
-
--- When player collects component
-print(player.Name .. " collected " .. componentName)
-```
-
-### Console Commands
-
-You can add admin commands for testing:
-
-```lua
--- In MainServer.lua
-game.ReplicatedStorage.AdminCommand.OnServerEvent:Connect(function(player, command)
-    if command == "skipwave" then
-        gameServer:startNextWave()
-    elseif command == "healbase" then
-        gameServer.baseManager:repairBase(1000)
-    end
-end)
-```
+Check the Output window in Roblox Studio for error messages. The boot sequence prints detailed status messages showing what's loading.
 
 ---
 
 ## Configuration
 
-To adjust game balance, edit `ReplicatedStorage/Shared/GameConfig.lua` in Roblox Studio:
+Game balance settings are in `ReplicatedStorage/Shared/GameConfig.lua`. Edit in Roblox Studio to adjust difficulty:
 
 ```lua
--- Make game easier
-GameConfig.STARTING_HEALTH = 150
-GameConfig.BASE_HEALTH = 1500
-GameConfig.ZOMBIE_DAMAGE = 5
-
--- Make game harder  
-GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.5
-GameConfig.ZOMBIES_PER_WAVE_MULTIPLIER = 2.0
-GameConfig.WAVE_DELAY = 20
+-- Example adjustments
+GameConfig.STARTING_HEALTH = 150          -- Player starting health
+GameConfig.BASE_HEALTH = 1500             -- Base starting health  
+GameConfig.ZOMBIE_DAMAGE = 5              -- Damage zombies deal
+GameConfig.ZOMBIE_HEALTH_MULTIPLIER = 1.5 -- Zombie health scaling
 ```
+
+See `WaveConfig.lua`, `WeaponConfig.lua`, and `ZombieTypes.lua` for additional tuning options.
 
 ---
 
 ## Next Steps
 
-After basic setup, the game is fully functional. Consider these enhancements:
+The game is functional after basic setup. Optional enhancements:
 
-1. **Customize Zombie Models**
-   - Add custom R15/R6 models to ServerStorage.ZombieModels
-   - Models should have: Humanoid, HumanoidRootPart, Head
-   - Name them: Walker, Runner, Brute, Spitter, Boss
-
-2. **Add Custom Maps**
-   - Create map models in ServerStorage.Maps
-   - Include ZombieSpawnPoints and ResourceSpawnPoints folders
-   - Configure MapConfig.lua with map details
-
-3. **Add Sound Effects**
-   - Update FPSAudioController with Roblox sound asset IDs
-   - Add weapon sounds, footsteps, ambient audio
-
-4. **Visual Polish**
-   - Add spawn particle effects
-   - Add hit indicators and damage numbers
-   - Create victory/defeat animations
-
-5. **Balance and Tune**
-   - Adjust GameConfig.lua values for difficulty
-   - Playtest with multiple players
-   - Fine-tune wave progression in WaveConfig.lua
+1. **Custom Zombie Models** - Add R15/R6 models to `ServerStorage.ZombieModels` (Walker, Runner, Brute, Spitter, Boss)
+2. **Custom Maps** - Create map models in `ServerStorage.Maps` with spawn point folders
+3. **Sound Effects** - Update `AssetConfig.lua` with Roblox sound asset IDs
+4. **Balance Tuning** - Adjust config files and playtest with multiple players
 
 ---
 
 ## Publishing
 
-When ready to publish:
+To publish your game:
 
-1. File → Publish to Roblox
-2. Choose a name and description
-3. Set game icon and thumbnail
-4. Configure settings:
-   - Max players: 8
-   - Genre: Adventure / Survival
-   - Enable filtering enabled
-5. Make it public or keep private for testing
+1. **File → Publish to Roblox**
+2. Set game name and description
+3. Configure max players: **8**
+4. Set genre: Adventure / Survival
+5. Add game icon and thumbnails
+6. Enable FilteringEnabled (should be on by default)
 
 ---
 
 ## Support
 
-For issues or questions:
-- Check the complete documentation index: [DOCUMENTATION.md](DOCUMENTATION.md)
-- Review the [API Documentation](API_DOCUMENTATION.md)
-- Review the [Game Design Document](GAME_DESIGN.md)
-- Visit the GitHub repository issues page
+For help or questions:
+- **Documentation**: See [DOCUMENTATION.md](DOCUMENTATION.md) for complete docs index
+- **API Reference**: See [API_DOCUMENTATION.md](API_DOCUMENTATION.md)
+- **Game Design**: See [GAME_DESIGN.md](GAME_DESIGN.md)
+- **GitHub Issues**: Visit the repository issues page
 
 ---
 
-**Installation Guide Version**: 2.0  
-**Last Updated**: 2025-12-25  
+**Installation Guide Version**: 3.0  
+**Last Updated**: 2026-02-11  
 **Compatible with**: Roblox Studio (Latest)

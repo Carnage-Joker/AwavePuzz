@@ -1,12 +1,12 @@
 -- @ScriptType: Script
--- Main.server.lua
+-- MainServerScript.lua
 -- SINGLE SERVER ENTRY POINT for Aether Wave: Convergence
 -- Boots all server systems in deterministic order
 -- Deterministic boot order with duplicate execution guard
 
 -- Guard against duplicate execution
 if script:GetAttribute("Initialized") then
-	warn("[Main.server] Already initialized, skipping duplicate execution")
+	warn("[MainServerScript] Already initialized, skipping duplicate execution")
 	return
 end
 script:SetAttribute("Initialized", true)
@@ -39,13 +39,13 @@ print("[BOOT][SERVER] Phase 0 complete: CharacterAutoLoads = false")
 print("[BOOT][SERVER] Phase 1: Initializing remote registry...")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
 if not SharedFolder then
-	error("[Main.server] CRITICAL: Failed to load Shared folder after 10 seconds")
+	error("[MainServerScript] CRITICAL: Failed to load Shared folder after 10 seconds")
 end
 
 -- Use new RemoteRegistry system
 local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
 if not RemotesFolder then
-	error("[Main.server] CRITICAL: Failed to load Remotes folder after 5 seconds")
+	error("[MainServerScript] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
 
 local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry", 5))
@@ -59,7 +59,7 @@ print("[BOOT][SERVER] Phase 1 complete: Remote registry initialized")
 print("[BOOT][SERVER] Phase 2: Loading shared configuration...")
 local GameConfigModule = SharedFolder:WaitForChild("GameConfig", 5)
 if not GameConfigModule then
-	error("[Main.server] CRITICAL: Failed to load GameConfig module after 5 seconds")
+	error("[MainServerScript] CRITICAL: Failed to load GameConfig module after 5 seconds")
 end
 local GameConfig = require(GameConfigModule)
 
