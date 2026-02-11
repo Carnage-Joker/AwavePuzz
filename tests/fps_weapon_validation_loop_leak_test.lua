@@ -4,8 +4,6 @@
 --
 -- Run this as a Server Script in ServerScriptService to test the cleanup pattern
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 print("========================================")
 print("FPS WEAPON VALIDATION LOOP LEAK TEST (BUG-001)")
 print("========================================")
