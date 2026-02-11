@@ -36,6 +36,7 @@ local LobbyManager = require(script.Parent.LobbyManager)
 local SpectatorManager = require(script.Parent.SpectatorManager)
 local PlayerSpawnManager = require(script.Parent.PlayerSpawnManager)
 local LobbySetup = require(script.Parent.LobbySetup)
+local SessionState = require(script.Parent.SessionState)
 
 -- Portal matchmaking (conditional load based on feature flag)
 local PortalMatchmakingService
@@ -118,6 +119,9 @@ function GameManager.new(allianceService)
 	-- Lobby setup (creates lobby area for players before map loads)
 	self.lobbySetup = LobbySetup.new()
 	self.lobbySetup:getOrCreateLobby()
+	
+	-- Session state tracking (unified player context)
+	self.sessionState = SessionState.getInstance()
 
 	-- Portal matchmaking service (if enabled)
 	if GameConfig.USE_PORTAL_MATCHMAKING and PortalMatchmakingService then
@@ -280,6 +284,7 @@ function GameManager:onPlayerPassedTitleScreen(player)
 
 	print(string.format("[Flow] Player %s passed title screen (TitleScreenContinue)", player.Name))
 	self.playersReadyForEpilogue[player.UserId] = true
+	self.sessionState:setPassedTitle(player, true)
 
 	-- ✅ NEW: Load character for player after title screen completion
 	-- With CharacterAutoLoads = false, we must explicitly load the character
@@ -576,6 +581,9 @@ function GameManager:onPlayerAdded(player)
 	end
 
 	print(string.format("[Flow] Join -> Player %s added to game", player.Name))
+	
+	-- Initialize SessionState for this player
+	self.sessionState:initializePlayer(player)
 
 	-- ✅ Init FPS ammo tracking first (safe even if WeaponService also triggers ammo setup)
 	if self.fpsWeaponService and self.fpsWeaponService.initializePlayer then
@@ -617,6 +625,7 @@ function GameManager:onPlayerAdded(player)
 		-- If currently in epilogue, mark player as having seen both title and epilogue
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
+		self.sessionState:setPassedTitle(player, true)
 		if self.remoteEvents.ShowEpilogue then
 			self.remoteEvents.ShowEpilogue:FireClient(player)
 		end
@@ -635,6 +644,7 @@ function GameManager:onPlayerAdded(player)
 		-- Title screen disabled: mark as ready immediately
 		self.playersReadyForEpilogue[player.UserId] = true
 		self.playersCompletedEpilogue[player.UserId] = true
+		self.sessionState:setPassedTitle(player, true)
 		print(string.format("[Flow] Join -> Ready (title screen disabled for %s)", player.Name))
 	end
 end
@@ -733,28 +743,31 @@ function GameManager:_getPlayerEffectiveState(player)
 		return self.currentState
 	end
 	
+	-- Use SessionState for unified context
+	local context = self.sessionState:getPlayerContext(player)
+	if not context then
+		return self.currentState
+	end
+	
 	-- Check if player is in a match (portal matchmaking)
-	if self.portalMatchmakingService and self.portalMatchmakingService.matchRegistry then
-		local isInMatch = self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
-		if isInMatch then
-			-- Player is in a match - send match state, NOT global lobby state
-			-- Match states: Countdown, WaveActive, Victory, Defeat
-			if self.currentState == "Countdown" or 
-			   self.currentState == "WaveActive" or 
-			   self.currentState == "Victory" or 
-			   self.currentState == "Defeat" then
-				return self.currentState
-			else
-				-- Match exists but state is weird - default to Countdown
-				warn(string.format("[GameManager] Player %s in match but global state is %s; defaulting to Countdown", 
-					player.Name, self.currentState))
-				return "Countdown"
-			end
+	if context.inMatch and context.matchId then
+		-- Player is in a match - send match state, NOT global lobby state
+		-- Match states: Countdown, WaveActive, Victory, Defeat
+		if self.currentState == "Countdown" or 
+		   self.currentState == "WaveActive" or 
+		   self.currentState == "Victory" or 
+		   self.currentState == "Defeat" then
+			return self.currentState
+		else
+			-- Match exists but state is weird - default to Countdown
+			warn(string.format("[GameManager] Player %s in match but global state is %s; defaulting to Countdown", 
+				player.Name, self.currentState))
+			return "Countdown"
 		end
 	end
 	
 	-- Player NOT in a match - check title screen status
-	if not self.playersReadyForEpilogue[player.UserId] then
+	if not context.passedTitle then
 		-- Player has not passed title screen
 		return "TitleScreen"
 	end
@@ -765,23 +778,23 @@ function GameManager:_getPlayerEffectiveState(player)
 end
 
 -- Get current state snapshot for a player (used on join/character spawn)
--- Returns: { snapshot = {...}, matchInfo = { inMatch = bool, matchId = string|nil } }
+-- Returns: { snapshot = {...}, matchInfo = { inMatch = bool, matchId = string|nil, isParticipant = bool } }
 function GameManager:getStateSnapshotForPlayer(player)
-	-- ✅ FIX: Use player-specific effective state instead of global state
+	-- Use player-specific effective state instead of global state
 	local effectiveState = self:_getPlayerEffectiveState(player)
 	
-	-- Gather match info once for both snapshot and logging
-	local inMatch = self.portalMatchmakingService and 
-	                self.portalMatchmakingService.matchRegistry and 
-	                self.portalMatchmakingService.matchRegistry:isPlayerInMatch(player)
-	local matchId = inMatch and self.portalMatchmakingService.matchRegistry.playerToMatch[player.UserId] or nil
+	-- Use SessionState for unified context
+	local context = self.sessionState:getPlayerContext(player)
+	local inMatch = context and context.inMatch or false
+	local matchId = context and context.matchId or nil
+	local isParticipant = context and context.isParticipant or false
 	
 	-- Log for debugging state snap-back issues
-	print(string.format("[GameManager][StateSnapshot] Player=%s GlobalState=%s EffectiveState=%s InMatch=%s MatchId=%s", 
-		player.Name, self.currentState, effectiveState, tostring(inMatch), tostring(matchId or "none")))
+	print(string.format("[GameManager][StateSnapshot] Player=%s GlobalState=%s EffectiveState=%s InMatch=%s MatchId=%s Participant=%s", 
+		player.Name, self.currentState, effectiveState, tostring(inMatch), tostring(matchId or "none"), tostring(isParticipant)))
 	
 	local snapshot = {
-		state = effectiveState, -- ✅ FIX: Use effective state, not global
+		state = effectiveState,
 		wave = self.currentWave,
 		baseHealth = self.baseManager and self.baseManager:getHealth() or 0,
 		cureProgress = self.cureProgress,
@@ -792,8 +805,9 @@ function GameManager:getStateSnapshotForPlayer(player)
 	return {
 		snapshot = snapshot,
 		matchInfo = {
-			inMatch = inMatch or false,
-			matchId = matchId
+			inMatch = inMatch,
+			matchId = matchId,
+			isParticipant = isParticipant
 		}
 	}
 end
@@ -956,6 +970,8 @@ function GameManager:startMatch(players, mapId, matchId)
 	for _, player in ipairs(players) do
 		if player and player.UserId then
 			self._matchParticipants[player.UserId] = true
+			-- Mark player as match participant in SessionState
+			self.sessionState:setMatch(player, matchId, true)
 		end
 	end
 	
@@ -1149,12 +1165,18 @@ function GameManager:onWaveComplete()
 	if not self.waveRewardsGranted[self.currentWave] then
 		self.waveRewardsGranted[self.currentWave] = true
 		
+		-- Only grant rewards to match participants (not spectators/late joiners)
+		local rewardCount = 0
 		for _, player in ipairs(Players:GetPlayers()) do
-			self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
+			-- Check if player is a participant in the current match
+			if self._matchParticipants and self._matchParticipants[player.UserId] then
+				self.playerManager:addCurrency(player, GameConfig.CURRENCY_PER_WAVE)
+				rewardCount = rewardCount + 1
+			end
 		end
 		
-		print(string.format("[GameManager] Wave %d rewards granted to %d players", 
-			self.currentWave, #Players:GetPlayers()))
+		print(string.format("[GameManager] Wave %d rewards granted to %d participants", 
+			self.currentWave, rewardCount))
 	else
 		warn(string.format("[GameManager] SECURITY: Duplicate wave completion detected for wave %d - rewards not granted", 
 			self.currentWave))
@@ -1197,6 +1219,16 @@ function GameManager:_cleanupRoundResources()
 	if self.portalMatchmakingService and self._currentMatchId then
 		self.portalMatchmakingService:endMatch(self._currentMatchId)
 		self._currentMatchId = nil
+	end
+	
+	-- Clear match participants and update SessionState
+	if self._matchParticipants then
+		for _, player in ipairs(Players:GetPlayers()) do
+			if self._matchParticipants[player.UserId] then
+				self.sessionState:setMatch(player, nil, false)
+			end
+		end
+		self._matchParticipants = {}
 	end
 end
 
