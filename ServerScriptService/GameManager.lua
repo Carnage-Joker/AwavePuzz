@@ -178,7 +178,7 @@ function GameManager.new(allianceService)
 	self._selectedMapId = nil             -- Cache selected map ID during resolution
 	
 	-- Cleanup tracking
-	self._heartbeatConnection = nil       -- Will be set by MainServer
+	self._heartbeatConnection = nil       -- Will be set by MainServerScript
 
 	-- ✅ FIX: Do NOT load map on server boot! Map should only load after portal queue or lobby voting.
 	-- Maps will be loaded by:

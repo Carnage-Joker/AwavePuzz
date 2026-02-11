@@ -203,25 +203,23 @@ AwavePuzz/
 │   │   ├── FPSConfig.lua          # FPS-specific configuration
 │   │   ├── WeaponConfig.lua       # Weapon definitions
 │   │   └── ...                    # Other shared configs
-│   ├── RemoteEvents/              # 🆕 RemoteEvent placeholders (58 files)
-│   └── Animations/                # 🆕 Animation placeholders (36 files)
+│   ├── RemoteEvents/              # 🆕 RemoteEvent instances (created at runtime)
+│   └── Animations/                # 🆕 Animation definitions
 │       └── Weapons/               # Weapon-specific animations
 ├── StarterPlayer/                 # Player initialization
 │   └── StarterPlayerScripts/      # Client-side controllers
+│       ├── BootClient.lua         # 🆕 Client entry point (LocalScript)
 │       ├── Modules/               # Client modules
 │       │   ├── FPSWeaponController.lua    # Weapon mechanics
 │       │   ├── FPSMovement.lua            # Movement system
-│       │   └── UI/                        # UI modules
+│       │   └── UI/                        # UI modules (all ModuleScripts)
 │       └── FPS/                   # FPS camera system
-├── StarterGui/                    # 🆕 UI LocalScripts
-│   ├── FPSHUD.lua                 # Crosshair, ammo, hitmarkers
-│   ├── TitleScreenUI.lua          # Title screen
-│   ├── EpilogueUI.lua             # Story epilogue
-│   └── ...                        # Other UI scripts
+├── StarterGui/                    # UI (handled by boot system now)
 ├── ServerStorage/                 # Server-only assets
-│   ├── Maps/                      # 🆕 Map models (placeholders)
-│   ├── Models/                    # 🆕 Weapon/object models (placeholders)
-│   └── ZombieModels/              # 🆕 Zombie models (placeholders)
+│   ├── DevOnly/                   # 🆕 Disabled/legacy/test files (not loaded)
+│   ├── Maps/                      # Map models
+│   ├── Models/                    # Weapon/object models
+│   └── ZombieModels/              # Zombie models
 ├── Archive/Legacy/Code/           # Archived legacy code (3 levels deep)
 ├── docs/                          # Documentation
 │   ├── implementation/            # Implementation summaries
@@ -234,7 +232,11 @@ AwavePuzz/
 └── LICENSE
 ```
 
-> **Note**: The repository now uses Roblox service names (ServerScriptService, ReplicatedStorage, etc.) to match the game structure exactly. See [docs/STRUCTURE.md](docs/STRUCTURE.md) for detailed structure guide.
+> **Important Notes**:
+> - The repository uses Roblox service names (ServerScriptService, ReplicatedStorage, etc.) to match the game structure exactly
+> - All Lua files use simple `.lua` extensions without dots in names (e.g., `MainServerScript.lua` NOT `Main.server.lua`) to prevent sync tool compatibility issues
+> - See [INSTALLATION.md](INSTALLATION.md) for complete setup guide with exact file structure
+> - See [docs/STRUCTURE.md](docs/STRUCTURE.md) for detailed architecture guide
 
 ## 📖 The Story: The Aether Wave
 

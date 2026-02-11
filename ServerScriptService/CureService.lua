@@ -3,7 +3,7 @@
 -- CureService
 -- ACTIVE cure system with puzzle integration and alliance support (PRIMARY implementation)
 --
--- NOTE: This is the ACTIVE cure system used in the main game (MainServer.lua)
+-- NOTE: This is the ACTIVE cure system used in the main game (MainServerScript.lua)
 -- For a simpler cure progress calculator, see CureCraftingManager.lua
 --
 -- Features:

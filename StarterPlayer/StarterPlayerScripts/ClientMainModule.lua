@@ -466,8 +466,8 @@ local function bootClient()
 			if loadingManager then loadingManager:updatePhase("UISystems", progress) end
 		end
 		
-		-- Special handling for TitleScreenUI - use pre-created instance from Boot.client.lua
-		-- Boot.client.lua creates TitleScreenUI in Phase 0.5 (before other UI) for immediate display
+		-- Special handling for TitleScreenUI - use pre-created instance from BootClient.lua
+		-- BootClient.lua creates TitleScreenUI in Phase 0.5 (before other UI) for immediate display
 		local titleScreenInstance = shared.__AwavePuzzTitleScreenInstance
 		if titleScreenInstance then
 			-- Bind remotes to the existing instance
@@ -586,7 +586,7 @@ local function bootClient()
 			if currentCamera then
 				if not enableCamera then
 					-- Keep camera scriptable during title/epilogue
-					-- (Boot.client.lua already set it, just maintain it)
+					-- (BootClient.lua already set it, just maintain it)
 					currentCamera.CameraType = Enum.CameraType.Scriptable
 				else
 					-- Re-enable camera control by restoring default camera type
