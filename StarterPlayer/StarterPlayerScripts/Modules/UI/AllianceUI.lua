@@ -261,13 +261,24 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- NOTE: Must store unsubscribe function after _connections is declared below
 
 -- State
 local myAlliances = {}
 local pendingRequest = nil
 local allyHighlights = {} -- Track highlight objects for allies
 local _connections = {}
+
+-- Now register scale changes with proper cleanup tracking
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 -- Functions
 local function showNotification(message, duration)

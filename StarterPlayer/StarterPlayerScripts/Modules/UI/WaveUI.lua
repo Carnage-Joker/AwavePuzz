@@ -166,8 +166,16 @@ local function updateUIScaling()
 	end
 end
 
--- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 -- Helpers
 local currentAnnouncementId = 0

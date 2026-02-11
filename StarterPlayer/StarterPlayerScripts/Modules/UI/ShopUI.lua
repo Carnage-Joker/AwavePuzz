@@ -164,8 +164,16 @@ local function updateUIScaling()
 	statusLabel.TextSize = getScaledTextSize(14)
 end
 
--- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 local catalogCache = {}
 local debounce = false

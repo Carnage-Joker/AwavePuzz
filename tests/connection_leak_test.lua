@@ -38,17 +38,61 @@ print("[ConnectionLeakTest] Starting connection leak test...")
 print(string.format("[ConnectionLeakTest] Testing %d modules with %d simulated rejoins", #MODULE_NAMES, TEST_REJOIN_COUNT))
 
 local function testModuleHasCleanup(moduleName)
-	-- This is a static analysis - checking if cleanup method exists
-	-- Actual cleanup testing requires runtime simulation
+	-- Static validation: check if cleanup method exists
 	print(string.format("[ConnectionLeakTest] Checking module: %s", moduleName))
 	
-	-- In a real test, we would:
-	-- 1. Track memory usage before rejoins
-	-- 2. Simulate player rejoins
-	-- 3. Track memory usage after rejoins
-	-- 4. Verify no significant memory increase
+	-- Try to require the module and check for cleanup method
+	local moduleScript = nil
 	
-	return true
+	-- Search for module in different locations
+	local possiblePaths = {
+		script.Parent.Parent:FindFirstChild("StarterPlayer"),
+		game:GetService("StarterPlayer"),
+	}
+	
+	for _, root in ipairs(possiblePaths) do
+		if root then
+			-- Check UI modules
+			local uiFolder = root:FindFirstChild("StarterPlayerScripts")
+			if uiFolder then
+				uiFolder = uiFolder:FindFirstChild("Modules")
+				if uiFolder then
+					local uiModulesFolder = uiFolder:FindFirstChild("UI")
+					if uiModulesFolder then
+						moduleScript = uiModulesFolder:FindFirstChild(moduleName)
+						if moduleScript then break end
+					end
+					
+					-- Check core modules
+					moduleScript = uiFolder:FindFirstChild(moduleName)
+					if moduleScript then break end
+				end
+			end
+		end
+	end
+	
+	if not moduleScript or not moduleScript:IsA("ModuleScript") then
+		warn(string.format("[ConnectionLeakTest] ✗ Module %s not found", moduleName))
+		return false
+	end
+	
+	local success, module = pcall(function()
+		return require(moduleScript)
+	end)
+	
+	if not success then
+		warn(string.format("[ConnectionLeakTest] ✗ Module %s failed to load: %s", moduleName, tostring(module)))
+		return false
+	end
+	
+	-- Check if cleanup method exists
+	if type(module) == "table" and type(module.cleanup) == "function" then
+		print(string.format("[ConnectionLeakTest] ✓ Module %s has cleanup method", moduleName))
+		return true
+	else
+		warn(string.format("[ConnectionLeakTest] ✗ Module %s missing cleanup method", moduleName))
+		return false
+	end
 end
 
 -- Run tests

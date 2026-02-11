@@ -172,8 +172,16 @@ local function updateUIScaling()
 	listLayout.Padding = UDim.new(0, getScaledValue(5, "padding"))
 end
 
--- Register for scale changes
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 
 -- Function to create a player row
 local function createPlayerRow(playerStats, layoutOrder)

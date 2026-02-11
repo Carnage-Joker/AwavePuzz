@@ -261,10 +261,26 @@ end
 
 -- Cleanup method
 function AchievementUI.cleanup()
+	-- Disconnect all connections
 	for _, connection in ipairs(_connections) do
 		connection:Disconnect()
 	end
 	_connections = {}
+	
+	-- Clean up UI resources from the singleton instance
+	if achievementUI then
+		-- Clear the notification queue
+		achievementUI.notificationQueue = {}
+		achievementUI.isShowingNotification = false
+		
+		-- Destroy the ScreenGui
+		if achievementUI.screenGui then
+			achievementUI.screenGui:Destroy()
+			achievementUI.screenGui = nil
+		end
+	end
+	
+	print("[AchievementUI] Cleanup completed")
 end
 
 -- Initialize

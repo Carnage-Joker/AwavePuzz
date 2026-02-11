@@ -16,12 +16,14 @@ _connections.weaponEquipped = weaponEquipped.Event:Connect(function(weaponId)
 	-- later: swap weapon mesh attached to arms here
 end)
 
--- BUG-007 FIX: Cleanup function (currently unused but available for future cleanup)
-local function cleanup()
-	for name, connection in pairs(_connections) do
-		if connection then
-			connection:Disconnect()
+-- BUG-007 FIX: Cleanup on script removal
+script.AncestryChanged:Connect(function(_, parent)
+	if parent == nil then
+		for name, connection in pairs(_connections) do
+			if connection then
+				connection:Disconnect()
+			end
 		end
+		_connections = {}
 	end
-	_connections = {}
-end
+end)

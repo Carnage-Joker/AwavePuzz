@@ -734,6 +734,39 @@ local function bootClient()
 	print(string.format("[BOOT][CLIENT] Player: %s", player.Name))
 	print(string.format("[BOOT][CLIENT] Version: %s", RemoteRegistry.VERSION))
 	print("=== [BOOT][CLIENT] Client initialization complete ===")
+	
+	-- BUG-007 FIX: Setup cleanup orchestration
+	-- Call cleanup when player leaves to prevent memory leaks
+	Players.LocalPlayer.AncestryChanged:Connect(function(_, parent)
+		if parent == nil then
+			-- Player is leaving, cleanup all modules
+			print("[BOOT][CLIENT] Player leaving, initiating cleanup...")
+			
+			-- Cleanup core modules
+			if Camera and Camera.cleanup then pcall(Camera.cleanup) end
+			if Movement and Movement.cleanup then pcall(Movement.cleanup) end
+			if WeaponController and WeaponController.cleanup then pcall(WeaponController.cleanup) end
+			if AnimationController and AnimationController.cleanup then pcall(AnimationController.cleanup) end
+			if AudioController and AudioController.cleanup then pcall(AudioController.cleanup) end
+			if MenuController and MenuController.cleanup then pcall(MenuController.cleanup) end
+			if MusicController and MusicController.cleanup then pcall(MusicController.cleanup) end
+			if StaminaClient and StaminaClient.cleanup then pcall(StaminaClient.cleanup) end
+			if VoiceoverController and VoiceoverController.cleanup then pcall(VoiceoverController.cleanup) end
+			if CureStationInteraction and CureStationInteraction.cleanup then pcall(CureStationInteraction.cleanup) end
+			
+			-- Cleanup UI modules
+			for moduleName, module in pairs(UI) do
+				if type(module) == "table" and module.cleanup then
+					pcall(module.cleanup)
+				end
+			end
+			
+			-- Cleanup ClientMainModule's own connections
+			ClientMainModule.cleanup()
+			
+			print("[BOOT][CLIENT] Cleanup complete")
+		end
+	end)
 end
 
 function ClientMainModule.initialize()

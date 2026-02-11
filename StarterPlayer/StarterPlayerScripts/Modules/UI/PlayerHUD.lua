@@ -266,8 +266,16 @@ local function updateUIScaling()
 	resourceMarkerCorner.CornerRadius = UDim.new(0, getScaledValue(3, "padding"))
 end
 
--- Register for scale changes and immediately apply once
-UIScaleManager.onScaleChanged(updateUIScaling)
+-- Register for scale changes and immediately apply once (returns unsubscribe function)
+local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
+_connections.scaleChanged = {
+	Disconnect = function()
+		if scaleChangedUnsubscribe then
+			scaleChangedUnsubscribe()
+			scaleChangedUnsubscribe = nil
+		end
+	end
+}
 updateUIScaling()
 
 -- ========== HEALTH HANDLING ==========
