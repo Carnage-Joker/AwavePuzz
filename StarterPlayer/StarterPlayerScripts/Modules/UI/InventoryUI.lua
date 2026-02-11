@@ -124,7 +124,7 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes
-_connections.scaleChanged = UIScaleManager.onScaleChanged(updateUIScaling)
+UIScaleManager.onScaleChanged(updateUIScaling)
 
 local function formatInventory(inventory)
 	local parts = {}
