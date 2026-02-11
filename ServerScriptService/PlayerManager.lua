@@ -298,11 +298,19 @@ function PlayerManager:_setupHealthListener(player, character)
 	-- Track the last known Humanoid health to detect external changes
 	-- This prevents circular updates when _syncHumanoidHealth modifies Humanoid.Health
 	playerData.lastHumanoidHealth = humanoid.Health
+	
+	-- Flag to prevent recursion during sync operations
+	playerData._syncingHumanoid = false
 
 	-- Track Humanoid health changes and sync back to internal state
 	local healthChangedConnection = humanoid.HealthChanged:Connect(function(newHealth)
 		if not playerData or not player.Parent then
 			-- Player left or data cleared
+			return
+		end
+		
+		-- Prevent recursion: ignore changes we made ourselves
+		if playerData._syncingHumanoid then
 			return
 		end
 
@@ -318,8 +326,8 @@ function PlayerManager:_setupHealthListener(player, character)
 
 		if healthDelta < 0 then
 			-- Health decreased (external damage taken)
-			-- Update internal state to match
-			playerData.health = math.max(0, newHealth)
+			-- Update internal state to match, clamped to valid range
+			playerData.health = math.max(0, math.min(GameConfig.STARTING_HEALTH, newHealth))
 			
 			if playerData.health <= 0 then
 				playerData.isAlive = false
@@ -328,14 +336,16 @@ function PlayerManager:_setupHealthListener(player, character)
 			self:sendHealthUpdate(player)
 		elseif healthDelta > 0 then
 			-- Health increased (external healing)
-			-- Only allow if player is alive
+			-- Only allow if player is alive and clamp to max
 			if playerData.isAlive then
 				playerData.health = math.min(GameConfig.STARTING_HEALTH, newHealth)
 				self:sendHealthUpdate(player)
 			else
-				-- Dead players cannot be healed via Humanoid
+				-- SECURITY: Dead players cannot be healed via Humanoid
+				playerData._syncingHumanoid = true
 				humanoid.Health = 0
 				playerData.lastHumanoidHealth = 0
+				playerData._syncingHumanoid = false
 			end
 		end
 	end)
@@ -364,6 +374,9 @@ function PlayerManager:_syncHumanoidHealth(player)
 	if not humanoid then
 		return
 	end
+	
+	-- Set flag to prevent recursion
+	playerData._syncingHumanoid = true
 
 	-- Set MaxHealth to match config
 	humanoid.MaxHealth = GameConfig.STARTING_HEALTH
@@ -371,9 +384,10 @@ function PlayerManager:_syncHumanoidHealth(player)
 	-- Sync current health from internal state
 	local newHumanoidHealth
 	if playerData.isAlive then
+		-- SECURITY: Clamp health to valid range
 		newHumanoidHealth = math.clamp(playerData.health, 0, GameConfig.STARTING_HEALTH)
 	else
-		-- Dead players stay dead
+		-- SECURITY: Dead players stay dead
 		newHumanoidHealth = 0
 	end
 	
@@ -382,6 +396,9 @@ function PlayerManager:_syncHumanoidHealth(player)
 	-- Update last known Humanoid health to prevent circular updates
 	-- This tells the HealthChanged listener that WE made this change
 	playerData.lastHumanoidHealth = newHumanoidHealth
+	
+	-- Clear flag
+	playerData._syncingHumanoid = false
 end
 
 function PlayerManager:damagePlayer(player, damage)

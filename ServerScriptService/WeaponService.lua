@@ -11,6 +11,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
+local RunService = game:GetService("RunService")
+
+-- Server-only validation
+if not RunService:IsServer() then
+	error("[WeaponService] This module can only be required on the server")
+end
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 10)
 if not SharedFolder then
@@ -89,6 +95,12 @@ function WeaponService.new(playerManager, allianceService, gameManager)
 	self.playerWeaponState = {} -- userId -> state
 	self.registeredZombies = {} -- Compatibility shim: zombie tracking for tests
 	self.remoteEvents = {}
+	
+	-- Rate limiting: track fire events per player to prevent spam
+	self.fireRateLimit = {} -- userId -> { count = number, windowStart = tick() }
+	self.FIRE_RATE_WINDOW = 1 -- 1 second window
+	self.MAX_FIRES_PER_WINDOW = 20 -- Max 20 fires per second (prevents spam)
+	
 	self:setupRemoteEvents()
 	return self
 end
@@ -243,8 +255,47 @@ function WeaponService:handleWeaponFire(player, payload)
 		warn("[WeaponService] Invalid payload from " .. player.Name)
 		return
 	end
+	
+	local userId = player.UserId
+	
+	-- SECURITY: Rate limiting - prevent remote spam
+	local now = tick()
+	local rateLimitData = self.fireRateLimit[userId]
+	if not rateLimitData then
+		self.fireRateLimit[userId] = {
+			count = 1,
+			windowStart = now
+		}
+	else
+		-- Check if we're in a new window
+		if (now - rateLimitData.windowStart) >= self.FIRE_RATE_WINDOW then
+			-- Reset window
+			rateLimitData.count = 1
+			rateLimitData.windowStart = now
+		else
+			-- Increment count in current window
+			rateLimitData.count = rateLimitData.count + 1
+			
+			-- Check if exceeded limit
+			if rateLimitData.count > self.MAX_FIRES_PER_WINDOW then
+				warn(string.format("[WeaponService] SECURITY: Rate limit exceeded for player %s (%d fires in %ds)", 
+					player.Name, rateLimitData.count, self.FIRE_RATE_WINDOW))
+				return
+			end
+		end
+	end
 
-	local weaponId = payload.weaponId
+	-- SECURITY: Ignore client-provided weaponId, use server authority
+	-- Client could send any weaponId, but we only trust what the server says is equipped
+	local equipped = self.playerManager:getEquippedWeapon(player)
+	if not equipped then
+		warn("[WeaponService] No equipped weapon for " .. player.Name)
+		return
+	end
+	
+	-- Use server-authoritative weaponId
+	local weaponId = equipped
+	
 	local origin = payload.origin
 	local direction = payload.direction
 	local timestamp = payload.timestamp
@@ -271,24 +322,41 @@ function WeaponService:handleWeaponFire(player, payload)
 	-- Use the validated unit direction for all subsequent calculations
 	direction = unitDir
 
-	local equipped = self.playerManager:getEquippedWeapon(player)
-	if not equipped or equipped ~= weaponId then
-		warn("[WeaponService] Weapon mismatch for " .. player.Name .. " - equipped: " .. tostring(equipped) .. ", fired: " .. tostring(weaponId))
-		return
-	end
-
 	local stats = self:getModifiedStats(player, weaponId)
 	if not stats then
 		warn("[WeaponService] No weapon config for id: " .. tostring(weaponId) .. " (player: " .. player.Name .. ")")
 		return
 	end
 	
+	-- SECURITY: Hard cap fire rate to prevent config exploits
+	-- Even if weapon config is modified, enforce minimum delay
+	local state = self.playerWeaponState[userId]
+	if not state then
+		warn("[WeaponService] No weapon state for " .. player.Name)
+		return
+	end
+	
+	local MINIMUM_FIRE_DELAY = 0.05 -- 0.05 seconds = 50ms minimum between shots
+	local timeSinceLastShot = now - state.lastShot
+	local weaponFireRate = stats.FireRate or 1.0
+	local requiredDelay = math.max(weaponFireRate, MINIMUM_FIRE_DELAY)
+	
+	if timeSinceLastShot < requiredDelay then
+		warn(string.format("[WeaponService] SECURITY: Shot too fast from %s (%.3fs since last, required %.3fs)", 
+			player.Name, timeSinceLastShot, requiredDelay))
+		return
+	end
+	
+	state.lastShot = now
+	
 	-- SECURITY: Validate origin position is near player (anti-wallhack)
 	local character = player.Character
 	if character then
 		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 		if humanoidRootPart then
-			local distanceFromPlayer = (origin - humanoidRootPart.Position).Magnitude
+			local originOffset = origin - humanoidRootPart.Position
+			local distanceFromPlayer = originOffset.Magnitude
+			
 			-- Use configurable max distance from GameConfig
 			local maxDistance = 15 -- Default fallback
 			if GameConfig.Security then
@@ -296,9 +364,30 @@ function WeaponService:handleWeaponFire(player, payload)
 			else
 				warn("[WeaponService] GameConfig.Security not found, using default MAX_WEAPON_FIRE_DISTANCE: " .. maxDistance)
 			end
+			
 			if distanceFromPlayer > maxDistance then
 				warn("[WeaponService] SECURITY: Rejected shot from " .. player.Name .. 
 					" - origin too far from player (" .. string.format("%.1f", distanceFromPlayer) .. " studs)")
+				return
+			end
+			
+			-- SECURITY: Validate origin is not significantly behind player (no backwards shooting)
+			-- Use local space Z coordinate to check if origin is behind
+			local hrpCFrame = humanoidRootPart.CFrame
+			local localOffset = hrpCFrame:PointToObjectSpace(origin)
+			
+			-- If Z is significantly negative, origin is behind player
+			if localOffset.Z < -3 then
+				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin behind player (localZ=%.1f)", 
+					player.Name, localOffset.Z))
+				return
+			end
+			
+			-- SECURITY: Validate origin Y is not absurdly above/below player
+			local verticalOffset = math.abs(localOffset.Y)
+			if verticalOffset > 10 then
+				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin too high/low (Y offset=%.1f)", 
+					player.Name, verticalOffset))
 				return
 			end
 
@@ -306,7 +395,7 @@ function WeaponService:handleWeaponFire(player, payload)
 			-- This reduces spoofing by ensuring shots come from roughly where player is facing
 			-- NOTE: In first-person mode, we use HumanoidRootPart for more reliable validation
 			--       since the head may be rotated differently than the camera
-			local referenceVector = humanoidRootPart.CFrame.LookVector
+			local referenceVector = hrpCFrame.LookVector
 			local dotProduct = direction:Dot(referenceVector)
 			
 			-- Allow shots within a reasonable angle of look direction
@@ -354,16 +443,6 @@ function WeaponService:handleWeaponFire(player, payload)
 		end
 	end
 
-	local state = self.playerWeaponState[player.UserId]
-	if not state then
-		return
-	end
-
-	local now = tick()
-	if now - (state.lastShot or 0) < stats.FireRate then
-		return -- still on cooldown
-	end
-
 	-- SECURITY: Validate and consume ammo server-side (if FPSWeaponService is available)
 	if self.fpsWeaponService then
 		-- Check if player is reloading
@@ -382,16 +461,53 @@ function WeaponService:handleWeaponFire(player, payload)
 		end
 	end
 
-	state.lastShot = now
-
+	-- Perform raycast
 	local rayDirection = direction.Unit * stats.Range
 	local params = RaycastParams.new()
-	params.FilterDescendantsInstances = {player.Character}
+	
+	-- Filter out player's character and equipped weapon model
+	local filterList = {character}
+	
+	-- Also filter out the weapon model if it exists
+	if character then
+		local weaponModel = character:FindFirstChild("EquippedWeaponModel")
+		if weaponModel then
+			table.insert(filterList, weaponModel)
+		end
+	end
+	
+	params.FilterDescendantsInstances = filterList
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.IgnoreWater = true
 
 	local result = Workspace:Raycast(origin, rayDirection, params)
 	if result then
+		-- SECURITY: Additional LOS check to hit position
+		-- Verify player has line of sight to the hit position (not just origin)
+		local head = character and character:FindFirstChild("Head")
+		if head then
+			local hitLosParams = RaycastParams.new()
+			hitLosParams.FilterDescendantsInstances = filterList
+			hitLosParams.FilterType = Enum.RaycastFilterType.Exclude
+			hitLosParams.IgnoreWater = true
+			
+			local hitDirection = result.Position - head.Position
+			local hitLosResult = Workspace:Raycast(head.Position, hitDirection, hitLosParams)
+			
+			-- If we hit something before the target, it's likely a wall shot
+			if hitLosResult and hitLosResult.Instance ~= result.Instance then
+				local distanceToTarget = hitDirection.Magnitude
+				local distanceToObstacle = hitLosResult.Distance
+				
+				-- Allow small tolerance for edge cases
+				if (distanceToObstacle + 2) < distanceToTarget then
+					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - no LOS to hit position (blocked by %s)", 
+						player.Name, hitLosResult.Instance:GetFullName()))
+					return
+				end
+			end
+		end
+		
 		local hitInstance = result.Instance
 		local hitModel = hitInstance and hitInstance:FindFirstAncestorOfClass("Model")
 
