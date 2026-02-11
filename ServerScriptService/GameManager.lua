@@ -162,6 +162,7 @@ function GameManager.new(allianceService)
 	-- ✅ Debounce + broadcast control
 	self._deathDebounce = {}              -- userId -> true (for current round)
 	self._deathConnections = {}           -- userId -> array of connections for cleanup
+	self._characterAddedConnections = {}  -- userId -> CharacterAdded connection for cleanup
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
 
@@ -555,16 +556,11 @@ function GameManager:_hookPlayerDeath(player)
 
 	-- BUGFIX (MEDIUM): Store CharacterAdded connection separately and disconnect old one before creating new
 	-- This prevents connection leak on multiple _hookPlayerDeath calls
-	if self._characterAddedConnections and self._characterAddedConnections[player.UserId] then
+	if self._characterAddedConnections[player.UserId] then
 		self._characterAddedConnections[player.UserId]:Disconnect()
 	end
 	
 	local characterAddedConnection = player.CharacterAdded:Connect(hookCharacter)
-	
-	-- Store CharacterAdded connection separately for proper cleanup
-	if not self._characterAddedConnections then
-		self._characterAddedConnections = {}
-	end
 	self._characterAddedConnections[player.UserId] = characterAddedConnection
 	
 	if player.Character then
@@ -673,7 +669,7 @@ function GameManager:onPlayerRemoving(player)
 	end
 	
 	-- BUG-013: Cleanup CharacterAdded connections to prevent memory leak
-	if self._characterAddedConnections and self._characterAddedConnections[player.UserId] then
+	if self._characterAddedConnections[player.UserId] then
 		self._characterAddedConnections[player.UserId]:Disconnect()
 		self._characterAddedConnections[player.UserId] = nil
 	end
