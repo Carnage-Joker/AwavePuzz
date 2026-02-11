@@ -94,7 +94,7 @@ Due to the client-side nature of the fix, manual verification is required:
 
 ## Implementation Details
 
-The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 493-567:
+The fix is located in `StarterPlayer/StarterPlayerScripts/Modules/FPSWeaponController.lua` at lines 493-588 (including the continuation of the original ammo update logic after the fix block):
 
 ```lua
 -- BUG-008 FIX: Validate weaponStats before using to prevent race condition
