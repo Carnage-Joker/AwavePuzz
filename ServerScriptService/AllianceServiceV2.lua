@@ -186,7 +186,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 
 	-- Check if requester is locked (in betrayal window or traitor)
 	if self.betrayalService and self.betrayalService:isPlayerLocked(requester) then
-		self.remoteEvents.AllianceUpdate:FireClient(requester, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "locked",
 			message = "You cannot form alliances while in a betrayal window"
 		})
@@ -194,7 +194,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	end
 
 	if self.betrayalService and self.betrayalService:isTraitor(requester) then
-		self.remoteEvents.AllianceUpdate:FireClient(requester, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "traitor",
 			message = "Traitors cannot form alliances"
 		})
@@ -204,7 +204,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	-- Check betrayal cooldown
 	if self:isOnBetrayalCooldown(requester) then
 		print(requester.Name .. " is on betrayal cooldown")
-		self.remoteEvents.AllianceUpdate:FireClient(requester, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "cooldown",
 			message = "You must wait before forming new alliances after a betrayal",
 		})
@@ -218,7 +218,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	self.pendingRequests[targetId][requesterId] = true
 
 	-- Notify target player
-	self.remoteEvents.AllianceUpdate:FireClient(target, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, target, {
 		type = "request",
 		from = requester,
 		fromName = requester.Name,
@@ -247,7 +247,7 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 	if accept then
 		-- Check if responder is locked
 		if self.betrayalService and self.betrayalService:isPlayerLocked(responder) then
-			self.remoteEvents.AllianceUpdate:FireClient(responder, {
+			RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, responder, {
 				type = "locked",
 				message = "You cannot form alliances while in a betrayal window"
 			})
@@ -258,13 +258,13 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 		self:createAlliance(requester, responder)
 
 		-- Notify both players
-		self.remoteEvents.AllianceUpdate:FireClient(requester, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "formed",
 			with = responder,
 			withName = responder.Name,
 		})
 
-		self.remoteEvents.AllianceUpdate:FireClient(responder, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, responder, {
 			type = "formed",
 			with = requester,
 			withName = requester.Name,
@@ -273,7 +273,7 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 		print(responder.Name .. " accepted alliance with " .. requester.Name)
 	else
 		-- Notify requester of rejection
-		self.remoteEvents.AllianceUpdate:FireClient(requester, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "rejected",
 			by = responder,
 			byName = responder.Name,
@@ -296,7 +296,7 @@ function AllianceServiceV2:handleBreakAlliance(player, target)
 
 	-- Check if player is locked
 	if self.betrayalService and self.betrayalService:isPlayerLocked(player) then
-		self.remoteEvents.AllianceUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, player, {
 			type = "locked",
 			message = "You cannot break alliances while in a betrayal window"
 		})
@@ -307,7 +307,7 @@ function AllianceServiceV2:handleBreakAlliance(player, target)
 	local success, err = self.betrayalService:startBetrayal(player, target)
 	if not success then
 		print("[AllianceServiceV2] Failed to start betrayal:", err)
-		self.remoteEvents.AllianceUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, player, {
 			type = "error",
 			message = "Failed to start betrayal: " .. (err or "Unknown error")
 		})

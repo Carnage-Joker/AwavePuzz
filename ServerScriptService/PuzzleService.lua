@@ -120,7 +120,7 @@ function PuzzleService:sendPuzzleProgress(player)
 
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleUpdate") then
-		remoteEvents.PuzzleUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleUpdate or remoteEvents.PuzzleUpdate, player, {
 			type = "progress",
 			progress = progress
 		})
@@ -350,7 +350,7 @@ end
 function PuzzleService:sendPuzzleToClient(player, componentName, puzzle)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("OpenPuzzleUI") then
-		remoteEvents.OpenPuzzleUI:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.OpenPuzzleUI or remoteEvents.OpenPuzzleUI, player, {
 			componentName = componentName,
 			puzzle = puzzle
 		})
@@ -360,7 +360,7 @@ end
 function PuzzleService:sendPuzzleError(player, message)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleFailed") then
-		remoteEvents.PuzzleFailed:FireClient(player, message)
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleFailed or remoteEvents.PuzzleFailed, player, message)
 	end
 end
 
@@ -560,7 +560,7 @@ function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
 	-- Notify client
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleCompleted") then
-		remoteEvents.PuzzleCompleted:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleCompleted or remoteEvents.PuzzleCompleted, player, {
 			componentName = componentName,
 			reward = reward,
 			timeTaken = elapsedTime

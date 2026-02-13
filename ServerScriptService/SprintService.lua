@@ -240,7 +240,7 @@ function SprintService:sendStaminaUpdate(player, force: boolean?)
 	state._lastSentStamina = currentStamina
 	state._lastSentSprint = isSprinting
 
-	self.remoteEvents.StaminaUpdate:FireClient(player, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.StaminaUpdate, player, {
 		current = currentStamina,
 		max = self.STAMINA_MAX,
 		isSprinting = isSprinting,

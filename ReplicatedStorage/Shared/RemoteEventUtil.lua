@@ -98,4 +98,35 @@ function RemoteEventUtil.waitForEvent(eventName, timeout)
 	return nil
 end
 
+-- Safe FireClient wrapper
+-- Validates player before calling :FireClient to avoid errors when player disconnects mid-update.
+-- Usage: RemoteEventUtil.safeFireClient(remoteEvent, player, ...)
+function RemoteEventUtil.safeFireClient(remoteEvent, player, ...)
+	if typeof(remoteEvent) ~= "Instance" or not remoteEvent:IsA("RemoteEvent") then
+		error("safeFireClient: first argument must be a RemoteEvent")
+	end
+
+	-- Validate player instance
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+
+	-- Player must be in the data model
+	if not player.Parent or not player:IsDescendantOf(game) then
+		return false
+	end
+
+	-- Fire safely
+	local ok, err = pcall(function(...)
+		remoteEvent:FireClient(player, ...)
+	end, ...)
+
+	if not ok then
+		warn(string.format("[RemoteEventUtil] safeFireClient failed for player %s: %s", tostring(player.Name), tostring(err)))
+		return false
+	end
+
+	return true
+end
+
 return RemoteEventUtil

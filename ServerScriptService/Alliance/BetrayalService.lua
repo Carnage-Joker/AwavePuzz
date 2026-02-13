@@ -187,13 +187,13 @@ function BetrayalService:startBetrayal(betrayer, victim)
 	end)
 
 	-- 6) Notify clients
-	self.remoteEvents.BetrayalStarted:FireClient(betrayer, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalStarted, betrayer, {
 		type = "betrayer",
 		victim = victim.Name,
 		duration = BETRAYAL_WINDOW_DURATION
 	})
 
-	self.remoteEvents.BetrayalStarted:FireClient(victim, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalStarted, victim, {
 		type = "victim",
 		betrayer = betrayer.Name,
 		duration = BETRAYAL_WINDOW_DURATION
@@ -252,7 +252,7 @@ function BetrayalService:resolveOutcome1_SuccessfulBetrayal(betrayer, victim, da
 	self.activeWindows[betrayer.UserId] = nil
 
 	-- Notify clients
-	self.remoteEvents.BetrayalOutcome:FireClient(betrayer, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
 		type = "success",
 		message = string.format("Betrayal successful! You eliminated %s and claimed 75%% of their pool!", victim.Name)
 	})
@@ -281,7 +281,7 @@ function BetrayalService:resolveOutcome2_FailedBetrayal(victor, betrayer, data)
 	self.activeWindows[betrayer.UserId] = nil
 
 	-- Notify clients
-	self.remoteEvents.BetrayalOutcome:FireClient(victor, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, victor, {
 		type = "victory",
 		message = string.format("You defeated betrayer %s and claimed 75%% of their pool!", betrayer.Name)
 	})
@@ -330,12 +330,12 @@ function BetrayalService:onWindowExpired(betrayerId)
 	self.activeWindows[betrayerId] = nil
 
 	-- Notify clients
-	self.remoteEvents.BetrayalOutcome:FireClient(betrayer, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
 		type = "stalemate_betrayer",
 		message = "Stalemate! All your personal items transferred to victim. You are marked as a Traitor."
 	})
 
-	self.remoteEvents.BetrayalOutcome:FireClient(victim, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, victim, {
 		type = "stalemate_victim",
 		message = string.format("Stalemate! You received all of %s's personal items.", betrayer.Name)
 	})

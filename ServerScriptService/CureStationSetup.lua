@@ -66,7 +66,7 @@ local function setupCureStation(station)
 			
 			-- Send notification to show puzzle menu
 			if remoteEvents:FindFirstChild("CureUpdate") then
-				remoteEvents.CureUpdate:FireClient(player, {
+				RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 					type = "show_puzzle_menu",
 					message = "Select a component puzzle to attempt"
 				})
@@ -200,7 +200,7 @@ function CureStationSetup:initialize()
 					print("[CureStationSetup]", player.Name, "manually opened cure station menu from", nearestStation.Name)
 					local cureUpdate = remoteEvents:FindFirstChild("CureUpdate")
 					if cureUpdate then
-						cureUpdate:FireClient(player, {
+						RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or cureUpdate, player, {
 							type = "show_puzzle_menu",
 							message = "Select a component puzzle to attempt"
 						})

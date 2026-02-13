@@ -40,25 +40,34 @@ Quick reference for developers working on bug fixes from the audit.
   - **Date**: 2026-02-10
 
 ### Critical Memory Leaks
-- [ ] **BUG-001**: Fix infinite loop leak (FPSWeaponService.lua:419)
-  - Add `_isRunning` flag to while loop
-  - Implement cleanup() method
-  - Test: Server restart doesn't create orphaned threads
+- [x] **BUG-001**: Fix infinite loop leak (FPSWeaponService.lua:419) ✅ **FIXED**
+  - Added `_isRunning` flag to the validation loop and stored task handle (`_ammoValidationTask`)
+  - Implemented `cleanup()` to cancel loop and active tasks
+  - Test: Verified cleanup stops validation loop and cancels reload tasks
+  - **Date**: 2026-02-13
   
-- [ ] **BUG-003**: Fix CharacterAdded connection leak (GameManager.lua:556-568)
-  - Initialize `_characterAddedConnections = {}` in constructor
-  - Test: Memory profiler shows no leak after 100 respawns
+- [x] **BUG-003**: Fix CharacterAdded connection leak (GameManager.lua:556-568) ✅ **FIXED**
+  - Now stores `CharacterAdded` connections per-player and disconnects previous connection before creating a new one
+  - Cleanup removes connections on `onPlayerRemoving`
+  - Test: No CharacterAdded connection growth after repeated respawns
+  - **Date**: 2026-02-13
   
-- [ ] **BUG-007**: Fix mass event connection leak (70+ files)
-  - Add `_connections = {}` table to each module
-  - Store all OnClientEvent:Connect() calls
-  - Implement cleanup() method for each module
-  - Test: Memory stable after 10 rejoins
+- [ ] **BUG-007**: Fix mass event connection leak (70+ files) — ONCLIENTEVENT SWEEP COMPLETE (QA PENDING)
+  - ✅ OnClientEvent registrations audited and corrected where missing (sweep completed). Modules updated: `PuzzleUI`, `PuzzleMenuUI`, `EpilogueUI` (plus many modules already following the pattern).
+  - ✅ `tests/connection_leak_test.lua` extended with a static source-inspection to catch `OnClientEvent` registrations that don't track connections.
+  - Remaining scope: input/tween/thread/other non-remote connection leaks (see BUG‑015, BUG‑021).
+  - Next actions:
+    1. Run `tests/connection_leak_test.lua` and perform manual Dev-Console memory verification (10 rejoins)
+    2. Sweep for Input/Tween/Heartbeat leaks and add missing `cleanup()` implementations
+    3. Close BUG-007 after QA passes and memory is stable
+  - Test: Memory increase < 10MB after 10 rejoins (manual + Dev Console)
+  - Note: This item now focuses on non-remote connection types; `OnClientEvent` leak coverage is complete and gated for verification.
   
-- [ ] **BUG-008**: Fix weapon state race condition (FPSWeaponController.lua:506-527)
-  - Add weaponStats validation before using
-  - Implement retry logic with 1s delay
-  - Test: Late joiners can still shoot on first spawn
+- [x] **BUG-008**: Fix weapon state race condition (FPSWeaponController.lua:506-527) ✅ **FIXED**
+  - Added `weaponStats` validation and scheduled retry logic (`WEAPON_STATS_RETRY_DELAY`) for late joiners
+  - Client re-applies ammo values on retry and derives `max` from `weaponStats` when needed
+  - Test: Client handles AmmoUpdate when weaponStats is initially nil; retry succeeds
+  - **Date**: 2026-02-13
 
 ---
 
@@ -93,10 +102,11 @@ Quick reference for developers working on bug fixes from the audit.
   - Test: Input lag doesn't accumulate after 10 deaths
 
 ### Logic Errors
-- [ ] **BUG-011**: Add player validation before FireClient (Multiple services)
-  - Create safeFireClient() helper function
-  - Check player.Parent and IsDescendantOf(game)
-  - Test: No errors when player disconnects mid-update
+- [x] **BUG-011**: Add player validation before FireClient (Multiple services) ✅ **FIXED**
+  - Implemented `RemoteEventUtil.safeFireClient()` and replaced high-impact `FireClient` usages in `GameManager`, `WeaponService`, `PlayerManager`, and `CureService`
+  - Added `tests/safe_fire_client_test.lua`
+  - Test: `safeFireClient` returns false for nil/disconnected players and prevents FireClient exceptions
+  - **Date**: 2026-02-13
   
 - [ ] **BUG-012**: Fix ammo validation ordering (WeaponService.lua:345-361)
   - Validate shot BEFORE consuming ammo

@@ -748,7 +748,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Open puzzle UI
 local openPuzzleEvent = remoteEvents:WaitForChild("OpenPuzzleUI")
-openPuzzleEvent.OnClientEvent:Connect(function(data)
+connections.openPuzzle = openPuzzleEvent.OnClientEvent:Connect(function(data)
 	if data and data.puzzle and data.componentName then
 		openPuzzle(data.componentName, data.puzzle)
 	end
@@ -756,7 +756,7 @@ end)
 
 -- Puzzle completed
 local puzzleCompletedEvent = remoteEvents:WaitForChild("PuzzleCompleted")
-puzzleCompletedEvent.OnClientEvent:Connect(function(data)
+connections.puzzleCompleted = puzzleCompletedEvent.OnClientEvent:Connect(function(data)
 	-- Show success notification
 	local notification = Instance.new("TextLabel")
 	notification.Size = UDim2.new(0, 400, 0, 80)
@@ -779,7 +779,7 @@ end)
 
 -- Puzzle failed
 local puzzleFailedEvent = remoteEvents:WaitForChild("PuzzleFailed")
-puzzleFailedEvent.OnClientEvent:Connect(function(message)
+connections.puzzleFailed = puzzleFailedEvent.OnClientEvent:Connect(function(message)
 	-- Show error notification
 	local notification = Instance.new("TextLabel")
 	notification.Size = UDim2.new(0, 400, 0, 80)

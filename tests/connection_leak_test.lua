@@ -76,6 +76,16 @@ local function testModuleHasCleanup(moduleName)
 		return false
 	end
 	
+	-- Static source inspection: ensure OnClientEvent registrations are tracked
+	local source = moduleScript.Source or ""
+	local registersRemotes = source:match("OnClientEvent:Connect") or source:match("OnClientEvent%%.Once")
+	local tracksConnections = source:match("connections") or source:match("_connections") or source:match("table.insert%%(%s*_connections")
+	if registersRemotes and not tracksConnections then
+		warn(string.format("[ConnectionLeakTest] ✗ Module %s registers remote events but does not track connections in source", moduleName))
+		-- mark as failed early
+		return false
+	end
+	
 	local success, module = pcall(function()
 		return require(moduleScript)
 	end)

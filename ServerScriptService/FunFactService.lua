@@ -191,8 +191,7 @@ function FunFactService:sendRandomFactToPlayer(player)
 	if fact then
 		-- Send to client
 		if self.remoteEvents.ShowFunFact then
-			self.remoteEvents.ShowFunFact:FireClient(player, {
-				text = fact.text,
+		RemoteEventUtil.safeFireClient(self.remoteEvents.ShowFunFact, player, {
 				category = fact.category,
 				id = fact.id
 			})

@@ -171,7 +171,7 @@ function FPSAnimationService:replicateFire(sourcePlayer, weaponId)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			self.remoteEvents.AnimationFireReplicate:FireClient(player, sourcePlayer, weaponId)
+			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationFireReplicate, player, sourcePlayer, weaponId)
 		end
 	end
 end
@@ -180,7 +180,7 @@ function FPSAnimationService:replicateSprint(sourcePlayer, isSprinting)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			self.remoteEvents.AnimationSprintReplicate:FireClient(player, sourcePlayer, isSprinting)
+			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationSprintReplicate, player, sourcePlayer, isSprinting)
 		end
 	end
 end
@@ -189,7 +189,7 @@ function FPSAnimationService:replicateADS(sourcePlayer, isADS)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			self.remoteEvents.AnimationADSReplicate:FireClient(player, sourcePlayer, isADS)
+			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationADSReplicate, player, sourcePlayer, isADS)
 		end
 	end
 end

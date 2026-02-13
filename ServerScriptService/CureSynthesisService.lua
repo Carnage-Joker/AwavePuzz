@@ -335,7 +335,7 @@ function CureSynthesisService:sendMessage(player, message, messageType)
 	
 	-- Send notification to client
 	if self.remoteEvents.ShowNotification and player and player:IsA("Player") then
-		self.remoteEvents.ShowNotification:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.ShowNotification, player, {
 			message = message,
 			messageType = messageType,
 			source = "CureSynthesisService"

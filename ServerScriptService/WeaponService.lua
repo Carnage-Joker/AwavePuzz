@@ -559,7 +559,7 @@ function WeaponService:handleWeaponFire(player, payload)
 			-- Check if hit a zombie
 			if hitModel:GetAttribute("IsZombie") then
 				self:damageZombie(hitModel, player, stats, weaponId)
-				self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+				RemoteEventUtil.safeFireClient(self.remoteEvents.WeaponHitConfirm, player, {
 					position = result.Position,
 					target = hitModel.Name
 				})
@@ -574,7 +574,7 @@ function WeaponService:handleWeaponFire(player, payload)
 					if not areAllied then
 						-- PvP damage is allowed for non-allied players
 						self:damagePlayer(hitModel, hitPlayer, player, stats, weaponId)
-						self.remoteEvents.WeaponHitConfirm:FireClient(player, {
+						RemoteEventUtil.safeFireClient(self.remoteEvents.WeaponHitConfirm, player, {
 							position = result.Position,
 							target = hitPlayer.Name
 						})

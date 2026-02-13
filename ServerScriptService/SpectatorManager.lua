@@ -218,7 +218,7 @@ function SpectatorManager:onPlayerDied(player)
 		spectatorActive = true,
 	}
 
-	self.remoteEvents.EnterSpectatorMode:FireClient(player, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.EnterSpectatorMode, player, {
 		targetPlayer = target and target.Name or nil,
 		targetUserId = target and target.UserId or nil,
 	})
@@ -245,7 +245,7 @@ function SpectatorManager:exitSpectatorMode(player)
 		player.Character:SetAttribute("IsSpectating", false)
 	end
 
-	self.remoteEvents.ExitSpectatorMode:FireClient(player, {})
+	RemoteEventUtil.safeFireClient(self.remoteEvents.ExitSpectatorMode, player, {})
 end
 
 function SpectatorManager:cycleSpectatorTarget(player, direction)
@@ -258,7 +258,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	if #alive == 0 then
 		-- nobody alive: clear target
 		data.targetUserId = nil
-		self.remoteEvents.SpectatorTargetUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 			targetPlayer = nil,
 			targetUserId = nil,
 		})
@@ -279,7 +279,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	if currentIndex == 0 then
 		local newTarget = alive[1]
 		data.targetUserId = newTarget.UserId
-		self.remoteEvents.SpectatorTargetUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 			targetPlayer = newTarget.Name,
 			targetUserId = newTarget.UserId,
 		})
@@ -299,7 +299,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	local newTarget = alive[newIndex]
 	data.targetUserId = newTarget.UserId
 
-	self.remoteEvents.SpectatorTargetUpdate:FireClient(player, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 		targetPlayer = newTarget.Name,
 		targetUserId = newTarget.UserId,
 	})
@@ -316,7 +316,7 @@ function SpectatorManager:onSpectatorTargetDied(targetUserId)
 				local newTarget = self:_findAlivePlayer(targetUserId, spectatorUserId)
 				data.targetUserId = newTarget and newTarget.UserId or nil
 
-				self.remoteEvents.SpectatorTargetUpdate:FireClient(spectator, {
+				RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
 					targetPlayer = newTarget and newTarget.Name or nil,
 					targetUserId = newTarget and newTarget.UserId or nil,
 				})
@@ -350,7 +350,7 @@ function SpectatorManager:_fixAllSpectatorTargets()
 				data.targetUserId = newTarget and newTarget.UserId or nil
 				local spectator = Players:GetPlayerByUserId(spectatorUserId)
 				if spectator then
-					self.remoteEvents.SpectatorTargetUpdate:FireClient(spectator, {
+					RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
 						targetPlayer = newTarget and newTarget.Name or nil,
 						targetUserId = newTarget and newTarget.UserId or nil,
 					})
@@ -390,7 +390,7 @@ function SpectatorManager:broadcastAliveList()
 		if data and data.spectatorActive then
 			local p = Players:GetPlayerByUserId(userId)
 			if p then
-				self.remoteEvents.SpectatorStateUpdate:FireClient(p, {
+				RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorStateUpdate, p, {
 					alivePlayers = aliveList,
 					aliveCount = #alivePlayers,
 				})

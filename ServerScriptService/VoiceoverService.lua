@@ -61,7 +61,7 @@ function VoiceoverService:playVoiceoverForPlayer(player, voiceoverId, voiceoverD
 	
 	-- Send to client
 	if self.remoteEvents.PlayVoiceover then
-		self.remoteEvents.PlayVoiceover:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.PlayVoiceover, player, {
 			id = voiceoverId,
 			soundId = voiceoverData.SoundId or "",
 			text = voiceoverData.Text or "",
@@ -179,7 +179,7 @@ function VoiceoverService:stopVoiceoverForPlayer(player)
 	end
 	
 	if self.remoteEvents.StopVoiceover then
-		self.remoteEvents.StopVoiceover:FireClient(player)
+		RemoteEventUtil.safeFireClient(self.remoteEvents.StopVoiceover, player)
 	end
 end
 

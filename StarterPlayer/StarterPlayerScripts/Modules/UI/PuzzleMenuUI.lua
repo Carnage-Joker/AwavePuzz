@@ -420,7 +420,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Listen for puzzle menu requests
 local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
-cureUpdateEvent.OnClientEvent:Connect(function(data)
+connections.cureUpdate = cureUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "show_puzzle_menu" then
 		showPuzzleMenu()
 	end
@@ -428,7 +428,7 @@ end)
 
 -- Listen for puzzle progress updates
 local puzzleUpdateEvent = remoteEvents:WaitForChild("PuzzleUpdate")
-puzzleUpdateEvent.OnClientEvent:Connect(function(data)
+connections.puzzleUpdate = puzzleUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "progress" then
 		updatePuzzleMenu(data.progress)
 	end

@@ -106,7 +106,7 @@ function AchievementService:unlockAchievement(player, achievementId)
 
 	-- Notify client
 	if self.remoteEvents.AchievementUnlocked then
-		self.remoteEvents.AchievementUnlocked:FireClient(player, achievementId)
+		RemoteEventUtil.safeFireClient(self.remoteEvents.AchievementUnlocked, player, achievementId)
 	end
 
 	return true

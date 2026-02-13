@@ -708,7 +708,7 @@ end
 
 function PlayerManager:sendInventoryUpdate(player)
 	if self.remoteEvents.InventoryUpdate and player then
-		self.remoteEvents.InventoryUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.InventoryUpdate, player, {
 			inventory = self:getInventory(player),
 		})
 	end
@@ -716,7 +716,7 @@ end
 
 function PlayerManager:sendCurrencyUpdate(player)
 	if self.remoteEvents.CurrencyUpdate and player then
-		self.remoteEvents.CurrencyUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.CurrencyUpdate, player, {
 			balance = self:getCurrency(player),
 		})
 	end
@@ -736,7 +736,7 @@ function PlayerManager:sendHealthUpdate(player)
 		return
 	end
 
-	self.remoteEvents.PlayerHealthUpdate:FireClient(player, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.PlayerHealthUpdate, player, {
 		current = playerData.health,
 		max = GameConfig.STARTING_HEALTH,
 	})
@@ -764,7 +764,7 @@ function PlayerManager:sendWeaponLoadout(player)
 		end
 	end
 
-	self.remoteEvents.WeaponLoadoutUpdate:FireClient(player, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.WeaponLoadoutUpdate, player, {
 		weapons = self:getWeapons(player),
 		equipped = self:getEquippedWeapon(player),
 		stats = weaponStats,

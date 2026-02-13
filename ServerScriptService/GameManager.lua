@@ -487,7 +487,8 @@ function GameManager:_hookPlayerDeath(player)
 			local snapshot = result.snapshot
 			local matchInfo = result.matchInfo
 			
-			self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+			-- Use safeFireClient to avoid errors when player disconnects mid-update
+			RemoteEventUtil.safeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
 			print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
 				player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 		end
@@ -614,7 +615,8 @@ function GameManager:onPlayerAdded(player)
 		local snapshot = result.snapshot
 		local matchInfo = result.matchInfo
 		
-		self.remoteEvents.GameStateUpdate:FireClient(player, snapshot)
+		-- Use safeFireClient to guard against disconnected players
+		RemoteEventUtil.safeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
 		print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
 			player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 	end
@@ -627,7 +629,7 @@ function GameManager:onPlayerAdded(player)
 		self.playersCompletedEpilogue[player.UserId] = true
 		self.sessionState:setPassedTitle(player, true)
 		if self.remoteEvents.ShowEpilogue then
-			self.remoteEvents.ShowEpilogue:FireClient(player)
+			RemoteEventUtil.safeFireClient(self.remoteEvents.ShowEpilogue, player)
 		end
 		print(string.format("[Flow] Join -> Epilogue (late joiner during epilogue: %s)", player.Name))
 	elseif GameConfig.SHOW_TITLE_SCREEN then
@@ -726,7 +728,7 @@ function GameManager:setState(newState, payload)
 		if self.remoteEvents.ShowEpilogue then
 			for _, player in ipairs(Players:GetPlayers()) do
 				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
-					self.remoteEvents.ShowEpilogue:FireClient(player)
+					RemoteEventUtil.safeFireClient(self.remoteEvents.ShowEpilogue, player)
 				end
 			end
 		end

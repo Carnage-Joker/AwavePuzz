@@ -101,7 +101,7 @@ function ShopService:sendCatalog(player)
 	end
 
 	if self.remoteEvents.ShopUpdate then
-		self.remoteEvents.ShopUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.ShopUpdate, player, {
 			type = "catalog",
 			items = catalog,
 		})
@@ -267,7 +267,7 @@ function ShopService:sendResult(player, success, message)
 		return
 	end
 
-	self.remoteEvents.ShopUpdate:FireClient(player, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.ShopUpdate, player, {
 		type = "result",
 		success = success and true or false,
 		message = message or "",

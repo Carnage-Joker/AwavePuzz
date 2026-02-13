@@ -337,7 +337,7 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		return 
 	end
 
-	self.remoteEvents.AmmoUpdate:FireClient(player, {
+RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {
 		weaponId = weaponId,
 		current = ammo.current,
 		reserve = ammo.reserve,
@@ -361,7 +361,7 @@ function FPSWeaponService:sendReloadConfirmation(player, weaponId, success, relo
 	end
 	
 	if self.remoteEvents.ReloadConfirm then
-		self.remoteEvents.ReloadConfirm:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents.ReloadConfirm, player, {
 			weaponId = weaponId,
 			reloadTime = reloadTime,
 			success = success

@@ -156,7 +156,8 @@ function CureService:addComponentProgress(player, componentName, amount)
 	-- Fire event to update UI (only once)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		remoteEvents.CureUpdate:FireClient(player, {
+		-- Use safeFireClient to avoid FireClient errors when player disconnects
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "component_collected",
 			componentName = componentName,
 			count = effectiveCount,
@@ -205,7 +206,7 @@ function CureService:handleDepositComponent(player, componentName)
 	-- Fire event to update UI
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		remoteEvents.CureUpdate:FireClient(player, {
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "component_collected",
 			componentName = componentName,
 			count = effectiveCount,
@@ -223,7 +224,8 @@ function CureService:notifyPuzzleAvailable(player, componentName)
 	-- Send notification to client
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		remoteEvents.CureUpdate:FireClient(player, {
+		-- Use safeFireClient to avoid FireClient errors when player disconnects
+		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "puzzle_available",
 			componentName = componentName,
 			message = "You have collected 5 " .. componentName .. " pieces! Visit a cure station to solve the puzzle."
@@ -334,30 +336,27 @@ function CureService:sendCureProgressUpdate(player, progress, components)
 	end
 
 	if self.remoteEvents and self.remoteEvents.PlayerCureProgressUpdate then
-		local success, err = pcall(function()
-			self.remoteEvents.PlayerCureProgressUpdate:FireClient(player, {
-				progress = progress,
-				components = components,
-				isPooled = self.allianceService and #self.allianceService:getAllies(player) > 0
-			})
-		end)
-		if not success then
-			warn("[CureService] Failed to send cure progress update to " .. player.Name .. ": " .. tostring(err))
+		local fired = RemoteEventUtil.safeFireClient(self.remoteEvents.PlayerCureProgressUpdate, player, {
+			progress = progress,
+			components = components,
+			isPooled = self.allianceService and #self.allianceService:getAllies(player) > 0
+		})
+		if not fired then
+			warn("[CureService] Failed to send cure progress update to " .. player.Name .. ": player may have disconnected")
 		end
 	end
 
 	-- Also update via CureUpdate for compatibility
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		local success, err = pcall(function()
-			remoteEvents.CureUpdate:FireClient(player, {
-				type = "progress",
-				progress = progress,
-				components = components
-			})
-		end)
-		if not success then
-			warn("[CureService] Failed to send CureUpdate to " .. player.Name .. ": " .. tostring(err))
+		-- Use safeFireClient to protect against disconnected players
+		local fired = RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
+			type = "progress",
+			progress = progress,
+			components = components
+		})
+		if not fired then
+			warn("[CureService] Failed to send CureUpdate to " .. player.Name .. ": player may have disconnected")
 		end
 	end
 end

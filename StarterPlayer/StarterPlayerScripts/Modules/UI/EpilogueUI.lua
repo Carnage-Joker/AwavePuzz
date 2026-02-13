@@ -53,7 +53,7 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
-		self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+		connections.gameStateUpdate = self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
 			if stateData and stateData.state then
 				local state = stateData.state
 				-- Show epilogue for any state containing "Epilogue"
@@ -73,14 +73,14 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	if self.remotes.ShowEpilogue then
-		self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
+		connections.showEpilogue = self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received ShowEpilogue event (legacy)")
 			self:show()
 		end)
 	end
 	
 	if self.remotes.HideEpilogue then
-		self.remotes.HideEpilogue.OnClientEvent:Connect(function()
+		connections.hideEpilogue = self.remotes.HideEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received HideEpilogue event (legacy)")
 			self:hide()
 		end)
