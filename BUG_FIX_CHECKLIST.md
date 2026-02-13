@@ -52,16 +52,16 @@ Quick reference for developers working on bug fixes from the audit.
   - Test: No CharacterAdded connection growth after repeated respawns
   - **Date**: 2026-02-13
   
-- [ ] **BUG-007**: Fix mass event connection leak (70+ files) — ONCLIENTEVENT SWEEP COMPLETE (QA PENDING)
-  - ✅ OnClientEvent registrations audited and corrected where missing (sweep completed). Modules updated: `PuzzleUI`, `PuzzleMenuUI`, `EpilogueUI` (plus many modules already following the pattern).
-  - ✅ `tests/connection_leak_test.lua` extended with a static source-inspection to catch `OnClientEvent` registrations that don't track connections.
+- [ ] **BUG-007**: Fix mass event connection leak (70+ files) — ONCLIENTEVENT SWEEP COMPLETE (STATIC TEST PASS; QA PENDING)
+  - ✅ OnClientEvent registrations audited and corrected where missing. Modules updated: `PuzzleUI`, `PuzzleMenuUI`, `EpilogueUI` (others already followed the pattern).
+  - ✅ `tests/connection_leak_test.lua` static inspection: **PASS** (no modules with `OnClientEvent:Connect()` left untracked).
   - Remaining scope: input/tween/thread/other non-remote connection leaks (see BUG‑015, BUG‑021).
   - Next actions:
-    1. Run `tests/connection_leak_test.lua` and perform manual Dev-Console memory verification (10 rejoins)
+    1. Manual Dev‑Console memory verification (10 rejoins) — high priority QA step
     2. Sweep for Input/Tween/Heartbeat leaks and add missing `cleanup()` implementations
-    3. Close BUG-007 after QA passes and memory is stable
+    3. Close BUG‑007 after QA passes and memory is stable
   - Test: Memory increase < 10MB after 10 rejoins (manual + Dev Console)
-  - Note: This item now focuses on non-remote connection types; `OnClientEvent` leak coverage is complete and gated for verification.
+  - Note: `OnClientEvent` leak coverage is complete; focusing now on runtime/thread/tween verification.
   
 - [x] **BUG-008**: Fix weapon state race condition (FPSWeaponController.lua:506-527) ✅ **FIXED**
   - Added `weaponStats` validation and scheduled retry logic (`WEAPON_STATS_RETRY_DELAY`) for late joiners
@@ -96,9 +96,9 @@ Quick reference for developers working on bug fixes from the audit.
   - **Test**: tests/fps_weapon_heartbeat_leak_test.lua validates single heartbeat per character
   - **Date**: 2026-02-10
   
-- [ ] **BUG-015**: Fix input connection leak (Multiple files)
-  - Store InputBegan/InputEnded connections
-  - Disconnect on CharacterRemoving
+- [ ] **BUG-015**: Fix input connection leak (Multiple files) — IN PROGRESS
+  - ✅ Fixed/tracked input handlers in: `TouchControlsUI`, `PuzzleMenuUI`, `ShopUI`, `EpilogueUI`, `FPSMenuController` (already defensive)
+  - Remaining: audit `FPSWeaponController`, `FPSMovement`, and other low-level input modules for any uncaptured InputBegan connections
   - Test: Input lag doesn't accumulate after 10 deaths
 
 ### Logic Errors
@@ -146,8 +146,9 @@ Quick reference for developers working on bug fixes from the audit.
   - Test: Late joiners see correct wave timer
 
 ### Memory Leaks
-- [ ] **BUG-021**: Fix tween animation leak (Multiple UI files)
-  - Call :Cancel() on all tweens before hide
+- [ ] **BUG-021**: Fix tween animation leak (Multiple UI files) — PARTIAL
+  - ✅ Reviewed major tween hotspots and added cancellation/stop for long‑running/pulsing threads (`TitleScreenUI`, `AchievementUI`, `SynthesisUI`, `FPSHUD`, `NotificationUI`)
+  - Remaining: audit any remaining pulsing threads or persistent tween lists (PRIORITY: `MapVotingUI`, `ScoreboardUI`, `LobbyUI`) and add `:Cancel()` where appropriate
   - Test: Tweens don't run after UI destroyed
   
 - [ ] **BUG-022**: Fix CharacterAdded leak (Multiple client files)

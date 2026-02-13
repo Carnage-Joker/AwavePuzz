@@ -220,6 +220,11 @@ local function rebuildList(items)
 	-- Preserve layout and padding while clearing entries
 	for _, child in ipairs(list:GetChildren()) do
 		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
+			-- Disconnect stored click connection on transient buttons
+			if child._clickConn and child._clickConn.Connected then
+				child._clickConn:Disconnect()
+				child._clickConn = nil
+			end
 			child:Destroy()
 		end
 	end
@@ -248,7 +253,8 @@ local function rebuildList(items)
 		-- Store button and item data
 		table.insert(shopItems, button)
 
-		button.MouseButton1Click:Connect(function()
+		-- Store click connection on the button and clean up when button destroyed
+		button._clickConn = button.MouseButton1Click:Connect(function()
 			if debounce then return end
 			debounce = true
 

@@ -187,7 +187,7 @@ function AchievementUI:processQueue()
 	self.isProcessingQueue = true
 	
 	-- Run the queue processing in a separate thread so callers don't block on waits
-	task.spawn(function()
+	self._queueThread = task.spawn(function()
 		while true do
 			if #self.notificationQueue == 0 then
 				-- Nothing left to show; stop processing
@@ -223,7 +223,7 @@ function AchievementUI:processQueue()
 			slideInTween:Play()
 			
 			-- Pulse effect (runs independently of the main queue timing)
-			task.spawn(function()
+			self._pulseThread = task.spawn(function()
 				task.wait(0.5)
 				for i = 1, 2 do
 					TweenService:Create(
@@ -269,9 +269,20 @@ function AchievementUI.cleanup()
 	
 	-- Clean up UI resources from the singleton instance
 	if achievementUI then
+		-- Stop queue thread and pulse thread if running
+		if achievementUI._queueThread then
+			task.cancel(achievementUI._queueThread)
+			achievementUI._queueThread = nil
+		end
+		if achievementUI._pulseThread then
+			task.cancel(achievementUI._pulseThread)
+			achievementUI._pulseThread = nil
+		end
+		
 		-- Clear the notification queue
 		achievementUI.notificationQueue = {}
 		achievementUI.isShowingNotification = false
+		achievementUI.isProcessingQueue = false
 		
 		-- Destroy the ScreenGui
 		if achievementUI.screenGui then

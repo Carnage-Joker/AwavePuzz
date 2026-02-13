@@ -194,7 +194,7 @@ function EpilogueUI:createUI()
 		skipButton.TextSize = 16
 		skipButton.Parent = self.frame
 		
-		skipButton.MouseButton1Click:Connect(function()
+		connections.skipButton = skipButton.MouseButton1Click:Connect(function()
 			self:skip()
 		end)
 		
@@ -217,7 +217,7 @@ function EpilogueUI:createUI()
 	muteButton.Parent = self.frame
 	
 	self.audioMuted = false
-	muteButton.MouseButton1Click:Connect(function()
+	connections.muteButton = muteButton.MouseButton1Click:Connect(function()
 		self.audioMuted = not self.audioMuted
 		if self.audioMuted then
 			muteButton.Text = "[M] Unmute Audio"
@@ -250,7 +250,7 @@ function EpilogueUI:createUI()
 	continueButton.TextSize = 20
 	continueButton.Parent = self.frame
 	
-	continueButton.MouseButton1Click:Connect(function()
+	connections.continueButton = continueButton.MouseButton1Click:Connect(function()
 		self:nextPage()
 	end)
 	

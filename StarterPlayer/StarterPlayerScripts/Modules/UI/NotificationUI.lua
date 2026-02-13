@@ -150,11 +150,13 @@ function NotificationUI:processQueue()
 	
 	self.isProcessingQueue = true
 	
-	task.spawn(function()
+	-- Store the thread handle so cleanup() can cancel if needed
+	self._queueThread = task.spawn(function()
 		while true do
 			if #self.notificationQueue == 0 then
 				self.isShowingNotification = false
 				self.isProcessingQueue = false
+				self._queueThread = nil
 				break
 			end
 			
@@ -211,6 +213,12 @@ function NotificationUI:cleanup()
 		end
 	end
 	_connections = {}
+	
+	-- Cancel any active queue thread
+	if self._queueThread then
+		task.cancel(self._queueThread)
+		self._queueThread = nil
+	end
 	
 	self.notificationQueue = {}
 	self.isShowingNotification = false

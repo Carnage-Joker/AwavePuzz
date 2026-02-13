@@ -290,9 +290,10 @@ function TitleScreenUI:createUI()
 	clickButton.Parent = self.frame
 	
 	-- Handle click to continue
-	clickButton.MouseButton1Click:Connect(function()
+	local clickConn = clickButton.MouseButton1Click:Connect(function()
 		self:onContinue()
 	end)
+	table.insert(self._connections, clickConn)
 	
 	-- Store reference for animations
 	self.titleLabel = titleLabel

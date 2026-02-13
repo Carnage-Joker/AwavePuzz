@@ -108,8 +108,8 @@ function CureStationInteraction:showInteractionPrompt()
 		corner.CornerRadius = UDim.new(0, 8)
 		corner.Parent = button
 		
-		-- Connect touch event
-		button.MouseButton1Click:Connect(function()
+		-- Connect touch event (track connection for cleanup)
+		self.connections.cureButton = button.MouseButton1Click:Connect(function()
 			self:triggerInteraction()
 		end)
 	else

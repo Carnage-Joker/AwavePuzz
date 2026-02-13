@@ -238,7 +238,7 @@ local function createAllButtons()
 	corner.Parent = weaponSwitchButton
 	
 	-- Weapon cycling logic - only cycles through owned weapons
-	weaponSwitchButton.MouseButton1Click:Connect(function()
+	connections.weaponSwitch = weaponSwitchButton.MouseButton1Click:Connect(function()
 		if #ownedWeapons == 0 then
 			return -- No weapons to cycle through
 		end
@@ -310,7 +310,8 @@ local function createUIToggleButton(name, text, yOffset, callback)
 	corner.Parent = button
 	
 	if callback then
-		button.MouseButton1Click:Connect(callback)
+		local btnConn = button.MouseButton1Click:Connect(callback)
+		table.insert(connections, btnConn)
 	end
 	
 	return button
@@ -387,7 +388,8 @@ local function createContextualButton(name, text, position, callback)
 	corner.Parent = button
 	
 	if callback then
-		button.MouseButton1Click:Connect(callback)
+		local btnConn = button.MouseButton1Click:Connect(callback)
+		table.insert(connections, btnConn)
 	end
 	
 	return button

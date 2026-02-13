@@ -293,7 +293,7 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 
 	-- Click handler
 	if available then
-		button.MouseButton1Click:Connect(function()
+		local btnConn = button.MouseButton1Click:Connect(function()
 			-- Request puzzle from server
 			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
@@ -301,6 +301,8 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 				menuFrame.Visible = false
 			end
 		end)
+		-- Track dynamic button connection so cleanup can disconnect
+		table.insert(connections, btnConn)
 	end
 
 	return button
@@ -376,13 +378,15 @@ local function updatePuzzleMenu(progressData)
 	finalDesc.Parent = finalButton
 
 	if finalAvailable then
-		finalButton.MouseButton1Click:Connect(function()
+		local finalConn = finalButton.MouseButton1Click:Connect(function()
 			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
 				remoteEvents.RequestPuzzle:FireServer("FinalSynthesis")
 				menuFrame.Visible = false
 			end
 		end)
+		-- Track final button connection for cleanup
+		table.insert(connections, finalConn)
 	end
 	
 	-- Add final button to tracked buttons
