@@ -1,9 +1,9 @@
--- ShopUI.client.lua
+-- ShopUI.lua
 -- Simple in-game shop interface for purchasing weapons and upgrades
 -- Updated with dynamic UI scaling for mobile devices.
+-- Refactored to use RemoteRegistry, UIConnectionMaid, and InputActionRegistry
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -34,15 +34,17 @@ local function cleanupButtons(parent: Instance)
 		end
 	end
 end
+local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
 
-local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
-local shopRequest = remoteFolder:WaitForChild("ShopRequest")
-local shopUpdate = remoteFolder:WaitForChild("ShopUpdate")
-
-local _connections = {}
+-- Module state
+local ShopUI = {}
+local maid = UIConnectionMaid.new()
+local remotes = nil  -- Will be set via bindRemotes()
+local shopRequest = nil
+local shopUpdate = nil
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -114,10 +116,10 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 closeCorner.Parent = closeButton
 
-_connections.closeButton = closeButton.MouseButton1Click:Connect(function()
+maid:Give(closeButton.MouseButton1Click:Connect(function()
 	screenGui.Enabled = false
 	ModalManager.remove("ShopUI")
-end)
+end), "closeButton")
 
 local list = Instance.new("ScrollingFrame")
 list.Size = UDim2.new(1, -getScaledValue(10, "padding"), 1, -getScaledValue(70, "padding"))
@@ -184,20 +186,29 @@ local function updateUIScaling()
 end
 
 -- Register for scale changes (returns unsubscribe function)
-local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
-_connections.scaleChanged = {
-	Disconnect = function()
-		if scaleChangedUnsubscribe then
-			scaleChangedUnsubscribe()
-			scaleChangedUnsubscribe = nil
-		end
-	end
-}
+maid:GiveFn(UIScaleManager.onScaleChanged(updateUIScaling), "scaleChanged")
 
 local catalogCache = {}
 local debounce = false
 local selectedItemIndex = 1
 local shopItems = {} -- Track shop item buttons for keyboard navigation
+local buttonMaid = UIConnectionMaid.new() -- Separate maid for transient button connections
+
+-- Shared purchase function used by both click and keyboard selection
+local function purchaseItem(item)
+	if debounce or not shopRequest then
+		return
+	end
+	debounce = true
+	
+	statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+	statusLabel.Text = "Processing purchase..."
+	shopRequest:FireServer("purchase", { itemId = item.Id })
+	
+	task.delay(0.25, function()
+		debounce = false
+	end)
+end
 
 local function updateItemSelection()
 	-- Update visual indication of selected item
@@ -233,17 +244,15 @@ local function updateCanvasSize()
 	list.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
 end
 
-_connections.layoutChanged = layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
+maid:Give(layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize), "layoutChanged")
 
 local function rebuildList(items)
+	-- Clean up all existing button connections
+	buttonMaid:Cleanup()
+	
 	-- Preserve layout and padding while clearing entries
 	for _, child in ipairs(list:GetChildren()) do
 		if not child:IsA("UIListLayout") and not child:IsA("UIPadding") then
-			-- Disconnect stored click connection on transient buttons
-			if child._clickConn and child._clickConn.Connected then
-				child._clickConn:Disconnect()
-				child._clickConn = nil
-			end
 			child:Destroy()
 		end
 	end
@@ -272,19 +281,10 @@ local function rebuildList(items)
 		-- Store button and item data
 		table.insert(shopItems, button)
 
-		-- Store click connection on the button and clean up when button destroyed
-		button._clickConn = button.MouseButton1Click:Connect(function()
-			if debounce then return end
-			debounce = true
-
-			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-			statusLabel.Text = "Processing purchase..."
-			shopRequest:FireServer("purchase", { itemId = item.Id })
-
-			task.delay(0.25, function()
-				debounce = false
-			end)
-		end)
+		-- Track button connection in buttonMaid for automatic cleanup on next rebuild
+		buttonMaid:Give(button.MouseButton1Click:Connect(function()
+			purchaseItem(item)
+		end))
 	end
 
 	updateCanvasSize()
@@ -295,105 +295,165 @@ local function rebuildList(items)
 	end
 end
 
-_connections.shopUpdate = shopUpdate.OnClientEvent:Connect(function(payload)
-	if typeof(payload) ~= "table" then
+-- Bind remotes from RemoteRegistry (called by ClientMainModule)
+function ShopUI.bindRemotes(providedRemotes)
+	if not providedRemotes then
+		warn("[ShopUI] bindRemotes: No remotes provided")
 		return
 	end
-
-	if payload.type == "catalog" then
-		catalogCache = payload.items or {}
-		rebuildList(catalogCache)
-		statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-		statusLabel.Text = "↑/↓ or W/S: Navigate • Enter: Purchase • Backspace: Close"
-	elseif payload.type == "result" then
-		local success = payload.success == true
-		statusLabel.TextColor3 = success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
-		statusLabel.Text = payload.message or (success and "Purchase successful" or "Purchase failed")
-	end
-end)
-
-_connections.inputBegan = UserInputService.InputBegan:Connect(function(input, gpe)
-	-- ALWAYS check gameProcessedEvent first
-	if gpe then
+	
+	remotes = providedRemotes
+	shopRequest = remotes.ShopRequest
+	shopUpdate = remotes.ShopUpdate
+	
+	if not shopRequest or not shopUpdate then
+		warn("[ShopUI] Missing required remotes: ShopRequest or ShopUpdate")
 		return
 	end
-
-	if input.KeyCode == Enum.KeyCode.B then
-		screenGui.Enabled = not screenGui.Enabled
-
-		if screenGui.Enabled then
+	
+	-- Connect to shop update events
+	maid:Give(shopUpdate.OnClientEvent:Connect(function(payload)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		
+		if payload.type == "catalog" then
+			catalogCache = payload.items or {}
+			rebuildList(catalogCache)
 			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-			statusLabel.Text = "Loading shop..."
-			shopRequest:FireServer("catalog")
+			statusLabel.Text = "↑/↓ or W/S: Navigate • Enter: Purchase • Backspace: Close"
+		elseif payload.type == "result" then
+			local success = payload.success == true
+			statusLabel.TextColor3 = success and Color3.new(0.7, 1, 0.7) or Color3.new(1, 0.6, 0.6)
+			statusLabel.Text = payload.message or (success and "Purchase successful" or "Purchase failed")
+		end
+	end), "shopUpdate")
+	
+	print("[ShopUI] Remotes bound successfully")
+end
+
+-- Setup InputActionRegistry handlers
+local function setupInputActions()
+	-- Register input actions with InputActionRegistry for conflict detection
+	-- ShopToggle remains enabled to allow opening the shop
+	-- Navigation actions disabled by default until shop opens to avoid conflicts
+	InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI, true)
+	InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
+	InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
+	InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, InputActionRegistry.Priority.MODAL_UI, false)
+	
+	-- Set up actual input handling via UserInputService (gated by InputActionRegistry state)
+	local UserInputService = game:GetService("UserInputService")
+	maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+		-- ALWAYS check gameProcessedEvent first
+		if gameProcessedEvent then
+			return
+		end
+		
+		-- Handle shop toggle (B key)
+		if input.KeyCode == Enum.KeyCode.B then
+			-- Check if ShopToggle action is enabled in registry
+			local action = InputActionRegistry.getAction("ShopToggle")
+			if not action or not action.enabled then
+				return
+			end
 			
-			-- Register with ModalManager and enable shop input actions
-			ModalManager.push("ShopUI", function()
-				screenGui.Enabled = false
+			screenGui.Enabled = not screenGui.Enabled
+			
+			if screenGui.Enabled then
+				statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+				statusLabel.Text = "Loading shop..."
+				if shopRequest then
+					shopRequest:FireServer("catalog")
+				end
+				
+				-- Register with ModalManager and enable shop input actions
+				ModalManager.push("ShopUI", function()
+					screenGui.Enabled = false
+					statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
+					statusLabel.Text = "Press B to toggle shop"
+					-- Disable shop input actions when closing
+					InputActionRegistry.disableOwner("ShopUI")
+				end, ModalManager.Priority.MODAL)
+				
+				-- Enable shop input actions when opening
+				InputActionRegistry.enableOwner("ShopUI")
+			else
 				statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
 				statusLabel.Text = "Press B to toggle shop"
+				ModalManager.remove("ShopUI")
 				-- Disable shop input actions when closing
 				InputActionRegistry.disableOwner("ShopUI")
-			end, ModalManager.Priority.MODAL)
-			
-			-- Enable shop input actions when opening
-			InputActionRegistry.enableOwner("ShopUI")
-		else
-			statusLabel.TextColor3 = Color3.new(0.8, 1, 0.8)
-			statusLabel.Text = "Press B to toggle shop"
-			ModalManager.remove("ShopUI")
-			-- Disable shop input actions when closing
-			InputActionRegistry.disableOwner("ShopUI")
+			end
+			return
 		end
-	-- Backspace is now handled by ModalManager globally, but keep fallback
-	elseif screenGui.Enabled and #shopItems > 0 then
-		-- Keyboard navigation when shop is open
+		
+		-- Handle navigation when shop is open
+		if not screenGui.Enabled or #shopItems == 0 then
+			return
+		end
+		
 		-- Only process if this shop is the top modal
 		if not ModalManager.isTopModal("ShopUI") then
 			return
 		end
 		
+		-- Navigate up
 		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
-			selectedItemIndex = selectedItemIndex - 1
-			if selectedItemIndex < 1 then
-				selectedItemIndex = #shopItems
+			local action = InputActionRegistry.getAction("ShopNavigateUp")
+			if action and action.enabled then
+				selectedItemIndex = selectedItemIndex - 1
+				if selectedItemIndex < 1 then
+					selectedItemIndex = #shopItems
+				end
+				updateItemSelection()
 			end
-			updateItemSelection()
+		-- Navigate down
 		elseif input.KeyCode == Enum.KeyCode.Down or input.KeyCode == Enum.KeyCode.S then
-			selectedItemIndex = selectedItemIndex + 1
-			if selectedItemIndex > #shopItems then
-				selectedItemIndex = 1
+			local action = InputActionRegistry.getAction("ShopNavigateDown")
+			if action and action.enabled then
+				selectedItemIndex = selectedItemIndex + 1
+				if selectedItemIndex > #shopItems then
+					selectedItemIndex = 1
+				end
+				updateItemSelection()
 			end
-			updateItemSelection()
+		-- Select item with Enter
 		elseif input.KeyCode == Enum.KeyCode.Return then
-			-- Prefer Enter for selection (Space conflicts with jump)
-			if shopItems[selectedItemIndex] then
-				shopItems[selectedItemIndex].MouseButton1Click:Fire()
+			local action = InputActionRegistry.getAction("ShopSelect")
+			if action and action.enabled then
+				-- Get the item data from the catalog cache
+				if shopItems[selectedItemIndex] and catalogCache[selectedItemIndex] then
+					purchaseItem(catalogCache[selectedItemIndex])
+				end
 			end
 		end
-	end
-end)
+	end), "inputBegan")
+end
 
--- Register input actions with InputActionRegistry
--- ShopToggle remains enabled to allow opening the shop
--- Navigation actions disabled by default until shop opens to avoid conflicts
-InputActionRegistry.register("ShopToggle", "ShopUI", {Enum.KeyCode.B}, InputActionRegistry.Priority.TOGGLE_UI, true)
-InputActionRegistry.register("ShopNavigateUp", "ShopUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
-InputActionRegistry.register("ShopNavigateDown", "ShopUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
-InputActionRegistry.register("ShopSelect", "ShopUI", {Enum.KeyCode.Return}, InputActionRegistry.Priority.MODAL_UI, false)
-
--- Return module table (required for ModuleScript compatibility)
-local ShopUI = {}
+-- Initialize input actions (called at module load time)
+setupInputActions()
 
 function ShopUI.cleanup()
-	for name, conn in pairs(_connections) do
-		if conn and conn.Connected then
-			conn:Disconnect()
-		end
-	end
-	table.clear(_connections)
+	-- Unregister input actions
+	InputActionRegistry.unregister("ShopToggle")
+	InputActionRegistry.unregister("ShopNavigateUp")
+	InputActionRegistry.unregister("ShopNavigateDown")
+	InputActionRegistry.unregister("ShopSelect")
 	
+	-- Clean up all connections
+	maid:Cleanup()
+	buttonMaid:Cleanup()
+	
+	-- Close modal if open
+	if ModalManager.isModalOpen("ShopUI") then
+		ModalManager.remove("ShopUI")
+	end
+	
+	-- Destroy UI
 	if screenGui then
 		screenGui:Destroy()
+		screenGui = nil
 	end
 end
 
