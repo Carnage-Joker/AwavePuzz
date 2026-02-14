@@ -15,6 +15,7 @@ local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
 
 -- Get MusicController for audio muting
 local MusicController = require(script.Parent.Parent:WaitForChild("MusicController"))
@@ -22,8 +23,8 @@ local MusicController = require(script.Parent.Parent:WaitForChild("MusicControll
 local EpilogueUI = {}
 EpilogueUI.__index = EpilogueUI
 
--- Connection tracking for cleanup
-local connections = {}
+-- Connection tracking for cleanup using UIConnectionMaid
+local maid = UIConnectionMaid.new()
 
 function EpilogueUI.new()
 	local self = setmetatable({}, EpilogueUI)
@@ -33,6 +34,7 @@ function EpilogueUI.new()
 	self.isTransitioning = false
 	self.autoAdvanceTimer = nil
 	self.remotes = nil -- Will be set via bindRemotes()
+	self.tweenConnections = {} -- Track tween completion connections
 	
 	self.screenGui = nil
 	self.frame = nil
@@ -53,7 +55,7 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
-		connections.gameStateUpdate = self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+		maid:Give(self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
 			if stateData and stateData.state then
 				local state = stateData.state
 				-- Show epilogue for any state containing "Epilogue"
@@ -68,22 +70,22 @@ function EpilogueUI:bindRemotes(remotes)
 					self:hide()
 				end
 			end
-		end)
+		end), "gameStateUpdate")
 	end
 	
 	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	if self.remotes.ShowEpilogue then
-		connections.showEpilogue = self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
+		maid:Give(self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received ShowEpilogue event (legacy)")
 			self:show()
-		end)
+		end), "showEpilogue")
 	end
 	
 	if self.remotes.HideEpilogue then
-		connections.hideEpilogue = self.remotes.HideEpilogue.OnClientEvent:Connect(function()
+		maid:Give(self.remotes.HideEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received HideEpilogue event (legacy)")
 			self:hide()
-		end)
+		end), "hideEpilogue")
 	end
 	
 	print("[EpilogueUI] Remotes bound and ready (state-driven + legacy)")
@@ -217,7 +219,7 @@ function EpilogueUI:createUI()
 	muteButton.Parent = self.frame
 	
 	self.audioMuted = false
-	connections.muteButton = muteButton.MouseButton1Click:Connect(function()
+	maid:Give(muteButton.MouseButton1Click:Connect(function()
 		self.audioMuted = not self.audioMuted
 		if self.audioMuted then
 			muteButton.Text = "[M] Unmute Audio"
@@ -230,7 +232,7 @@ function EpilogueUI:createUI()
 			-- Unmute all music tracks
 			MusicController.unmuteAll()
 		end
-	end)
+	end), "muteButton")
 	
 	self.muteButton = muteButton
 	
@@ -250,9 +252,9 @@ function EpilogueUI:createUI()
 	continueButton.TextSize = 20
 	continueButton.Parent = self.frame
 	
-	connections.continueButton = continueButton.MouseButton1Click:Connect(function()
+	maid:Give(continueButton.MouseButton1Click:Connect(function()
 		self:nextPage()
-	end)
+	end), "continueButton")
 	
 	-- Store references
 	self.titleLabel = titleLabel
@@ -282,7 +284,7 @@ function EpilogueUI:show()
 	end, ModalManager.Priority.FULLSCREEN)
 	
 	-- Listen for input (only if top modal)
-	connections.inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		
 		-- Only process if this is the top modal
@@ -310,7 +312,7 @@ function EpilogueUI:show()
 				end
 			end
 		end
-	end)
+	end), "inputConnection")
 	
 	-- Fade in
 	self:fadeIn()
@@ -552,17 +554,32 @@ InputActionRegistry.register("EpilogueMute", "EpilogueUI", {Enum.KeyCode.M}, Inp
 
 -- Cleanup function
 function EpilogueUI:cleanup()
-	for name, connection in pairs(connections) do
-		if connection then
-			connection:Disconnect()
-		end
-	end
-	connections = {}
+	-- Unregister input actions
+	InputActionRegistry.unregister("EpilogueContinue")
+	InputActionRegistry.unregister("EpilogueMute")
+	
+	-- Clean up all connections via maid
+	maid:Cleanup()
 	
 	-- Cancel timers
 	if self.autoAdvanceTimer then
 		task.cancel(self.autoAdvanceTimer)
 		self.autoAdvanceTimer = nil
+	end
+	
+	-- Cancel any ongoing tweens
+	if self.pulseTweens then
+		for _, tween in pairs(self.pulseTweens) do
+			if tween then
+				tween:Cancel()
+			end
+		end
+		table.clear(self.pulseTweens)
+	end
+	
+	if self.pulseThread then
+		task.cancel(self.pulseThread)
+		self.pulseThread = nil
 	end
 	
 	-- Remove from ModalManager if still active
@@ -573,19 +590,12 @@ end
 
 -- Module interface
 EpilogueUI.initialize = function()
-	-- Ensure connections table exists
-	connections = connections or {}
-
 	-- Re-establish CharacterRemoving handler to ensure cleanup runs on respawn
-	if connections.CharacterRemovingConnection then
-		connections.CharacterRemovingConnection:Disconnect()
-	end
-
 	if Player and Player.CharacterRemoving then
-		connections.CharacterRemovingConnection = Player.CharacterRemoving:Connect(function()
+		maid:Give(Player.CharacterRemoving:Connect(function()
 			-- Use module-level cleanup to clear connections and timers
 			EpilogueUI:cleanup()
-		end)
+		end), "characterRemoving")
 	end
 end
 

@@ -22,6 +22,7 @@ local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -30,21 +31,12 @@ UIScaleManager.initialize()
 local myAlliances = {}
 local pendingRequest = nil
 local allyHighlights = {} -- Track highlight objects for allies
-local _connections = {}
+
+-- Connection tracking using UIConnectionMaid
+local maid = UIConnectionMaid.new()
 
 -- Forward declare for updateUIScaling() scope safety (avoid global lookup)
 local updatePlayerList
-
--- Helpers for consistent connection tracking + cleanup
-local function track(conn)
-	table.insert(_connections, conn)
-	return conn
-end
-
-local function trackDisconnectable(obj)
-	table.insert(_connections, obj)
-	return obj
-end
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -119,11 +111,11 @@ local mainCloseCorner = Instance.new("UICorner")
 mainCloseCorner.CornerRadius = UDim.new(0, getScaledValue(5, "padding"))
 mainCloseCorner.Parent = mainCloseButton
 
-track(mainCloseButton.MouseButton1Click:Connect(function()
+maid:Give(mainCloseButton.MouseButton1Click:Connect(function()
 	mainFrame.Visible = false
 	-- If closed via X, also remove modal entry to prevent stale closures
 	ModalManager.remove("AllianceUI")
-end))
+end), "mainCloseButton")
 
 -- Player List (ScrollingFrame)
 local playerList = Instance.new("ScrollingFrame")
@@ -282,16 +274,8 @@ local function updateUIScaling()
 	end
 end
 
--- Register for scale changes (must be trackable for cleanup)
-local scaleChangedUnsubscribe = UIScaleManager.onScaleChanged(updateUIScaling)
-trackDisconnectable({
-	Disconnect = function()
-		if scaleChangedUnsubscribe then
-			scaleChangedUnsubscribe()
-			scaleChangedUnsubscribe = nil
-		end
-	end,
-})
+-- Register for scale changes (returns unsubscribe function)
+maid:GiveFn(UIScaleManager.onScaleChanged(updateUIScaling), "scaleChanged")
 
 -- Functions
 local function showNotification(message, duration)
@@ -330,7 +314,7 @@ local function addAllyHighlight(allyPlayer)
 		allyHighlights[allyPlayer.UserId] = highlight
 
 		-- Re-add highlight if character respawns (track for cleanup)
-		track(allyPlayer.CharacterAdded:Connect(function()
+		maid:Give(allyPlayer.CharacterAdded:Connect(function()
 			if myAlliances[allyPlayer.UserId] then
 				task.wait(0.1) -- Small delay for character to load
 				addAllyHighlight(allyPlayer)
@@ -436,7 +420,7 @@ updatePlayerList = function()
 			btnCorner.Parent = actionButton
 
 			-- Button click handler
-			track(actionButton.MouseButton1Click:Connect(function()
+			maid:Give(actionButton.MouseButton1Click:Connect(function()
 				local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 				if not remoteEvents then return end
 
@@ -464,7 +448,7 @@ end
 
 -- Toggle UI with H key (Team/Help) - Changed from LeftShift to avoid Sprint conflict
 local UserInputService = game:GetService("UserInputService")
-track(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	-- ALWAYS check gameProcessedEvent first
 	if gameProcessed then return end
 
@@ -481,7 +465,7 @@ track(UserInputService.InputBegan:Connect(function(input, gameProcessed)
 			ModalManager.remove("AllianceUI")
 		end
 	end
-end))
+end), "inputBegan")
 
 -- Register input action with InputActionRegistry
 InputActionRegistry.register("AllianceToggle", "AllianceUI", {Enum.KeyCode.H}, InputActionRegistry.Priority.TOGGLE_UI)
@@ -491,7 +475,7 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Alliance Update
 local allianceUpdateEvent = remoteEvents:WaitForChild("AllianceUpdate")
-track(allianceUpdateEvent.OnClientEvent:Connect(function(data)
+maid:Give(allianceUpdateEvent.OnClientEvent:Connect(function(data)
 	if data.type == "request" then
 		-- Show alliance request
 		pendingRequest = data.from
@@ -537,21 +521,21 @@ track(allianceUpdateEvent.OnClientEvent:Connect(function(data)
 		-- Error occurred
 		showNotification(data.message, 3)
 	end
-end))
+end), "allianceUpdate")
 
 -- Betrayal Started Event
 local betrayalStartedEvent = remoteEvents:WaitForChild("BetrayalStarted")
-track(betrayalStartedEvent.OnClientEvent:Connect(function(data)
+maid:Give(betrayalStartedEvent.OnClientEvent:Connect(function(data)
 	if data.type == "betrayer" then
 		showNotification("Betrayal initiated! Eliminate " .. data.victim .. " in " .. data.duration .. "s!", 5)
 	elseif data.type == "victim" then
 		showNotification("You've been betrayed by " .. data.betrayer .. "! Survive " .. data.duration .. "s!", 5)
 	end
-end))
+end), "betrayalStarted")
 
 -- Betrayal Outcome Event
 local betrayalOutcomeEvent = remoteEvents:WaitForChild("BetrayalOutcome")
-track(betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
+maid:Give(betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
 	if data.type == "success" then
 		showNotification(data.message, 5)
 	elseif data.type == "victory" then
@@ -561,10 +545,10 @@ track(betrayalOutcomeEvent.OnClientEvent:Connect(function(data)
 	elseif data.type == "stalemate_victim" then
 		showNotification(data.message, 5)
 	end
-end))
+end), "betrayalOutcome")
 
 -- Accept button handler
-track(acceptButton.MouseButton1Click:Connect(function()
+maid:Give(acceptButton.MouseButton1Click:Connect(function()
 	if pendingRequest then
 		local respondEvent = remoteEvents:FindFirstChild("RespondAlliance")
 		if respondEvent then
@@ -573,10 +557,10 @@ track(acceptButton.MouseButton1Click:Connect(function()
 		pendingRequest = nil
 		requestFrame.Visible = false
 	end
-end))
+end), "acceptButton")
 
 -- Decline button handler
-track(declineButton.MouseButton1Click:Connect(function()
+maid:Give(declineButton.MouseButton1Click:Connect(function()
 	if pendingRequest then
 		local respondEvent = remoteEvents:FindFirstChild("RespondAlliance")
 		if respondEvent then
@@ -585,10 +569,10 @@ track(declineButton.MouseButton1Click:Connect(function()
 		pendingRequest = nil
 		requestFrame.Visible = false
 	end
-end))
+end), "declineButton")
 
 -- Listen for player changes
-track(Players.PlayerAdded:Connect(function(newPlayer)
+maid:Give(Players.PlayerAdded:Connect(function(newPlayer)
 	task.wait(0.5)
 	if mainFrame.Visible then
 		updatePlayerList()
@@ -597,15 +581,15 @@ track(Players.PlayerAdded:Connect(function(newPlayer)
 	if myAlliances[newPlayer.UserId] then
 		addAllyHighlight(newPlayer)
 	end
-end))
+end), "playerAdded")
 
-track(Players.PlayerRemoving:Connect(function(removedPlayer)
+maid:Give(Players.PlayerRemoving:Connect(function(removedPlayer)
 	myAlliances[removedPlayer.UserId] = nil
 	removeAllyHighlight(removedPlayer)
 	if mainFrame.Visible then
 		updatePlayerList()
 	end
-end))
+end), "playerRemoving")
 
 -- Initial update
 updatePlayerList()
@@ -620,14 +604,30 @@ local AllianceUI = {}
 
 -- Cleanup method
 function AllianceUI.cleanup()
-	for _, c in ipairs(_connections) do
-		if typeof(c) == "RBXScriptConnection" then
-			c:Disconnect()
-		elseif type(c) == "table" and type(c.Disconnect) == "function" then
-			c:Disconnect()
+	-- Unregister input action
+	InputActionRegistry.unregister("AllianceToggle")
+	
+	-- Clean up all connections via maid
+	maid:Cleanup()
+	
+	-- Clean up all ally highlights
+	for userId, highlight in pairs(allyHighlights) do
+		if highlight then
+			highlight:Destroy()
 		end
 	end
-	table.clear(_connections)
+	table.clear(allyHighlights)
+	
+	-- Close modal if open
+	if mainFrame and mainFrame.Visible then
+		ModalManager.remove("AllianceUI")
+	end
+	
+	-- Destroy UI
+	if screenGui then
+		screenGui:Destroy()
+		screenGui = nil
+	end
 end
 
 return AllianceUI
