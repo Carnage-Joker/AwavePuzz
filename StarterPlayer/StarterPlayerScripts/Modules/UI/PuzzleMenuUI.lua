@@ -195,18 +195,20 @@ connections.scaleChanged = {
 	end
 }
 
--- Keyboard navigation state
+-- Module state
+local remotes = nil -- Will be set via bindRemotes()
 local puzzleButtons = {}
 local puzzleButtonData = {} -- Maps button to its component name and availability
 local selectedPuzzleIndex = 1
 
 -- Helper function to request a puzzle from the server
 local function requestPuzzle(componentName)
-	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
-		remoteEvents.RequestPuzzle:FireServer(componentName)
-		menuFrame.Visible = false
+	if not remotes or not remotes.RequestPuzzle then
+		warn("[PuzzleMenuUI] RequestPuzzle remote not available")
+		return
 	end
+	remotes.RequestPuzzle:FireServer(componentName)
+	menuFrame.Visible = false
 end
 
 local function updatePuzzleSelection()
@@ -429,30 +431,41 @@ local function showPuzzleMenu()
 	InputActionRegistry.enableOwner("PuzzleMenuUI")
 	
 	-- Request puzzle progress from server
-	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzleProgress") then
-		remoteEvents.RequestPuzzleProgress:FireServer()
+	if remotes and remotes.RequestPuzzleProgress then
+		remotes.RequestPuzzleProgress:FireServer()
 	end
 end
 
--- Remote event handlers
-local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
-
--- Listen for puzzle menu requests
-local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
-maid:Give(cureUpdateEvent.OnClientEvent:Connect(function(data)
-	if type(data) == "table" and data.type == "show_puzzle_menu" then
-		showPuzzleMenu()
+-- Bind remotes from RemoteRegistry (called by ClientMainModule)
+local function bindRemotes(providedRemotes)
+	if not providedRemotes then
+		warn("[PuzzleMenuUI] bindRemotes: No remotes provided")
+		return
 	end
-end), "cureUpdate")
-
--- Listen for puzzle progress updates
-local puzzleUpdateEvent = remoteEvents:WaitForChild("PuzzleUpdate")
-maid:Give(puzzleUpdateEvent.OnClientEvent:Connect(function(data)
-	if type(data) == "table" and data.type == "progress" then
-		updatePuzzleMenu(data.progress)
+	
+	remotes = providedRemotes
+	
+	if not remotes.CureUpdate or not remotes.PuzzleUpdate or not remotes.RequestPuzzle or not remotes.RequestPuzzleProgress then
+		warn("[PuzzleMenuUI] Missing required remotes")
+		return
 	end
-end), "puzzleUpdate")
+	
+	-- Listen for puzzle menu requests
+	maid:Give(remotes.CureUpdate.OnClientEvent:Connect(function(data)
+		if type(data) == "table" and data.type == "show_puzzle_menu" then
+			showPuzzleMenu()
+		end
+	end), "cureUpdate")
+	
+	-- Listen for puzzle progress updates
+	maid:Give(remotes.PuzzleUpdate.OnClientEvent:Connect(function(data)
+		if type(data) == "table" and data.type == "progress" then
+			updatePuzzleMenu(data.progress)
+		end
+	end), "puzzleUpdate")
+	
+	print("[PuzzleMenuUI] Remotes bound successfully")
+end
 
 -- Keyboard navigation handler
 maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
@@ -532,6 +545,8 @@ print("PuzzleMenuUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
+
+PuzzleMenuUI.bindRemotes = bindRemotes
 
 function PuzzleMenuUI.cleanup()
 	cleanup()
