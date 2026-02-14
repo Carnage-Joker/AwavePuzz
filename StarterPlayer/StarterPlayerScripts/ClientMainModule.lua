@@ -456,6 +456,16 @@ local function bootClient()
 					else
 						uiCount = uiCount + 1
 					end
+					
+					-- Bind remotes if the module has bindRemotes method
+					if typeof(result) == "table" and result.bindRemotes then
+						local bindSuccess, bindErr = pcall(result.bindRemotes, result, remotes)
+						if bindSuccess then
+							print(string.format("[BOOT][CLIENT] ✓ %s remotes bound", moduleName))
+						else
+							warn(string.format("[BOOT][CLIENT] ✗ %s bindRemotes failed: %s", moduleName, tostring(bindErr)))
+						end
+					end
 				elseif not success then
 					warn(string.format("[BOOT][CLIENT] ✗ UI module %s failed to load: %s", moduleName, tostring(result)))
 				end
