@@ -53,15 +53,31 @@ Quick reference for developers working on bug fixes from the audit.
   - **Date**: 2026-02-13
   
 - [ ] **BUG-007**: Fix mass event connection leak (70+ files) — ONCLIENTEVENT SWEEP COMPLETE (STATIC TEST PASS; QA PENDING)
-  - ✅ OnClientEvent registrations audited and corrected where missing. Modules updated: `PuzzleUI`, `PuzzleMenuUI`, `EpilogueUI` (others already followed the pattern).
-  - ✅ `tests/connection_leak_test.lua` static inspection: **PASS** (no modules with `OnClientEvent:Connect()` left untracked).
-  - Remaining scope: input/tween/thread/other non-remote connection leaks (see BUG‑015, BUG‑021).
-  - Next actions:
-    1. Manual Dev‑Console memory verification (10 rejoins) — high priority QA step
-    2. Sweep for Input/Tween/Heartbeat leaks and add missing `cleanup()` implementations
-    3. Close BUG‑007 after QA passes and memory is stable
-  - Test: Memory increase < 10MB after 10 rejoins (manual + Dev Console)
-  - Note: `OnClientEvent` leak coverage is complete; focusing now on runtime/thread/tween verification.
+  - Summary: Static sweep completed — all `OnClientEvent` registrations were standardized to tracked connections + `cleanup()`. Remaining leak surface is runtime-only (input/tween/heartbeat threads).
+  - Files audited (high‑impact): `PuzzleUI`, `PuzzleMenuUI`, `EpilogueUI`, `FPSHUD`, `CureUI`, `PlayerHUD`, `WaveUI` (see PR for full list)
+  - Fix implemented: Replaced untracked `OnClientEvent:Connect()` with stored connection objects and `cleanup()` calls; added static checks in CI (`tests/connection_leak_test.lua`).
+  - Automated tests (existing/new):
+    - `tests/connection_leak_test.lua` — static detection (PASS)
+    - TODO: `tests/connection_leak_runtime_test.lua` — Dev Console snapshot compare (adds CI gating)
+  - Manual QA steps:
+    1. Join + leave (rejoin) cycle ×10 on local server
+    2. Capture Dev Console memory snapshots before/after
+    3. Verify memory delta < 10MB and no orphaned connections in profiler
+  - Next actions / owner / estimate:
+    1. Add runtime memory regression test (`tests/connection_leak_runtime_test.lua`) — owner: `@frontend` — 2h
+    2. Run QA manual verification and attach results to PR — owner: QA — 1h
+    3. Sweep `FPSWeaponController`, `FPSMovement`, `MapVotingUI`, `LobbyUI` for input/tween/heartbeat leaks — owner: `@frontend` — 2–4h
+    4. Close BUG-007 after tests + QA signoff
+  - PR checklist:
+    - [ ] Add runtime test
+    - [ ] Attach QA memory snapshots
+    - [ ] Reviewers: `@lead-dev`, `@qa`
+  - Acceptance criteria:
+    - Memory increase < 10MB after 10 rejoins (Dev Console)
+    - No orphaned threads/connections reported in profiler
+    - `tests/connection_leak_test.lua` passes in CI
+  - Status: ONGOING — awaiting runtime test + QA signoff
+  - Estimate to close: 4–6 hours (including QA)
   
 - [x] **BUG-008**: Fix weapon state race condition (FPSWeaponController.lua:506-527) ✅ **FIXED**
   - Added `weaponStats` validation and scheduled retry logic (`WEAPON_STATS_RETRY_DELAY`) for late joiners
@@ -97,9 +113,22 @@ Quick reference for developers working on bug fixes from the audit.
   - **Date**: 2026-02-10
   
 - [ ] **BUG-015**: Fix input connection leak (Multiple files) — IN PROGRESS
-  - ✅ Fixed/tracked input handlers in: `TouchControlsUI`, `PuzzleMenuUI`, `ShopUI`, `EpilogueUI`, `FPSMenuController` (already defensive)
-  - Remaining: audit `FPSWeaponController`, `FPSMovement`, and other low-level input modules for any uncaptured InputBegan connections
-  - Test: Input lag doesn't accumulate after 10 deaths
+  - Summary: Many UI/input modules were updated but low‑level input handlers and legacy controllers still need auditing (cause: uncaptured `UserInputService.InputBegan` / `InputEnded` connections).
+  - Files audited/fixed so far: `TouchControlsUI`, `PuzzleMenuUI`, `ShopUI`, `EpilogueUI`, `FPSMenuController` (tracked & cleaned up)
+  - Remaining audit list (priority): `FPSWeaponController`, `FPSMovement`, `CureStationUI`, `CureInteractionController`, `MapVotingUI`
+  - Fix pattern: store input connections in module state, expose `cleanup()` to disconnect, reattach on respawn where necessary.
+  - Tests:
+    - `tests/input_connection_leak_test.lua` (client-side profiler + rejoin loop) — TODO
+    - Manual: 10 respawns/rejoins, verify Input handlers count stable via Dev Console
+  - Next actions / owners:
+    1. Audit `FPSWeaponController` & `FPSMovement` and add missing cleanup — owner: `@frontend` — 2h
+    2. Add `tests/input_connection_leak_test.lua` and CI gating — owner: `@qa` — 2h
+    3. QA validation (10 respawns) and close bug — owner: QA — 1h
+  - PR checklist:
+    - [ ] Add cleanup to all modules with input handlers
+    - [ ] Add unit/manual test to `tests/`
+    - [ ] Reviewer: `@lead-dev`
+  - Acceptance criteria: input handler count stable after 10 respawns; no input lag accumulation in profiler
 
 ### Logic Errors
 - [x] **BUG-011**: Add player validation before FireClient (Multiple services) ✅ **FIXED**
@@ -109,8 +138,19 @@ Quick reference for developers working on bug fixes from the audit.
   - **Date**: 2026-02-13
   
 - [ ] **BUG-012**: Fix ammo validation ordering (WeaponService.lua:345-361)
-  - Validate shot BEFORE consuming ammo
-  - Test: Failed shots don't consume ammo
+  - Problem: Server currently decrements/accepts ammo state before performing full validation (hit validation, cooldowns, and anti-spam). Failed validations may still consume ammo.
+  - Fix: Reorder server-side logic so validation (including LOS raycast, cooldown, and server-side hit confirmation) occurs BEFORE decrementing player ammo. Add unit tests that assert no ammo change on invalid shots.
+  - Example change summary:
+    - `if not validateShot(player, payload) then return end`
+    - `playerAmmo = playerAmmo - 1` (only after validation passes)
+  - Tests:
+    - Add `tests/ammo_consumption_ordering_test.lua` (unit) — simulate invalid shot payloads and assert ammo unchanged
+    - Manual: Attempt malformed/obstructed shot; verify client ammo not decremented and server does not award shots
+  - PR checklist:
+    - [ ] Unit test added (`tests/ammo_consumption_ordering_test.lua`)
+    - [ ] Regression test for server-side hit validation
+    - [ ] Reviewer: `@combat-dev`
+  - Status: not-started → recommended next owner: `@combat-dev` — estimate: 2–3 hours
 
 ---
 
@@ -118,8 +158,19 @@ Quick reference for developers working on bug fixes from the audit.
 
 ### Race Conditions
 - [ ] **BUG-016**: Fix alliance graph mutex (AllianceGraph.lua)
-  - Implement queue-based edge addition
-  - Test: Concurrent alliance formations don't corrupt graph
+  - Problem: Current mutex/check-then-act pattern can corrupt `AllianceGraph` when multiple alliance requests race concurrently.
+  - Fix: Implement queue-based edge addition with an atomic "processNext" worker and granular locks per-player key. Replace check-then-act with enqueue/process pattern.
+  - Implementation notes:
+    - Add `_edgeQueue` table and `_processing` flag to `AllianceGraph`
+    - Provide `enqueueEdgeRequest(srcId, dstId)` → processed serially by `processEdgeQueue()`
+    - Use defensive checks when applying changes and persist via `Graph:commit()` only after validation
+  - Tests:
+    - Add `tests/alliance_graph_mutex_test.lua` (simulate 50 concurrent alliance requests, verify graph integrity)
+    - Manual: Stress test with multiple rapid alliance requests in Studio
+  - Next actions / owner / estimate:
+    - Implement queue + unit tests — owner: `@gameplay-dev` — 3–4 hours
+    - CI: add stress test scenario — owner: `@qa` — 1–2 hours
+  - Acceptance criteria: graph remains consistent under concurrent requests; no data races detected in stress test
   
 - [ ] **BUG-024**: Fix TitleScreenUI singleton race (TitleScreenUI.lua:20-26)
   - Add atomic creation flag
@@ -128,43 +179,88 @@ Quick reference for developers working on bug fixes from the audit.
 
 ### Logic Errors
 - [ ] **BUG-017**: Add humanoid validation (PlayerManager.lua:114-134)
-  - Check character.Parent before setup
-  - Use FindFirstChild instead of WaitForChild
-  - Test: Rapid respawns don't crash
+  - Problem: `PlayerManager` assumes `Character` is fully parented and `Humanoid` exists; rapid respawns can cause nil accesses.
+  - Fix: Guard all Character/Humanoid access with `if character and character.Parent then` and use `FindFirstChild("Humanoid")` with timeout fallback logic. Return early if humanoid not present and retry with a short backoff where appropriate.
+  - Code pattern example:
+    - `local humanoid = character:FindFirstChild("Humanoid") if not humanoid then return end`
+  - Tests:
+    - `tests/humanoid_validation_test.lua` — simulate rapid respawns and assert no crashes
+    - Manual: Rapidly toggle spawn in Studio and verify no nil-index errors in output
+  - Next actions / owner / estimate: `@player-dev` — 1–2 hours
+  - Acceptance criteria: No crashes or errors during 50 rapid respawns in Studio
   
 - [ ] **BUG-018**: Fix inventory ledger merge (InventoryLedger.lua)
-  - Merge deductions instead of overwriting
-  - Test: Alliance resources accumulate correctly
+  - Problem: Ledger merge currently overwrites resource deductions instead of summing them, causing lost resources when multiple transactions apply to the same item.
+  - Fix: Change merge semantics to accumulate (add/subtract) amounts for identical ledger keys; add reconciliation step to validate invariants after merge.
+  - Example:
+    - `ledger[key] = (ledger[key] or 0) + delta` instead of assignment
+  - Tests:
+    - `tests/inventory_ledger_merge_test.lua` — unit tests for concurrent merges and reconciliation
+    - Manual: Simulate concurrent alliance purchases and verify total resources deducted equals expected
+  - Next actions / owner / estimate: `@economy-dev` — 2–3 hours
+  - Acceptance criteria: No resource loss under concurrent operations; unit tests added and passing
   
 - [ ] **BUG-019**: Add spawn point validation (ItemSpawner.lua:86-102)
-  - Generate fallback spawn points if nil
-  - Test: Items spawn even without map spawn points
+  - Problem: `ItemSpawner` assumes map spawn points exist; nil spawn arrays cause silent fails or nil-index errors.
+  - Fix: Validate spawn-point arrays and generate safe fallback points (e.g., map center + offset grid) when none are provided. Log warnings for missing map metadata.
+  - Tests:
+    - `tests/item_spawner_fallback_test.lua` — assert items spawn at fallback locations when map spawn list is empty
+    - Manual: Load map with missing spawn points and verify items still spawn
+  - Next actions / owner / estimate: `@map-dev` — 1–2 hours
+  - Acceptance criteria: Items spawn reliably even when map spawn points are absent; no runtime errors logged
   
 - [ ] **BUG-020**: Fix late joiner sync (GameManager.lua:608-616)
-  - Add waveTimeRemaining to snapshot
-  - Include serverTime for interpolation
-  - Test: Late joiners see correct wave timer
+  - Problem: Late joiners miss `waveTimeRemaining` and `serverTime` in snapshots causing incorrect timers and UI jitter.
+  - Fix: Include `waveTimeRemaining`, `serverTime` (server tick), and `waveNumber` in the snapshot sent to late joiners; ensure interpolation uses serverTime offset.
+  - Tests:
+    - `tests/late_joiner_sync_test.lua` — simulate late join and assert UI timer matches server within 200ms
+    - Manual: Join during active wave and confirm timer alignment
+  - Next actions / owner / estimate: `@net-dev` — 1–2 hours
+  - Acceptance criteria: Late joiner timer matches server snapshot; no desynchronization observed in 10 manual trials
 
 ### Memory Leaks
 - [ ] **BUG-021**: Fix tween animation leak (Multiple UI files) — PARTIAL
-  - ✅ Reviewed major tween hotspots and added cancellation/stop for long‑running/pulsing threads (`TitleScreenUI`, `AchievementUI`, `SynthesisUI`, `FPSHUD`, `NotificationUI`)
-  - Remaining: audit any remaining pulsing threads or persistent tween lists (PRIORITY: `MapVotingUI`, `ScoreboardUI`, `LobbyUI`) and add `:Cancel()` where appropriate
-  - Test: Tweens don't run after UI destroyed
+  - Summary: Major hotspots fixed (cancellation and `:Cancel()` added). Remaining UIs require audit for pulsing threads and persistent tween lists.
+  - Remaining priority list: `MapVotingUI`, `ScoreboardUI`, `LobbyUI`, `AchievementUI` (verify all existing fixes applied)
+  - Fix pattern: store Tween/Task handles, call `:Cancel()`/`:CancelTween()` in `cleanup()`, avoid `while true` loops without `_running` guard.
+  - Tests:
+    - `tests/tween_leak_test.lua` — client profiler + rejoin loop to ensure no active tweens after UI destroyed
+    - Manual: Open/close UI repeatedly and verify active Tween count in DevTools
+  - Next actions / owner / estimate:
+    1. Audit `MapVotingUI`, `ScoreboardUI`, `LobbyUI` — owner: `@ui-dev` — 2 hours
+    2. Add `tests/tween_leak_test.lua` to CI — owner: `@qa` — 2 hours
+  - Acceptance criteria: No active tweens after UI destroyed; profiler shows stable tween count across repeated opens/closes
   
 - [ ] **BUG-022**: Fix CharacterAdded leak (Multiple client files)
-  - Store connections in module
-  - Disconnect in cleanup()
-  - Test: No character reference leaks after 10 respawns
+  - Problem: Several client modules rely on `CharacterAdded` but do not store/disconnect connections on cleanup causing retained references after respawn.
+  - Fix pattern: store `CharacterAdded` connections in module-local table, disconnect in `cleanup()` and reattach on respawn. Initialize connection tables in module `init()` to avoid first-call leaks.
+  - Files to update: `PlayerHUD`, `FPSHUD`, `CureUI`, `WaveUI` (verify existing `cleanup()` actually disconnects)
+  - Tests:
+    - `tests/characteradded_client_leak_test.lua` — simulate 10 respawns and assert connection count stable
+    - Manual: Respawn ×10 and confirm no retained Character references in profiler
+  - Next actions / owner / estimate: `@frontend` — 2–3 hours
+  - Acceptance criteria: No CharacterAdded reference leaks after 10 respawns; client memory stable in profiler
   
 - [ ] **BUG-023**: Add remote timeout handling (Multiple UI files)
-  - Implement fireWithTimeout() helper
-  - Show error notification on timeout
-  - Test: User gets feedback if server hangs
+  - Problem: UI waits indefinitely for server responses; lack of timeout leads to stuck UI states.
+  - Fix: Implement `RemoteEventUtil.fireWithTimeout(remoteEvent, payload, timeoutSec)` that returns success/failure and use it across high‑impact UIs (`SynthesisUI`, `ShopUI`, `CureUI`). Show friendly notification on timeout and provide retry option.
+  - Tests:
+    - `tests/remote_timeout_test.lua` — simulate delayed server response and assert UI shows timeout/warning
+    - Manual: Force server delay and ensure UI recovers and provides retry
+  - Next actions / owner / estimate: `@ui-dev` — 2–3 hours
+  - Acceptance criteria: No UI lockups on delayed server response; `RemoteEventUtil.fireWithTimeout` used in all critical UI paths
   
 - [ ] **BUG-025**: Fix notification loop leak (AchievementUI.lua:189)
-  - Add `_running` flag to while loop
-  - Cancel thread in cleanup()
-  - Test: Thread stops when UI destroyed
+  - Problem: Notification loop uses an unbounded `while true` with no `_running` guard, causing threads to persist after UI destruction.
+  - Fix: Add `_running` flag and track spawned thread handle; set `_running = false` and cancel thread in `cleanup()`; replace `while true` with `while _running`.
+  - Code pattern:
+    - `local _running = true; task.spawn(function() while _running do ... end end)`
+    - `function cleanup() _running = false; task.cancel(threadHandle) end`
+  - Tests:
+    - `tests/notification_loop_leak_test.lua` — assert no background threads after UI destroyed
+    - Manual: Open/close Achievements UI ×20 and verify no thread growth in profiler
+  - Next actions / owner / estimate: `@ui-dev` — 1 hour
+  - Acceptance criteria: No persistent threads from AchievementUI after destruction; test added to CI
 
 ---
 
