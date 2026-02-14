@@ -71,7 +71,7 @@ if invalidAssetCount > 0 then
 	warn(string.format(
 		"[BOOT][SERVER] ⚠️ Boot-time validation found %d invalid asset(s). Game will continue but assets may not load correctly.",
 		invalidAssetCount
-	))
+		))
 else
 	print("[BOOT][SERVER] ✅ All assets validated successfully")
 end
@@ -188,7 +188,7 @@ Players.PlayerAdded:Connect(function(player)
 
 		-- Initialize sprint service for new character
 		sprintService:onCharacterAdded(player, character)
-		
+
 		-- BUG-005 FIX: Clear kill tracking attributes on respawn
 		-- This ensures kill rewards are granted on each death, not just the first
 		local humanoid = character:WaitForChild("Humanoid", 5)
@@ -207,11 +207,11 @@ Players.PlayerRemoving:Connect(function(player)
 	gameManager:onPlayerRemoving(player)
 	allianceService:removePlayer(player)
 	sprintService:removePlayer(player)
-	
+
 	if fpsWeaponService then
 		fpsWeaponService:removePlayer(player)
 	end
-	
+
 	achievementService:removePlayer(player)
 end)
 
@@ -262,7 +262,7 @@ task.spawn(function()
 	if GameConfig and GameConfig.MIN_PLAYERS_TO_START then
 		minPlayers = GameConfig.MIN_PLAYERS_TO_START
 	end
-	
+
 	repeat
 		task.wait(1)
 	until #Players:GetPlayers() >= minPlayers

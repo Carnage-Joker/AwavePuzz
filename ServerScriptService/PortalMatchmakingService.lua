@@ -76,6 +76,7 @@ end
 function PortalMatchmakingService:setupRemoteEvents()
 	-- Use RemoteEventUtil for consistency with the rest of the codebase
 	local RemoteEventUtil = require(Shared:WaitForChild("RemoteEventUtil", 5))
+	self._RemoteEventUtil = RemoteEventUtil
 	
 	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
 		"PortalQueueStatus",
@@ -412,7 +413,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 	if portal.locked then
 		print(string.format("[PortalMatchmakingService] Portal %s is locked", portalId))
 		-- Send feedback to client
-		RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueStatus, player, {
+		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueStatus, player, {
 			portalId = portalId,
 			status = "locked",
 			message = "Portal is launching..."
@@ -447,7 +448,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		player.Name, portalId, #portal.queue, self.maxPlayersPerMatch))
 	
 	-- Send join confirmation to player
-		RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueJoined, player, {
+		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueJoined, player, {
 		mapId = portal.config.mapId,
 		queueCount = #portal.queue,
 		maxPlayers = self.maxPlayersPerMatch
@@ -493,7 +494,7 @@ function PortalMatchmakingService:removePlayerFromQueue(player, portalId)
 	
 	-- Send leave notification to player
 	if player and player.Parent then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
+		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
 			portalId = portalId
 		})
 	end
@@ -753,7 +754,7 @@ function PortalMatchmakingService:launchMatch(portalId)
 	-- Notify players they've left the queue (match is starting)
 	for _, player in ipairs(matchPlayers) do
 		if player and player.Parent then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
+			self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
 				portalId = portalId
 			})
 		end

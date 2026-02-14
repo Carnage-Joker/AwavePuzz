@@ -15,6 +15,25 @@ local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+-- at top of ShopUI module
+local clickConns: { [Instance]: RBXScriptConnection } = {}
+
+local function bindButton(btn: TextButton, callback)
+	-- cleanup any existing
+	local old = clickConns[btn]
+	if old then old:Disconnect() end
+
+	clickConns[btn] = btn.MouseButton1Click:Connect(callback)
+end
+
+local function cleanupButtons(parent: Instance)
+	for inst, conn in pairs(clickConns) do
+		if not inst:IsDescendantOf(parent) then
+			conn:Disconnect()
+			clickConns[inst] = nil
+		end
+	end
+end
 
 -- Initialize scale manager
 UIScaleManager.initialize()
