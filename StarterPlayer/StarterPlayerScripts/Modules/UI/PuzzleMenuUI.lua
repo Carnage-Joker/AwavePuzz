@@ -1,6 +1,7 @@
--- PuzzleMenuUI.client.lua
+-- PuzzleMenuUI.lua
 -- Client-side UI for selecting which puzzle to attempt at cure station
 -- Updated with dynamic UI scaling for mobile devices.
+-- Refactored to use UIConnectionMaid and proper keyboard selection
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,12 +19,14 @@ local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
+local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
 
 -- Connection tracking for cleanup
-local connections = {}
+local maid = UIConnectionMaid.new()
+local buttonMaid = UIConnectionMaid.new() -- Separate maid for button connections
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -194,7 +197,17 @@ connections.scaleChanged = {
 
 -- Keyboard navigation state
 local puzzleButtons = {}
+local puzzleButtonData = {} -- Maps button to its component name and availability
 local selectedPuzzleIndex = 1
+
+-- Helper function to request a puzzle from the server
+local function requestPuzzle(componentName)
+	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+	if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
+		remoteEvents.RequestPuzzle:FireServer(componentName)
+		menuFrame.Visible = false
+	end
+end
 
 local function updatePuzzleSelection()
 	-- Update visual indication of selected puzzle
@@ -293,23 +306,26 @@ local function createPuzzleButton(componentName, puzzleConfig, available, compon
 
 	-- Click handler
 	if available then
-		local btnConn = button.MouseButton1Click:Connect(function()
-			-- Request puzzle from server
-			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
-				remoteEvents.RequestPuzzle:FireServer(componentName)
-				menuFrame.Visible = false
-			end
-		end)
-		-- Track dynamic button connection so cleanup can disconnect
-		table.insert(connections, btnConn)
+		buttonMaid:Give(button.MouseButton1Click:Connect(function()
+			requestPuzzle(componentName)
+		end))
 	end
+	
+	-- Store button data for keyboard selection
+	puzzleButtonData[button] = {
+		componentName = componentName,
+		available = available
+	}
 
 	return button
 end
 
 -- Function to populate puzzle menu
 local function updatePuzzleMenu(progressData)
+	-- Clean up button connections and data
+	buttonMaid:Cleanup()
+	puzzleButtonData = {}
+	
 	-- Clear existing buttons
 	for _, child in ipairs(puzzleList:GetChildren()) do
 		if child:IsA("TextButton") then
@@ -378,16 +394,16 @@ local function updatePuzzleMenu(progressData)
 	finalDesc.Parent = finalButton
 
 	if finalAvailable then
-		local finalConn = finalButton.MouseButton1Click:Connect(function()
-			local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-			if remoteEvents and remoteEvents:FindFirstChild("RequestPuzzle") then
-				remoteEvents.RequestPuzzle:FireServer("FinalSynthesis")
-				menuFrame.Visible = false
-			end
-		end)
-		-- Track final button connection for cleanup
-		table.insert(connections, finalConn)
+		buttonMaid:Give(finalButton.MouseButton1Click:Connect(function()
+			requestPuzzle("FinalSynthesis")
+		end))
 	end
+	
+	-- Store button data for keyboard selection
+	puzzleButtonData[finalButton] = {
+		componentName = "FinalSynthesis",
+		available = finalAvailable
+	}
 	
 	-- Add final button to tracked buttons
 	table.insert(puzzleButtons, finalButton)
@@ -424,22 +440,22 @@ local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Listen for puzzle menu requests
 local cureUpdateEvent = remoteEvents:WaitForChild("CureUpdate")
-connections.cureUpdate = cureUpdateEvent.OnClientEvent:Connect(function(data)
+maid:Give(cureUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "show_puzzle_menu" then
 		showPuzzleMenu()
 	end
-end)
+end), "cureUpdate")
 
 -- Listen for puzzle progress updates
 local puzzleUpdateEvent = remoteEvents:WaitForChild("PuzzleUpdate")
-connections.puzzleUpdate = puzzleUpdateEvent.OnClientEvent:Connect(function(data)
+maid:Give(puzzleUpdateEvent.OnClientEvent:Connect(function(data)
 	if type(data) == "table" and data.type == "progress" then
 		updatePuzzleMenu(data.progress)
 	end
-end)
+end), "puzzleUpdate")
 
 -- Keyboard navigation handler
-connections.navigation = UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 	if gameProcessedEvent then return end
 	
 	-- Only process if menu is visible and is the top modal
@@ -450,25 +466,41 @@ connections.navigation = UserInputService.InputBegan:Connect(function(input, gam
 	if #puzzleButtons > 0 then
 		-- Navigation when menu is open
 		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
-			selectedPuzzleIndex = selectedPuzzleIndex - 1
-			if selectedPuzzleIndex < 1 then
-				selectedPuzzleIndex = #puzzleButtons
+			-- Check if navigate up action is enabled
+			local action = InputActionRegistry.getAction("PuzzleMenuNavigateUp")
+			if action and action.enabled then
+				selectedPuzzleIndex = selectedPuzzleIndex - 1
+				if selectedPuzzleIndex < 1 then
+					selectedPuzzleIndex = #puzzleButtons
+				end
+				updatePuzzleSelection()
 			end
-			updatePuzzleSelection()
 		elseif input.KeyCode == Enum.KeyCode.Down or input.KeyCode == Enum.KeyCode.S then
-			selectedPuzzleIndex = selectedPuzzleIndex + 1
-			if selectedPuzzleIndex > #puzzleButtons then
-				selectedPuzzleIndex = 1
+			-- Check if navigate down action is enabled
+			local action = InputActionRegistry.getAction("PuzzleMenuNavigateDown")
+			if action and action.enabled then
+				selectedPuzzleIndex = selectedPuzzleIndex + 1
+				if selectedPuzzleIndex > #puzzleButtons then
+					selectedPuzzleIndex = 1
+				end
+				updatePuzzleSelection()
 			end
-			updatePuzzleSelection()
 		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
-			-- Trigger selected puzzle
-			if puzzleButtons[selectedPuzzleIndex] and puzzleButtons[selectedPuzzleIndex].BackgroundColor3 ~= Color3.fromRGB(60, 60, 60) then
-				puzzleButtons[selectedPuzzleIndex].MouseButton1Click:Fire()
+			-- Check if select action is enabled
+			local action = InputActionRegistry.getAction("PuzzleMenuSelect")
+			if action and action.enabled then
+				-- Use stored button data instead of firing signal
+				local button = puzzleButtons[selectedPuzzleIndex]
+				if button then
+					local data = puzzleButtonData[button]
+					if data and data.available then
+						requestPuzzle(data.componentName)
+					end
+				end
 			end
 		end
 	end
-end)
+end), "navigation")
 
 -- Register input actions with InputActionRegistry
 -- Navigation and selection actions disabled by default until menu opens to avoid conflicts
@@ -478,12 +510,14 @@ InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.R
 
 -- Cleanup function
 local function cleanup()
-	for name, connection in pairs(connections) do
-		if connection then
-			connection:Disconnect()
-		end
-	end
-	connections = {}
+	-- Unregister input actions
+	InputActionRegistry.unregister("PuzzleMenuNavigateUp")
+	InputActionRegistry.unregister("PuzzleMenuNavigateDown")
+	InputActionRegistry.unregister("PuzzleMenuSelect")
+	
+	-- Clean up all connections
+	maid:Cleanup()
+	buttonMaid:Cleanup()
 	
 	-- Remove from ModalManager if still open
 	if menuFrame.Visible then
@@ -492,11 +526,19 @@ local function cleanup()
 end
 
 -- Handle respawn - cleanup connections
-connections.characterRemoving = player.CharacterRemoving:Connect(cleanup)
+maid:Give(player.CharacterRemoving:Connect(cleanup), "characterRemoving")
 
 print("PuzzleMenuUI initialized")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
-PuzzleMenuUI.cleanup = cleanup
+
+function PuzzleMenuUI.cleanup()
+	cleanup()
+	
+	if screenGui then
+		screenGui:Destroy()
+	end
+end
+
 return PuzzleMenuUI
