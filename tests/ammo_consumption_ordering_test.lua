@@ -144,4 +144,73 @@ else
     warn(string.format("❌ Test D FAILED: Expected ammo %d but got %d", initialAmmo - 1, ammoCount() or -1))
 end
 
+-- Establish baseline after a known-valid shot
+local ammoAfterValid = ammoCount()
+
+-- Test E: NaN direction values should NOT consume ammo
+local nanValue = 0/0
+local payloadE = {
+    origin = hrp.Position + Vector3.new(0, 1.5, 0),
+    direction = Vector3.new(nanValue, 0, 1),
+    timestamp = tick()
+}
+ws:handleWeaponFire(player, payloadE)
+if ammoCount() == ammoAfterValid then
+    print("✅ Test E PASSED: NaN direction did not consume ammo")
+else
+    warn("❌ Test E FAILED: Ammo changed for NaN direction")
+end
+
+-- Test F: Excessive vertical offset (Y > 10) should NOT consume ammo
+local highOrigin = hrp.Position + Vector3.new(0, 11, 0)
+local payloadF = {
+    origin = highOrigin,
+    direction = (highOrigin - hrp.Position).Unit,
+    timestamp = tick()
+}
+ws:handleWeaponFire(player, payloadF)
+if ammoCount() == ammoAfterValid then
+    print("✅ Test F PASSED: High-origin shot did not consume ammo")
+else
+    warn("❌ Test F FAILED: Ammo changed for high-origin shot")
+end
+
+-- Test G: Dot product validation failure should NOT consume ammo
+local offOrigin = hrp.Position + hrp.CFrame.LookVector * 5
+local offDirection = -(offOrigin - hrp.Position).Unit -- deliberately opposite
+local payloadG = {
+    origin = offOrigin,
+    direction = offDirection,
+    timestamp = tick()
+}
+ws:handleWeaponFire(player, payloadG)
+if ammoCount() == ammoAfterValid then
+    print("✅ Test G PASSED: Misaligned direction did not consume ammo")
+else
+    warn("❌ Test G FAILED: Ammo changed for misaligned direction")
+end
+
+-- Test H: Line-of-sight validation failure should NOT consume ammo
+local blocker = Instance.new("Part")
+blocker.Size = Vector3.new(4, 4, 1)
+blocker.Anchored = true
+blocker.CanCollide = true
+blocker.CFrame = CFrame.new(hrp.Position + hrp.CFrame.LookVector * 5)
+blocker.Name = "AmmoTest_LOS_Blocker"
+blocker.Parent = workspace
+
+local losOrigin = hrp.Position + hrp.CFrame.LookVector * 10
+local payloadH = {
+    origin = losOrigin,
+    direction = (losOrigin - hrp.Position).Unit,
+    timestamp = tick()
+}
+ws:handleWeaponFire(player, payloadH)
+if ammoCount() == ammoAfterValid then
+    print("✅ Test H PASSED: Blocked line-of-sight shot did not consume ammo")
+else
+    warn("❌ Test H FAILED: Ammo changed for blocked line-of-sight shot")
+end
+
+blocker:Destroy()
 print("=== AMMO CONSUMPTION ORDERING TEST COMPLETE ===")
