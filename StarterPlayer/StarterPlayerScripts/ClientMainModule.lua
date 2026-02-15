@@ -786,9 +786,22 @@ local function bootClient()
 			if CureStationInteraction and CureStationInteraction.cleanup then pcall(CureStationInteraction.cleanup) end
 			
 			-- Cleanup UI modules
-			for moduleName, module in pairs(UI) do
+			for _, module in pairs(UI) do
 				if type(module) == "table" and module.cleanup then
-					pcall(module.cleanup)
+					-- Try method-style first (for instance objects like EpilogueUI)
+					local ok, err = pcall(function()
+						module:cleanup()
+					end)
+					-- If that fails, log the error and try static style (for module-level cleanups)
+					if not ok then
+						warn("[ClientMain] UI cleanup method-style failed for module:", tostring(module), "error:", err)
+						local okStatic, errStatic = pcall(function()
+							module.cleanup()
+						end)
+						if not okStatic then
+							warn("[ClientMain] UI cleanup static-style also failed for module:", tostring(module), "error:", errStatic)
+						end
+					end
 				end
 			end
 			
