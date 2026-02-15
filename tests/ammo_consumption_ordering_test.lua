@@ -115,19 +115,21 @@ else
     warn("❌ Test B FAILED: Ammo changed for invalid direction")
 end
 
--- Test C: Origin behind player (localOffset.Z < -3) should NOT consume ammo
--- Use forward-facing direction to pass dot product check, but origin behind player
-local behindOrigin = hrp.CFrame * CFrame.new(0, 0, -4)
+-- Test C: Origin too far forward (localOffset.Z < -3) should NOT consume ammo
+-- In Roblox, LookVector points along -Z, so negative local Z means forward
+-- This tests that WeaponService rejects origins placed too far ahead of the player
+-- Use forward-facing direction to pass dot product check
+local forwardOrigin = hrp.CFrame * CFrame.new(0, 0, -4)  -- 4 studs forward in local space
 local payloadC = {
-    origin = behindOrigin.p,
+    origin = forwardOrigin.p,
     direction = hrp.CFrame.LookVector, -- forward-facing direction (passes dot product validation)
     timestamp = tick()
 }
 ws:handleWeaponFire(player, payloadC)
 if ammoCount() == initialAmmo then
-    print("✅ Test C PASSED: Behind-origin shot did not consume ammo")
+    print("✅ Test C PASSED: Origin-too-far-forward shot did not consume ammo")
 else
-    warn("❌ Test C FAILED: Ammo changed for behind-origin shot")
+    warn("❌ Test C FAILED: Ammo changed for origin-too-far-forward shot")
 end
 
 -- Test D: Valid shot should consume ammo (even on miss)
