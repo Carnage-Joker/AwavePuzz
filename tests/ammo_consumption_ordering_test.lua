@@ -80,7 +80,6 @@ ws:setFPSWeaponService(mockFPS)
 -- Prepare test state
 local weaponId = WeaponConfig.DefaultWeapon
 mockFPS:onWeaponEquipped(player, weaponId)
-ws.playerWeaponState[player.UserId] = { lastShot = 0, upgrades = {} }
 
 local function ammoCount()
     local a = mockFPS:getAmmo(player, weaponId)
