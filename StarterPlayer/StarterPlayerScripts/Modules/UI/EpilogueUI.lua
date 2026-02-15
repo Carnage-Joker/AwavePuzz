@@ -23,8 +23,7 @@ local MusicController = require(script.Parent.Parent:WaitForChild("MusicControll
 local EpilogueUI = {}
 EpilogueUI.__index = EpilogueUI
 
--- Connection tracking for cleanup using UIConnectionMaid
-local maid = UIConnectionMaid.new()
+-- no module-level maid; each instance owns its cleanup
 
 function EpilogueUI.new()
 	local self = setmetatable({}, EpilogueUI)
@@ -35,11 +34,17 @@ function EpilogueUI.new()
 	self.autoAdvanceTimer = nil
 	self.remotes = nil -- Will be set via bindRemotes()
 	self.tweenConnections = {} -- Track tween completion connections
+	self.maid = UIConnectionMaid.new()
 	
 	self.screenGui = nil
 	self.frame = nil
 	
 	self:createUI()
+	
+	-- Add character lifecycle cleanup
+	self.maid:Give(Player.CharacterRemoving:Connect(function()
+		self:cleanup()
+	end), "characterRemoving")
 	
 	return self
 end
@@ -55,7 +60,7 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	-- ✅ PRIMARY: Listen for GameStateUpdate (state-driven UI)
 	if self.remotes.GameStateUpdate then
-		maid:Give(self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
+		self.maid:Give(self.remotes.GameStateUpdate.OnClientEvent:Connect(function(stateData)
 			if stateData and stateData.state then
 				local state = stateData.state
 				-- Show epilogue for any state containing "Epilogue"
@@ -75,14 +80,14 @@ function EpilogueUI:bindRemotes(remotes)
 	
 	-- ✅ COMPATIBILITY: Listen for server commands (legacy support)
 	if self.remotes.ShowEpilogue then
-		maid:Give(self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
+		self.maid:Give(self.remotes.ShowEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received ShowEpilogue event (legacy)")
 			self:show()
 		end), "showEpilogue")
 	end
 	
 	if self.remotes.HideEpilogue then
-		maid:Give(self.remotes.HideEpilogue.OnClientEvent:Connect(function()
+		self.maid:Give(self.remotes.HideEpilogue.OnClientEvent:Connect(function()
 			print("[EpilogueUI] Received HideEpilogue event (legacy)")
 			self:hide()
 		end), "hideEpilogue")
@@ -196,9 +201,9 @@ function EpilogueUI:createUI()
 		skipButton.TextSize = 16
 		skipButton.Parent = self.frame
 		
-		connections.skipButton = skipButton.MouseButton1Click:Connect(function()
+		self.maid:Give(skipButton.MouseButton1Click:Connect(function()
 			self:skip()
-		end)
+		end), "skipButton")
 		
 		self.skipButton = skipButton
 	end
@@ -219,7 +224,7 @@ function EpilogueUI:createUI()
 	muteButton.Parent = self.frame
 	
 	self.audioMuted = false
-	maid:Give(muteButton.MouseButton1Click:Connect(function()
+	self.maid:Give(muteButton.MouseButton1Click:Connect(function()
 		self.audioMuted = not self.audioMuted
 		if self.audioMuted then
 			muteButton.Text = "[M] Unmute Audio"
@@ -252,7 +257,7 @@ function EpilogueUI:createUI()
 	continueButton.TextSize = 20
 	continueButton.Parent = self.frame
 	
-	maid:Give(continueButton.MouseButton1Click:Connect(function()
+	self.maid:Give(continueButton.MouseButton1Click:Connect(function()
 		self:nextPage()
 	end), "continueButton")
 	
@@ -284,7 +289,7 @@ function EpilogueUI:show()
 	end, ModalManager.Priority.FULLSCREEN)
 	
 	-- Listen for input (only if top modal)
-	maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	self.maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then return end
 		
 		-- Only process if this is the top modal
@@ -328,12 +333,6 @@ function EpilogueUI:hide()
 	if self.autoAdvanceTimer then
 		task.cancel(self.autoAdvanceTimer)
 		self.autoAdvanceTimer = nil
-	end
-	
-	-- Disconnect input listener
-	if connections.inputConnection then
-		connections.inputConnection:Disconnect()
-		connections.inputConnection = nil
 	end
 	
 	-- Remove from ModalManager
@@ -559,7 +558,7 @@ function EpilogueUI:cleanup()
 	InputActionRegistry.unregister("EpilogueMute")
 	
 	-- Clean up all connections via maid
-	maid:Cleanup()
+	self.maid:Cleanup()
 	
 	-- Cancel timers
 	if self.autoAdvanceTimer then
@@ -585,17 +584,6 @@ function EpilogueUI:cleanup()
 	-- Remove from ModalManager if still active
 	if self.isActive then
 		ModalManager.remove("EpilogueUI")
-	end
-end
-
--- Module interface
-EpilogueUI.initialize = function()
-	-- Re-establish CharacterRemoving handler to ensure cleanup runs on respawn
-	if Player and Player.CharacterRemoving then
-		maid:Give(Player.CharacterRemoving:Connect(function()
-			-- Use module-level cleanup to clear connections and timers
-			EpilogueUI:cleanup()
-		end), "characterRemoving")
 	end
 end
 
