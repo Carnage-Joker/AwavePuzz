@@ -90,6 +90,8 @@ local initialAmmo = ammoCount()
 print("Initial ammo:", initialAmmo)
 
 -- Helper function to reset fire cooldown between tests
+-- This prevents the fire rate limiter from rejecting subsequent tests
+-- since WeaponService:handleWeaponFire updates lastShot before validation
 local function resetFireCooldown()
     if ws.playerWeaponState[player.UserId] then
         ws.playerWeaponState[player.UserId].lastShot = 0
@@ -109,7 +111,6 @@ else
     warn("❌ Test A FAILED: Ammo changed for invalid origin")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test B
 resetFireCooldown()
 
 -- Test B: Invalid direction magnitude should NOT consume ammo
@@ -125,7 +126,6 @@ else
     warn("❌ Test B FAILED: Ammo changed for invalid direction")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test C
 resetFireCooldown()
 
 -- Test C: Origin behind player (localOffset.Z < -3) should NOT consume ammo
@@ -142,7 +142,6 @@ else
     warn("❌ Test C FAILED: Ammo changed for behind-origin shot")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test D
 resetFireCooldown()
 
 -- Test D: Valid shot should consume ammo (even on miss)
@@ -161,7 +160,6 @@ end
 -- Establish baseline after a known-valid shot
 local ammoAfterValid = ammoCount()
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test E
 resetFireCooldown()
 
 -- Test E: NaN direction values should NOT consume ammo
@@ -178,7 +176,6 @@ else
     warn("❌ Test E FAILED: Ammo changed for NaN direction")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test F
 resetFireCooldown()
 
 -- Test F: Excessive vertical offset (Y > 10) should NOT consume ammo
@@ -195,7 +192,6 @@ else
     warn("❌ Test F FAILED: Ammo changed for high-origin shot")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test G
 resetFireCooldown()
 
 -- Test G: Dot product validation failure should NOT consume ammo
@@ -213,7 +209,6 @@ else
     warn("❌ Test G FAILED: Ammo changed for misaligned direction")
 end
 
--- Reset fire cooldown to prevent rate limiter from interfering with Test H
 resetFireCooldown()
 
 -- Test H: Line-of-sight validation failure should NOT consume ammo
