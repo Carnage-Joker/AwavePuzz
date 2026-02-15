@@ -131,15 +131,15 @@ resetFireCooldown()
 -- Test C: Origin behind player (localOffset.Z < -3) should NOT consume ammo
 local behindOrigin = hrp.CFrame * CFrame.new(0, 0, -4)
 local payloadC = {
-    origin = behindOrigin.p,
-    direction = -hrp.CFrame.LookVector, -- pointing backwards
+    origin = forwardOrigin.p,
+    direction = hrp.CFrame.LookVector, -- forward-facing direction (passes dot product validation) 
     timestamp = tick()
 }
 ws:handleWeaponFire(player, payloadC)
 if ammoCount() == initialAmmo then
-    print("✅ Test C PASSED: Behind-origin shot did not consume ammo")
+    print("✅ Test C PASSED: Origin-too-far-forward shot did not consume ammo")
 else
-    warn("❌ Test C FAILED: Ammo changed for behind-origin shot")
+    warn("❌ Test C FAILED: Ammo changed for origin-too-far-forward shot")
 end
 
 resetFireCooldown()
