@@ -89,6 +89,15 @@ end
 local initialAmmo = ammoCount()
 print("Initial ammo:", initialAmmo)
 
+-- Helper function to reset fire cooldown between tests
+-- This prevents the fire rate limiter from rejecting subsequent tests
+-- since WeaponService:handleWeaponFire updates lastShot before validation
+local function resetFireCooldown()
+    if ws.playerWeaponState[player.UserId] then
+        ws.playerWeaponState[player.UserId].lastShot = 0
+    end
+end
+
 -- Test A: Invalid origin (too far) should NOT consume ammo
 local payloadA = {
     origin = hrp.Position + Vector3.new(1000, 0, 0), -- way outside MAX_WEAPON_FIRE_DISTANCE
@@ -101,6 +110,8 @@ if ammoCount() == initialAmmo then
 else
     warn("❌ Test A FAILED: Ammo changed for invalid origin")
 end
+
+resetFireCooldown()
 
 -- Test B: Invalid direction magnitude should NOT consume ammo
 local payloadB = {
@@ -115,14 +126,13 @@ else
     warn("❌ Test B FAILED: Ammo changed for invalid direction")
 end
 
--- Test C: Origin too far forward (localOffset.Z < -3) should NOT consume ammo
--- In Roblox, LookVector points along -Z, so negative local Z means forward
--- This tests that WeaponService rejects origins placed too far ahead of the player
--- Use forward-facing direction to pass dot product check
-local forwardOrigin = hrp.CFrame * CFrame.new(0, 0, -4)  -- 4 studs forward in local space
+resetFireCooldown()
+
+-- Test C: Origin behind player (localOffset.Z < -3) should NOT consume ammo
+local behindOrigin = hrp.CFrame * CFrame.new(0, 0, -4)
 local payloadC = {
     origin = forwardOrigin.p,
-    direction = hrp.CFrame.LookVector, -- forward-facing direction (passes dot product validation)
+    direction = hrp.CFrame.LookVector, -- forward-facing direction (passes dot product validation) 
     timestamp = tick()
 }
 ws:handleWeaponFire(player, payloadC)
@@ -131,6 +141,8 @@ if ammoCount() == initialAmmo then
 else
     warn("❌ Test C FAILED: Ammo changed for origin-too-far-forward shot")
 end
+
+resetFireCooldown()
 
 -- Test D: Valid shot should consume ammo (even on miss)
 local payloadD = {
@@ -148,6 +160,8 @@ end
 -- Establish baseline after a known-valid shot
 local ammoAfterValid = ammoCount()
 
+resetFireCooldown()
+
 -- Test E: NaN direction values should NOT consume ammo
 local nanValue = 0/0
 local payloadE = {
@@ -161,6 +175,8 @@ if ammoCount() == ammoAfterValid then
 else
     warn("❌ Test E FAILED: Ammo changed for NaN direction")
 end
+
+resetFireCooldown()
 
 -- Test F: Excessive vertical offset (Y > 10) should NOT consume ammo
 local highOrigin = hrp.Position + Vector3.new(0, 11, 0)
@@ -176,6 +192,8 @@ else
     warn("❌ Test F FAILED: Ammo changed for high-origin shot")
 end
 
+resetFireCooldown()
+
 -- Test G: Dot product validation failure should NOT consume ammo
 local offOrigin = hrp.Position + hrp.CFrame.LookVector * 5
 local offDirection = -(offOrigin - hrp.Position).Unit -- deliberately opposite
@@ -190,6 +208,8 @@ if ammoCount() == ammoAfterValid then
 else
     warn("❌ Test G FAILED: Ammo changed for misaligned direction")
 end
+
+resetFireCooldown()
 
 -- Test H: Line-of-sight validation failure should NOT consume ammo
 local blocker = Instance.new("Part")
