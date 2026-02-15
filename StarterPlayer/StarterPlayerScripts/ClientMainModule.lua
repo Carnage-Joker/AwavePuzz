@@ -788,14 +788,12 @@ local function bootClient()
 			-- Cleanup UI modules
 			for _, module in pairs(UI) do
 				if type(module) == "table" and module.cleanup then
+					-- Try method-style first (for instance objects like EpilogueUI)
 					local ok = pcall(function()
-						-- try method-style first
-						if type(module.cleanup) == "function" then
-							module:cleanup()
-						end
+						module:cleanup()
 					end)
+					-- If that fails, try static style (for module-level cleanups)
 					if not ok then
-						-- fallback for static cleanup() modules
 						pcall(function()
 							module.cleanup()
 						end)
