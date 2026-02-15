@@ -21,7 +21,6 @@ if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart
     return
 end
 local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-local head = player.Character:FindFirstChild("Head")
 
 -- Load modules
 local WeaponServiceModule = require(ServerScriptService:WaitForChild("WeaponService"))
