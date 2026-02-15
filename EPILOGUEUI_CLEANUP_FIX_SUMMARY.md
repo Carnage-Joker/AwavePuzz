@@ -39,7 +39,16 @@ end
 function EpilogueUI.new()
     local self = setmetatable({}, EpilogueUI)
     self.maid = UIConnectionMaid.new()  -- Instance-level maid
+<<<<<<< HEAD
 
+=======
+    
+    -- Add character lifecycle cleanup
+    self.maid:Give(Player.CharacterRemoving:Connect(function()
+        self:cleanup()
+    end), "characterRemoving")
+    
+>>>>>>> 83051d28e37be655b21b155c7bf4918ba290d001
     return self
 end
 ```

@@ -158,6 +158,7 @@ end
 local function runTests()
 	local allPassed = true
 	
+<<<<<<< HEAD
 	local test1Passed = testInstanceHasMaid()
 	allPassed = allPassed and test1Passed
 	task.wait(0.5)
@@ -168,6 +169,15 @@ local function runTests()
 	
 	local test3Passed = testNoModuleLevelMaid()
 	allPassed = allPassed and test3Passed
+=======
+	allPassed = testInstanceHasMaid() and allPassed
+	task.wait(0.5)
+	
+	allPassed = testCleanupMethod() and allPassed
+	task.wait(0.5)
+	
+	allPassed = testNoModuleLevelMaid() and allPassed
+>>>>>>> 83051d28e37be655b21b155c7bf4918ba290d001
 	
 	if allPassed then
 		print("[EpilogueUICleanupTest] ✓ All tests passed")
