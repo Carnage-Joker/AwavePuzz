@@ -1,5 +1,5 @@
 -- ammo_consumption_ordering_test.lua
--- Verifies BUG-012: server validates shot BEFORE consuming ammo
+-- Regression test for BUG-012: verifies server validates shot BEFORE consuming ammo (fix must remain in place)
 -- Run in Roblox Studio Server console (requires at least one connected player)
 
 local Players = game:GetService("Players")
