@@ -116,10 +116,11 @@ else
 end
 
 -- Test C: Origin behind player (localOffset.Z < -3) should NOT consume ammo
+-- Use forward-facing direction to pass dot product check, but origin behind player
 local behindOrigin = hrp.CFrame * CFrame.new(0, 0, -4)
 local payloadC = {
     origin = behindOrigin.p,
-    direction = -hrp.CFrame.LookVector, -- pointing backwards
+    direction = hrp.CFrame.LookVector, -- forward-facing direction (passes dot product validation)
     timestamp = tick()
 }
 ws:handleWeaponFire(player, payloadC)
