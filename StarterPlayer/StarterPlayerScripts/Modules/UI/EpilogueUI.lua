@@ -41,11 +41,6 @@ function EpilogueUI.new()
 	
 	self:createUI()
 	
-	-- Add character lifecycle cleanup
-	self.maid:Give(Player.CharacterRemoving:Connect(function()
-		self:cleanup()
-	end), "characterRemoving")
-	
 	return self
 end
 
