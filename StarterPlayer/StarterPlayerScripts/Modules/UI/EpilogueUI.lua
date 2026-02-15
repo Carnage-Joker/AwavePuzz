@@ -41,11 +41,6 @@ function EpilogueUI.new()
 	
 	self:createUI()
 	
-	-- Add character lifecycle cleanup
-	self.maid:Give(Player.CharacterRemoving:Connect(function()
-		self:cleanup()
-	end), "characterRemoving")
-	
 	return self
 end
 
@@ -584,6 +579,12 @@ function EpilogueUI:cleanup()
 	-- Remove from ModalManager if still active
 	if self.isActive then
 		ModalManager.remove("EpilogueUI")
+	end
+	
+	-- Destroy ScreenGui to prevent UI pollution
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
 	end
 end
 

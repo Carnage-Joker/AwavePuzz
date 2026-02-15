@@ -6,10 +6,10 @@
 	
 	Test: Verify that each instance has its own maid and cleanup works correctly
 	
-	How to run:
-	1. Place this script in ServerScriptService for testing
-	2. Join the game as a player
-	3. The test will validate EpilogueUI instance cleanup
+	How to run (client-side):
+	1. Place this script as a LocalScript in StarterPlayer > StarterPlayerScripts
+	2. Start play mode so a LocalPlayer is created
+	3. The test will validate EpilogueUI instance cleanup on the client
 ]]
 
 local Players = game:GetService("Players")
