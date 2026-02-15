@@ -580,6 +580,12 @@ function EpilogueUI:cleanup()
 	if self.isActive then
 		ModalManager.remove("EpilogueUI")
 	end
+	
+	-- Destroy ScreenGui to prevent UI pollution
+	if self.screenGui then
+		self.screenGui:Destroy()
+		self.screenGui = nil
+	end
 end
 
 return EpilogueUI
