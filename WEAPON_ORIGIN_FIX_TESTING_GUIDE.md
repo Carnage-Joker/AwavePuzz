@@ -35,13 +35,9 @@ This guide will help you test the weapon origin fix in Roblox Studio to verify t
 1. Open the **Command Bar** (View → Command Bar)
 2. Copy and paste this command:
    ```lua
-   local test = require(game.ServerStorage.DevOnly.WeaponSystemTests)
-   if test and test.weapon_origin_reconstruction_test then
-       test.weapon_origin_reconstruction_test.runAll()
-   else
-       local OriginTests = require(script.Parent.tests.weapon_origin_reconstruction_test)
-       OriginTests.runAll()
-   end
+   local ReplicatedStorage = game:GetService("ReplicatedStorage")
+   local OriginTests = require(ReplicatedStorage:WaitForChild("tests"):WaitForChild("weapon_origin_reconstruction_test"))
+   OriginTests.runAll()
    ```
 3. Press **Enter**
 
