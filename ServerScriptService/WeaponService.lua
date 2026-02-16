@@ -4,7 +4,7 @@
 -- Features proper gun cloning, positioning on hand, weapon switching with cleanup,
 -- and raycast firing in the direction the player is aiming
 
--- Debug flag - set to true to enable detailed logging
+-- Debug flag - set to true to enable detailed logging (includes origin reconstruction details)
 local DEBUG = false
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -281,6 +281,47 @@ function WeaponService:_throttledSecurityWarn(userId, warnType, message)
 	end
 end
 
+-- Reconstruct shot origin server-side from player character
+-- This eliminates false rejections caused by client/server origin mismatch
+-- Returns: (reconstructedOrigin: Vector3, isValid: boolean)
+function WeaponService:reconstructOrigin(player, clientDirection)
+	local character = player.Character
+	if not character then
+		if DEBUG then
+			warn("[WeaponService] DEBUG: Cannot reconstruct origin - no character for " .. player.Name)
+		end
+		return nil, false
+	end
+	
+	local head = character:FindFirstChild("Head")
+	if not head then
+		if DEBUG then
+			warn("[WeaponService] DEBUG: Cannot reconstruct origin - no head for " .. player.Name)
+		end
+		return nil, false
+	end
+	
+	-- Get security settings
+	local forwardOffset = GameConfig.Security.ORIGIN_FORWARD_OFFSET or 2.0
+	local verticalOffset = GameConfig.Security.ORIGIN_VERTICAL_OFFSET or 0.5
+	
+	-- Reconstruct origin from head position + forward offset in aim direction
+	-- Break into steps for clarity
+	local headPosition = head.Position
+	local cameraHeightOffset = Vector3.new(0, verticalOffset, 0)
+	local forwardInAimDirection = clientDirection.Unit * forwardOffset
+	local safeOrigin = headPosition + cameraHeightOffset + forwardInAimDirection
+	
+	if DEBUG then
+		print(string.format("[WeaponService] DEBUG: Reconstructed origin for %s - Head: (%.1f,%.1f,%.1f), Origin: (%.1f,%.1f,%.1f)", 
+			player.Name, 
+			headPosition.X, headPosition.Y, headPosition.Z,
+			safeOrigin.X, safeOrigin.Y, safeOrigin.Z))
+	end
+	
+	return safeOrigin, true
+end
+
 function WeaponService:handleWeaponFire(player, payload)
 	if typeof(payload) ~= "table" then
 		warn("[WeaponService] Invalid payload from " .. player.Name)
@@ -382,96 +423,100 @@ function WeaponService:handleWeaponFire(player, payload)
 	
 	state.lastShot = now
 	
-	-- SECURITY: Validate origin position is near player (anti-wallhack)
+	-- SECURITY: Server-authoritative origin reconstruction and validation
 	local character = player.Character
+	local useServerOrigin = GameConfig.Security and GameConfig.Security.USE_SERVER_ORIGIN
+	
+	-- Reconstruct origin server-side if enabled (default: true)
+	if useServerOrigin == nil then
+		useServerOrigin = true
+	end
+	
+	if useServerOrigin then
+		-- Server reconstructs safe origin from player character
+		local reconstructedOrigin, isValid = self:reconstructOrigin(player, direction)
+		if not isValid then
+			self:_throttledSecurityWarn(userId, "origin_reconstruct_failed",
+				"[WeaponService] SECURITY: Failed to reconstruct origin for " .. player.Name)
+			return
+		end
+		
+		-- Use server-reconstructed origin instead of client-provided origin
+		origin = reconstructedOrigin
+		
+		if DEBUG then
+			print(string.format("[WeaponService] DEBUG: Using server-reconstructed origin for %s: (%.1f,%.1f,%.1f)",
+				player.Name, origin.X, origin.Y, origin.Z))
+		end
+	else
+		-- Legacy validation: validate client-provided origin (kept for testing/fallback)
+		if character then
+			local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+			if humanoidRootPart then
+				local originOffset = origin - humanoidRootPart.Position
+				local distanceFromPlayer = originOffset.Magnitude
+				
+				-- Use configurable max distance from GameConfig
+				local maxDistance = GameConfig.Security.MAX_WEAPON_FIRE_DISTANCE or 15
+				
+				if distanceFromPlayer > maxDistance then
+					self:_throttledSecurityWarn(userId, "origin_distance",
+						string.format("[WeaponService] SECURITY: Rejected shot from %s - origin too far from player (%.1f studs)", 
+							player.Name, distanceFromPlayer))
+					return
+				end
+				
+				-- SECURITY: Validate origin is not significantly behind player with tolerance
+				-- Use local space Z coordinate to check if origin is behind
+				local hrpCFrame = humanoidRootPart.CFrame
+				local localOffset = hrpCFrame:PointToObjectSpace(origin)
+				
+				-- Add tolerance to avoid false positives from camera offsets
+				local behindTolerance = GameConfig.Security.BEHIND_BODY_TOLERANCE or 1.0
+				local behindThreshold = -3 - behindTolerance
+				
+				if localOffset.Z < behindThreshold then
+					self:_throttledSecurityWarn(userId, "origin_behind",
+						string.format("[WeaponService] SECURITY: Rejected shot from %s - origin behind player (localZ=%.1f, threshold=%.1f)", 
+							player.Name, localOffset.Z, behindThreshold))
+					return
+				end
+				
+				-- SECURITY: Validate origin Y is not absurdly above/below player
+				local verticalOffset = math.abs(localOffset.Y)
+				if verticalOffset > 10 then
+					self:_throttledSecurityWarn(userId, "origin_vertical",
+						string.format("[WeaponService] SECURITY: Rejected shot from %s - origin too high/low (Y offset=%.1f)", 
+							player.Name, verticalOffset))
+					return
+				end
+			end
+		end
+	end
+	
+	-- SECURITY: Validate direction alignment with player look vector
+	-- This is ALWAYS validated regardless of origin reconstruction mode
 	if character then
 		local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 		if humanoidRootPart then
-			local originOffset = origin - humanoidRootPart.Position
-			local distanceFromPlayer = originOffset.Magnitude
-			
-			-- Use configurable max distance from GameConfig
-			local maxDistance = 15 -- Default fallback
-			if GameConfig.Security then
-				maxDistance = GameConfig.Security.MAX_WEAPON_FIRE_DISTANCE or 15
-			else
-				warn("[WeaponService] GameConfig.Security not found, using default MAX_WEAPON_FIRE_DISTANCE: " .. maxDistance)
-			end
-			
-			if distanceFromPlayer > maxDistance then
-				warn("[WeaponService] SECURITY: Rejected shot from " .. player.Name .. 
-					" - origin too far from player (" .. string.format("%.1f", distanceFromPlayer) .. " studs)")
-				return
-			end
-			
-			-- SECURITY: Validate origin is not significantly behind player (no backwards shooting)
-			-- Use local space Z coordinate to check if origin is behind
 			local hrpCFrame = humanoidRootPart.CFrame
-			local localOffset = hrpCFrame:PointToObjectSpace(origin)
-			
-			-- If Z is significantly negative, origin is behind player
-			if localOffset.Z < -3 then
-				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin behind player (localZ=%.1f)", 
-					player.Name, localOffset.Z))
-				return
-			end
-			
-			-- SECURITY: Validate origin Y is not absurdly above/below player
-			local verticalOffset = math.abs(localOffset.Y)
-			if verticalOffset > 10 then
-				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin too high/low (Y offset=%.1f)", 
-					player.Name, verticalOffset))
-				return
-			end
-
-			-- ✅ SECURITY: Validate direction is roughly aligned with player look vector (dot-product threshold)
-			-- This reduces spoofing by ensuring shots come from roughly where player is facing
-			-- NOTE: In first-person mode, we use HumanoidRootPart for more reliable validation
-			--       since the head may be rotated differently than the camera
 			local referenceVector = hrpCFrame.LookVector
 			local dotProduct = direction:Dot(referenceVector)
 			
-			-- Allow shots within a reasonable angle of look direction
-			-- BUG-004 FIX: Changed threshold from -0.5 to 0.7 to prevent wallhack exploit
-			-- This restricts shots to ~45 degree cone (forward-facing only)
-			-- This prevents backward shots and significantly limits wallhack potential
-			local minDotProduct = 0.7  -- Strict validation for anti-wallhack (45-degree cone)
-			if GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT then
-				minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
-			end
+			-- Get threshold from config
+			local minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT or 0.7
 			
 			if dotProduct < minDotProduct then
-				-- Temporary debug logging to diagnose direction issues
-				warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - direction not aligned with look vector (dot: %.2f, threshold: %.2f)", 
-					player.Name, dotProduct, minDotProduct))
-				warn(string.format("  Origin: (%.1f, %.1f, %.1f), Direction: (%.2f, %.2f, %.2f)", 
-					origin.X, origin.Y, origin.Z, direction.X, direction.Y, direction.Z))
-				warn(string.format("  HRP Position: (%.1f, %.1f, %.1f), HRP LookVector: (%.2f, %.2f, %.2f)",
-					humanoidRootPart.Position.X, humanoidRootPart.Position.Y, humanoidRootPart.Position.Z,
-					referenceVector.X, referenceVector.Y, referenceVector.Z))
-				return
-			end
-			
-			-- BUG-004 FIX: Add raycast validation for line-of-sight (anti-wallhack)
-			-- Verify that the player has a clear line of sight from their camera/head to the shot origin
-			-- This prevents shooting through walls by validating the origin is actually visible
-			local head = character:FindFirstChild("Head")
-			if head then
-				local losParams = RaycastParams.new()
-				losParams.FilterDescendantsInstances = {character}
-				losParams.FilterType = Enum.RaycastFilterType.Exclude
-				losParams.IgnoreWater = true
+				self:_throttledSecurityWarn(userId, "direction_alignment",
+					string.format("[WeaponService] SECURITY: Rejected shot from %s - direction not aligned with look vector (dot: %.2f, threshold: %.2f)", 
+						player.Name, dotProduct, minDotProduct))
 				
-				-- Cast ray from player's head to the claimed origin point
-				local losDirection = origin - head.Position
-				local losResult = Workspace:Raycast(head.Position, losDirection, losParams)
-				
-				-- If raycast hits something before reaching the origin, the origin is behind a wall
-				if losResult and losResult.Distance < losDirection.Magnitude - 1 then
-					warn(string.format("[WeaponService] SECURITY: Rejected shot from %s - origin not in line-of-sight (blocked by %s at %.1f studs)", 
-						player.Name, losResult.Instance:GetFullName(), losResult.Distance))
-					return
+				if DEBUG then
+					warn(string.format("  DEBUG: Direction: (%.2f, %.2f, %.2f), HRP LookVector: (%.2f, %.2f, %.2f)",
+						direction.X, direction.Y, direction.Z,
+						referenceVector.X, referenceVector.Y, referenceVector.Z))
 				end
+				return
 			end
 		end
 	end

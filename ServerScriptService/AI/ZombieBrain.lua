@@ -625,6 +625,12 @@ function ZombieBrain:destroy()
 		self.bossAuraService:unregisterBoss(self.zombieModel)
 	end
 
+	-- Clean up base damage cooldown for this attacker
+	if self.baseManager and self.zombieModel then
+		local zombieName = self.zombieModel.Name or "Unknown Zombie"
+		self.baseManager:removeAttackerCooldown(zombieName)
+	end
+
 	if self.attackAnimationTrack then
 		self.attackAnimationTrack:Stop()
 		self.attackAnimationTrack = nil
