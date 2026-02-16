@@ -184,7 +184,7 @@ local function testSingleZombieCooldown()
 	print(string.format("Successful attacks: %d", attacks))
 	
 	-- With 2s cooldown and 0.1s intervals, only first attack should succeed in first 1 second
-	if attacks <= 2 then
+	if attacks == 1 then
 		print("✅ PASS: Single zombie cooldown working correctly")
 	else
 		print("❌ FAIL: Single zombie cooldown not enforcing properly")
