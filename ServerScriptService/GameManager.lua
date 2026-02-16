@@ -709,12 +709,10 @@ function GameManager:setState(newState, payload)
 	if isMatchState and self._currentMatchId then
 		local matchRegistry = self:getMatchRegistry()
 		if matchRegistry then
-			-- Convert GameManager state names to MatchRegistry state names
-			local matchStateName = newState
-			-- Update the match state in registry
-			local success = matchRegistry:setMatchState(self._currentMatchId, matchStateName)
+			-- Update the match state in registry (state names are compatible)
+			local success = matchRegistry:setMatchState(self._currentMatchId, newState)
 			if not success then
-				warn(string.format("[GameManager] Failed to set match state to %s for match %s", matchStateName, self._currentMatchId))
+				warn(string.format("[GameManager] Failed to set match state to %s for match %s", newState, self._currentMatchId))
 			end
 		end
 	end
@@ -855,7 +853,7 @@ function GameManager:_getPlayerEffectiveState(player)
 				return matchState
 			else
 				-- REGRESSION ASSERTION: Player claims to be in match but match doesn't exist or is inactive
-				warn(string.format("[GameManager] REGRESSION: Player %s marked as in match %s but match state not found. This indicates state corruption.",
+				warn(string.format("[GameManager] REGRESSION: Player %s marked as in match %s but match state not found. This indicates state corruption. Clearing player's corrupted match state.",
 					player.Name, tostring(context.matchId)))
 				-- Clear the player's match state in SessionState since match doesn't exist
 				self.sessionState:setMatch(player, nil, false)
@@ -1692,6 +1690,10 @@ function GameManager:updateScoreboard(deltaTime)
 
 	if self.stateTimer <= 0 then
 		-- Clean up match before transitioning to next state
+		-- Note: This is the primary match cleanup path. Additional cleanup occurs via:
+		-- - Player disconnect: MatchRegistry.removePlayerFromMatch() cleans up individual players
+		-- - Empty match: Match marked inactive and cleaned up by periodic cleanup
+		-- - MatchRegistry.endMatch(): Removes all player mappings and marks match inactive
 		if self._currentMatchId then
 			print(string.format("[GameManager] Match %s complete, cleaning up", self._currentMatchId))
 			

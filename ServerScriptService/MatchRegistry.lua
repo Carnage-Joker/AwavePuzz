@@ -7,6 +7,8 @@ local MatchRegistry = {}
 MatchRegistry.__index = MatchRegistry
 
 -- Match-specific states (independent of global GameManager state)
+-- Note: These state names intentionally match GameManager.States for compatibility
+-- Alternative: Could import from shared constants module, but this keeps MatchRegistry independent
 MatchRegistry.MatchStates = {
 	COUNTDOWN = "Countdown",
 	WAVE_ACTIVE = "WaveActive",
