@@ -436,7 +436,8 @@ function WeaponService:handleWeaponFire(player, payload)
 		-- Server reconstructs safe origin from player character
 		local reconstructedOrigin, isValid = self:reconstructOrigin(player, direction)
 		if not isValid then
-			warn("[WeaponService] Failed to reconstruct origin for " .. player.Name)
+			self:_throttledSecurityWarn(userId, "origin_reconstruct_failed",
+				"[WeaponService] SECURITY: Failed to reconstruct origin for " .. player.Name)
 			return
 		end
 		
