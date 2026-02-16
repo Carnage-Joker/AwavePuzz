@@ -179,9 +179,10 @@ By making the server **authoritative for origin** while keeping **direction vali
 
 ### Automated Tests
 
-Run in Roblox Studio Command Bar:
+1. In Roblox Studio, copy `weapon_origin_reconstruction_test` into `ReplicatedStorage/tests`.
+2. Run in the Command Bar:
 ```lua
-local test = require(game.ServerScriptService.Tests.weapon_origin_reconstruction_test)
+local test = require(game.ReplicatedStorage.tests.weapon_origin_reconstruction_test)
 test.runAll()
 ```
 
