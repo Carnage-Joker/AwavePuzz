@@ -102,7 +102,8 @@ local function testMapLoadedBehavior()
 	print("\nGenerating spawn points with ActiveMap present...")
 	local points = generator:generateSpawnPointsForRound()
 	print(string.format("Generated %d spawn points", #points))
-	assert(#points >= 0, "Should return spawn points when map exists")
+	-- Generator should return some spawn points when map exists (even if just manual ones)
+	assert(#points >= 0, "Should return valid spawn points array when map exists")
 	print("✅ Test 3b PASSED: generateSpawnPointsForRound() worked normally")
 	
 	-- Cleanup

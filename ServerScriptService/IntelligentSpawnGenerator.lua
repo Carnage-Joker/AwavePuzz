@@ -12,12 +12,17 @@ IntelligentSpawnGenerator.__index = IntelligentSpawnGenerator
 
 -- Load GameConfig for DEBUG flag
 local GameConfig = nil
-pcall(function()
+local configLoadSuccess, configLoadError = pcall(function()
 	local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
 	if SharedFolder then
 		GameConfig = require(SharedFolder:FindFirstChild("GameConfig"))
 	end
 end)
+
+-- Log if GameConfig failed to load (but only if Shared folder exists)
+if not configLoadSuccess and ReplicatedStorage:FindFirstChild("Shared") then
+	warn("[SpawnGenerator] Failed to load GameConfig:", configLoadError)
+end
 
 ----------------------------------------------------------------
 -- CONFIG
