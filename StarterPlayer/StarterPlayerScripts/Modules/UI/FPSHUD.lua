@@ -3,7 +3,7 @@
 -- Integrates with FPSWeaponController for real-time feedback
 
 -- Debug flag - set to true to enable detailed logging
-local DEBUG_AMMO = true  -- Set to true to debug ammo UI issues
+local DEBUG_AMMO = false  -- Set to true to debug ammo UI issues
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")

@@ -25,19 +25,19 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		return 
 	end
 
-RemoteEventUtil.safeFireClient(...)  ← ❌ ERROR: This line has NO indentation!
-		weaponId = weaponId,             ← ❌ Orphaned code outside function
+RemoteEventUtil.safeFireClient(...)  ← ⚠️ WARNING: Unindented line (column 0)
+		weaponId = weaponId,             ← Makes code harder to read
 		current = ammo.current,
 		...
 	})
 	
 	if DEBUG_AMMO then
-		print("✓ Sent ammo update")      ← ✓ This code never executes
+		print("✓ Sent ammo update")      ← Expected to be inside function
 	end
 end
 ```
 
-**Problem**: The `RemoteEventUtil.safeFireClient()` line at column 0 causes Lua to think it's outside the function, creating a syntax error that prevents the entire script from loading.
+**Problem**: The `RemoteEventUtil.safeFireClient()` line at column 0 made the code harder to read and maintain. While Lua is indentation-insensitive and this doesn't cause a syntax error, inconsistent indentation can make it difficult to spot actual logical errors or understand code flow.
 
 ### The Fix
 
@@ -55,32 +55,31 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 	end
 
 	RemoteEventUtil.safeFireClient(...)  ← ✓ FIXED: Properly indented with one tab
-		weaponId = weaponId,             ← ✓ Inside function scope
+		weaponId = weaponId,             ← ✓ Consistent with function scope
 		current = ammo.current,
 		...
 	})
 	
 	if DEBUG_AMMO then
-		print("✓ Sent ammo update")      ← ✓ Code now executes
+		print("✓ Sent ammo update")      ← ✓ Clear code structure
 	end
 end
 ```
 
-**Solution**: Added proper indentation (one tab) to line 340 to place the call within the function scope.
+**Solution**: Added proper indentation (one tab) to line 340 to improve code readability and consistency with the rest of the codebase.
 
 ## Impact
 
 ### Before Fix
-- ❌ **Server**: FPSWeaponService fails to load (syntax error)
-- ❌ **Client**: Never receives ammo updates
-- ❌ **UI**: No ammo information displayed
-- ❌ **Gameplay**: Players can't see ammunition status
+- ⚠️ **Code Quality**: Inconsistent indentation made code harder to review
+- ⚠️ **Maintainability**: Unusual formatting could hide actual bugs
+- ⚠️ **Readability**: Difficult to follow code structure at a glance
 
 ### After Fix
-- ✓ **Server**: FPSWeaponService loads correctly
-- ✓ **Client**: Receives ammo updates via RemoteEvent
-- ✓ **UI**: Displays ammo counter (e.g., "30 / 120")
-- ✓ **Gameplay**: Players can see ammunition and manage resources
+- ✓ **Code Quality**: Consistent indentation throughout
+- ✓ **Maintainability**: Clear code structure
+- ✓ **Readability**: Easy to follow function scope
+- ✓ **Standards**: Follows project coding conventions
 
 ## Data Flow (When Working)
 

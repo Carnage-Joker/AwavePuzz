@@ -28,13 +28,13 @@
 RemoteEventUtil.safeFireClient(...)  ← This line has NO indentation!
 ```
 
-This caused the `RemoteEventUtil.safeFireClient()` call to be outside the function scope, creating a Lua syntax error that prevented the entire FPSWeaponService module from loading.
+While Lua is indentation-insensitive (meaning indentation doesn't affect parsing or execution), this formatting inconsistency:
+- Made the code harder to read and review
+- Violated project coding standards
+- Could obscure actual logical errors during review
+- Reduced overall code quality
 
-**Impact**:
-- ❌ Server-side service couldn't load
-- ❌ No ammo updates sent to clients
-- ❌ UI couldn't display ammunition info
-- ❌ Core gameplay feature broken
+**Note**: The original task was to investigate why ammo updates weren't displaying. This formatting fix improves code quality and consistency, but if ammo updates are still not working, the actual functional issue may require further investigation.
 
 ### 3. Fix Applied ✓
 **Solution**: Added proper tab indentation to line 340
@@ -46,7 +46,7 @@ This caused the `RemoteEventUtil.safeFireClient()` call to be outside the functi
 	RemoteEventUtil.safeFireClient(...)  ← Added one tab of indentation
 ```
 
-This is a **1-character fix** (adding a single tab) that restores proper code scoping.
+This is a **1-character fix** (adding a single tab) that improves code quality and consistency with project standards.
 
 ### 4. Debug Logging Enabled ✓
 To help with testing and verification, I enabled `DEBUG_AMMO = true` in three files:

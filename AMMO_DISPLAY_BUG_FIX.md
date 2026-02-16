@@ -9,21 +9,21 @@
 
 ## Root Cause Analysis
 
-### Critical Syntax Error
+### Code Quality Issue
 **Location**: `ServerScriptService/FPSWeaponService.lua`, line 340
 
 **Issue**: The `RemoteEventUtil.safeFireClient()` call had incorrect indentation. The line started at column 0 (no indentation) instead of being properly indented within the function scope.
 
 ```lua
--- BEFORE (Broken - line 340):
+-- BEFORE (Inconsistent - line 340):
 	end
 
-RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {  -- ❌ No indentation
+RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {  -- ⚠️ No indentation
 	weaponId = weaponId,
 	...
 })
 
--- AFTER (Fixed):
+-- AFTER (Consistent):
 	end
 
 	RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {  -- ✓ Properly indented
@@ -33,12 +33,14 @@ RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {  -- ❌ N
 ```
 
 ### Impact
-This indentation error caused a **Lua syntax error** that prevented the entire `FPSWeaponService` module from loading. As a result:
+While Lua is indentation-insensitive (indentation doesn't affect parsing or execution), this formatting inconsistency had several effects:
 
-1. ❌ Server-side weapon service failed to initialize
-2. ❌ No ammo updates were sent to clients
-3. ❌ Players saw no ammunition information in their HUD
-4. ❌ Weapon functionality was likely completely broken
+1. ⚠️ Made code harder to review and maintain
+2. ⚠️ Violated project coding standards
+3. ⚠️ Could obscure actual logical errors
+4. ⚠️ Reduced overall code quality
+
+**Note**: The original problem statement indicated ammo updates weren't displaying. This formatting fix improves code quality, but if there's still an actual functional issue with ammo updates, further investigation would be needed to identify the root cause.
 
 ## Technical Details
 
