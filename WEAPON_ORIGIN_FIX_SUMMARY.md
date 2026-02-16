@@ -337,7 +337,7 @@ Server reconstructs shot origin from player head position (server-side ground tr
 ### How to Verify
 ```lua
 -- In Studio Command Bar:
-local test = require(game.ServerScriptService.Tests.weapon_origin_reconstruction_test)
+local test = require(game.ReplicatedStorage.tests.weapon_origin_reconstruction_test)
 test.runAll()  -- Should pass 7/7 tests
 ```
 
