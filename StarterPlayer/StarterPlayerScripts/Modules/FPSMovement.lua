@@ -20,21 +20,9 @@ local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 
--- Wait for camera module (will be available after initialization)
-local FirstPersonCamera = nil
-task.spawn(function()
-	-- Try to get the camera module from _G or wait for it
-	task.wait(0.5)
-	local success, cam = pcall(function()
-		return require(player.PlayerScripts:WaitForChild("FirstPersonCamera.client", 5))
-	end)
-	if success then
-		FirstPersonCamera = cam
-	else
-		-- Camera module runs as a separate script, communicate via events
-		FirstPersonCamera = nil
-	end
-end)
+-- NOTE: Camera module is managed separately by ClientMainModule
+-- Camera-movement synchronization happens via bindable events and state setters
+-- See: FirstPersonCamera.setSprinting(), FirstPersonCamera.setCrouching(), etc.
 
 --------------------------------------------------------------------------------
 -- REMOTE EVENTS
@@ -104,6 +92,11 @@ local lerp = MathUtil.lerp
 local clamp = MathUtil.clamp
 
 -- Helper: Check if gameplay input should be blocked by modal state
+-- NOTE: This function is called frequently (every frame, multiple times per input)
+-- but is intentionally kept simple for performance:
+-- - _enabled is a local boolean (instant check)
+-- - ModalManager.shouldBlockGameplay() iterates a small stack (typically 0-2 items)
+-- - No need for caching as the check is already O(1) amortized
 local function shouldBlockGameplay()
 	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
 	-- PANEL priority (like Scoreboard) allows gameplay to continue
@@ -227,6 +220,15 @@ local function updateCrouch(deltaTime)
 	-- Notify server of crouch state change
 	if wasCrouching ~= isCrouching then
 		crouchEvent:FireServer(isCrouching)
+		
+		-- Broadcast crouch state change via bindable (for camera sync)
+		local bindableFolder = player.PlayerGui:FindFirstChild("BindableEvents")
+		if bindableFolder then
+			local crouchBindable = bindableFolder:FindFirstChild("CrouchStateChanged")
+			if crouchBindable then
+				crouchBindable:Fire(isCrouching)
+			end
+		end
 	end
 end
 
@@ -430,6 +432,20 @@ local function onCharacterAdded(character)
 
 	-- Reset stamina to max on spawn
 	currentStamina = maxStamina
+	
+	-- Broadcast reset state to camera (prevents stale sprint/crouch FOV after respawn)
+	local bindableFolder = player.PlayerGui:FindFirstChild("BindableEvents")
+	if bindableFolder then
+		local sprintEvent = bindableFolder:FindFirstChild("SprintStateChanged")
+		if sprintEvent then
+			sprintEvent:Fire(false)
+		end
+		
+		local crouchEvent = bindableFolder:FindFirstChild("CrouchStateChanged")
+		if crouchEvent then
+			crouchEvent:Fire(false)
+		end
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -457,8 +473,9 @@ function FPSMovementController.getStamina()
 end
 
 function FPSMovementController.setADSActive(active)
-	-- Called by weapon controller to reduce speed during ADS
-	-- Speed adjustment happens in calculateMoveSpeed
+	-- NOTE: ADS speed adjustment is handled by the weapon controller
+	-- which directly modifies Humanoid.WalkSpeed when ADS state changes.
+	-- This method is kept for API compatibility but is currently unused.
 end
 
 -- Enable or disable movement (used by state manager)
@@ -497,11 +514,6 @@ end
 -- INITIALIZATION
 --------------------------------------------------------------------------------
 
--- Store input connections for cleanup
-local inputBeganConnection = nil
-local inputEndedConnection = nil
-local heartbeatConnection = nil
-
 local function initialize()
 	-- Setup InputManager callbacks
 	setupInputCallbacks()
@@ -537,6 +549,28 @@ local function initialize()
 		sprintStateEvent.Name = "SprintStateChanged"
 		sprintStateEvent.Parent = bindableFolder
 	end
+	
+	-- Crouch state event (for camera sync)
+	local crouchStateEvent = bindableFolder:FindFirstChild("CrouchStateChanged")
+	if not crouchStateEvent then
+		crouchStateEvent = Instance.new("BindableEvent")
+		crouchStateEvent.Name = "CrouchStateChanged"
+		crouchStateEvent.Parent = bindableFolder
+	end
+	
+	-- Fire initial state for late subscribers (camera may initialize after movement)
+	-- Use task.defer to ensure bindables are fully set up and camera has subscribed
+	-- Capture current state to avoid race conditions
+	local currentSprint = isSprinting
+	local currentCrouch = isCrouching
+	task.defer(function()
+		if sprintStateEvent then
+			sprintStateEvent:Fire(currentSprint)
+		end
+		if crouchStateEvent then
+			crouchStateEvent:Fire(currentCrouch)
+		end
+	end)
 
 	-- Stamina event for PlayerHUD.client
 	local staminaBindable = bindableFolder:FindFirstChild("StaminaUpdate")
@@ -566,38 +600,17 @@ function FPSMovementController.initialize()
 	initialize()
 end
 
-function FPSMovementController.onCharacterAdded(character)
-	onCharacterAdded(character)
-	
-	-- BUG-015: Reconnect input handlers on respawn
-	if not inputBeganConnection or not inputBeganConnection.Connected then
-		inputBeganConnection = UserInputService.InputBegan:Connect(onInputBegan)
-	end
-	if not inputEndedConnection or not inputEndedConnection.Connected then
-		inputEndedConnection = UserInputService.InputEnded:Connect(onInputEnded)
-	end
-	if not heartbeatConnection or not heartbeatConnection.Connected then
-		heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
-			updateMovement(deltaTime)
-		end)
-	end
-end
-
-function FPSMovementController.onCharacterRemoving()
-	-- BUG-015: Cleanup input connections to prevent memory leaks
-	if inputBeganConnection then
-		inputBeganConnection:Disconnect()
-		inputBeganConnection = nil
-	end
-	if inputEndedConnection then
-		inputEndedConnection:Disconnect()
-		inputEndedConnection = nil
-	end
-	if heartbeatConnection then
-		heartbeatConnection:Disconnect()
-		heartbeatConnection = nil
-	end
-end
+-- NOTE: Character lifecycle methods onCharacterAdded/onCharacterRemoving
+-- are intentionally NOT implemented here. Character events are handled
+-- by ClientMainModule which calls initialize() once at boot.
+-- All input connections persist across respawns since they're bound to
+-- the LocalPlayer, not the character. This avoids connection leaks and
+-- simplifies the lifecycle management.
+--
+-- If character-specific setup is needed in the future:
+-- 1. Implement onCharacterAdded(character) to reset character-specific state
+-- 2. Wire it in ClientMainModule's character event handler
+-- 3. Do NOT create new input connections - reuse existing ones
 
 function FPSMovementController.cleanup()
 	-- Disconnect all tracked connections

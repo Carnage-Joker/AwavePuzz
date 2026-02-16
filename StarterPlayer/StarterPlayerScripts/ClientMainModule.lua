@@ -647,6 +647,9 @@ local function bootClient()
 			Camera.onCharacterAdded(character)
 		end
 		
+		-- NOTE: Movement module does not implement onCharacterAdded
+		-- Movement connections persist across respawns (bound to LocalPlayer)
+		-- This prevents connection leaks and simplifies lifecycle management
 		if Movement and Movement.onCharacterAdded then
 			Movement.onCharacterAdded(character)
 		end
@@ -789,20 +792,6 @@ local function bootClient()
 			for _, module in pairs(UI) do
 				if type(module) == "table" and module.cleanup then
 					-- Try method-style first (for instance objects like EpilogueUI)
-<<<<<<< HEAD
-					local ok, err = pcall(function()
-						module:cleanup()
-					end)
-					-- If that fails, log the error and try static style (for module-level cleanups)
-					if not ok then
-						warn("[ClientMain] UI cleanup method-style failed for module:", tostring(module), "error:", err)
-						local okStatic, errStatic = pcall(function()
-							module.cleanup()
-						end)
-						if not okStatic then
-							warn("[ClientMain] UI cleanup static-style also failed for module:", tostring(module), "error:", errStatic)
-						end
-=======
 					local ok = pcall(function()
 						module:cleanup()
 					end)
@@ -811,7 +800,6 @@ local function bootClient()
 						pcall(function()
 							module.cleanup()
 						end)
->>>>>>> 83051d28e37be655b21b155c7bf4918ba290d001
 					end
 				end
 			end
