@@ -978,9 +978,4 @@ function PortalMatchmakingService:endMatch(matchId)
 	print(string.format("[PortalMatchmakingService] Match %s ended successfully", matchId))
 end
 
--- Get the match registry instance
-function PortalMatchmakingService:getMatchRegistry()
-	return self.matchRegistry
-end
-
 return PortalMatchmakingService
