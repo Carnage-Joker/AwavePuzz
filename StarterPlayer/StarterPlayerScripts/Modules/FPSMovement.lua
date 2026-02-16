@@ -564,8 +564,12 @@ local function initialize()
 	local currentSprint = isSprinting
 	local currentCrouch = isCrouching
 	task.defer(function()
-		sprintStateEvent:Fire(currentSprint)
-		crouchStateEvent:Fire(currentCrouch)
+		if sprintStateEvent then
+			sprintStateEvent:Fire(currentSprint)
+		end
+		if crouchStateEvent then
+			crouchStateEvent:Fire(currentCrouch)
+		end
 	end)
 
 	-- Stamina event for PlayerHUD.client
