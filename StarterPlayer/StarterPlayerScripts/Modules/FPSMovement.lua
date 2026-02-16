@@ -432,6 +432,20 @@ local function onCharacterAdded(character)
 
 	-- Reset stamina to max on spawn
 	currentStamina = maxStamina
+	
+	-- Broadcast reset state to camera (prevents stale sprint/crouch FOV after respawn)
+	local bindableFolder = player.PlayerGui:FindFirstChild("BindableEvents")
+	if bindableFolder then
+		local sprintEvent = bindableFolder:FindFirstChild("SprintStateChanged")
+		if sprintEvent then
+			sprintEvent:Fire(false)
+		end
+		
+		local crouchEvent = bindableFolder:FindFirstChild("CrouchStateChanged")
+		if crouchEvent then
+			crouchEvent:Fire(false)
+		end
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -543,6 +557,10 @@ local function initialize()
 		crouchStateEvent.Name = "CrouchStateChanged"
 		crouchStateEvent.Parent = bindableFolder
 	end
+	
+	-- Fire initial state for late subscribers (camera may initialize after movement)
+	sprintStateEvent:Fire(isSprinting)
+	crouchStateEvent:Fire(isCrouching)
 
 	-- Stamina event for PlayerHUD.client
 	local staminaBindable = bindableFolder:FindFirstChild("StaminaUpdate")

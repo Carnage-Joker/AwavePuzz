@@ -494,19 +494,26 @@ function FirstPersonCamera.initialize()
 	-- This synchronizes FOV changes with sprint state
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	task.spawn(function()
+		-- Guard: Only subscribe if still initialized
+		if not initialized then return end
+		
 		local bindableFolder = playerGui:WaitForChild("BindableEvents", 5)
-		if bindableFolder then
+		if bindableFolder and initialized then
 			local sprintEvent = bindableFolder:WaitForChild("SprintStateChanged", 2)
-			if sprintEvent and sprintEvent:IsA("BindableEvent") then
+			if sprintEvent and sprintEvent:IsA("BindableEvent") and initialized then
 				bindConn(globalConnections, sprintEvent.Event:Connect(function(sprinting)
-					isSprinting = sprinting
+					if initialized then
+						isSprinting = sprinting
+					end
 				end))
 			end
 			
 			local crouchEvent = bindableFolder:WaitForChild("CrouchStateChanged", 2)
-			if crouchEvent and crouchEvent:IsA("BindableEvent") then
+			if crouchEvent and crouchEvent:IsA("BindableEvent") and initialized then
 				bindConn(globalConnections, crouchEvent.Event:Connect(function(crouching)
-					isCrouching = crouching
+					if initialized then
+						isCrouching = crouching
+					end
 				end))
 			end
 		end
