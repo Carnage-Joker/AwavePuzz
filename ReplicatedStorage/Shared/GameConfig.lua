@@ -195,6 +195,13 @@ GameConfig.AI = {
 GameConfig.Security = {
 	MAX_WEAPON_FIRE_DISTANCE = 15, -- Maximum distance from player for weapon fire origin (anti-wallhack)
 	LOBBY_DEBOUNCE_TIME = 1.0, -- Seconds between lobby resolution attempts (prevent race conditions)
+	
+	-- Server-authoritative origin reconstruction settings
+	USE_SERVER_ORIGIN = true, -- Use server-reconstructed origin instead of client-provided origin
+	ORIGIN_FORWARD_OFFSET = 2.0, -- Forward offset from head for reconstructed origin (studs)
+	ORIGIN_VERTICAL_OFFSET = 0.5, -- Vertical offset from head for reconstructed origin (studs)
+	BEHIND_BODY_TOLERANCE = 1.0, -- Tolerance for behind-body checks to avoid camera offset false positives (studs)
+	MIN_WEAPON_FIRE_DOT_PRODUCT = 0.7, -- Minimum dot product for direction alignment (0.7 = ~45 degree cone)
 }
 
 -- Lobby Settings
