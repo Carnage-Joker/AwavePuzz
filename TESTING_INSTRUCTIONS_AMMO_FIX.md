@@ -4,9 +4,9 @@
 
 **Bug**: Ammo counter not displaying during gameplay
 
-**Root Cause**: Critical indentation error in `FPSWeaponService.lua` line 340 prevented the entire server-side service from loading.
+**Root Cause**: Malformed Lua statement around the `RemoteEventUtil.safeFireClient()` call in `FPSWeaponService.lua` (line 340) caused a syntax error that prevented the entire server-side service from loading.
 
-**Fix**: Corrected indentation of `RemoteEventUtil.safeFireClient()` call
+**Fix**: Corrected the `RemoteEventUtil.safeFireClient()` statement so the Lua syntax is valid and the service can load normally
 
 ## Quick Test (5 minutes)
 
