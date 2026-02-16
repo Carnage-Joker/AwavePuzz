@@ -720,9 +720,14 @@ function GameManager:setState(newState, payload)
 		end
 	end
 	
-	-- Update global state
-	self.currentState = newState
-	self.stateTimer = 0
+	-- Only update global state when this transition is not owned by an active match.
+	-- This prevents non-match players from seeing match-scoped states (COUNTDOWN/WAVE_ACTIVE/etc)
+	-- via the global snapshot / effective state resolution.
+	local shouldUpdateGlobalState = not (isMatchState and self._currentMatchId)
+	if shouldUpdateGlobalState then
+		self.currentState = newState
+		self.stateTimer = 0
+	end
 
 	-- Build state snapshot (authoritative game state)
 	local stateData = {
