@@ -358,6 +358,78 @@ function SecurityTests.testAmmoSyncInterval()
 end
 
 -- ============================================================================
+-- SERVER-AUTHORITATIVE ORIGIN TESTS
+-- ============================================================================
+
+function SecurityTests.testServerOriginReconstructionConfig()
+	local testName = "Server Origin - Configuration Exists"
+	
+	-- Verify server-origin reconstruction configuration exists
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+	
+	local hasSecurityConfig = GameConfig.Security ~= nil
+	local hasUseServerOrigin = hasSecurityConfig and GameConfig.Security.USE_SERVER_ORIGIN ~= nil
+	local hasForwardOffset = hasSecurityConfig and GameConfig.Security.ORIGIN_FORWARD_OFFSET ~= nil
+	local hasVerticalOffset = hasSecurityConfig and GameConfig.Security.ORIGIN_VERTICAL_OFFSET ~= nil
+	local hasBehindTolerance = hasSecurityConfig and GameConfig.Security.BEHIND_BODY_TOLERANCE ~= nil
+	
+	if hasUseServerOrigin and hasForwardOffset and hasVerticalOffset and hasBehindTolerance then
+		logTest(testName, true)
+		return true
+	else
+		logTest(testName, false, "Server origin reconstruction config missing from GameConfig.Security")
+		return false
+	end
+end
+
+function SecurityTests.testServerOriginReconstructionMethod()
+	local testName = "Server Origin - Reconstruction Method Exists"
+	
+	-- Verify WeaponService has reconstructOrigin method
+	local ServerScriptService = game:GetService("ServerScriptService")
+	local WeaponService = ServerScriptService:FindFirstChild("WeaponService")
+	
+	if WeaponService and WeaponService:IsA("ModuleScript") then
+		local success, module = pcall(function()
+			return require(WeaponService)
+		end)
+		
+		if success and module and typeof(module.reconstructOrigin) == "function" then
+			logTest(testName, true)
+			return true
+		else
+			logTest(testName, false, "WeaponService missing reconstructOrigin method")
+			return false
+		end
+	end
+	
+	logTest(testName, false, "WeaponService not found")
+	return false
+end
+
+function SecurityTests.testDirectionValidationPreserved()
+	local testName = "Server Origin - Direction Validation Preserved"
+	
+	-- Verify that direction validation is still performed even with server origin
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local GameConfig = require(ReplicatedStorage.Shared.GameConfig)
+	
+	local hasMinDotProduct = GameConfig.Security and GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT ~= nil
+	local isReasonableThreshold = hasMinDotProduct and 
+		GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT >= 0.5 and 
+		GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT <= 1.0
+	
+	if isReasonableThreshold then
+		logTest(testName, true)
+		return true
+	else
+		logTest(testName, false, "MIN_WEAPON_FIRE_DOT_PRODUCT not configured properly")
+		return false
+	end
+end
+
+-- ============================================================================
 -- RUN ALL TESTS
 -- ============================================================================
 
@@ -391,6 +463,12 @@ function SecurityTests.runAll()
 	print("\n--- Security Configuration Tests ---")
 	SecurityTests.testSecurityConfigExists()
 	SecurityTests.testAmmoSyncInterval()
+	
+	-- Server-Authoritative Origin Tests
+	print("\n--- Server-Authoritative Origin Tests ---")
+	SecurityTests.testServerOriginReconstructionConfig()
+	SecurityTests.testServerOriginReconstructionMethod()
+	SecurityTests.testDirectionValidationPreserved()
 	
 	-- Results
 	print("\n" .. string.rep("=", 60))

@@ -5,9 +5,27 @@
 
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local IntelligentSpawnGenerator = {}
 IntelligentSpawnGenerator.__index = IntelligentSpawnGenerator
+
+-- Load GameConfig for DEBUG flag
+local GameConfig = nil
+local configLoadSuccess, configLoadError = pcall(function()
+	local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
+	if SharedFolder then
+		local GameConfigModule = SharedFolder:FindFirstChild("GameConfig")
+		if GameConfigModule then
+			GameConfig = require(GameConfigModule)
+		end
+	end
+end)
+
+-- Log if GameConfig failed to load (but only if Shared folder exists)
+if not configLoadSuccess and ReplicatedStorage:FindFirstChild("Shared") then
+	warn("[SpawnGenerator] Failed to load GameConfig:", configLoadError)
+end
 
 ----------------------------------------------------------------
 -- CONFIG
@@ -88,7 +106,8 @@ function IntelligentSpawnGenerator.new()
 	return setmetatable({
 		mapBounds = nil,
 		generatedSpawnPoints = {},
-		_debugFolder = nil
+		_debugFolder = nil,
+		_noMapWarningShown = false  -- Track if we've already shown the no-map warning
 	}, IntelligentSpawnGenerator)
 end
 
@@ -115,7 +134,13 @@ function IntelligentSpawnGenerator:analyzeMapBounds()
 	local map = getActiveMap()
 	if not map then
 		self.mapBounds = nil
-		warn("[SpawnGenerator] No ActiveMap found, cannot analyze map bounds. Spawn generation will be deferred until map is loaded.")
+		-- Only log in DEBUG mode or show one-time informational message
+		if GameConfig and GameConfig.DEBUG then
+			warn("[SpawnGenerator] No ActiveMap found, cannot analyze map bounds. Spawn generation will be deferred until map is loaded.")
+		elseif not self._noMapWarningShown then
+			print("[SpawnGenerator] Waiting for map to load before generating spawn points...")
+			self._noMapWarningShown = true
+		end
 		return false
 	end
 
@@ -215,7 +240,10 @@ function IntelligentSpawnGenerator:generateSpawnPointsForRound()
 	if not self.mapBounds then
 		local success = self:analyzeMapBounds()
 		if not success then
-			warn("[SpawnGenerator] Cannot generate spawn points without ActiveMap. Returning empty list.")
+			-- Only log in DEBUG mode (warning already shown in analyzeMapBounds)
+			if GameConfig and GameConfig.DEBUG then
+				warn("[SpawnGenerator] Cannot generate spawn points without ActiveMap. Returning empty list.")
+			end
 			return {}
 		end
 	end
@@ -223,7 +251,10 @@ function IntelligentSpawnGenerator:generateSpawnPointsForRound()
 	-- Double-check that ActiveMap still exists
 	local map = getActiveMap()
 	if not map then
-		warn("[SpawnGenerator] ActiveMap disappeared during spawn generation. Returning empty list.")
+		-- Only log in DEBUG mode
+		if GameConfig and GameConfig.DEBUG then
+			warn("[SpawnGenerator] ActiveMap disappeared during spawn generation. Returning empty list.")
+		end
 		return {}
 	end
 
