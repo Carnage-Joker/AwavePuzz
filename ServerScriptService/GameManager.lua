@@ -696,6 +696,28 @@ function GameManager:onPlayerRemoving(player)
 end
 
 function GameManager:setState(newState, payload)
+	-- Determine if this is a match-specific state or global state
+	local isMatchState = (newState == GameManager.States.COUNTDOWN or 
+	                      newState == GameManager.States.WAVE_ACTIVE or
+	                      newState == GameManager.States.INTERMISSION or
+	                      newState == GameManager.States.VICTORY or
+	                      newState == GameManager.States.DEFEAT)
+	
+	-- If it's a match state and we have an active match, update the match state
+	if isMatchState and self._currentMatchId then
+		local matchRegistry = self:getMatchRegistry()
+		if matchRegistry then
+			-- Convert GameManager state names to MatchRegistry state names
+			local matchStateName = newState
+			-- Update the match state in registry
+			local success = matchRegistry:setMatchState(self._currentMatchId, matchStateName)
+			if not success then
+				warn(string.format("[GameManager] Failed to set match state to %s for match %s", matchStateName, self._currentMatchId))
+			end
+		end
+	end
+	
+	-- Update global state
 	self.currentState = newState
 	self.stateTimer = 0
 
@@ -709,9 +731,31 @@ function GameManager:setState(newState, payload)
 		payload = payload
 	}
 
-	-- Broadcast state update to all clients
+	-- Broadcast state update to clients
+	-- Note: Each client will see their effective state via _getPlayerEffectiveState
 	if self.remoteEvents.GameStateUpdate then
-		self.remoteEvents.GameStateUpdate:FireAllClients(stateData)
+		if isMatchState and self._currentMatchId then
+			-- Match state: only broadcast to match participants
+			local matchRegistry = self:getMatchRegistry()
+			if matchRegistry then
+				local matchPlayers = matchRegistry:getMatchPlayers(self._currentMatchId)
+				for _, player in ipairs(matchPlayers) do
+					if player and player.Parent then
+						self.remoteEvents.GameStateUpdate:FireClient(player, stateData)
+					end
+				end
+			end
+		else
+			-- Global state: broadcast to all non-match players
+			local matchRegistry = self:getMatchRegistry()
+			for _, player in ipairs(Players:GetPlayers()) do
+				local context = self.sessionState:getPlayerContext(player)
+				-- Only send to players not in a match
+				if not context or not context.inMatch then
+					self.remoteEvents.GameStateUpdate:FireClient(player, stateData)
+				end
+			end
+		end
 	end
 
 	-- Compatibility: Keep legacy show/hide events for systems that haven't migrated yet
@@ -738,6 +782,7 @@ function GameManager:setState(newState, payload)
 	print(string.format("[GameManager] State changed to %s", newState))
 end
 
+
 -- ✅ NEW: Determine player's effective state based on their context
 -- Returns the state that should be sent to a specific player
 function GameManager:_getPlayerEffectiveState(player)
@@ -753,18 +798,26 @@ function GameManager:_getPlayerEffectiveState(player)
 	
 	-- Check if player is in a match (portal matchmaking)
 	if context.inMatch and context.matchId then
-		-- Player is in a match - send match state, NOT global lobby state
-		-- Match states: Countdown, WaveActive, Victory, Defeat
-		if self.currentState == "Countdown" or 
-		   self.currentState == "WaveActive" or 
-		   self.currentState == "Victory" or 
-		   self.currentState == "Defeat" then
-			return self.currentState
+		-- Player is in a match - get state from MatchRegistry, NOT global state
+		local matchRegistry = self:getMatchRegistry()
+		if matchRegistry then
+			local matchState = matchRegistry:getMatchState(context.matchId)
+			if matchState then
+				-- Valid match state found - use it
+				return matchState
+			else
+				-- REGRESSION ASSERTION: Player claims to be in match but match doesn't exist or is inactive
+				warn(string.format("[GameManager] REGRESSION: Player %s marked as in match %s but match state not found. This indicates state corruption.",
+					player.Name, tostring(context.matchId)))
+				-- Clear the player's match state in SessionState since match doesn't exist
+				self.sessionState:setMatch(player, nil, false)
+				-- Fall through to use global state as recovery
+			end
 		else
-			-- Match exists but state is weird - default to Countdown
-			warn(string.format("[GameManager] Player %s in match but global state is %s; defaulting to Countdown", 
-				player.Name, self.currentState))
-			return "Countdown"
+			-- Portal matchmaking not enabled but player is marked as in match - this is an error
+			warn(string.format("[GameManager] Player %s marked as in match but MatchRegistry not available", player.Name))
+			-- Clear corrupted state
+			self.sessionState:setMatch(player, nil, false)
 		end
 	end
 	
@@ -775,7 +828,7 @@ function GameManager:_getPlayerEffectiveState(player)
 	end
 	
 	-- Player has passed title screen, not in match - send global state
-	-- This handles lobby, waiting, etc.
+	-- This handles lobby, waiting, scoreboard, etc.
 	return self.currentState
 end
 
@@ -1590,6 +1643,20 @@ function GameManager:updateScoreboard(deltaTime)
 	self.stateTimer -= deltaTime
 
 	if self.stateTimer <= 0 then
+		-- Clean up match before transitioning to next state
+		if self._currentMatchId then
+			print(string.format("[GameManager] Match %s complete, cleaning up", self._currentMatchId))
+			
+			-- End the match in PortalMatchmakingService
+			if self.portalMatchmakingService and self.portalMatchmakingService.endMatch then
+				self.portalMatchmakingService:endMatch(self._currentMatchId)
+			end
+			
+			-- Clear match participants
+			self._matchParticipants = nil
+			self._currentMatchId = nil
+		end
+		
 		-- ✅ FIX: After round ends (SCOREBOARD), show EPILOGUE if enabled, then go to LOBBY
 		-- This is the correct flow: ROUND_END -> SCOREBOARD -> EPILOGUE -> LOBBY
 		if GameConfig.SHOW_EPILOGUE then
@@ -1683,6 +1750,14 @@ end
 
 function GameManager:getSpectatorManager()
 	return self.spectatorManager
+end
+
+function GameManager:getMatchRegistry()
+	-- Get MatchRegistry from PortalMatchmakingService if available
+	if self.portalMatchmakingService and self.portalMatchmakingService.getMatchRegistry then
+		return self.portalMatchmakingService:getMatchRegistry()
+	end
+	return nil
 end
 
 return GameManager
