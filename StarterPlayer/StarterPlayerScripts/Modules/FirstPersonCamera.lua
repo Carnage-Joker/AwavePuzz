@@ -498,7 +498,7 @@ function FirstPersonCamera.initialize()
 		if not initialized then return end
 		
 		local bindableFolder = playerGui:WaitForChild("BindableEvents", 5)
-		if bindableFolder and initialized then
+		if bindableFolder then
 			local sprintEvent = bindableFolder:WaitForChild("SprintStateChanged", 2)
 			if sprintEvent and sprintEvent:IsA("BindableEvent") then
 				bindConn(globalConnections, sprintEvent.Event:Connect(function(sprinting)
