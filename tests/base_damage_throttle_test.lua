@@ -105,9 +105,9 @@ local function testWithThrottle()
 	print(string.format("Expected time to destruction: %.1f seconds", expectedTime))
 	print(string.format("Actual time: %.1f seconds", duration))
 	
-	-- Check if time is reasonable (should be at least 10s, ideally 15-30s with current settings)
-	if duration >= 10 and duration <= 100 then
-		print("✅ PASS: Time-to-destruction is within acceptable range (10-100s)")
+	-- Check if time is reasonable (should be in the 15-30s range with current settings)
+	if duration >= 15 and duration <= 30 then
+		print("✅ PASS: Time-to-destruction is within acceptable range (15-30s)")
 		if duration >= 15 and duration <= 30 then
 			print("✅ OPTIMAL: Time is in optimal range (15-30s)")
 		end
