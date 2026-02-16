@@ -165,15 +165,18 @@ local function testSingleZombieCooldown()
 	
 	local zombieName = "TestZombie"
 	local attacks = 0
+	local lastHealth = baseManager:getBaseHealth()
 	
 	-- Try to attack 10 times rapidly
 	for i = 1, 10 do
-		local success = baseManager:damageBase(ZOMBIE_DAMAGE, zombieName)
-		if not success then
-			-- Damage was blocked
-		else
+		baseManager:damageBase(ZOMBIE_DAMAGE, zombieName)
+		
+		local currentHealth = baseManager:getBaseHealth()
+		if currentHealth < lastHealth then
 			attacks = attacks + 1
+			lastHealth = currentHealth
 		end
+		
 		task.wait(0.1) -- 0.1s between attempts (faster than cooldown)
 	end
 	
