@@ -78,15 +78,15 @@ Time = (1000 / (10 × 10)) × 2.0 = (1000 / 100) × 2.0 = 20 seconds
 
 ### Adjusting for Difficulty
 
-**Easy Mode** (60-90s destruction time):
+**Easy Mode** (25-40s destruction time):
 - `BASE_DAMAGE_COOLDOWN = 3.0`
 - Reduces pressure, gives more time to clear zombies
 
-**Normal Mode** (15-30s destruction time; ~20s with defaults from formula above):
+**Normal Mode** (18-25s destruction time):
 - `BASE_DAMAGE_COOLDOWN = 2.0` (default)
 - Balanced pressure and player response time
 
-**Hard Mode** (15-30s destruction time):
+**Hard Mode** (12-18s destruction time):
 - `BASE_DAMAGE_COOLDOWN = 1.5`
 - High pressure, requires immediate response
 
