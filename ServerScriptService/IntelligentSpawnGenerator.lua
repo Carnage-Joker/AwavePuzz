@@ -15,7 +15,10 @@ local GameConfig = nil
 local configLoadSuccess, configLoadError = pcall(function()
 	local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
 	if SharedFolder then
-		GameConfig = require(SharedFolder:FindFirstChild("GameConfig"))
+		local GameConfigModule = SharedFolder:FindFirstChild("GameConfig")
+		if GameConfigModule then
+			GameConfig = require(GameConfigModule)
+		end
 	end
 end)
 
