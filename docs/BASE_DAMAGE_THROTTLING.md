@@ -134,20 +134,20 @@ The test script (`tests/base_damage_throttle_test.lua`) runs 4 tests:
 4. Monitor base health in UI
 5. Observe time to destruction
 
-**Expected**: Base should take 30-60 seconds to destroy with 10 zombies
+**Expected**: Base should take 15-30 seconds to destroy with 10 zombies (2.0s cooldown)
 
 #### Scenario 2: Late Wave with 30+ Zombies
 1. Use console to skip to Wave 5+
 2. Allow zombies to reach base
 3. Monitor destruction time
 
-**Expected**: Base should be under heavy pressure but not instant death (15-45s)
+**Expected**: Base should be under heavy pressure but not instant death (7-15s with 30 zombies)
 
 #### Scenario 3: Breacher/Bruiser Focus
 1. Spawn 10 Breachers or Bruisers near base
 2. Monitor destruction time
 
-**Expected**: Faster destruction due to 1.5-2x multipliers, but still controlled (20-40s)
+**Expected**: Faster destruction due to 1.5-2x multipliers, but still controlled (10-15s)
 
 ### Verification Checklist
 

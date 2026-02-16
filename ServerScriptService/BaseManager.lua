@@ -132,7 +132,7 @@ function BaseManager:damageBase(damage, source)
 	self.health = math.max(0, self.health - damage)
 	self._attackerCooldowns[sourceStr] = currentTime
 	
-	-- Security: Log base damage events with source tracking
+	-- Log base damage events with source tracking
 	print(string.format("[BaseManager] DAMAGE: Base took %.1f damage from %s (Health: %.1f/%.1f)", 
 		damage, sourceStr, self.health, self.maxHealth))
 	

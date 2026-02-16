@@ -75,6 +75,10 @@ Time = (1000 / (10 × 10)) × 2.0 = 20 seconds
 | 20      | 10         | 10 seconds          |
 | 10      | 30 (Breacher) | 6.7 seconds      |
 
+**Note**: With 2.0s cooldown and 10 zombies at 10 damage:
+- Expected: ~20 seconds to destroy 1000 HP base
+- Acceptable range for testing: 10-30 seconds (accounting for timing variations)
+
 ## Testing
 
 ### Automated Test Script
@@ -114,20 +118,22 @@ loadstring(game:GetService("ServerScriptService"):WaitForChild("tests"):WaitForC
 ## Tuning Recommendations
 
 ### Difficulty Levels
-**Easy Mode** (60-90s destruction):
+**Easy Mode** (40-90s destruction with 10 zombies):
 ```lua
 GameConfig.BASE_DAMAGE_COOLDOWN = 3.0
 ```
 
-**Normal Mode** (30-60s destruction):
+**Normal Mode** (15-30s destruction with 10 zombies):
 ```lua
 GameConfig.BASE_DAMAGE_COOLDOWN = 2.0  -- Default
 ```
 
-**Hard Mode** (15-30s destruction):
+**Hard Mode** (8-15s destruction with 10 zombies):
 ```lua
 GameConfig.BASE_DAMAGE_COOLDOWN = 1.5
 ```
+
+**Note**: These times scale inversely with zombie count. More zombies = faster destruction.
 
 ### Adjusting for Wave Progression
 Consider adjusting cooldown based on:
