@@ -196,17 +196,32 @@ function OriginTests.testRateLimitingPreserved()
 		return require(WeaponService)
 	end)
 	
-	if not success then
+	if not success or not WeaponServiceModule then
 		logTest(testName, false, "Failed to require WeaponService")
 		return false
 	end
 	
-	-- Check for rate limiting constants
-	if WeaponServiceModule.FIRE_RATE_WINDOW and WeaponServiceModule.MAX_FIRES_PER_WINDOW then
+	-- Construct a WeaponService instance to check instance-level rate limiting fields
+	if type(WeaponServiceModule.new) ~= "function" then
+		logTest(testName, false, "WeaponService.new constructor not found")
+		return false
+	end
+	
+	local ok, weaponServiceInstance = pcall(function()
+		return WeaponServiceModule.new()
+	end)
+	
+	if not ok or not weaponServiceInstance then
+		logTest(testName, false, "Failed to construct WeaponService instance")
+		return false
+	end
+	
+	-- Check for rate limiting fields on the instance
+	if weaponServiceInstance.FIRE_RATE_WINDOW and weaponServiceInstance.MAX_FIRES_PER_WINDOW then
 		logTest(testName, true)
 		return true
 	else
-		logTest(testName, false, "Rate limiting constants not found")
+		logTest(testName, false, "Rate limiting fields not found on WeaponService instance")
 		return false
 	end
 end
