@@ -51,7 +51,7 @@ This eliminates client/server mismatch while maintaining security.
 2. Open the Command Bar (View → Command Bar)
 3. Run:
 ```lua
-local test = require(game.ServerScriptService.Tests.weapon_origin_reconstruction_test)
+local test = require(game.ReplicatedStorage.tests.weapon_origin_reconstruction_test)
 test.runAll()
 ```
 
