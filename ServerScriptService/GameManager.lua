@@ -806,7 +806,13 @@ function GameManager:broadcastEvent(remoteEvent, data, matchOnly)
 	local matchRegistry = self:getMatchRegistry()
 	local matchPlayers = {}
 	
-	if matchOnly and self._currentMatchId and matchRegistry then
+	if matchOnly then
+		-- When portal matchmaking is disabled or no active match, fall back to FireAllClients
+		if not self._currentMatchId or not matchRegistry then
+			remoteEvent:FireAllClients(data)
+			return
+		end
+		
 		-- Get match players
 		matchPlayers = matchRegistry:getMatchPlayers(self._currentMatchId) or {}
 		-- Broadcast to match players only
@@ -1697,23 +1703,8 @@ function GameManager:updateScoreboard(deltaTime)
 	self.stateTimer -= deltaTime
 
 	if self.stateTimer <= 0 then
-		-- Clean up match before transitioning to next state
-		-- Note: This is the primary match cleanup path. Additional cleanup occurs via:
-		-- - Player disconnect: MatchRegistry.removePlayerFromMatch() cleans up individual players
-		-- - Empty match: Match marked inactive and cleaned up by periodic cleanup
-		-- - MatchRegistry.endMatch(): Removes all player mappings and marks match inactive
-		if self._currentMatchId then
-			print(string.format("[GameManager] Match %s complete, cleaning up", self._currentMatchId))
-			
-			-- End the match in PortalMatchmakingService
-			if self.portalMatchmakingService and self.portalMatchmakingService.endMatch then
-				self.portalMatchmakingService:endMatch(self._currentMatchId)
-			end
-			
-			-- Clear match participants
-			self._matchParticipants = nil
-			self._currentMatchId = nil
-		end
+		-- Match cleanup already handled in _cleanupRoundResources() during Victory/Defeat
+		-- No need to duplicate cleanup here
 		
 		-- ✅ FIX: After round ends (SCOREBOARD), show EPILOGUE if enabled, then go to LOBBY
 		-- This is the correct flow: ROUND_END -> SCOREBOARD -> EPILOGUE -> LOBBY
