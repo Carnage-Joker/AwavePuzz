@@ -500,7 +500,7 @@ function FirstPersonCamera.initialize()
 		local bindableFolder = playerGui:WaitForChild("BindableEvents", 5)
 		if bindableFolder and initialized then
 			local sprintEvent = bindableFolder:WaitForChild("SprintStateChanged", 2)
-			if sprintEvent and sprintEvent:IsA("BindableEvent") and initialized then
+			if sprintEvent and sprintEvent:IsA("BindableEvent") then
 				bindConn(globalConnections, sprintEvent.Event:Connect(function(sprinting)
 					if initialized then
 						isSprinting = sprinting
@@ -509,7 +509,7 @@ function FirstPersonCamera.initialize()
 			end
 			
 			local crouchEvent = bindableFolder:WaitForChild("CrouchStateChanged", 2)
-			if crouchEvent and crouchEvent:IsA("BindableEvent") and initialized then
+			if crouchEvent and crouchEvent:IsA("BindableEvent") then
 				bindConn(globalConnections, crouchEvent.Event:Connect(function(crouching)
 					if initialized then
 						isCrouching = crouching

@@ -559,8 +559,11 @@ local function initialize()
 	end
 	
 	-- Fire initial state for late subscribers (camera may initialize after movement)
-	sprintStateEvent:Fire(isSprinting)
-	crouchStateEvent:Fire(isCrouching)
+	-- Use task.defer to ensure bindables are fully set up and camera has subscribed
+	task.defer(function()
+		sprintStateEvent:Fire(isSprinting)
+		crouchStateEvent:Fire(isCrouching)
+	end)
 
 	-- Stamina event for PlayerHUD.client
 	local staminaBindable = bindableFolder:FindFirstChild("StaminaUpdate")
