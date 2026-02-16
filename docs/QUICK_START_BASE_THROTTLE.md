@@ -53,7 +53,7 @@ GameConfig.BASE_DAMAGE_COOLDOWN = 2.0  -- Seconds between attacks from same zomb
 ```
 
 ### Tuning Guide
-- **Easy**: `3.0` seconds (base lasts 40-90s with 10 zombies)
+- **Easy**: `3.0` seconds (base lasts 25-40s with 10 zombies)
 - **Normal**: `2.0` seconds (base lasts 15-30s with 10 zombies) ← Default
 - **Hard**: `1.5` seconds (base lasts 8-15s with 10 zombies)
 
