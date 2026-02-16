@@ -20,6 +20,12 @@ local TESTS_PASSED = 0
 local TESTS_FAILED = 0
 local VERBOSE = true
 
+-- Test validation constants
+local MAX_REASONABLE_FORWARD_OFFSET = 10  -- Maximum forward offset from head (studs)
+local MAX_REASONABLE_VERTICAL_OFFSET = 5  -- Maximum vertical offset from head (studs)
+local MAX_REASONABLE_BEHIND_TOLERANCE = 5  -- Maximum behind-body tolerance (studs)
+local MIN_REASONABLE_DOT_PRODUCT = 0.5  -- Minimum direction dot product (~60 degree cone)
+
 local function logTest(testName, passed, message)
 	if passed then
 		TESTS_PASSED = TESTS_PASSED + 1
@@ -73,9 +79,9 @@ function OriginTests.testOriginOffsetsConfigured()
 	local verticalOffset = GameConfig.Security.ORIGIN_VERTICAL_OFFSET
 	
 	if forwardOffset and verticalOffset then
-		-- Verify reasonable values
-		local isReasonable = forwardOffset > 0 and forwardOffset < 10 and
-			verticalOffset >= 0 and verticalOffset < 5
+		-- Verify reasonable values using defined constants
+		local isReasonable = forwardOffset > 0 and forwardOffset < MAX_REASONABLE_FORWARD_OFFSET and
+			verticalOffset >= 0 and verticalOffset < MAX_REASONABLE_VERTICAL_OFFSET
 		
 		if isReasonable then
 			logTest(testName, true)
@@ -103,7 +109,7 @@ function OriginTests.testBehindToleranceConfigured()
 	
 	local tolerance = GameConfig.Security.BEHIND_BODY_TOLERANCE
 	
-	if tolerance and tolerance >= 0 and tolerance <= 5 then
+	if tolerance and tolerance >= 0 and tolerance <= MAX_REASONABLE_BEHIND_TOLERANCE then
 		logTest(testName, true)
 		return true
 	else
@@ -164,8 +170,8 @@ function OriginTests.testDirectionValidationPreserved()
 	
 	local minDotProduct = GameConfig.Security.MIN_WEAPON_FIRE_DOT_PRODUCT
 	
-	-- Verify reasonable threshold (0.5 to 1.0 range)
-	if minDotProduct and minDotProduct >= 0.5 and minDotProduct <= 1.0 then
+	-- Verify reasonable threshold using defined constant (MIN_REASONABLE_DOT_PRODUCT to 1.0)
+	if minDotProduct and minDotProduct >= MIN_REASONABLE_DOT_PRODUCT and minDotProduct <= 1.0 then
 		logTest(testName, true)
 		return true
 	else

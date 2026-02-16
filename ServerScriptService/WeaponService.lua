@@ -306,9 +306,11 @@ function WeaponService:reconstructOrigin(player, clientDirection)
 	local verticalOffset = GameConfig.Security.ORIGIN_VERTICAL_OFFSET or 0.5
 	
 	-- Reconstruct origin from head position + forward offset in aim direction
-	-- Use client's aim direction (validated separately) to calculate forward offset
+	-- Break into steps for clarity
 	local headPosition = head.Position
-	local safeOrigin = headPosition + Vector3.new(0, verticalOffset, 0) + (clientDirection.Unit * forwardOffset)
+	local cameraHeightOffset = Vector3.new(0, verticalOffset, 0)
+	local forwardInAimDirection = clientDirection.Unit * forwardOffset
+	local safeOrigin = headPosition + cameraHeightOffset + forwardInAimDirection
 	
 	if DEBUG then
 		print(string.format("[WeaponService] DEBUG: Reconstructed origin for %s - Head: (%.1f,%.1f,%.1f), Origin: (%.1f,%.1f,%.1f)", 
