@@ -6,10 +6,21 @@
 local MatchRegistry = {}
 MatchRegistry.__index = MatchRegistry
 
+-- Match-specific states (independent of global GameManager state)
+-- Note: These state names intentionally match GameManager.States for compatibility
+-- Alternative: Could import from shared constants module, but this keeps MatchRegistry independent
+MatchRegistry.MatchStates = {
+	COUNTDOWN = "Countdown",
+	WAVE_ACTIVE = "WaveActive",
+	INTERMISSION = "Intermission",
+	VICTORY = "Victory",
+	DEFEAT = "Defeat"
+}
+
 function MatchRegistry.new()
 	local self = setmetatable({}, MatchRegistry)
 	
-	-- matchId -> { players = {}, mapId = "", startTime = tick(), active = bool }
+	-- matchId -> { players = {}, mapId = "", startTime = tick(), active = bool, state = string }
 	self.activeMatches = {}
 	
 	-- userId -> matchId (quick lookup)
@@ -41,12 +52,13 @@ function MatchRegistry:createMatch(players, mapId)
 	
 	local matchId = self:generateMatchId()
 	
-	-- Create match record
+	-- Create match record with initial Countdown state
 	self.activeMatches[matchId] = {
 		players = {},
 		mapId = mapId,
 		startTime = tick(),
-		active = true
+		active = true,
+		state = MatchRegistry.MatchStates.COUNTDOWN
 	}
 	
 	-- Register each player
@@ -78,6 +90,48 @@ end
 -- Get match data
 function MatchRegistry:getMatch(matchId)
 	return self.activeMatches[matchId]
+end
+
+-- Get the current state of a match
+function MatchRegistry:getMatchState(matchId)
+	local match = self.activeMatches[matchId]
+	if not match or not match.active then
+		return nil
+	end
+	return match.state
+end
+
+-- Set the state of a match
+function MatchRegistry:setMatchState(matchId, state)
+	local match = self.activeMatches[matchId]
+	if not match then
+		warn(string.format("[MatchRegistry] Cannot set state for non-existent match %s", tostring(matchId)))
+		return false
+	end
+	
+	if not match.active then
+		warn(string.format("[MatchRegistry] Cannot set state for inactive match %s", tostring(matchId)))
+		return false
+	end
+	
+	-- Validate state
+	local validState = false
+	for _, validStateValue in pairs(MatchRegistry.MatchStates) do
+		if state == validStateValue then
+			validState = true
+			break
+		end
+	end
+	
+	if not validState then
+		warn(string.format("[MatchRegistry] Invalid match state '%s' for match %s", tostring(state), matchId))
+		return false
+	end
+	
+	local oldState = match.state
+	match.state = state
+	print(string.format("[MatchRegistry] Match %s state: %s → %s", matchId, tostring(oldState), state))
+	return true
 end
 
 -- Check if a player is in any match
