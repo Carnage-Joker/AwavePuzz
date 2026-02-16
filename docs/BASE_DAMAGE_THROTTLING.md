@@ -119,7 +119,8 @@ The test script (`tests/base_damage_throttle_test.lua`) runs 4 tests:
 
 **Expected Output**:
 ```
-✅ PASS: Time-to-destruction is within acceptable range (30-90s)
+✅ PASS: Time-to-destruction is within acceptable range (15-30s)
+✅ OPTIMAL: Time is in optimal range (15-30s)
 ✅ PASS: Cooldown is working (X attacks blocked)
 ✅ PASS: Memory cleanup working correctly
 ✅ PASS: Single zombie cooldown working correctly

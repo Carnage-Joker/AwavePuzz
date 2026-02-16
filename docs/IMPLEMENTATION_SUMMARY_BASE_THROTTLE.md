@@ -101,7 +101,7 @@ loadstring(game:GetService("ServerScriptService"):WaitForChild("tests"):WaitForC
 2. Spawn 10 zombies near base
 3. Let zombies reach base
 4. Monitor base health in UI
-5. Verify destruction takes 30-90 seconds (not < 10 seconds)
+5. Verify destruction takes 15-30 seconds (not < 10 seconds)
 
 ## Performance & Memory
 
