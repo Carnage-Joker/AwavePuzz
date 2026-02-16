@@ -560,9 +560,12 @@ local function initialize()
 	
 	-- Fire initial state for late subscribers (camera may initialize after movement)
 	-- Use task.defer to ensure bindables are fully set up and camera has subscribed
+	-- Capture current state to avoid race conditions
+	local currentSprint = isSprinting
+	local currentCrouch = isCrouching
 	task.defer(function()
-		sprintStateEvent:Fire(isSprinting)
-		crouchStateEvent:Fire(isCrouching)
+		sprintStateEvent:Fire(currentSprint)
+		crouchStateEvent:Fire(currentCrouch)
 	end)
 
 	-- Stamina event for PlayerHUD.client
