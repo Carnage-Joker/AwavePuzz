@@ -470,7 +470,9 @@ end
 
 function GameManager:broadcastMap()
 	if self.remoteEvents.MapUpdate then
-		self.remoteEvents.MapUpdate:FireAllClients({ map = self.mapManager:getCurrentMapId() })
+		-- Only send to match players if in a match, otherwise send to all
+		local matchOnly = self._currentMatchId ~= nil
+		self:broadcastEvent(self.remoteEvents.MapUpdate, { map = self.mapManager:getCurrentMapId() }, matchOnly)
 	end
 end
 
@@ -782,6 +784,52 @@ function GameManager:setState(newState, payload)
 	print(string.format("[GameManager] State changed to %s", newState))
 end
 
+-- Helper method to broadcast events to match players or appropriate audience
+-- @param remoteEvent - The remote event to fire
+-- @param data - The data to send
+-- @param matchOnly - If true, only send to current match players; if false, only send to non-match players; if nil, send to all
+function GameManager:broadcastEvent(remoteEvent, data, matchOnly)
+	if not remoteEvent then return end
+	
+	if matchOnly == nil then
+		-- Send to all players
+		remoteEvent:FireAllClients(data)
+		return
+	end
+	
+	local matchRegistry = self:getMatchRegistry()
+	local matchPlayers = {}
+	
+	if matchOnly and self._currentMatchId and matchRegistry then
+		-- Get match players
+		matchPlayers = matchRegistry:getMatchPlayers(self._currentMatchId) or {}
+		-- Broadcast to match players only
+		for _, player in ipairs(matchPlayers) do
+			if player and player.Parent then
+				remoteEvent:FireClient(player, data)
+			end
+		end
+	elseif not matchOnly then
+		-- Broadcast to non-match players only
+		local matchPlayerIds = {}
+		if self._currentMatchId and matchRegistry then
+			local matchPlayersList = matchRegistry:getMatchPlayers(self._currentMatchId) or {}
+			for _, player in ipairs(matchPlayersList) do
+				if player and player.UserId then
+					matchPlayerIds[player.UserId] = true
+				end
+			end
+		end
+		
+		-- Send to all players not in the match
+		for _, player in ipairs(Players:GetPlayers()) do
+			if player and player.Parent and not matchPlayerIds[player.UserId] then
+				remoteEvent:FireClient(player, data)
+			end
+		end
+	end
+end
+
 
 -- ✅ NEW: Determine player's effective state based on their context
 -- Returns the state that should be sent to a specific player
@@ -922,7 +970,7 @@ function GameManager:showVictoryCredits(alivePlayers)
 	end
 
 	if self.remoteEvents.ShowCredits then
-		self.remoteEvents.ShowCredits:FireAllClients(survivorData)
+		self:broadcastEvent(self.remoteEvents.ShowCredits, survivorData, true) -- Match only
 		print("[GameManager] Victory credits shown with", #survivorData, "survivors")
 	end
 end
@@ -1170,11 +1218,11 @@ function GameManager:startWave()
 	self.waveTimeRemaining = waveData.TimeLimit
 
 	if self.remoteEvents.WaveAnnounce then
-		self.remoteEvents.WaveAnnounce:FireAllClients({
+		self:broadcastEvent(self.remoteEvents.WaveAnnounce, {
 			waveNumber = self.currentWave,
 			timeLimit = waveData.TimeLimit,
 			zombieCount = waveData.ZombieCount
-		})
+		}, true) -- Match only
 	end
 
 	if #self.spawner.allSpawnPoints == 0 then
@@ -1248,7 +1296,7 @@ function GameManager:updateCureProgress(progress)
 	self.cureProgress = math.min(100, progress)
 
 	if self.remoteEvents.CureUpdate then
-		self.remoteEvents.CureUpdate:FireAllClients(self.cureProgress)
+		self:broadcastEvent(self.remoteEvents.CureUpdate, self.cureProgress, true) -- Match only
 	end
 
 	if self.cureProgress >= 100 then
@@ -1367,10 +1415,10 @@ end
 
 function GameManager:showEndOfRoundScoreboard()
 	if self.remoteEvents.ShowScoreboard then
-		self.remoteEvents.ShowScoreboard:FireAllClients({
+		self:broadcastEvent(self.remoteEvents.ShowScoreboard, {
 			duration = GameConfig.SCOREBOARD_DISPLAY_TIME,
 			scores = self:getScoreboardData()
-		})
+		}, true) -- Match only
 	end
 end
 
@@ -1468,10 +1516,10 @@ function GameManager:updateWave(deltaTime)
 	if sec >= 0 and (sec % 5 == 0) and (self._lastWaveBroadcastSec ~= sec) then
 		self._lastWaveBroadcastSec = sec
 		if self.remoteEvents.WaveUpdate then
-			self.remoteEvents.WaveUpdate:FireAllClients({
+			self:broadcastEvent(self.remoteEvents.WaveUpdate, {
 				timeRemaining = sec,
 				zombiesAlive = self.spawner:getActiveZombieCount()
-			})
+			}, true) -- Match only
 		end
 	end
 
