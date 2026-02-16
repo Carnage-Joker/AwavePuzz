@@ -34,6 +34,7 @@ GameConfig.STAMINA_UPDATE_THRESHOLD = 0.5 -- Minimum stamina change to trigger n
 GameConfig.BASE_HEALTH = 1000
 GameConfig.BASE_REGEN_RATE = 0 -- No regeneration by default
 GameConfig.AUTO_CREATE_BASE_CAMP = true -- Automatically create base camp in map center
+GameConfig.BASE_DAMAGE_COOLDOWN = 2.0 -- Seconds between base damage attacks from same zombie (throttling)
 
 -- Development Settings
 -- WARNING: These should only be true in Studio during development

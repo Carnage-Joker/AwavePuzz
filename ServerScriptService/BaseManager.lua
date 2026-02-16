@@ -65,6 +65,11 @@ function BaseManager.new()
 	self.maxHealth = math.max(0, baseHealth)
 	self.health = self.maxHealth
 	self._destroyed = false
+	
+	-- Per-attacker cooldown tracking (prevents instant melt from multiple zombies)
+	-- Maps attacker identifier (string) -> last damage timestamp (tick())
+	self._attackerCooldowns = {}
+	self._baseDamageCooldown = tonumber(GameConfig.BASE_DAMAGE_COOLDOWN) or 2.0
 
 	return self
 end
@@ -110,11 +115,24 @@ function BaseManager:damageBase(damage, source)
 	if damage <= 0 then
 		return false
 	end
-
-	self.health = math.max(0, self.health - damage)
 	
-	-- Security: Log base damage events with source tracking
+	-- Per-attacker cooldown check (prevent instant melt from multiple zombies)
 	local sourceStr = source and tostring(source) or "Unknown"
+	local currentTime = tick()
+	
+	if self._attackerCooldowns[sourceStr] then
+		local timeSinceLastAttack = currentTime - self._attackerCooldowns[sourceStr]
+		if timeSinceLastAttack < self._baseDamageCooldown then
+			-- Still on cooldown, reject damage
+			return false
+		end
+	end
+	
+	-- Apply damage and record attack time
+	self.health = math.max(0, self.health - damage)
+	self._attackerCooldowns[sourceStr] = currentTime
+	
+	-- Log base damage events with source tracking
 	print(string.format("[BaseManager] DAMAGE: Base took %.1f damage from %s (Health: %.1f/%.1f)", 
 		damage, sourceStr, self.health, self.maxHealth))
 	
@@ -182,6 +200,24 @@ function BaseManager:takeDamage(damage, source)
 	return self:damageBase(damage, source)
 end
 
+-- Clean up cooldown entry for a specific attacker (e.g., when zombie dies/despawns)
+-- @param attackerName - The identifier used in damageBase source parameter
+function BaseManager:removeAttackerCooldown(attackerName)
+	if attackerName then
+		local key = tostring(attackerName)
+		if self._attackerCooldowns[key] then
+			self._attackerCooldowns[key] = nil
+			-- Optional: log cleanup for debugging
+			-- print(string.format("[BaseManager] Cleaned up cooldown for attacker: %s", key))
+		end
+	end
+end
+
+-- Clear all attacker cooldowns (useful for testing/reset)
+function BaseManager:clearAttackerCooldowns()
+	self._attackerCooldowns = {}
+end
+
 -- Compatibility shim: isDestroyed() method for test API
 -- Direct access to _destroyed flag (optimized, no extra indirection)
 function BaseManager:isDestroyed()
@@ -203,10 +239,12 @@ function BaseManager:reset(opts)
 		local GameConfig = getGameConfig()
 		local baseHealth = tonumber(GameConfig.BASE_HEALTH) or self.maxHealth
 		self.maxHealth = math.max(0, baseHealth)
+		self._baseDamageCooldown = tonumber(GameConfig.BASE_DAMAGE_COOLDOWN) or 2.0
 	end
 
 	self.health = self.maxHealth
 	self._destroyed = false
+	self:clearAttackerCooldowns() -- Clear cooldowns on reset
 	self:broadcastHealthUpdate()
 end
 
