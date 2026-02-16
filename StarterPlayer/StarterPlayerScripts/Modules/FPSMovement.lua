@@ -92,6 +92,11 @@ local lerp = MathUtil.lerp
 local clamp = MathUtil.clamp
 
 -- Helper: Check if gameplay input should be blocked by modal state
+-- NOTE: This function is called frequently (every frame, multiple times per input)
+-- but is intentionally kept simple for performance:
+-- - _enabled is a local boolean (instant check)
+-- - ModalManager.shouldBlockGameplay() iterates a small stack (typically 0-2 items)
+-- - No need for caching as the check is already O(1) amortized
 local function shouldBlockGameplay()
 	-- Block gameplay when MODAL or FULLSCREEN priority modals are active
 	-- PANEL priority (like Scoreboard) allows gameplay to continue
@@ -215,6 +220,15 @@ local function updateCrouch(deltaTime)
 	-- Notify server of crouch state change
 	if wasCrouching ~= isCrouching then
 		crouchEvent:FireServer(isCrouching)
+		
+		-- Broadcast crouch state change via bindable (for camera sync)
+		local bindableFolder = player.PlayerGui:FindFirstChild("BindableEvents")
+		if bindableFolder then
+			local crouchBindable = bindableFolder:FindFirstChild("CrouchStateChanged")
+			if crouchBindable then
+				crouchBindable:Fire(isCrouching)
+			end
+		end
 	end
 end
 
@@ -520,6 +534,14 @@ local function initialize()
 		sprintStateEvent = Instance.new("BindableEvent")
 		sprintStateEvent.Name = "SprintStateChanged"
 		sprintStateEvent.Parent = bindableFolder
+	end
+	
+	-- Crouch state event (for camera sync)
+	local crouchStateEvent = bindableFolder:FindFirstChild("CrouchStateChanged")
+	if not crouchStateEvent then
+		crouchStateEvent = Instance.new("BindableEvent")
+		crouchStateEvent.Name = "CrouchStateChanged"
+		crouchStateEvent.Parent = bindableFolder
 	end
 
 	-- Stamina event for PlayerHUD.client

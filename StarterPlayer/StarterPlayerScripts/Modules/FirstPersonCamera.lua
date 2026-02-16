@@ -502,6 +502,13 @@ function FirstPersonCamera.initialize()
 					isSprinting = sprinting
 				end))
 			end
+			
+			local crouchEvent = bindableFolder:WaitForChild("CrouchStateChanged", 2)
+			if crouchEvent and crouchEvent:IsA("BindableEvent") then
+				bindConn(globalConnections, crouchEvent.Event:Connect(function(crouching)
+					isCrouching = crouching
+				end))
+			end
 		end
 	end)
 
