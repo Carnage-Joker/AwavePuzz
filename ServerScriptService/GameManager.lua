@@ -809,6 +809,10 @@ function GameManager:broadcastEvent(remoteEvent, data, matchOnly)
 	if matchOnly then
 		-- When portal matchmaking is disabled or no active match, fall back to FireAllClients
 		if not self._currentMatchId or not matchRegistry then
+			if GameConfig and GameConfig.DEBUG then
+				local reason = not matchRegistry and "portal matchmaking disabled" or "no active match"
+				print(string.format("[GameManager] broadcastEvent: falling back to FireAllClients (%s)", reason))
+			end
 			remoteEvent:FireAllClients(data)
 			return
 		end
