@@ -337,7 +337,7 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		return 
 	end
 
-RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {
+	RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {
 		weaponId = weaponId,
 		current = ammo.current,
 		reserve = ammo.reserve,
