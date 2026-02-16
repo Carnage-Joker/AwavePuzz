@@ -20,21 +20,9 @@ local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 
--- Wait for camera module (will be available after initialization)
-local FirstPersonCamera = nil
-task.spawn(function()
-	-- Try to get the camera module from _G or wait for it
-	task.wait(0.5)
-	local success, cam = pcall(function()
-		return require(player.PlayerScripts:WaitForChild("FirstPersonCamera.client", 5))
-	end)
-	if success then
-		FirstPersonCamera = cam
-	else
-		-- Camera module runs as a separate script, communicate via events
-		FirstPersonCamera = nil
-	end
-end)
+-- NOTE: Camera module is managed separately by ClientMainModule
+-- Camera-movement synchronization happens via bindable events and state setters
+-- See: FirstPersonCamera.setSprinting(), FirstPersonCamera.setCrouching(), etc.
 
 --------------------------------------------------------------------------------
 -- REMOTE EVENTS
@@ -457,8 +445,9 @@ function FPSMovementController.getStamina()
 end
 
 function FPSMovementController.setADSActive(active)
-	-- Called by weapon controller to reduce speed during ADS
-	-- Speed adjustment happens in calculateMoveSpeed
+	-- NOTE: ADS speed adjustment is handled by the weapon controller
+	-- which directly modifies Humanoid.WalkSpeed when ADS state changes.
+	-- This method is kept for API compatibility but is currently unused.
 end
 
 -- Enable or disable movement (used by state manager)
@@ -496,11 +485,6 @@ end
 --------------------------------------------------------------------------------
 -- INITIALIZATION
 --------------------------------------------------------------------------------
-
--- Store input connections for cleanup
-local inputBeganConnection = nil
-local inputEndedConnection = nil
-local heartbeatConnection = nil
 
 local function initialize()
 	-- Setup InputManager callbacks
@@ -566,38 +550,17 @@ function FPSMovementController.initialize()
 	initialize()
 end
 
-function FPSMovementController.onCharacterAdded(character)
-	onCharacterAdded(character)
-	
-	-- BUG-015: Reconnect input handlers on respawn
-	if not inputBeganConnection or not inputBeganConnection.Connected then
-		inputBeganConnection = UserInputService.InputBegan:Connect(onInputBegan)
-	end
-	if not inputEndedConnection or not inputEndedConnection.Connected then
-		inputEndedConnection = UserInputService.InputEnded:Connect(onInputEnded)
-	end
-	if not heartbeatConnection or not heartbeatConnection.Connected then
-		heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
-			updateMovement(deltaTime)
-		end)
-	end
-end
-
-function FPSMovementController.onCharacterRemoving()
-	-- BUG-015: Cleanup input connections to prevent memory leaks
-	if inputBeganConnection then
-		inputBeganConnection:Disconnect()
-		inputBeganConnection = nil
-	end
-	if inputEndedConnection then
-		inputEndedConnection:Disconnect()
-		inputEndedConnection = nil
-	end
-	if heartbeatConnection then
-		heartbeatConnection:Disconnect()
-		heartbeatConnection = nil
-	end
-end
+-- NOTE: Character lifecycle methods onCharacterAdded/onCharacterRemoving
+-- are intentionally NOT implemented here. Character events are handled
+-- by ClientMainModule which calls initialize() once at boot.
+-- All input connections persist across respawns since they're bound to
+-- the LocalPlayer, not the character. This avoids connection leaks and
+-- simplifies the lifecycle management.
+--
+-- If character-specific setup is needed in the future:
+-- 1. Implement onCharacterAdded(character) to reset character-specific state
+-- 2. Wire it in ClientMainModule's character event handler
+-- 3. Do NOT create new input connections - reuse existing ones
 
 function FPSMovementController.cleanup()
 	-- Disconnect all tracked connections

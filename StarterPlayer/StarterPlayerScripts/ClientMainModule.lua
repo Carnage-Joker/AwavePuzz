@@ -647,6 +647,9 @@ local function bootClient()
 			Camera.onCharacterAdded(character)
 		end
 		
+		-- NOTE: Movement module does not implement onCharacterAdded
+		-- Movement connections persist across respawns (bound to LocalPlayer)
+		-- This prevents connection leaks and simplifies lifecycle management
 		if Movement and Movement.onCharacterAdded then
 			Movement.onCharacterAdded(character)
 		end

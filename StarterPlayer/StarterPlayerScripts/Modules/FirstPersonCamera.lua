@@ -26,6 +26,7 @@ local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
 local MathUtil = require(SharedFolder:WaitForChild("MathUtil"))
 local InputManager = require(SharedFolder:WaitForChild("InputManager"))
+local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 
 local clamp = MathUtil.clamp
 local lerp = MathUtil.lerp
@@ -219,7 +220,8 @@ end
 --------------------------------------------------------------------------------
 
 local function getLookDelta(dt: number): Vector2
-	if isMenuOpen then
+	-- Block camera input when menus are open or modal is active
+	if isMenuOpen or ModalManager.shouldBlockGameplay() then
 		return Vector2.zero
 	end
 
@@ -487,6 +489,21 @@ function FirstPersonCamera.initialize()
 			end
 		end))
 	end
+	
+	-- Listen for sprint state changes from movement controller
+	-- This synchronizes FOV changes with sprint state
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	task.spawn(function()
+		local bindableFolder = playerGui:WaitForChild("BindableEvents", 5)
+		if bindableFolder then
+			local sprintEvent = bindableFolder:WaitForChild("SprintStateChanged", 2)
+			if sprintEvent and sprintEvent:IsA("BindableEvent") then
+				bindConn(globalConnections, sprintEvent.Event:Connect(function(sprinting)
+					isSprinting = sprinting
+				end))
+			end
+		end
+	end)
 
 	-- Setup existing character
 	if player.Character then
