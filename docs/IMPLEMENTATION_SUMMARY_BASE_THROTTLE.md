@@ -86,7 +86,7 @@ Location: `tests/base_damage_throttle_test.lua`
 
 **4 Tests:**
 1. Without Throttle - Shows expected instant melt behavior
-2. With Throttle - Verifies cooldown enforcement and time-to-destruction (30-90s)
+2. With Throttle - Verifies cooldown enforcement and time-to-destruction (~20s, generally within 10-30s)
 3. Memory Cleanup - Confirms zombie cleanup removes cooldown entries
 4. Single Zombie - Validates per-zombie cooldown works
 
