@@ -114,8 +114,11 @@ GameConfig.Security = {
 
 ### Automated Tests
 ```lua
-local test = require(game.ServerScriptService.Tests.weapon_origin_reconstruction_test)
-test.runAll()
+-- Module location in repo:
+--   tests/weapon_origin_reconstruction_test.lua
+--
+-- Expected location in Studio (if copying tests into the data model):
+--   ServerScriptService/Tests/weapon_origin_reconstruction_test
 ```
 **Expected**: 7 PASSED, 0 FAILED
 
