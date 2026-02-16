@@ -82,7 +82,7 @@ Time = (1000 / (10 × 10)) × 2.0 = (1000 / 100) × 2.0 = 20 seconds
 - `BASE_DAMAGE_COOLDOWN = 3.0`
 - Reduces pressure, gives more time to clear zombies
 
-**Normal Mode** (30-60s destruction time):
+**Normal Mode** (15-30s destruction time; ~20s with defaults from formula above):
 - `BASE_DAMAGE_COOLDOWN = 2.0` (default)
 - Balanced pressure and player response time
 
