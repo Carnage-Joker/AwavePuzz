@@ -6,20 +6,16 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Ensure RemoteEvents folder exists
-local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
+-- Wait for RemoteEvents folder (created by RemoteRegistry during server boot)
+local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
 if not remoteEvents then
-	remoteEvents = Instance.new("Folder")
-	remoteEvents.Name = "RemoteEvents"
-	remoteEvents.Parent = ReplicatedStorage
+	error("[ClientReady] CRITICAL: RemoteEvents folder not found after 10 seconds")
 end
 
--- Ensure ClientReady event exists
-local evt = remoteEvents:FindFirstChild("ClientReady")
+-- Get ClientReady event from RemoteRegistry
+local evt = remoteEvents:WaitForChild("ClientReady", 5)
 if not evt then
-	evt = Instance.new("RemoteEvent")
-	evt.Name = "ClientReady"
-	evt.Parent = remoteEvents
+	error("[ClientReady] CRITICAL: ClientReady remote not found in RemoteRegistry")
 end
 
 local readyByUserId = {}

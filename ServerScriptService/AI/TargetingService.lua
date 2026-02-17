@@ -156,7 +156,7 @@ function TargetingService:selectBestTarget(zombieModel, zombiePos, waveNumber)
 	local zombieStats = nil
 	local zombieType = zombieModel:GetAttribute("ZombieType")
 	if zombieType then
-		local ZombieTypes = require(game:GetService("ReplicatedStorage").Shared.ZombieTypes)
+		local ZombieTypes = require(ReplicatedStorage.Shared.ZombieTypes)
 		zombieStats = ZombieTypes[zombieType]
 	end
 
