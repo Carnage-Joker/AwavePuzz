@@ -27,6 +27,7 @@ UIScaleManager.initialize()
 -- Connection tracking for cleanup
 local maid = UIConnectionMaid.new()
 local buttonMaid = UIConnectionMaid.new() -- Separate maid for button connections
+local connections = {} -- Track connections that need early setup
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -207,6 +208,7 @@ local function requestPuzzle(componentName)
 		warn("[PuzzleMenuUI] RequestPuzzle remote not available")
 		return
 	end
+	print("[PuzzleMenuUI] Requesting puzzle:", componentName)
 	remotes.RequestPuzzle:FireServer(componentName)
 	menuFrame.Visible = false
 end
@@ -541,7 +543,7 @@ end
 -- Handle respawn - cleanup connections
 maid:Give(player.CharacterRemoving:Connect(cleanup), "characterRemoving")
 
-print("PuzzleMenuUI initialized")
+print("[PuzzleMenuUI] Module loaded")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
