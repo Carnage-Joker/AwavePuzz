@@ -58,7 +58,7 @@ BootTests.runAll()
 require(game.ReplicatedStorage.tests.run_boot_tests)
 ```
 
-**Expected Output:**
+**Expected Output (Server Context):**
 ```
 ============================================================
 BOOT SMOKE TEST SUITE
@@ -67,7 +67,7 @@ Baseline + Safety Nets - Entry Points, Module Loading, Boot
 
 --- Entry Point Tests ---
 ✅ PASS: Server Entry Point Guard - Duplicate execution guard is active
-✅ PASS: Client Entry Point Guard - Client boot guard is active
+⏭️  SKIP: Client Entry Point Guard - Not running on client
 
 --- Module Loading Tests ---
 ✅ PASS: RemoteRegistry Initialization - RemoteRegistry loaded successfully (version 1.0.0)
@@ -82,14 +82,54 @@ Baseline + Safety Nets - Entry Points, Module Loading, Boot
 ✅ PASS: No Duplicate RemoteEvents Folders - Exactly one RemoteEvents folder found
 
 --- Synchronization Tests ---
+⏭️  SKIP: Client-Server Ready Signal - Not running on client
+✅ PASS: Module Timeout Values - GameConfig loaded quickly (0.01s)
+
+============================================================
+BOOT SMOKE TEST RESULTS
+============================================================
+Tests Passed: 10
+Tests Failed: 0
+Tests Skipped: 2
+Total Tests: 12
+
+✅ ALL TESTS PASSED - Boot system is healthy
+============================================================
+```
+
+**Expected Output (Client Context):**
+```
+============================================================
+BOOT SMOKE TEST SUITE
+Baseline + Safety Nets - Entry Points, Module Loading, Boot
+============================================================
+
+--- Entry Point Tests ---
+⏭️  SKIP: Server Entry Point Guard - Not running on server
+✅ PASS: Client Entry Point Guard - Client boot guard is active
+
+--- Module Loading Tests ---
+✅ PASS: RemoteRegistry Initialization - RemoteRegistry loaded successfully (version 1.0.0)
+✅ PASS: RemoteEvents Folder - RemoteEvents folder contains 132 remotes
+✅ PASS: Core Configuration Modules - All 6 core modules present and loadable
+⏭️  SKIP: Service Initialization - Not running on server
+
+--- Boot Configuration Tests ---
+⏭️  SKIP: Character Auto-Load Control - Not running on server
+✅ PASS: Boot Log Format - RemoteRegistry has VERSION for deterministic logging
+⏭️  SKIP: Deprecated Module Detection - Not running on server
+✅ PASS: No Duplicate RemoteEvents Folders - Exactly one RemoteEvents folder found
+
+--- Synchronization Tests ---
 ✅ PASS: Client-Server Ready Signal - TitleScreenUI initialized and stored in shared
 ✅ PASS: Module Timeout Values - GameConfig loaded quickly (0.01s)
 
 ============================================================
 BOOT SMOKE TEST RESULTS
 ============================================================
-Tests Passed: 12
+Tests Passed: 8
 Tests Failed: 0
+Tests Skipped: 4
 Total Tests: 12
 
 ✅ ALL TESTS PASSED - Boot system is healthy

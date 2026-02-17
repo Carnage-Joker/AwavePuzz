@@ -13,6 +13,7 @@ local BootSmokeTests = {}
 
 local TESTS_PASSED = 0
 local TESTS_FAILED = 0
+local TESTS_SKIPPED = 0
 local TEST_RESULTS = {}
 
 local function pass(testName: string, message: string?)
@@ -32,6 +33,13 @@ local function fail(testName: string, message: string)
 	warn(result)
 end
 
+local function skip(testName: string, reason: string)
+	TESTS_SKIPPED += 1
+	local result = string.format("⏭️  SKIP: %s - %s", testName, reason)
+	table.insert(TEST_RESULTS, result)
+	print(result)
+end
+
 local function info(message: string)
 	local result = string.format("ℹ️  INFO: %s", message)
 	table.insert(TEST_RESULTS, result)
@@ -45,7 +53,7 @@ local function testServerEntryPoint()
 	local testName = "Server Entry Point Guard"
 	
 	if not RunService:IsServer() then
-		info("Skipping server test (not running on server)")
+		skip(testName, "Not running on server")
 		return
 	end
 	
@@ -73,7 +81,7 @@ local function testClientEntryPoint()
 	local testName = "Client Entry Point Guard"
 	
 	if not RunService:IsClient() then
-		info("Skipping client test (not running on client)")
+		skip(testName, "Not running on client")
 		return
 	end
 	
@@ -211,7 +219,7 @@ local function testServiceInitialization()
 	local testName = "Service Initialization"
 	
 	if not RunService:IsServer() then
-		info("Skipping service test (not running on server)")
+		skip(testName, "Not running on server")
 		return
 	end
 	
@@ -263,7 +271,7 @@ local function testCharacterAutoLoad()
 	local testName = "Character Auto-Load Control"
 	
 	if not RunService:IsServer() then
-		info("Skipping character auto-load test (not running on server)")
+		skip(testName, "Not running on server")
 		return
 	end
 	
@@ -313,7 +321,7 @@ local function testDeprecatedModules()
 	local testName = "Deprecated Module Detection"
 	
 	if not RunService:IsServer() then
-		info("Skipping deprecated module check (not running on server)")
+		skip(testName, "Not running on server")
 		return
 	end
 	
@@ -322,7 +330,15 @@ local function testDeprecatedModules()
 	
 	if remoteBootstrap then
 		-- Check if it's been loaded (has initialized attribute)
-		local bootstrapModule = require(remoteBootstrap)
+		local success, bootstrapModule = pcall(function()
+			return require(remoteBootstrap)
+		end)
+		
+		if not success then
+			fail(testName, "Failed to require RemoteEventsBootstrap: " .. tostring(bootstrapModule))
+			return
+		end
+		
 		if bootstrapModule and bootstrapModule.initialized then
 			info("RemoteEventsBootstrap is present (deprecated, but backward compatible)")
 		end
@@ -360,7 +376,7 @@ local function testClientServerSync()
 	local testName = "Client-Server Ready Signal"
 	
 	if not RunService:IsClient() then
-		info("Skipping client-server sync test (not running on client)")
+		skip(testName, "Not running on client")
 		return
 	end
 	
@@ -419,6 +435,7 @@ function BootSmokeTests.runAll()
 	
 	TESTS_PASSED = 0
 	TESTS_FAILED = 0
+	TESTS_SKIPPED = 0
 	TEST_RESULTS = {}
 	
 	-- Run all tests
@@ -452,7 +469,8 @@ function BootSmokeTests.runAll()
 	print("============================================================")
 	print(string.format("Tests Passed: %d", TESTS_PASSED))
 	print(string.format("Tests Failed: %d", TESTS_FAILED))
-	print(string.format("Total Tests: %d", TESTS_PASSED + TESTS_FAILED))
+	print(string.format("Tests Skipped: %d", TESTS_SKIPPED))
+	print(string.format("Total Tests: %d", TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED))
 	print("")
 	
 	if TESTS_FAILED == 0 then
@@ -466,6 +484,7 @@ function BootSmokeTests.runAll()
 	return {
 		passed = TESTS_PASSED,
 		failed = TESTS_FAILED,
+		skipped = TESTS_SKIPPED,
 		results = TEST_RESULTS,
 	}
 end
