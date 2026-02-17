@@ -205,10 +205,10 @@ local selectedPuzzleIndex = 1
 -- Helper function to request a puzzle from the server
 local function requestPuzzle(componentName)
 	if not remotes or not remotes.RequestPuzzle then
-		warn("[UI:PuzzleMenuUI] RequestPuzzle remote not available")
+		warn("[PuzzleMenuUI] RequestPuzzle remote not available")
 		return
 	end
-	print("[UI:PuzzleMenuUI] Requesting puzzle:", componentName)
+	print("[PuzzleMenuUI] Requesting puzzle:", componentName)
 	remotes.RequestPuzzle:FireServer(componentName)
 	menuFrame.Visible = false
 end
