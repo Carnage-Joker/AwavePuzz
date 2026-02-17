@@ -613,7 +613,7 @@ AwavePuzz is a feature-complete, well-architected multiplayer zombie survival FP
 **Impact**: MEDIUM (balance issue, not game-breaking)
 
 **Description**: Heartbeat loop fires faster than intended fire rate on full-auto weapons
-**Location**: `FPSWeaponController.lua` lines 327-328
+**Location**: `FPSWeaponController.lua` line 356 (Heartbeat-based fire-rate logic)
 
 **Mitigation**:
 - Server-side rate limiting partially mitigates
