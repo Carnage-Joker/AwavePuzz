@@ -4,6 +4,8 @@
 
 A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, alliance systems, dynamic music, achievements, and an immersive narrative experience with full FPS mechanics!
 
+> **📊 NEW: [Production Readiness Report](PRODUCTION_READINESS_REPORT.md)** - Comprehensive overview of all game features, what's working, what's not, and how to get production-ready (95% complete!)
+
 ## 🎮 Game Overview
 
 **Aether Wave: Convergence** is a cooperative survival FPS where up to 8 players defend a base against increasingly difficult waves of zombies infected by the Aether Virus. Players must work together (or betray each other) to collect cure components and craft a cure before the base is destroyed or all players are eliminated.
