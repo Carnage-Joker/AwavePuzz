@@ -11,6 +11,8 @@ local Players = game:GetService("Players")
 
 local BootSmokeTests = {}
 
+-- Test counters and expected total
+local EXPECTED_TOTAL_TESTS = 12
 local TESTS_PASSED = 0
 local TESTS_FAILED = 0
 local TESTS_SKIPPED = 0
@@ -470,7 +472,16 @@ function BootSmokeTests.runAll()
 	print(string.format("Tests Passed: %d", TESTS_PASSED))
 	print(string.format("Tests Failed: %d", TESTS_FAILED))
 	print(string.format("Tests Skipped: %d", TESTS_SKIPPED))
-	print(string.format("Total Tests: %d", TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED))
+	
+	local actualTotal = TESTS_PASSED + TESTS_FAILED + TESTS_SKIPPED
+	print(string.format("Total Tests: %d", actualTotal))
+	
+	-- Validate test count
+	if actualTotal ~= EXPECTED_TOTAL_TESTS then
+		warn(string.format("⚠️  WARNING: Test count mismatch! Expected %d tests, but counted %d", 
+			EXPECTED_TOTAL_TESTS, actualTotal))
+	end
+	
 	print("")
 	
 	if TESTS_FAILED == 0 then
@@ -485,6 +496,8 @@ function BootSmokeTests.runAll()
 		passed = TESTS_PASSED,
 		failed = TESTS_FAILED,
 		skipped = TESTS_SKIPPED,
+		total = actualTotal,
+		expected = EXPECTED_TOTAL_TESTS,
 		results = TEST_RESULTS,
 	}
 end
