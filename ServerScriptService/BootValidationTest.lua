@@ -61,7 +61,7 @@ end
 print("\n[Test C] Checking CureStations Dev Gating...")
 local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
 if SharedFolder then
-	local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
+	local GameConfig = require(SharedFolder:WaitForChild("GameConfig", 5))
 	local isStudio = RunService:IsStudio()
 	local devFlag = GameConfig.DEV_AUTO_CREATE_CURE_STATIONS
 	
