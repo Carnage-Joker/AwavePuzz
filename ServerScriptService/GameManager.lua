@@ -216,9 +216,6 @@ function GameManager:configureSpawnersForMap()
 	-- Configure ItemSpawner with item spawn points from the map
 	local itemSpawnParts = self.itemSpawner:findItemSpawnPoints()
 	self.itemSpawner:setSpawnPoints(itemSpawnParts)
-	
-	-- Generate intelligent spawn points now that the map is loaded
-	self.spawner:generateSpawnPointsForRound()
 end
 
 function GameManager:setupRemoteEvents()

@@ -123,13 +123,6 @@ function Spawner:loadSpawnPoints()
 end
 
 function Spawner:generateSpawnPointsForRound()
-	-- Guard: Check if ActiveMap exists before generating spawn points
-	local activeMap = workspace:FindFirstChild("ActiveMap")
-	if not activeMap then
-		print("[Spawner] No ActiveMap found, skipping spawn point generation (will retry when map loads)")
-		return
-	end
-	
 	print("[Spawner] Generating intelligent spawn points for new round...")
 
 	self:loadSpawnPoints()
@@ -516,14 +509,6 @@ function Spawner:clearAllZombies()
 end
 
 function Spawner:prepareForNewRound()
-	-- Guard: Check if ActiveMap exists before preparing spawn points
-	local activeMap = workspace:FindFirstChild("ActiveMap")
-	if not activeMap then
-		print("[Spawner] No ActiveMap found, deferring spawn preparation until map loads")
-		self:clearAllZombies()
-		return
-	end
-	
 	print("[Spawner] Preparing for new round...")
 
 	self:clearAllZombies()
