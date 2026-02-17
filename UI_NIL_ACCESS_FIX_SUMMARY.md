@@ -21,17 +21,16 @@ A comprehensive utility module for safe UI reference resolution with:
 - `resolveUIChain()` - Resolves a chain of UI references with validation
 - `resolveElement()` - Helper to resolve a single UI element
 - `validateElement()` - Validates element exists and is correct type
-- `log()` - Consistent [UI:ModuleName] logging
-- `retryUntilSuccess()` - Retry loop for operations that may initially fail
+- `log()` - Consistent logging (note: uses `[UI:ModuleName]` prefix for utility logging)
+- `retryUntilSuccess()` - Retry loop for operations that may initially fail (now accepts truthy values, not just `true`)
 
 This utility provides a reusable pattern for all UI modules to safely access UI elements with proper error handling (warn, don't throw).
 
 ### 2. Fixed PuzzleMenuUI.lua
 **Changes**:
 1. Added `local connections = {}` declaration at line 30
-2. Added `Init()` method for consistency with ClientMainModule's UI initialization pattern
-3. Updated all logging to use `[UI:PuzzleMenuUI]` prefix
-4. Documented that Init() is a placeholder for uniformity (UI elements created at module load)
+2. Updated all logging to use `[PuzzleMenuUI]` prefix (matching other UI modules)
+3. Removed unnecessary `Init()` method (UI elements created at module load)
 
 **Before** (line 118):
 ```lua
@@ -46,20 +45,21 @@ connections.closeButton = closeButton.MouseButton1Click:Connect(function()
 ```
 
 ### 3. Updated ClientMainModule.lua
-**Change**: Added support for calling `Init()` method on UI modules in addition to existing `initialize()` support.
+**Changes**: 
+1. Added support for calling `Init()` method on UI modules in addition to existing `initialize()` support
+2. Added warning when both `initialize()` and `Init()` exist to prevent silent configuration errors
 
 ```lua
--- Call initialize if it exists
-if typeof(result) == "table" and result.initialize then
-    local initSuccess, initErr = pcall(result.initialize)
-    ...
--- Call Init if it exists (new pattern for UI modules)
-elseif typeof(result) == "table" and result.Init then
-    local initSuccess, initErr = pcall(result.Init)
-    ...
+-- Check for both initialization methods (potential configuration error)
+local hasInitialize = typeof(result) == "table" and result.initialize
+local hasInit = typeof(result) == "table" and result.Init
+
+if hasInitialize and hasInit then
+    warn(string.format("[BOOT][CLIENT] ⚠️  UI module %s has both initialize() and Init() methods. Only initialize() will be called.", moduleName))
+end
 ```
 
-This allows UI modules to use either naming convention for initialization.
+This allows UI modules to use either naming convention for initialization while warning about potential mistakes.
 
 ### 4. Created Test Suite
 **File**: `tests/ui_nil_access_test.lua`
@@ -67,9 +67,13 @@ This allows UI modules to use either naming convention for initialization.
 A comprehensive test that verifies:
 1. UIResolveRefs utility loads correctly and has all expected methods
 2. PuzzleMenuUI module loads without nil access errors
-3. PuzzleMenuUI.Init() can be called successfully
-4. PuzzleMenuUI ScreenGui is created in PlayerGui
-5. PuzzleUI module also loads correctly (verification)
+3. PuzzleMenuUI ScreenGui is created in PlayerGui
+4. PuzzleUI module also loads correctly (verification)
+
+**Configurable Timeouts**: Added constants at the top of the test file to make timeouts adjustable for different environments:
+- `WAIT_FOR_CHILD_TIMEOUT = 5` (seconds)
+- `UI_CREATION_DELAY = 0.5` (seconds)
+- `PLAYER_GUI_TIMEOUT = 2` (seconds)
 
 ## Verification
 
@@ -190,13 +194,19 @@ local function cleanup()
 end
 ```
 
+**Logging Pattern**: Use `[ModuleName]` without "UI:" prefix to match the established convention:
+```lua
+print("[MyUI] Initializing...")
+warn("[MyUI] Warning message")
+```
+
 ### Using UIResolveRefs
 For UI modules that need deferred initialization:
 
 ```lua
 local UIResolveRefs = require(ReplicatedStorage.Shared.UI.UIResolveRefs)
 
-function MyUI.Init()
+function MyUI.initialize()  -- or Init()
     UIResolveRefs.log("MyUI", "Initializing...")
     
     -- Safe UI element resolution
@@ -218,6 +228,8 @@ function MyUI.Init()
     UIResolveRefs.log("MyUI", "Initialization complete")
 end
 ```
+
+**Note**: The UIResolveRefs utility itself uses `[UI:ModuleName]` prefix for its internal logging to distinguish utility messages from module-specific logging.
 
 ## Conclusion
 

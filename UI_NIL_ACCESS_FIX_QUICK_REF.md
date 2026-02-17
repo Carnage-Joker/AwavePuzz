@@ -4,6 +4,7 @@
 - **Bug**: PuzzleMenuUI.lua line 118 had `connections.closeButton = ...` but `connections` was never declared
 - **Error**: "attempt to index nil" when clicking the close button
 - **Solution**: Added `local connections = {}` declaration at line 30
+- **Additional**: Removed unnecessary `Init()` method, fixed logging pattern to match codebase convention
 
 ## 📦 What Was Added
 
@@ -70,12 +71,16 @@ end
 
 ### Using Init() Method
 ```lua
-function MyUI.Init()
-    print("[UI:MyUI] Initializing...")
+-- Note: Only add Init() if you need deferred initialization
+-- PuzzleMenuUI doesn't have Init() because UI is created at module load
+function MyUI.initialize()  -- or Init() if needed
+    print("[MyUI] Initializing...")
     -- Deferred initialization logic here
-    print("[UI:MyUI] Initialization complete")
+    print("[MyUI] Initialization complete")
 end
 ```
+
+**Important**: If both `initialize()` and `Init()` exist, ClientMainModule will warn and only call `initialize()`.
 
 ## 📊 Changes Summary
 - 5 files changed
@@ -90,11 +95,13 @@ end
 3. Expected: All tests pass ✅
 
 ## 📝 Logging Pattern
-All UI modules should use:
+All UI modules should use `[ModuleName]` without "UI:" prefix:
 ```lua
-print("[UI:ModuleName] Message")
-warn("[UI:ModuleName] Warning message")
+print("[ModuleName] Message")
+warn("[ModuleName] Warning message")
 ```
+
+**Note**: The UIResolveRefs utility itself uses `[UI:ModuleName]` prefix to distinguish its internal logging.
 
 ## 🚀 Ready to Merge
 - [x] Bug fixed
