@@ -12,6 +12,7 @@ local Players = game:GetService("Players")
 local BootSmokeTests = {}
 
 -- Test counters and expected total
+-- NOTE: Update EXPECTED_TOTAL_TESTS when adding or removing tests
 local EXPECTED_TOTAL_TESTS = 12
 local TESTS_PASSED = 0
 local TESTS_FAILED = 0
@@ -332,9 +333,7 @@ local function testDeprecatedModules()
 	
 	if remoteBootstrap then
 		-- Check if it's been loaded (has initialized attribute)
-		local success, bootstrapModule = pcall(function()
-			return require(remoteBootstrap)
-		end)
+		local success, bootstrapModule = pcall(require, remoteBootstrap)
 		
 		if not success then
 			fail(testName, "Failed to require RemoteEventsBootstrap: " .. tostring(bootstrapModule))
