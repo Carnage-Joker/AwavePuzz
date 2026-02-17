@@ -651,7 +651,7 @@ AwavePuzz is a feature-complete, well-architected multiplayer zombie survival FP
 **Impact**: LOW (10-50ms window)
 
 **Description**: Alliance severed before locks applied; narrow friendly fire bypass window
-**Location**: `BetrayalService.lua` line 136
+**Location**: `BetrayalService.lua` lines 169-173
 
 **Mitigation**:
 - Window is ~10-50ms
