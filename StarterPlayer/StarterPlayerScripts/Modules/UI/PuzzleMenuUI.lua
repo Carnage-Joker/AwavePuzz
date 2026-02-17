@@ -550,11 +550,12 @@ local PuzzleMenuUI = {}
 
 -- Init function to be called by ClientMainModule after require
 -- This ensures all UI elements are properly initialized
+-- Note: For PuzzleMenuUI, UI elements are created at module top-level during require,
+-- so this Init() is a placeholder for consistency with other UI modules that may need
+-- deferred initialization. This allows ClientMainModule to call Init() uniformly
+-- on all UI modules without needing to know which ones require it.
 function PuzzleMenuUI.Init()
-	print("[UI:PuzzleMenuUI] Initializing...")
-	-- UI elements are created at module top-level, so nothing extra needed here
-	-- This is a placeholder for consistency with other UI modules
-	print("[UI:PuzzleMenuUI] Initialization complete")
+	print("[UI:PuzzleMenuUI] Init() called - UI elements already created at module load")
 end
 
 PuzzleMenuUI.bindRemotes = bindRemotes

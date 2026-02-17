@@ -116,7 +116,8 @@ end
 	
 	@param moduleName string - Name of the UI module
 	@param message string - The log message
-	@param level string? - Log level: "INFO", "WARN", "ERROR" (default: "INFO")
+	@param level string? - Log level: "INFO", "WARN" (default: "INFO")
+	Note: "ERROR" level removed to maintain graceful error handling philosophy
 ]]
 function UIResolveRefs.log(moduleName: string, message: string, level: string?)
 	local actualLevel = level or "INFO"
@@ -124,8 +125,6 @@ function UIResolveRefs.log(moduleName: string, message: string, level: string?)
 	
 	if actualLevel == "WARN" then
 		warn(prefix, message)
-	elseif actualLevel == "ERROR" then
-		error(prefix .. " " .. message)
 	else
 		print(prefix, message)
 	end

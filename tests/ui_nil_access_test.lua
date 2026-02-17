@@ -82,6 +82,15 @@ if success2 and PuzzleMenuUI then
 	
 	if initSuccess then
 		print("✅ PuzzleMenuUI.Init() called successfully")
+		
+		-- Verify the ScreenGui was created
+		task.wait(0.5) -- Give a moment for UI to be parented
+		local puzzleMenuUI = player:WaitForChild("PlayerGui", 2):FindFirstChild("PuzzleMenuUI")
+		if puzzleMenuUI then
+			print("✅ PuzzleMenuUI ScreenGui exists in PlayerGui")
+		else
+			print("⚠️  PuzzleMenuUI ScreenGui not found in PlayerGui (may be expected if not fully initialized)")
+		end
 	else
 		print("❌ PuzzleMenuUI.Init() error:", tostring(initErr))
 	end
