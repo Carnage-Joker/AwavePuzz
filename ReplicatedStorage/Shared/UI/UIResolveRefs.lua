@@ -135,19 +135,19 @@ end
 	Useful for UI elements that depend on game state or remote data
 	
 	@param moduleName string - Name of the UI module for logging
-	@param fn () -> boolean - Function to retry; should return true on success
+	@param fn () -> any - Function to retry; should return a truthy value on success
 	@param maxRetries number? - Maximum number of retry attempts (default: 100)
 	@param retryDelay number? - Delay between retries in seconds (default: 0.1)
 	@return boolean - True if function succeeded, false if all retries failed
 ]]
-function UIResolveRefs.retryUntilSuccess(moduleName: string, fn: () -> boolean, maxRetries: number?, retryDelay: number?): boolean
+function UIResolveRefs.retryUntilSuccess(moduleName: string, fn: () -> any, maxRetries: number?, retryDelay: number?): boolean
 	local actualMaxRetries = maxRetries or DEFAULT_MAX_RETRIES
 	local actualRetryDelay = retryDelay or DEFAULT_RETRY_DELAY
 	local retries = 0
 	
 	while retries < actualMaxRetries do
 		local success, result = pcall(fn)
-		if success and result == true then
+		if success and result then
 			return true
 		end
 		
