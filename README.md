@@ -446,6 +446,8 @@ This game is built using:
 - **[GAME_DESIGN.md](GAME_DESIGN.md)** - Game design document and mechanics
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for the restructured repository
 - **[SECURITY.md](SECURITY.md)** - 🆕 Security measures and anti-exploit documentation
+- **[BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md)** - 🆕 Boot system safety, entry points, and testing
+- **[BOOT_SAFETY_QUICK_REFERENCE.md](BOOT_SAFETY_QUICK_REFERENCE.md)** - 🆕 Quick reference for boot system changes
 - **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - 🆕 Production deployment checklist
 
 #### Technical References
@@ -473,6 +475,9 @@ This game is built using:
 - **[ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md)** - Quick reference for animation configuration
 
 #### Testing Guides
+- **[tests/README.md](tests/README.md)** - 🆕 Complete test suite documentation (boot, security, leaks, race conditions)
+- **[tests/boot_smoke_tests.lua](tests/boot_smoke_tests.lua)** - 🆕 Boot system validation tests (12 tests)
+- **[tests/security_validation_tests.lua](tests/security_validation_tests.lua)** - Security configuration tests (11 tests)
 - **[docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)** - Alliance system testing
 - **[docs/testing/TESTING_MAP_AND_LOBBY.md](docs/testing/TESTING_MAP_AND_LOBBY.md)** - Map and lobby testing
 
