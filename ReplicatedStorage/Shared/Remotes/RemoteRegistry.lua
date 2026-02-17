@@ -169,25 +169,22 @@ local function ensureRemote(folder: Folder, name: string, remoteType: "Event" | 
 	local expectedClass = (remoteType == "Event") and "RemoteEvent" or "RemoteFunction"
 
 	if existing then
-		-- Type narrowing: check if it's the correct type
 		if remoteType == "Event" and existing:IsA("RemoteEvent") then
 			return existing :: RemoteEvent
 		elseif remoteType == "Function" and existing:IsA("RemoteFunction") then
 			return existing :: RemoteFunction
 		end
-		
-		-- Wrong type - recreate
+
 		warn(string.format(
 			"%s '%s' exists but is wrong type (%s, expected %s). Recreating.",
 			LOG_PREFIX,
 			name,
 			existing.ClassName,
 			expectedClass
-			))
+		))
 		existing:Destroy()
 	end
 
-	-- Create new remote with proper typing
 	if remoteType == "Event" then
 		local remote = Instance.new("RemoteEvent")
 		remote.Name = name
@@ -254,12 +251,12 @@ function RemoteRegistry.initializeServer(): RemoteMap
 		existed,
 		unexpected,
 		#REMOTE_DEFINITIONS
-		))
+	))
 
 	return remotes
 end
 
-function RemoteRegistry.initializeClient(timeout: number?): RemoteMap?
+function RemoteRegistry.initializeClient(timeout: number?): RemoteMap
 	if not RunService:IsClient() then
 		error(string.format("%s initializeClient() must only be called from the client", LOG_PREFIX))
 	end
@@ -309,7 +306,7 @@ function RemoteRegistry.initializeClient(timeout: number?): RemoteMap?
 			LOG_PREFIX,
 			actualTimeout,
 			table.concat(missing, ", ")
-			))
+		))
 	end
 
 	print(string.format("%s [BOOT][CLIENT] Registry initialized: %d remotes ready", LOG_PREFIX, #REMOTE_DEFINITIONS))
@@ -328,7 +325,6 @@ function RemoteRegistry.getRemote(name: string): RemoteEvent | RemoteFunction
 		error(string.format("%s Remote '%s' not found. Is it defined in RemoteRegistry?", LOG_PREFIX, name))
 	end
 
-	-- Type narrowing with proper checks
 	if remoteInst:IsA("RemoteEvent") then
 		return remoteInst :: RemoteEvent
 	elseif remoteInst:IsA("RemoteFunction") then
@@ -344,6 +340,18 @@ function RemoteRegistry.getAllRemoteNames(): { string }
 		table.insert(names, def.Name)
 	end
 	return names
+end
+
+-- ------------------------------------------------------------------
+-- Compatibility helpers (so client code can just do RemoteRegistry.GetClientRemotes())
+-- ------------------------------------------------------------------
+
+function RemoteRegistry.GetClientRemotes(timeout: number?): RemoteMap
+	return RemoteRegistry.initializeClient(timeout)
+end
+
+function RemoteRegistry.GetServerRemotes(): RemoteMap
+	return RemoteRegistry.initializeServer()
 end
 
 return RemoteRegistry

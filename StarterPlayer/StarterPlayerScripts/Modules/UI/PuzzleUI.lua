@@ -19,7 +19,9 @@ local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
-
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
+local remotes = RemoteRegistry.GetClientRemotes()
+local PuzzleMenuRequest = remotes.PuzzleMenuRequest
 -- Initialize scale manager
 UIScaleManager.initialize()
 
@@ -744,7 +746,6 @@ connections.submitButton = submitButton.MouseButton1Click:Connect(function()
 end)
 
 -- Remote event handlers
-local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 
 -- Open puzzle UI
 local openPuzzleEvent = remoteEvents:WaitForChild("OpenPuzzleUI")

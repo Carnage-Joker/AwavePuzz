@@ -1,80 +1,92 @@
--- PuzzleMenuUI.lua
--- Client-side UI for selecting which puzzle to attempt at cure station
+-- PuzzleUI.client.lua
+-- Client-side puzzle interface for cure synthesis
+-- Displays puzzle mini-games when player has collected 5 of a component type
 -- Updated with dynamic UI scaling for mobile devices.
--- Refactored to use UIConnectionMaid and proper keyboard selection
+
+--!strict
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Get config
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
 local PuzzleConfig = require(SharedFolder:WaitForChild("PuzzleConfig"))
 local UIScaleManager = require(SharedFolder:WaitForChild("UIScaleManager"))
 local UIScaleConfig = require(SharedFolder:WaitForChild("UIScaleConfig"))
 local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
-local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
+
+local remotes = RemoteRegistry.GetClientRemotes()
+
+-- Remotes (RemoteRegistry is single source of truth)
+local OpenPuzzleUI = remotes.OpenPuzzleUI
+local PuzzleCompleted = remotes.PuzzleCompleted
+local PuzzleFailed = remotes.PuzzleFailed
+local SubmitPuzzleAnswer = remotes.SubmitPuzzleAnswer
+
+-- Optional/legacy variable (not used, kept only if you reference it elsewhere)
+local PuzzleMenuRequest = remotes.PuzzleMenuRequest
 
 -- Initialize scale manager
 UIScaleManager.initialize()
 
 -- Connection tracking for cleanup
-local maid = UIConnectionMaid.new()
-local buttonMaid = UIConnectionMaid.new() -- Separate maid for button connections
-local connections = {} -- Track connections that need early setup
+local connections: { [any]: any } = {}
 
 -- Helper functions
-local function getScaledValue(baseValue, scaleType)
+local function getScaledValue(baseValue: number, scaleType: string?): number
 	return UIScaleManager.scalePixels(baseValue, scaleType or "menuElements")
 end
 
-local function getScaledTextSize(baseSize)
+local function getScaledTextSize(baseSize: number): number
 	return UIScaleManager.scaleTextSize(baseSize)
 end
 
--- Minimum touch target from config with fallback
+-- Minimum touch target from config
 local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
 
 -- Prevent duplicate UI instances
-local existing = playerGui:FindFirstChild("PuzzleMenuUI")
+local existing = playerGui:FindFirstChild("PuzzleUI")
 if existing then
-	UIDebugConfig.warnDuplicate("PuzzleMenuUI")
+	UIDebugConfig.warnDuplicate("PuzzleUI")
 	existing:Destroy()
 end
 
-UIDebugConfig.logUICreation("PuzzleMenuUI", "Creating ScreenGui", "PuzzleMenuUI.lua")
+UIDebugConfig.logUICreation("PuzzleUI", "Creating ScreenGui", "PuzzleUI.lua")
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PuzzleMenuUI"
+screenGui.Name = "PuzzleUI"
 screenGui.ResetOnSpawn = false
 screenGui.Enabled = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Menu frame (hidden by default) - centered with scaled size
-local menuFrame = Instance.new("Frame")
-menuFrame.Name = "MenuFrame"
-menuFrame.Size = UIScaleManager.scaleSize(500, 600, "menuElements", "menuDialog")
-menuFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-menuFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-menuFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-menuFrame.BackgroundTransparency = 0.05
-menuFrame.BorderSizePixel = 3
-menuFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
-menuFrame.Visible = false
-menuFrame.ZIndex = 100
-menuFrame.Parent = screenGui
+-- Main puzzle frame (hidden by default) - centered with scaled size
+local puzzleFrame = Instance.new("Frame")
+puzzleFrame.Name = "PuzzleFrame"
+puzzleFrame.Size = UIScaleManager.scaleSize(600, 500, "menuElements", "menuDialog")
+puzzleFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+puzzleFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+puzzleFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+puzzleFrame.BackgroundTransparency = 0.05
+puzzleFrame.BorderSizePixel = 3
+puzzleFrame.BorderColor3 = Color3.fromRGB(100, 255, 100)
+puzzleFrame.Visible = false
+puzzleFrame.ZIndex = 100
+puzzleFrame.Parent = screenGui
 
-local menuCorner = Instance.new("UICorner")
-menuCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
-menuCorner.Parent = menuFrame
+local puzzleCorner = Instance.new("UICorner")
+puzzleCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
+puzzleCorner.Parent = puzzleFrame
 
 -- Title bar
 local titleBar = Instance.new("Frame")
@@ -82,7 +94,7 @@ titleBar.Name = "TitleBar"
 titleBar.Size = UDim2.new(1, 0, 0, getScaledValue(50, "padding"))
 titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 titleBar.BorderSizePixel = 0
-titleBar.Parent = menuFrame
+titleBar.Parent = puzzleFrame
 
 local titleBarCorner = Instance.new("UICorner")
 titleBarCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
@@ -90,12 +102,13 @@ titleBarCorner.Parent = titleBar
 
 -- Title text
 local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
 titleLabel.Size = UDim2.new(1, -getScaledValue(60, "padding"), 1, 0)
 titleLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Cure Station - Select Puzzle"
+titleLabel.Text = "Puzzle"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = getScaledTextSize(22)
+titleLabel.TextSize = getScaledTextSize(24)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextXAlignment = Enum.TextXAlignment.Left
 titleLabel.Parent = titleBar
@@ -103,6 +116,7 @@ titleLabel.Parent = titleBar
 -- Close button with minimum touch target
 local closeButtonSize = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
 closeButton.Size = UDim2.new(0, closeButtonSize, 0, closeButtonSize)
 closeButton.Position = UDim2.new(1, -closeButtonSize - getScaledValue(5, "padding"), 0, getScaledValue(5, "padding"))
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
@@ -116,58 +130,76 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 closeCorner.Parent = closeButton
 
-connections.closeButton = closeButton.MouseButton1Click:Connect(function()
-	menuFrame.Visible = false
-	ModalManager.remove("PuzzleMenuUI")
-	-- Disable puzzle menu input actions when closing via close button
-	InputActionRegistry.disableOwner("PuzzleMenuUI")
-end)
+-- Description label
+local descLabel = Instance.new("TextLabel")
+descLabel.Name = "Description"
+descLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(40, "padding"))
+descLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
+descLabel.BackgroundTransparency = 1
+descLabel.Text = "Solve the puzzle to progress"
+descLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+descLabel.TextSize = getScaledTextSize(16)
+descLabel.Font = Enum.Font.Gotham
+descLabel.TextWrapped = true
+descLabel.TextXAlignment = Enum.TextXAlignment.Left
+descLabel.Parent = puzzleFrame
 
--- ESC/Backspace handled globally by ModalManager
+-- Timer label
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Name = "Timer"
+timerLabel.Size = UDim2.new(0, getScaledValue(150, "padding"), 0, getScaledValue(30, "padding"))
+timerLabel.Position = UDim2.new(1, -getScaledValue(160, "padding"), 0, getScaledValue(105, "padding"))
+timerLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+timerLabel.Text = "Time: 60s"
+timerLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+timerLabel.TextSize = getScaledTextSize(18)
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.Parent = puzzleFrame
 
--- Instructions
-local instructionLabel = Instance.new("TextLabel")
-instructionLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))
-instructionLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
-instructionLabel.BackgroundTransparency = 1
-instructionLabel.Text = "↑/↓ or W/S: Navigate • Enter: Select • Backspace: Close\nYou need 5 components to unlock each puzzle."
-instructionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-instructionLabel.TextSize = getScaledTextSize(14)
-instructionLabel.Font = Enum.Font.Gotham
-instructionLabel.TextWrapped = true
-instructionLabel.TextXAlignment = Enum.TextXAlignment.Left
-instructionLabel.Parent = menuFrame
+local timerCorner = Instance.new("UICorner")
+timerCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+timerCorner.Parent = timerLabel
 
--- Puzzle list (ScrollingFrame)
-local puzzleList = Instance.new("ScrollingFrame")
-puzzleList.Name = "PuzzleList"
-puzzleList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(130, "padding"))
-puzzleList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(120, "padding"))
-puzzleList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-puzzleList.BackgroundTransparency = 0.5
-puzzleList.BorderSizePixel = 0
-puzzleList.ScrollBarThickness = getScaledValue(8, "padding")
-puzzleList.CanvasSize = UDim2.new(0, 0, 0, 0)
-puzzleList.Parent = menuFrame
+-- Content frame (where puzzle is displayed)
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "Content"
+contentFrame.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(200, "padding"))
+contentFrame.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(140, "padding"))
+contentFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+contentFrame.BackgroundTransparency = 0.5
+contentFrame.BorderSizePixel = 0
+contentFrame.Parent = puzzleFrame
 
-local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, getScaledValue(10, "padding"))
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.Parent = puzzleList
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+contentCorner.Parent = contentFrame
 
--- Update canvas size when content changes
-listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	puzzleList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + getScaledValue(10, "padding"))
-end)
+-- Submit button with minimum touch target
+local submitButtonHeight = math.max(getScaledValue(45, "menuElements"), MIN_TOUCH_TARGET)
+local submitButton = Instance.new("TextButton")
+submitButton.Name = "SubmitButton"
+submitButton.Size = UDim2.new(0, getScaledValue(200, "menuElements"), 0, submitButtonHeight)
+submitButton.Position = UDim2.new(0.5, 0, 1, -getScaledValue(60, "padding"))
+submitButton.AnchorPoint = Vector2.new(0.5, 0)
+submitButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+submitButton.Text = "Submit Answer"
+submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+submitButton.TextSize = getScaledTextSize(20)
+submitButton.Font = Enum.Font.GothamBold
+submitButton.Parent = puzzleFrame
+
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
+submitCorner.Parent = submitButton
 
 -- Function to update UI scaling when screen size changes
 local function updateUIScaling()
-	menuFrame.Size = UIScaleManager.scaleSize(500, 600, "menuElements", "menuDialog")
-	menuCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
+	puzzleFrame.Size = UIScaleManager.scaleSize(600, 500, "menuElements", "menuDialog")
+	puzzleCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
 
 	titleBar.Size = UDim2.new(1, 0, 0, getScaledValue(50, "padding"))
 	titleBarCorner.CornerRadius = UDim.new(0, getScaledValue(12, "padding"))
-	titleLabel.TextSize = getScaledTextSize(22)
+	titleLabel.TextSize = getScaledTextSize(24)
 
 	local newCloseSize = math.max(getScaledValue(40, "menuElements"), MIN_TOUCH_TARGET)
 	closeButton.Size = UDim2.new(0, newCloseSize, 0, newCloseSize)
@@ -175,14 +207,24 @@ local function updateUIScaling()
 	closeButton.TextSize = getScaledTextSize(24)
 	closeCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
 
-	instructionLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(50, "padding"))
-	instructionLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
-	instructionLabel.TextSize = getScaledTextSize(14)
+	descLabel.Size = UDim2.new(1, -getScaledValue(20, "padding"), 0, getScaledValue(40, "padding"))
+	descLabel.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(60, "padding"))
+	descLabel.TextSize = getScaledTextSize(16)
 
-	puzzleList.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(130, "padding"))
-	puzzleList.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(120, "padding"))
-	puzzleList.ScrollBarThickness = getScaledValue(8, "padding")
-	listLayout.Padding = UDim.new(0, getScaledValue(10, "padding"))
+	timerLabel.Size = UDim2.new(0, getScaledValue(150, "padding"), 0, getScaledValue(30, "padding"))
+	timerLabel.Position = UDim2.new(1, -getScaledValue(160, "padding"), 0, getScaledValue(105, "padding"))
+	timerLabel.TextSize = getScaledTextSize(18)
+	timerCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+
+	contentFrame.Size = UDim2.new(1, -getScaledValue(20, "padding"), 1, -getScaledValue(200, "padding"))
+	contentFrame.Position = UDim2.new(0, getScaledValue(10, "padding"), 0, getScaledValue(140, "padding"))
+	contentCorner.CornerRadius = UDim.new(0, getScaledValue(8, "padding"))
+
+	local newSubmitHeight = math.max(getScaledValue(45, "menuElements"), MIN_TOUCH_TARGET)
+	submitButton.Size = UDim2.new(0, getScaledValue(200, "menuElements"), 0, newSubmitHeight)
+	submitButton.Position = UDim2.new(0.5, 0, 1, -getScaledValue(60, "padding"))
+	submitButton.TextSize = getScaledTextSize(20)
+	submitCorner.CornerRadius = UDim.new(0, getScaledValue(10, "padding"))
 end
 
 -- Register for scale changes (returns unsubscribe function)
@@ -193,369 +235,533 @@ connections.scaleChanged = {
 			scaleChangedUnsubscribe()
 			scaleChangedUnsubscribe = nil
 		end
-	end
+	end,
 }
 
--- Module state
-local remotes = nil -- Will be set via bindRemotes()
-local puzzleButtons = {}
-local puzzleButtonData = {} -- Maps button to its component name and availability
-local selectedPuzzleIndex = 1
+-- State
+local currentPuzzle: any = nil
+local currentComponentName: string? = nil
+local puzzleStartTime = 0.0
+local timerConnection: RBXScriptConnection? = nil
 
--- Helper function to request a puzzle from the server
-local function requestPuzzle(componentName)
-	if not remotes or not remotes.RequestPuzzle then
-		warn("[PuzzleMenuUI] RequestPuzzle remote not available")
-		return
-	end
-	print("[PuzzleMenuUI] Requesting puzzle:", componentName)
-	remotes.RequestPuzzle:FireServer(componentName)
-	menuFrame.Visible = false
-end
-
-local function updatePuzzleSelection()
-	-- Update visual indication of selected puzzle
-	for i, button in ipairs(puzzleButtons) do
-		local buttonCorner = button:FindFirstChildOfClass("UICorner")
-		
-		if i == selectedPuzzleIndex then
-			-- Add selection border
-			local stroke = button:FindFirstChild("SelectionStroke")
-			if not stroke then
-				stroke = Instance.new("UIStroke")
-				stroke.Name = "SelectionStroke"
-				stroke.Parent = button
+-- Helper function to clear content and disconnect dynamic connections
+local function clearContent()
+	-- Disconnect any dynamic connections (e.g., colorBlock connections)
+	for key, connection in pairs(connections) do
+		if type(key) == "string" and key:match("^colorBlock_") then
+			if typeof(connection) == "RBXScriptConnection" and connection.Connected then
+				connection:Disconnect()
+			elseif type(connection) == "table" and type(connection.Disconnect) == "function" then
+				connection.Disconnect()
 			end
-			stroke.Thickness = 3
-			stroke.Color = Color3.fromRGB(100, 200, 255)
-		else
-			-- Remove selection border
-			local stroke = button:FindFirstChild("SelectionStroke")
-			if stroke then
-				stroke:Destroy()
-			end
+			connections[key] = nil
 		end
 	end
-	
-	-- Scroll to selected button if needed
-	if #puzzleButtons > 0 and puzzleButtons[selectedPuzzleIndex] then
-		local selectedButton = puzzleButtons[selectedPuzzleIndex]
-		local buttonPos = selectedButton.AbsolutePosition.Y - puzzleList.AbsolutePosition.Y
-		local listHeight = puzzleList.AbsoluteSize.Y
-		local canvasPos = puzzleList.CanvasPosition.Y
-		
-		-- Scroll down if button is below visible area
-		if buttonPos + selectedButton.AbsoluteSize.Y > canvasPos + listHeight then
-			puzzleList.CanvasPosition = Vector2.new(0, buttonPos + selectedButton.AbsoluteSize.Y - listHeight)
-		-- Scroll up if button is above visible area
-		elseif buttonPos < canvasPos then
-			puzzleList.CanvasPosition = Vector2.new(0, buttonPos)
-		end
-	end
-end
 
--- Function to create puzzle button
-local function createPuzzleButton(componentName, puzzleConfig, available, componentCount)
-	local button = Instance.new("TextButton")
-	button.Name = componentName
-	button.Size = UDim2.new(1, -10, 0, 80)
-	button.BackgroundColor3 = available and Color3.fromRGB(40, 100, 40) or Color3.fromRGB(60, 60, 60)
-	button.AutoButtonColor = available
-	button.Parent = puzzleList
-
-	local buttonCorner = Instance.new("UICorner")
-	buttonCorner.CornerRadius = UDim.new(0, 8)
-	buttonCorner.Parent = button
-
-	-- Component name
-	local nameLabel = Instance.new("TextLabel")
-	nameLabel.Size = UDim2.new(1, -20, 0, 25)
-	nameLabel.Position = UDim2.new(0, 10, 0, 5)
-	nameLabel.BackgroundTransparency = 1
-	nameLabel.Text = componentName
-	nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	nameLabel.TextSize = 18
-	nameLabel.Font = Enum.Font.GothamBold
-	nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-	nameLabel.Parent = button
-
-	-- Puzzle name
-	local puzzleLabel = Instance.new("TextLabel")
-	puzzleLabel.Size = UDim2.new(1, -20, 0, 20)
-	puzzleLabel.Position = UDim2.new(0, 10, 0, 30)
-	puzzleLabel.BackgroundTransparency = 1
-	puzzleLabel.Text = puzzleConfig.name .. " (" .. puzzleConfig.type .. ")"
-	puzzleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-	puzzleLabel.TextSize = 14
-	puzzleLabel.Font = Enum.Font.Gotham
-	puzzleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	puzzleLabel.Parent = button
-
-	-- Status label
-	local statusLabel = Instance.new("TextLabel")
-	statusLabel.Size = UDim2.new(1, -20, 0, 20)
-	statusLabel.Position = UDim2.new(0, 10, 0, 55)
-	statusLabel.BackgroundTransparency = 1
-	if available then
-		statusLabel.Text = string.format("Ready to attempt (%d/5 components)", componentCount)
-		statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-	else
-		statusLabel.Text = string.format("Need more components (%d/5)", componentCount)
-		statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-	end
-	statusLabel.TextSize = 12
-	statusLabel.Font = Enum.Font.Gotham
-	statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-	statusLabel.Parent = button
-
-	-- Click handler
-	if available then
-		buttonMaid:Give(button.MouseButton1Click:Connect(function()
-			requestPuzzle(componentName)
-		end))
-	end
-	
-	-- Store button data for keyboard selection
-	puzzleButtonData[button] = {
-		componentName = componentName,
-		available = available
-	}
-
-	return button
-end
-
--- Function to populate puzzle menu
-local function updatePuzzleMenu(progressData)
-	-- Clean up button connections and data
-	buttonMaid:Cleanup()
-	puzzleButtonData = {}
-	
-	-- Clear existing buttons
-	for _, child in ipairs(puzzleList:GetChildren()) do
-		if child:IsA("TextButton") then
+	-- Destroy UI elements
+	for _, child in ipairs(contentFrame:GetChildren()) do
+		if not child:IsA("UICorner") then
 			child:Destroy()
 		end
 	end
-	
-	-- Clear button array
-	puzzleButtons = {}
-	selectedPuzzleIndex = 1
+end
 
-	progressData = progressData or {}
-	local componentPuzzles = progressData.componentPuzzles or {}
-	local componentCounts = progressData.componentCounts or {}
+-- Close puzzle UI
+local function closePuzzle()
+	puzzleFrame.Visible = false
+	ModalManager.remove("PuzzleUI")
 
-	-- Create buttons for each component puzzle
-	for _, componentName in ipairs(GameConfig.CURE_COMPONENT_NAMES) do
-		local puzzleConfig = PuzzleConfig.ComponentPuzzles[componentName]
-		if puzzleConfig then
-			local puzzleProgress = componentPuzzles[componentName] or {}
-			local componentCount = componentCounts[componentName] or 0
-			local available = componentCount >= GameConfig.CURE_COMPONENTS_REQUIRED and not puzzleProgress.solved
-
-			local button = createPuzzleButton(componentName, puzzleConfig, available, componentCount)
-			table.insert(puzzleButtons, button)
-		end
+	if timerConnection then
+		timerConnection:Disconnect()
+		timerConnection = nil
 	end
 
-	-- Add final synthesis button
-	local finalPuzzleData = progressData.finalPuzzle or {}
-	local readyForFinal = progressData.readyForFinal or false
-	local finalSolved = finalPuzzleData.solved or false
-	local finalAvailable = readyForFinal and not finalSolved
-	local finalButton = Instance.new("TextButton")
-	finalButton.Name = "FinalSynthesis"
-	finalButton.Size = UDim2.new(1, -10, 0, 100)
-	finalButton.BackgroundColor3 = finalAvailable and Color3.fromRGB(100, 50, 200) or Color3.fromRGB(60, 60, 60)
-	finalButton.AutoButtonColor = finalAvailable
-	finalButton.LayoutOrder = 999
-	finalButton.Parent = puzzleList
+	clearContent()
+	currentPuzzle = nil
+	currentComponentName = nil
+end
 
-	local finalCorner = Instance.new("UICorner")
-	finalCorner.CornerRadius = UDim.new(0, 8)
-	finalCorner.Parent = finalButton
+connections.closeButton = closeButton.MouseButton1Click:Connect(closePuzzle)
 
-	local finalLabel = Instance.new("TextLabel")
-	finalLabel.Size = UDim2.new(1, -20, 0, 30)
-	finalLabel.Position = UDim2.new(0, 10, 0, 10)
-	finalLabel.BackgroundTransparency = 1
-	finalLabel.Text = "⚗️ FINAL SYNTHESIS ⚗️"
-	finalLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-	finalLabel.TextSize = 22
-	finalLabel.Font = Enum.Font.GothamBold
-	finalLabel.Parent = finalButton
-
-	local finalDesc = Instance.new("TextLabel")
-	finalDesc.Size = UDim2.new(1, -20, 0, 50)
-	finalDesc.Position = UDim2.new(0, 10, 0, 45)
-	finalDesc.BackgroundTransparency = 1
-	finalDesc.Text = "Complete all 5 component puzzles to unlock\nThis will synthesize the cure and WIN the game!"
-	finalDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
-	finalDesc.TextSize = 12
-	finalDesc.Font = Enum.Font.Gotham
-	finalDesc.TextWrapped = true
-	finalDesc.TextXAlignment = Enum.TextXAlignment.Left
-	finalDesc.Parent = finalButton
-
-	if finalAvailable then
-		buttonMaid:Give(finalButton.MouseButton1Click:Connect(function()
-			requestPuzzle("FinalSynthesis")
-		end))
+-- Update timer
+local function updateTimer()
+	if not currentPuzzle or not currentPuzzle.timeLimit then
+		return
 	end
-	
-	-- Store button data for keyboard selection
-	puzzleButtonData[finalButton] = {
-		componentName = "FinalSynthesis",
-		available = finalAvailable
-	}
-	
-	-- Add final button to tracked buttons
-	table.insert(puzzleButtons, finalButton)
-	
-	-- Update selection visuals
-	if #puzzleButtons > 0 then
-		updatePuzzleSelection()
+
+	local elapsed = tick() - puzzleStartTime
+	local remaining = math.max(0, (currentPuzzle.timeLimit :: number) - elapsed)
+
+	timerLabel.Text = string.format("Time: %ds", math.ceil(remaining))
+
+	-- Change color based on remaining time
+	if remaining <= 10 then
+		timerLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+	elseif remaining <= 30 then
+		timerLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+	else
+		timerLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+	end
+
+	-- Auto-close if time runs out
+	if remaining <= 0 then
+		closePuzzle()
 	end
 end
 
--- Show puzzle menu
-local function showPuzzleMenu()
-	menuFrame.Visible = true
-	
-	-- Register with ModalManager and enable puzzle menu input actions
-	ModalManager.push("PuzzleMenuUI", function()
-		menuFrame.Visible = false
-		-- Disable puzzle menu input actions when closing
-		InputActionRegistry.disableOwner("PuzzleMenuUI")
-	end, ModalManager.Priority.MODAL)
-	
-	-- Enable puzzle menu input actions when opening
-	InputActionRegistry.enableOwner("PuzzleMenuUI")
-	
-	-- Request puzzle progress from server
-	if remotes and remotes.RequestPuzzleProgress then
-		remotes.RequestPuzzleProgress:FireServer()
-	end
-end
+-- Mathematical puzzle UI
+local function createMathPuzzleUI(puzzleData: any): TextBox
+	clearContent()
 
--- Bind remotes from RemoteRegistry (called by ClientMainModule)
-local function bindRemotes(providedRemotes)
-	if not providedRemotes then
-		warn("[PuzzleMenuUI] bindRemotes: No remotes provided")
-		return
-	end
-	
-	remotes = providedRemotes
-	
-	if not remotes.CureUpdate or not remotes.PuzzleUpdate or not remotes.RequestPuzzle or not remotes.RequestPuzzleProgress then
-		warn("[PuzzleMenuUI] Missing required remotes")
-		return
-	end
-	
-	-- Listen for puzzle menu requests
-	maid:Give(remotes.CureUpdate.OnClientEvent:Connect(function(data)
-		if type(data) == "table" and data.type == "show_puzzle_menu" then
-			showPuzzleMenu()
-		end
-	end), "cureUpdate")
-	
-	-- Listen for puzzle progress updates
-	maid:Give(remotes.PuzzleUpdate.OnClientEvent:Connect(function(data)
-		if type(data) == "table" and data.type == "progress" then
-			updatePuzzleMenu(data.progress)
-		end
-	end), "puzzleUpdate")
-	
-	print("[PuzzleMenuUI] Remotes bound successfully")
-end
+	local mathLabel = Instance.new("TextLabel")
+	mathLabel.Size = UDim2.new(1, -40, 0, 80)
+	mathLabel.Position = UDim2.new(0, 20, 0, 20)
+	mathLabel.BackgroundTransparency = 1
+	mathLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	mathLabel.TextSize = 32
+	mathLabel.Font = Enum.Font.GothamBold
+	mathLabel.Parent = contentFrame
 
--- Keyboard navigation handler
-maid:Give(UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-	if gameProcessedEvent then return end
-	
-	-- Only process if menu is visible and is the top modal
-	if not menuFrame.Visible or not ModalManager.isTopModal("PuzzleMenuUI") then
-		return
-	end
-	
-	if #puzzleButtons > 0 then
-		-- Navigation when menu is open
-		if input.KeyCode == Enum.KeyCode.Up or input.KeyCode == Enum.KeyCode.W then
-			-- Check if navigate up action is enabled
-			local action = InputActionRegistry.getAction("PuzzleMenuNavigateUp")
-			if action and action.enabled then
-				selectedPuzzleIndex = selectedPuzzleIndex - 1
-				if selectedPuzzleIndex < 1 then
-					selectedPuzzleIndex = #puzzleButtons
-				end
-				updatePuzzleSelection()
+	-- Display the sequence or equation
+	if puzzleData.equation then
+		mathLabel.Text = puzzleData.equation
+	elseif puzzleData.sequence then
+		local sequenceText = ""
+		for i = 1, #puzzleData.sequence + 1 do
+			if puzzleData.sequence[i] then
+				sequenceText ..= tostring(puzzleData.sequence[i])
+			else
+				sequenceText ..= "?"
 			end
-		elseif input.KeyCode == Enum.KeyCode.Down or input.KeyCode == Enum.KeyCode.S then
-			-- Check if navigate down action is enabled
-			local action = InputActionRegistry.getAction("PuzzleMenuNavigateDown")
-			if action and action.enabled then
-				selectedPuzzleIndex = selectedPuzzleIndex + 1
-				if selectedPuzzleIndex > #puzzleButtons then
-					selectedPuzzleIndex = 1
-				end
-				updatePuzzleSelection()
+			if i < #puzzleData.sequence + 1 then
+				sequenceText ..= ", "
 			end
-		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
-			-- Check if select action is enabled
-			local action = InputActionRegistry.getAction("PuzzleMenuSelect")
-			if action and action.enabled then
-				-- Use stored button data instead of firing signal
-				local button = puzzleButtons[selectedPuzzleIndex]
-				if button then
-					local data = puzzleButtonData[button]
-					if data and data.available then
-						requestPuzzle(data.componentName)
+		end
+		mathLabel.Text = sequenceText
+	end
+
+	-- Answer input
+	local answerBox = Instance.new("TextBox")
+	answerBox.Name = "AnswerBox"
+	answerBox.Size = UDim2.new(0, 200, 0, 50)
+	answerBox.Position = UDim2.new(0.5, -100, 0, 120)
+	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	answerBox.Text = ""
+	answerBox.PlaceholderText = "Enter answer..."
+	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	answerBox.TextSize = 24
+	answerBox.Font = Enum.Font.Gotham
+	answerBox.ClearTextOnFocus = false
+	answerBox.Parent = contentFrame
+
+	local answerCorner = Instance.new("UICorner")
+	answerCorner.CornerRadius = UDim.new(0, 8)
+	answerCorner.Parent = answerBox
+
+	return answerBox
+end
+
+-- Pattern puzzle UI
+local function createPatternPuzzleUI(puzzleData: any): TextBox
+	clearContent()
+
+	local instructionLabel = Instance.new("TextLabel")
+	instructionLabel.Size = UDim2.new(1, -40, 0, 40)
+	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
+	instructionLabel.BackgroundTransparency = 1
+	instructionLabel.Text = "What comes next in the sequence?"
+	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	instructionLabel.TextSize = 20
+	instructionLabel.Font = Enum.Font.GothamBold
+	instructionLabel.Parent = contentFrame
+
+	-- Display sequence
+	local sequenceFrame = Instance.new("Frame")
+	sequenceFrame.Size = UDim2.new(1, -40, 0, 80)
+	sequenceFrame.Position = UDim2.new(0, 20, 0, 60)
+	sequenceFrame.BackgroundTransparency = 1
+	sequenceFrame.Parent = contentFrame
+
+	local listLayout = Instance.new("UIListLayout")
+	listLayout.FillDirection = Enum.FillDirection.Horizontal
+	listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+	listLayout.Padding = UDim.new(0, 10)
+	listLayout.Parent = sequenceFrame
+
+	if puzzleData.sequence then
+		for i = 1, #puzzleData.sequence + 1 do
+			local item = Instance.new("Frame")
+			item.Size = UDim2.new(0, 60, 0, 60)
+			item.BackgroundColor3 = puzzleData.sequence[i] and Color3.fromRGB(50, 150, 255) or Color3.fromRGB(100, 100, 100)
+			item.Parent = sequenceFrame
+
+			local itemCorner = Instance.new("UICorner")
+			itemCorner.CornerRadius = UDim.new(0, 8)
+			itemCorner.Parent = item
+
+			local itemLabel = Instance.new("TextLabel")
+			itemLabel.Size = UDim2.new(1, 0, 1, 0)
+			itemLabel.BackgroundTransparency = 1
+			itemLabel.Text = puzzleData.sequence[i] and tostring(puzzleData.sequence[i]) or "?"
+			itemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+			itemLabel.TextSize = 18
+			itemLabel.Font = Enum.Font.GothamBold
+			itemLabel.Parent = item
+		end
+	end
+
+	-- Answer input
+	local answerBox = Instance.new("TextBox")
+	answerBox.Name = "AnswerBox"
+	answerBox.Size = UDim2.new(0, 200, 0, 50)
+	answerBox.Position = UDim2.new(0.5, -100, 0, 160)
+	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	answerBox.Text = ""
+	answerBox.PlaceholderText = "Enter answer..."
+	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	answerBox.TextSize = 24
+	answerBox.Font = Enum.Font.Gotham
+	answerBox.Parent = contentFrame
+
+	local answerCorner = Instance.new("UICorner")
+	answerCorner.CornerRadius = UDim.new(0, 8)
+	answerCorner.Parent = answerBox
+
+	return answerBox
+end
+
+-- Color puzzle UI
+local function createColorPuzzleUI(puzzleData: any): { [number]: { frame: TextButton, color: Color3 } }
+	clearContent()
+
+	local instructionLabel = Instance.new("TextLabel")
+	instructionLabel.Size = UDim2.new(1, -40, 0, 40)
+	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
+	instructionLabel.BackgroundTransparency = 1
+	instructionLabel.Text = "Arrange the colors in the correct order (click two to swap)"
+	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	instructionLabel.TextSize = 18
+	instructionLabel.Font = Enum.Font.GothamBold
+	instructionLabel.TextWrapped = true
+	instructionLabel.Parent = contentFrame
+
+	local colorFrame = Instance.new("Frame")
+	colorFrame.Name = "ColorFrame"
+	colorFrame.Size = UDim2.new(1, -40, 1, -80)
+	colorFrame.Position = UDim2.new(0, 20, 0, 60)
+	colorFrame.BackgroundTransparency = 1
+	colorFrame.Parent = contentFrame
+
+	local colorLayout = Instance.new("UIGridLayout")
+	colorLayout.CellSize = UDim2.new(0, 70, 0, 70)
+	colorLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	colorLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	colorLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+	colorLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	colorLayout.Parent = colorFrame
+
+	local colorBlocks: { [number]: { frame: TextButton, color: Color3 } } = {}
+
+	if puzzleData.shuffled then
+		for i, color: Color3 in ipairs(puzzleData.shuffled) do
+			local block = Instance.new("TextButton")
+			block.Name = "ColorBlock" .. i
+			block.Size = UDim2.new(0, 70, 0, 70)
+			block.BackgroundColor3 = color
+			block.Text = tostring(i)
+			block.TextColor3 = Color3.fromRGB(255, 255, 255)
+			block.TextSize = 24
+			block.Font = Enum.Font.GothamBold
+			block.LayoutOrder = i
+			block.Parent = colorFrame
+
+			local blockCorner = Instance.new("UICorner")
+			blockCorner.CornerRadius = UDim.new(0, 8)
+			blockCorner.Parent = block
+
+			block:SetAttribute("ColorIndex", i)
+			colorBlocks[i] = { frame = block, color = color }
+
+			local connectionKey = "colorBlock_" .. i
+			connections[connectionKey] = block.MouseButton1Click:Connect(function()
+				local currentIndex = block:GetAttribute("ColorIndex")
+				if not currentIndex then
+					return
+				end
+
+				if not colorFrame:GetAttribute("FirstSelected") then
+					colorFrame:SetAttribute("FirstSelected", currentIndex)
+					block.BorderSizePixel = 3
+					block.BorderColor3 = Color3.fromRGB(255, 255, 0)
+				else
+					local firstIndex = colorFrame:GetAttribute("FirstSelected")
+					if firstIndex ~= currentIndex then
+						local firstBlock = colorBlocks[firstIndex].frame
+						local secondBlock = block
+
+						local tempOrder = firstBlock.LayoutOrder
+						firstBlock.LayoutOrder = secondBlock.LayoutOrder
+						secondBlock.LayoutOrder = tempOrder
+
+						firstBlock:SetAttribute("ColorIndex", currentIndex)
+						block:SetAttribute("ColorIndex", firstIndex)
+
+						colorBlocks[firstIndex], colorBlocks[currentIndex] = colorBlocks[currentIndex], colorBlocks[firstIndex]
+						firstBlock.BorderSizePixel = 0
+						secondBlock.BorderSizePixel = 0
+					else
+						block.BorderSizePixel = 0
 					end
+					colorFrame:SetAttribute("FirstSelected", nil)
 				end
-			end
+			end)
 		end
 	end
-end), "navigation")
+
+	return colorBlocks
+end
+
+-- Logic puzzle UI (simplified MVP)
+local function createLogicPuzzleUI(_: any): TextBox
+	clearContent()
+
+	local instructionLabel = Instance.new("TextLabel")
+	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
+	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
+	instructionLabel.BackgroundTransparency = 1
+	instructionLabel.Text = "LOGIC DEDUCTION PUZZLE\n\n(Simplified MVP: Enter 'correct' to solve)"
+	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	instructionLabel.TextSize = 16
+	instructionLabel.Font = Enum.Font.GothamBold
+	instructionLabel.TextWrapped = true
+	instructionLabel.Parent = contentFrame
+
+	local answerBox = Instance.new("TextBox")
+	answerBox.Name = "AnswerBox"
+	answerBox.Size = UDim2.new(0, 300, 0, 50)
+	answerBox.Position = UDim2.new(0.5, -150, 0, 120)
+	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	answerBox.Text = ""
+	answerBox.PlaceholderText = "Enter 'correct'..."
+	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	answerBox.TextSize = 20
+	answerBox.Font = Enum.Font.Gotham
+	answerBox.Parent = contentFrame
+
+	local answerCorner = Instance.new("UICorner")
+	answerCorner.CornerRadius = UDim.new(0, 8)
+	answerCorner.Parent = answerBox
+
+	return answerBox
+end
+
+-- Abstract puzzle UI (simplified MVP)
+local function createAbstractPuzzleUI(_: any): TextBox
+	clearContent()
+
+	local instructionLabel = Instance.new("TextLabel")
+	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
+	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
+	instructionLabel.BackgroundTransparency = 1
+	instructionLabel.Text = "NODE CONNECTION PUZZLE\n\n(Simplified MVP: Enter 'circuit' to solve)"
+	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	instructionLabel.TextSize = 16
+	instructionLabel.Font = Enum.Font.GothamBold
+	instructionLabel.TextWrapped = true
+	instructionLabel.Parent = contentFrame
+
+	local answerBox = Instance.new("TextBox")
+	answerBox.Name = "AnswerBox"
+	answerBox.Size = UDim2.new(0, 300, 0, 50)
+	answerBox.Position = UDim2.new(0.5, -150, 0, 120)
+	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	answerBox.Text = ""
+	answerBox.PlaceholderText = "Enter 'circuit'..."
+	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+	answerBox.TextSize = 20
+	answerBox.Font = Enum.Font.Gotham
+	answerBox.Parent = contentFrame
+
+	local answerCorner = Instance.new("UICorner")
+	answerCorner.CornerRadius = UDim.new(0, 8)
+	answerCorner.Parent = answerBox
+
+	return answerBox
+end
+
+-- Open puzzle UI
+local function openPuzzle(componentName: string, puzzle: any)
+	currentPuzzle = puzzle
+	currentComponentName = componentName
+	puzzleStartTime = tick()
+
+	titleLabel.Text = puzzle.name or "Puzzle"
+	descLabel.Text = puzzle.description or "Solve the puzzle"
+	timerLabel.Text = string.format("Time: %ds", puzzle.timeLimit or 60)
+
+	if puzzle.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL then
+		createMathPuzzleUI(puzzle.data)
+	elseif puzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
+		createPatternPuzzleUI(puzzle.data)
+	elseif puzzle.type == PuzzleConfig.PuzzleTypes.COLOR then
+		createColorPuzzleUI(puzzle.data)
+	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
+		createLogicPuzzleUI(puzzle.data)
+	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
+		createAbstractPuzzleUI(puzzle.data)
+	else
+		clearContent()
+	end
+
+	puzzleFrame.Visible = true
+	ModalManager.push("PuzzleUI", closePuzzle, ModalManager.Priority.MODAL)
+
+	if timerConnection then
+		timerConnection:Disconnect()
+	end
+	timerConnection = RunService.Heartbeat:Connect(updateTimer)
+end
+
+-- Submit answer
+connections.submitButton = submitButton.MouseButton1Click:Connect(function()
+	if not ModalManager.isTopModal("PuzzleUI") then
+		return
+	end
+
+	if not currentPuzzle or not currentComponentName then
+		return
+	end
+
+	local answer: any = nil
+
+	if currentPuzzle.type == PuzzleConfig.PuzzleTypes.MATHEMATICAL or currentPuzzle.type == PuzzleConfig.PuzzleTypes.PATTERN then
+		local answerBox = contentFrame:FindFirstChild("AnswerBox")
+		if answerBox and answerBox:IsA("TextBox") then
+			answer = tonumber(answerBox.Text) or answerBox.Text
+		end
+	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.COLOR then
+		local colorFrame = contentFrame:FindFirstChild("ColorFrame")
+		if colorFrame then
+			answer = {}
+			local blocks: { TextButton } = {}
+			for _, child in ipairs(colorFrame:GetChildren()) do
+				if child:IsA("TextButton") then
+					table.insert(blocks, child)
+				end
+			end
+			table.sort(blocks, function(a, b)
+				return a.LayoutOrder < b.LayoutOrder
+			end)
+			for _, block in ipairs(blocks) do
+				table.insert(answer, block.BackgroundColor3)
+			end
+		end
+	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.LOGIC or currentPuzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
+		local answerBox = contentFrame:FindFirstChild("AnswerBox")
+		if answerBox and answerBox:IsA("TextBox") then
+			answer = answerBox.Text
+		end
+	end
+
+	if SubmitPuzzleAnswer then
+		SubmitPuzzleAnswer:FireServer(currentComponentName, answer)
+	else
+		warn("[PuzzleUI] Missing remote: SubmitPuzzleAnswer")
+	end
+
+	closePuzzle()
+end)
+
+-- Remote event handlers (RemoteRegistry only)
+if OpenPuzzleUI then
+	connections.openPuzzle = (OpenPuzzleUI :: RemoteEvent).OnClientEvent:Connect(function(data: any)
+		if data and data.puzzle and data.componentName then
+			openPuzzle(data.componentName, data.puzzle)
+		end
+	end)
+else
+	warn("[PuzzleUI] Missing remote: OpenPuzzleUI")
+end
+
+if PuzzleCompleted then
+	connections.puzzleCompleted = (PuzzleCompleted :: RemoteEvent).OnClientEvent:Connect(function(data: any)
+		local notification = Instance.new("TextLabel")
+		notification.Size = UDim2.new(0, 400, 0, 80)
+		notification.Position = UDim2.new(0.5, -200, 0.2, 0)
+		notification.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+		notification.Text = string.format("Puzzle Solved!\n+%d Currency", (data and data.reward) or 0)
+		notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+		notification.TextSize = 24
+		notification.Font = Enum.Font.GothamBold
+		notification.Parent = screenGui
+
+		local notifCorner = Instance.new("UICorner")
+		notifCorner.CornerRadius = UDim.new(0, 12)
+		notifCorner.Parent = notification
+
+		task.wait(3)
+		if notification.Parent then
+			notification:Destroy()
+		end
+	end)
+else
+	warn("[PuzzleUI] Missing remote: PuzzleCompleted")
+end
+
+if PuzzleFailed then
+	connections.puzzleFailed = (PuzzleFailed :: RemoteEvent).OnClientEvent:Connect(function(message: any)
+		local notification = Instance.new("TextLabel")
+		notification.Size = UDim2.new(0, 400, 0, 80)
+		notification.Position = UDim2.new(0.5, -200, 0.2, 0)
+		notification.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		notification.Text = "Puzzle Failed!\n" .. tostring(message or "Try again")
+		notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+		notification.TextSize = 20
+		notification.Font = Enum.Font.GothamBold
+		notification.Parent = screenGui
+
+		local notifCorner = Instance.new("UICorner")
+		notifCorner.CornerRadius = UDim.new(0, 12)
+		notifCorner.Parent = notification
+
+		task.wait(3)
+		if notification.Parent then
+			notification:Destroy()
+		end
+	end)
+else
+	warn("[PuzzleUI] Missing remote: PuzzleFailed")
+end
 
 -- Register input actions with InputActionRegistry
--- Navigation and selection actions disabled by default until menu opens to avoid conflicts
-InputActionRegistry.register("PuzzleMenuNavigateUp", "PuzzleMenuUI", {Enum.KeyCode.Up, Enum.KeyCode.W}, InputActionRegistry.Priority.MODAL_UI, false)
-InputActionRegistry.register("PuzzleMenuNavigateDown", "PuzzleMenuUI", {Enum.KeyCode.Down, Enum.KeyCode.S}, InputActionRegistry.Priority.MODAL_UI, false)
-InputActionRegistry.register("PuzzleMenuSelect", "PuzzleMenuUI", {Enum.KeyCode.Return, Enum.KeyCode.Space}, InputActionRegistry.Priority.MODAL_UI, false)
+InputActionRegistry.register("PuzzleSubmit", "PuzzleUI", {}, InputActionRegistry.Priority.MODAL_UI) -- Submit via button only
 
 -- Cleanup function
 local function cleanup()
-	-- Unregister input actions
-	InputActionRegistry.unregister("PuzzleMenuNavigateUp")
-	InputActionRegistry.unregister("PuzzleMenuNavigateDown")
-	InputActionRegistry.unregister("PuzzleMenuSelect")
-	
-	-- Clean up all connections
-	maid:Cleanup()
-	buttonMaid:Cleanup()
-	
-	-- Remove from ModalManager if still open
-	if menuFrame.Visible then
-		ModalManager.remove("PuzzleMenuUI")
+	for _, conn in pairs(connections) do
+		if typeof(conn) == "RBXScriptConnection" then
+			conn:Disconnect()
+		elseif type(conn) == "table" and type(conn.Disconnect) == "function" then
+			conn.Disconnect()
+		end
+	end
+	connections = {}
+
+	if timerConnection then
+		timerConnection:Disconnect()
+		timerConnection = nil
+	end
+
+	if puzzleFrame.Visible then
+		ModalManager.remove("PuzzleUI")
 	end
 end
 
--- Handle respawn - cleanup connections
-maid:Give(player.CharacterRemoving:Connect(cleanup), "characterRemoving")
+connections.characterRemoving = player.CharacterRemoving:Connect(cleanup)
 
-print("[PuzzleMenuUI] Module loaded")
+print("PuzzleUI initialized")
 
--- Return module table (required for ModuleScript compatibility)
-local PuzzleMenuUI = {}
-
-PuzzleMenuUI.bindRemotes = bindRemotes
-
-function PuzzleMenuUI.cleanup()
-	cleanup()
-	
-	if screenGui then
-		screenGui:Destroy()
-	end
-end
-
-return PuzzleMenuUI
+local PuzzleUIModule = {}
+PuzzleUIModule.cleanup = cleanup
+return PuzzleUIModule
