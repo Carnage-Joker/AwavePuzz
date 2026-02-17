@@ -441,14 +441,14 @@ end
 -- Bind remotes from RemoteRegistry (called by ClientMainModule)
 local function bindRemotes(providedRemotes)
 	if not providedRemotes then
-		warn("[UI:PuzzleMenuUI] bindRemotes: No remotes provided")
+		warn("[PuzzleMenuUI] bindRemotes: No remotes provided")
 		return
 	end
 	
 	remotes = providedRemotes
 	
 	if not remotes.CureUpdate or not remotes.PuzzleUpdate or not remotes.RequestPuzzle or not remotes.RequestPuzzleProgress then
-		warn("[UI:PuzzleMenuUI] Missing required remotes")
+		warn("[PuzzleMenuUI] Missing required remotes")
 		return
 	end
 	
@@ -466,7 +466,7 @@ local function bindRemotes(providedRemotes)
 		end
 	end), "puzzleUpdate")
 	
-	print("[UI:PuzzleMenuUI] Remotes bound successfully")
+	print("[PuzzleMenuUI] Remotes bound successfully")
 end
 
 -- Keyboard navigation handler
@@ -543,20 +543,10 @@ end
 -- Handle respawn - cleanup connections
 maid:Give(player.CharacterRemoving:Connect(cleanup), "characterRemoving")
 
-print("[UI:PuzzleMenuUI] Module loaded")
+print("[PuzzleMenuUI] Module loaded")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
-
--- Init function to be called by ClientMainModule after require
--- This ensures all UI elements are properly initialized
--- Note: For PuzzleMenuUI, UI elements are created at module top-level during require,
--- so this Init() is a placeholder for consistency with other UI modules that may need
--- deferred initialization. This allows ClientMainModule to call Init() uniformly
--- on all UI modules without needing to know which ones require it.
-function PuzzleMenuUI.Init()
-	print("[UI:PuzzleMenuUI] Init() called - UI elements already created at module load")
-end
 
 PuzzleMenuUI.bindRemotes = bindRemotes
 

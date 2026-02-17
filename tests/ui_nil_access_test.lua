@@ -3,6 +3,11 @@
 -- Place this in a LocalScript and run in Roblox Studio
 -- This should be run BEFORE the game fully initializes to catch early errors
 
+-- Configurable timeouts (can be adjusted for slower environments)
+local WAIT_FOR_CHILD_TIMEOUT = 5 -- seconds
+local UI_CREATION_DELAY = 0.5 -- seconds
+local PLAYER_GUI_TIMEOUT = 2 -- seconds
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
@@ -14,9 +19,9 @@ print("========================================")
 -- Test 1: Verify UIResolveRefs utility loads
 print("\n--- Test 1: UIResolveRefs Utility ---")
 local success, UIResolveRefs = pcall(function()
-	local SharedFolder = ReplicatedStorage:WaitForChild("Shared", 5)
-	local UIFolder = SharedFolder:WaitForChild("UI", 5)
-	return require(UIFolder:WaitForChild("UIResolveRefs", 5))
+	local SharedFolder = ReplicatedStorage:WaitForChild("Shared", WAIT_FOR_CHILD_TIMEOUT)
+	local UIFolder = SharedFolder:WaitForChild("UI", WAIT_FOR_CHILD_TIMEOUT)
+	return require(UIFolder:WaitForChild("UIResolveRefs", WAIT_FOR_CHILD_TIMEOUT))
 end)
 
 if success and UIResolveRefs then
@@ -45,22 +50,16 @@ end
 print("\n--- Test 2: PuzzleMenuUI Module Load ---")
 local success2, PuzzleMenuUI = pcall(function()
 	local StarterPlayer = game:GetService("StarterPlayer")
-	local StarterPlayerScripts = StarterPlayer:WaitForChild("StarterPlayerScripts", 5)
-	local Modules = StarterPlayerScripts:WaitForChild("Modules", 5)
-	local UIFolder = Modules:WaitForChild("UI", 5)
-	return require(UIFolder:WaitForChild("PuzzleMenuUI", 5))
+	local StarterPlayerScripts = StarterPlayer:WaitForChild("StarterPlayerScripts", WAIT_FOR_CHILD_TIMEOUT)
+	local Modules = StarterPlayerScripts:WaitForChild("Modules", WAIT_FOR_CHILD_TIMEOUT)
+	local UIFolder = Modules:WaitForChild("UI", WAIT_FOR_CHILD_TIMEOUT)
+	return require(UIFolder:WaitForChild("PuzzleMenuUI", WAIT_FOR_CHILD_TIMEOUT))
 end)
 
 if success2 and PuzzleMenuUI then
 	print("✅ PuzzleMenuUI loaded successfully")
 	
 	-- Verify expected methods exist
-	if PuzzleMenuUI.Init then
-		print("✅ PuzzleMenuUI.Init method exists")
-	else
-		print("❌ PuzzleMenuUI.Init method missing")
-	end
-	
 	if PuzzleMenuUI.bindRemotes then
 		print("✅ PuzzleMenuUI.bindRemotes method exists")
 	else
@@ -73,26 +72,13 @@ if success2 and PuzzleMenuUI then
 		print("❌ PuzzleMenuUI.cleanup method missing")
 	end
 	
-	-- Test Init function (should not error)
-	local initSuccess, initErr = pcall(function()
-		if PuzzleMenuUI.Init then
-			PuzzleMenuUI.Init()
-		end
-	end)
-	
-	if initSuccess then
-		print("✅ PuzzleMenuUI.Init() called successfully")
-		
-		-- Verify the ScreenGui was created
-		task.wait(0.5) -- Give a moment for UI to be parented
-		local puzzleMenuUI = player:WaitForChild("PlayerGui", 2):FindFirstChild("PuzzleMenuUI")
-		if puzzleMenuUI then
-			print("✅ PuzzleMenuUI ScreenGui exists in PlayerGui")
-		else
-			print("⚠️  PuzzleMenuUI ScreenGui not found in PlayerGui (may be expected if not fully initialized)")
-		end
+	-- Verify the ScreenGui was created
+	task.wait(UI_CREATION_DELAY) -- Give a moment for UI to be parented
+	local puzzleMenuUI = player:WaitForChild("PlayerGui", PLAYER_GUI_TIMEOUT):FindFirstChild("PuzzleMenuUI")
+	if puzzleMenuUI then
+		print("✅ PuzzleMenuUI ScreenGui exists in PlayerGui")
 	else
-		print("❌ PuzzleMenuUI.Init() error:", tostring(initErr))
+		print("⚠️  PuzzleMenuUI ScreenGui not found in PlayerGui (may be expected if not fully initialized)")
 	end
 else
 	print("❌ PuzzleMenuUI failed to load:", tostring(PuzzleMenuUI))
@@ -109,10 +95,10 @@ print("✅ Module loaded without nil access errors (indirect verification)")
 print("\n--- Test 4: PuzzleUI Module Load ---")
 local success4, PuzzleUI = pcall(function()
 	local StarterPlayer = game:GetService("StarterPlayer")
-	local StarterPlayerScripts = StarterPlayer:WaitForChild("StarterPlayerScripts", 5)
-	local Modules = StarterPlayerScripts:WaitForChild("Modules", 5)
-	local UIFolder = Modules:WaitForChild("UI", 5)
-	return require(UIFolder:WaitForChild("PuzzleUI", 5))
+	local StarterPlayerScripts = StarterPlayer:WaitForChild("StarterPlayerScripts", WAIT_FOR_CHILD_TIMEOUT)
+	local Modules = StarterPlayerScripts:WaitForChild("Modules", WAIT_FOR_CHILD_TIMEOUT)
+	local UIFolder = Modules:WaitForChild("UI", WAIT_FOR_CHILD_TIMEOUT)
+	return require(UIFolder:WaitForChild("PuzzleUI", WAIT_FOR_CHILD_TIMEOUT))
 end)
 
 if success4 and PuzzleUI then

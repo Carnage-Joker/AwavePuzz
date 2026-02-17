@@ -445,16 +445,25 @@ local function bootClient()
 				
 				if success and result ~= nil then
 					UI[moduleName] = result
-					-- Call initialize if it exists
-					if typeof(result) == "table" and result.initialize then
+					
+					-- Check for both initialization methods (potential configuration error)
+					local hasInitialize = typeof(result) == "table" and result.initialize
+					local hasInit = typeof(result) == "table" and result.Init
+					
+					if hasInitialize and hasInit then
+						warn(string.format("[BOOT][CLIENT] ⚠️  UI module %s has both initialize() and Init() methods. Only initialize() will be called.", moduleName))
+					end
+					
+					-- Call initialize if it exists (takes precedence)
+					if hasInitialize then
 						local initSuccess, initErr = pcall(result.initialize)
 						if initSuccess then
 							uiCount = uiCount + 1
 						else
 							warn(string.format("[BOOT][CLIENT] ✗ UI module %s initialize failed: %s", moduleName, tostring(initErr)))
 						end
-					-- Call Init if it exists (new pattern for UI modules)
-					elseif typeof(result) == "table" and result.Init then
+					-- Call Init if it exists (fallback pattern)
+					elseif hasInit then
 						local initSuccess, initErr = pcall(result.Init)
 						if initSuccess then
 							uiCount = uiCount + 1
