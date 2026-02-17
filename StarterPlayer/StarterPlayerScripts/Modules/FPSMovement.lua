@@ -36,7 +36,7 @@ end
 -- Get crouch event from RemoteRegistry (created by server boot)
 local crouchEvent = remoteEventsFolder:WaitForChild("CrouchUpdate", 5)
 if not crouchEvent then
-	warn("[FPSMovement] CrouchUpdate remote not found - crouch functionality may not work")
+	error("[FPSMovement] CRITICAL: CrouchUpdate remote not found")
 end
 
 --------------------------------------------------------------------------------
