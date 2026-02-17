@@ -61,22 +61,27 @@ end
 print("\n[Test C] Checking CureStations Dev Gating...")
 local SharedFolder = ReplicatedStorage:FindFirstChild("Shared")
 if SharedFolder then
-	local GameConfig = require(SharedFolder:WaitForChild("GameConfig"))
-	local isStudio = RunService:IsStudio()
-	local devFlag = GameConfig.DEV_AUTO_CREATE_CURE_STATIONS
-	
-	print("  - Running in Studio:", isStudio)
-	print("  - DEV_AUTO_CREATE_CURE_STATIONS:", devFlag)
-	
-	local cureStations = Workspace:FindFirstChild("CureStations")
-	if cureStations then
-		print("  - CureStations folder found with", #cureStations:GetChildren(), "stations")
-		print("  ✓ PASS: CureStations setup completed")
+	local GameConfigModule = SharedFolder:WaitForChild("GameConfig", 5)
+	if not GameConfigModule then
+		print("  ✗ FAIL: GameConfig module not found after 5 seconds")
 	else
-		if not isStudio or not devFlag then
-			print("  ✓ PASS: No auto-created stations (as expected in production/disabled mode)")
+		local GameConfig = require(GameConfigModule)
+		local isStudio = RunService:IsStudio()
+		local devFlag = GameConfig.DEV_AUTO_CREATE_CURE_STATIONS
+		
+		print("  - Running in Studio:", isStudio)
+		print("  - DEV_AUTO_CREATE_CURE_STATIONS:", devFlag)
+		
+		local cureStations = Workspace:FindFirstChild("CureStations")
+		if cureStations then
+			print("  - CureStations folder found with", #cureStations:GetChildren(), "stations")
+			print("  ✓ PASS: CureStations setup completed")
 		else
-			print("  ⚠ WARNING: No CureStations found despite being in Studio with flag enabled")
+			if not isStudio or not devFlag then
+				print("  ✓ PASS: No auto-created stations (as expected in production/disabled mode)")
+			else
+				print("  ⚠ WARNING: No CureStations found despite being in Studio with flag enabled")
+			end
 		end
 	end
 else

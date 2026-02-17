@@ -171,6 +171,69 @@ Cross-platform device compatibility:
 
 ### Testing Documentation
 
+#### [tests/README.md](tests/README.md) 🆕
+**Complete Test Suite Documentation**
+
+Overview of all test categories:
+- **Boot & Safety Tests** - Boot system validation (12 tests)
+- **Security Tests** - Configuration and exploit prevention (11 tests)
+- **Memory Leak Tests** - Connection and cleanup validation
+- **Race Condition Tests** - State consistency validation
+- **System Integration Tests** - Cross-system validation
+
+#### [tests/boot_smoke_tests.lua](tests/boot_smoke_tests.lua) 🆕
+**Boot System Validation Suite**
+
+Validates boot safety with 12 comprehensive tests:
+- Entry point duplicate guards (server & client)
+- RemoteRegistry initialization
+- Module loading and timeouts
+- Service initialization order
+- Character auto-load control
+- Client-server synchronization
+
+Run in Studio Command Bar:
+```lua
+require(game.ReplicatedStorage.tests.run_boot_tests)
+```
+
+#### [tests/security_validation_tests.lua](tests/security_validation_tests.lua)
+**Security Configuration Tests**
+
+Automated security validation (11 tests):
+- Anti-wallhack protection checks (BUG-004)
+- Server authority validation (BUG-009)
+- Configuration presence and sanity checks
+
+Run in Studio Command Bar:
+```lua
+require(game.ReplicatedStorage.tests.run_security_tests)
+```
+
+#### [BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md) 🆕
+**Boot System Safety Documentation**
+
+Complete guide to boot safety:
+- Single entry points (server & client)
+- Duplicate execution guards
+- RemoteRegistry system
+- Module loading best practices
+- Service initialization order
+- Boot log format standards
+- Testing checklist
+- Troubleshooting guide
+
+#### [BOOT_SAFETY_QUICK_REFERENCE.md](BOOT_SAFETY_QUICK_REFERENCE.md) 🆕
+**Boot Safety Quick Reference**
+
+Quick reference for developers:
+- Entry point locations (DO NOT MODIFY)
+- Quick boot test command
+- Adding new services rules
+- Adding new remotes correctly
+- Module loading rules
+- Common issues and fixes
+
 #### [docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)
 
 Complete testing guide for the alliance and betrayal system.
