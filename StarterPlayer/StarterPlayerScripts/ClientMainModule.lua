@@ -453,6 +453,14 @@ local function bootClient()
 						else
 							warn(string.format("[BOOT][CLIENT] ✗ UI module %s initialize failed: %s", moduleName, tostring(initErr)))
 						end
+					-- Call Init if it exists (new pattern for UI modules)
+					elseif typeof(result) == "table" and result.Init then
+						local initSuccess, initErr = pcall(result.Init)
+						if initSuccess then
+							uiCount = uiCount + 1
+						else
+							warn(string.format("[BOOT][CLIENT] ✗ UI module %s Init failed: %s", moduleName, tostring(initErr)))
+						end
 					else
 						uiCount = uiCount + 1
 					end

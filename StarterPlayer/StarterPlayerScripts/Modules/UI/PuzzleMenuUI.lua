@@ -27,6 +27,7 @@ UIScaleManager.initialize()
 -- Connection tracking for cleanup
 local maid = UIConnectionMaid.new()
 local buttonMaid = UIConnectionMaid.new() -- Separate maid for button connections
+local connections = {} -- Track connections that need early setup
 
 -- Helper functions
 local function getScaledValue(baseValue, scaleType)
@@ -204,9 +205,10 @@ local selectedPuzzleIndex = 1
 -- Helper function to request a puzzle from the server
 local function requestPuzzle(componentName)
 	if not remotes or not remotes.RequestPuzzle then
-		warn("[PuzzleMenuUI] RequestPuzzle remote not available")
+		warn("[UI:PuzzleMenuUI] RequestPuzzle remote not available")
 		return
 	end
+	print("[UI:PuzzleMenuUI] Requesting puzzle:", componentName)
 	remotes.RequestPuzzle:FireServer(componentName)
 	menuFrame.Visible = false
 end
@@ -439,14 +441,14 @@ end
 -- Bind remotes from RemoteRegistry (called by ClientMainModule)
 local function bindRemotes(providedRemotes)
 	if not providedRemotes then
-		warn("[PuzzleMenuUI] bindRemotes: No remotes provided")
+		warn("[UI:PuzzleMenuUI] bindRemotes: No remotes provided")
 		return
 	end
 	
 	remotes = providedRemotes
 	
 	if not remotes.CureUpdate or not remotes.PuzzleUpdate or not remotes.RequestPuzzle or not remotes.RequestPuzzleProgress then
-		warn("[PuzzleMenuUI] Missing required remotes")
+		warn("[UI:PuzzleMenuUI] Missing required remotes")
 		return
 	end
 	
@@ -464,7 +466,7 @@ local function bindRemotes(providedRemotes)
 		end
 	end), "puzzleUpdate")
 	
-	print("[PuzzleMenuUI] Remotes bound successfully")
+	print("[UI:PuzzleMenuUI] Remotes bound successfully")
 end
 
 -- Keyboard navigation handler
@@ -541,10 +543,19 @@ end
 -- Handle respawn - cleanup connections
 maid:Give(player.CharacterRemoving:Connect(cleanup), "characterRemoving")
 
-print("PuzzleMenuUI initialized")
+print("[UI:PuzzleMenuUI] Module loaded")
 
 -- Return module table (required for ModuleScript compatibility)
 local PuzzleMenuUI = {}
+
+-- Init function to be called by ClientMainModule after require
+-- This ensures all UI elements are properly initialized
+function PuzzleMenuUI.Init()
+	print("[UI:PuzzleMenuUI] Initializing...")
+	-- UI elements are created at module top-level, so nothing extra needed here
+	-- This is a placeholder for consistency with other UI modules
+	print("[UI:PuzzleMenuUI] Initialization complete")
+end
 
 PuzzleMenuUI.bindRemotes = bindRemotes
 
