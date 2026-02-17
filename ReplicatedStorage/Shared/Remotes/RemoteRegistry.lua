@@ -69,6 +69,7 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "StaminaUpdate", Type = "Event"},
 	{Name = "EnterSpectatorMode", Type = "Event"},
 	{Name = "ExitSpectatorMode", Type = "Event"},
+	{Name = "CrouchUpdate", Type = "Event"}, -- Client movement crouch state updates
 
 	-- Matchmaking and lobby
 	{Name = "PortalQueueUpdate", Type = "Event"},
@@ -104,6 +105,7 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 	{Name = "WeaponLoadoutUpdate", Type = "Event"},
 	{Name = "DealDamage", Type = "Event"},
 	{Name = "AmmoUpdate", Type = "Event"},
+	{Name = "ReloadConfirm", Type = "Event"}, -- Server confirmation for reload requests
 
 	-- Shop and economy
 	{Name = "ShopPurchase", Type = "Event"},

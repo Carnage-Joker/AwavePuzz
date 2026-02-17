@@ -28,14 +28,15 @@ local ModalManager = require(SharedFolder:WaitForChild("ModalManager"))
 -- REMOTE EVENTS
 --------------------------------------------------------------------------------
 
-local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents")
+local remoteEventsFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
+if not remoteEventsFolder then
+	error("[FPSMovement] CRITICAL: RemoteEvents folder not found")
+end
 
--- Create crouch event if it doesn't exist
-local crouchEvent = remoteEventsFolder:FindFirstChild("CrouchUpdate")
+-- Get crouch event from RemoteRegistry (created by server boot)
+local crouchEvent = remoteEventsFolder:WaitForChild("CrouchUpdate", 5)
 if not crouchEvent then
-	crouchEvent = Instance.new("RemoteEvent")
-	crouchEvent.Name = "CrouchUpdate"
-	crouchEvent.Parent = remoteEventsFolder
+	warn("[FPSMovement] CrouchUpdate remote not found - crouch functionality may not work")
 end
 
 --------------------------------------------------------------------------------

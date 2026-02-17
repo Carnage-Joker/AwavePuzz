@@ -1,0 +1,11 @@
+-- @ScriptType: Script
+-- MainServer.lua
+-- 
+-- ⚠️ IMPORTANT: This file is intentionally empty.
+-- The actual server boot script is MainServerScript.legacy.lua
+-- 
+-- Despite its "legacy" name, MainServerScript.legacy.lua is the ACTIVE boot script
+-- that initializes all game systems. The naming is historical and will be fixed
+-- in a future refactor.
+-- 
+-- DO NOT add code to this file. See MainServerScript.legacy.lua for the server boot flow.

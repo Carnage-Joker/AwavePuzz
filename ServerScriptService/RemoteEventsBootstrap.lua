@@ -2,10 +2,15 @@
 -- @ScriptType: ModuleScript
 -- RemoteEventsBootstrap
 --
--- DEPRECATED: This module has been replaced by RemoteRegistry (ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua)
--- Kept for backward compatibility only. Will be removed in a future version.
+-- ⚠️⚠️⚠️ FULLY DEPRECATED - DO NOT USE ⚠️⚠️⚠️
+-- This module has been completely replaced by RemoteRegistry (ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua)
+-- Kept ONLY for backward compatibility with legacy code. Will be removed in a future version.
 --
--- New code should use RemoteRegistry.initializeServer() instead of requiring this module.
+-- All remote creation should now happen through RemoteRegistry.initializeServer() during server boot.
+-- See MainServerScript.legacy.lua Phase 1 for the proper initialization pattern.
+--
+-- DO NOT require this module in new code.
+-- DO NOT add new functionality to this module.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

@@ -4,6 +4,19 @@
 -- RemoteEventUtil.lua
 -- Shared utility for creating and managing remote events
 -- Consolidates the duplicate remote event setup pattern from multiple server services
+--
+-- ⚠️ DEPRECATION NOTICE: This module is legacy code kept for backward compatibility.
+-- New code should use RemoteRegistry (ReplicatedStorage/Shared/Remotes/RemoteRegistry.lua)
+-- which provides centralized, type-safe remote management.
+--
+-- RemoteRegistry advantages:
+-- - Single source of truth for all remotes
+-- - Centralized creation during server boot
+-- - Type safety and validation
+-- - Prevents duplicate/orphaned remotes
+-- - Better debugging and maintenance
+--
+-- This module will be phased out in a future release once all services migrate to RemoteRegistry.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
