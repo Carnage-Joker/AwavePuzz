@@ -379,9 +379,17 @@ function PortalMatchmakingService:onPortalTouched(portalId, player)
 	end
 	self.touchDebounce[debounceKey] = now
 	
-	-- Check if player is already in a match
-	if self.matchRegistry:isPlayerInMatch(player) then
-		print(string.format("[PortalMatchmakingService] Player %s already in a match", player.Name))
+	-- Check if player is already in a match (both via MatchRegistry and SessionState)
+	-- Dual check provides defense-in-depth: MatchRegistry is source of truth,
+	-- SessionState provides quick local check without requiring MatchRegistry reference
+	if self.matchRegistry:isPlayerInMatch(player) or self.sessionState:isPlayerInMatch(player) then
+		print(string.format("[PortalMatchmakingService] Player %s already in a match, cannot join queue", player.Name))
+		-- Send feedback to client
+		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueStatus, player, {
+			portalId = portalId,
+			status = "in_match",
+			message = "Cannot join queue while in a match"
+		})
 		return
 	end
 	
