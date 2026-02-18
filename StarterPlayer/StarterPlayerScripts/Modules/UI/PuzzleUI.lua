@@ -684,60 +684,78 @@ local function createAbstractPuzzleUI(puzzleData)
 	local nodeConnections = {}
 	local connectionPath = {}  -- Order of nodes clicked
 	
-	-- Create nodes in a circle pattern
-	local centerX = canvasFrame.AbsoluteSize.X / 2
-	local centerY = canvasFrame.AbsoluteSize.Y / 2
-	local radius = math.min(centerX, centerY) - 30
-	
-	for i = 1, nodeCount do
-		local angle = (i - 1) * (2 * math.pi / nodeCount) - math.pi / 2
-		local nodeX = centerX + radius * math.cos(angle)
-		local nodeY = centerY + radius * math.sin(angle)
-		
-		local nodeButton = Instance.new("TextButton")
-		nodeButton.Name = "Node" .. i
-		nodeButton.Size = UDim2.new(0, 40, 0, 40)
-		nodeButton.Position = UDim2.new(0, nodeX - 20, 0, nodeY - 20)
-		nodeButton.AnchorPoint = Vector2.new(0, 0)
-		nodeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 200)
-		nodeButton.Text = tostring(i)
-		nodeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-		nodeButton.TextSize = 18
-		nodeButton.Font = Enum.Font.GothamBold
-		nodeButton.Parent = canvasFrame
-		
-		local nodeCorner = Instance.new("UICorner")
-		nodeCorner.CornerRadius = UDim.new(1, 0)  -- Circular
-		nodeCorner.Parent = nodeButton
-		
-		-- Click to add to path
-		local connectionKey = "node_" .. i
-		connections[connectionKey] = nodeButton.MouseButton1Click:Connect(function()
-			-- Add node to path
-			table.insert(connectionPath, i)
-			
-			-- Highlight node
-			nodeButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
-			
-			-- Update connection display
-			local pathText = "Path: "
-			for j, node in ipairs(connectionPath) do
-				pathText = pathText .. node
-				if j < #connectionPath then
-					pathText = pathText .. " → "
+	-- Create nodes in a circle pattern once the canvas has a valid size
+	local function layoutNodes()
+		local size = canvasFrame.AbsoluteSize
+		if size.X == 0 or size.Y == 0 then
+			-- Wait for the first non-zero AbsoluteSize before laying out nodes
+			local sizeChangedConn
+			sizeChangedConn = canvasFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+				local newSize = canvasFrame.AbsoluteSize
+				if newSize.X > 0 and newSize.Y > 0 then
+					sizeChangedConn:Disconnect()
+					layoutNodes()
 				end
-			end
-			instructionLabel.Text = pathText
+			end)
+			return
+		end
+		
+		local centerX = size.X / 2
+		local centerY = size.Y / 2
+		local radius = math.min(centerX, centerY) - 30
+		
+		for i = 1, nodeCount do
+			local angle = (i - 1) * (2 * math.pi / nodeCount) - math.pi / 2
+			local nodeX = centerX + radius * math.cos(angle)
+			local nodeY = centerY + radius * math.sin(angle)
 			
-			-- If path is complete (all nodes + return to start), build connections
-			if #connectionPath == nodeCount + 1 then
-				-- Build connections table
-				for j = 1, #connectionPath - 1 do
-					nodeConnections[connectionPath[j]] = connectionPath[j + 1]
+			local nodeButton = Instance.new("TextButton")
+			nodeButton.Name = "Node" .. i
+			nodeButton.Size = UDim2.new(0, 40, 0, 40)
+			nodeButton.Position = UDim2.new(0, nodeX - 20, 0, nodeY - 20)
+			nodeButton.AnchorPoint = Vector2.new(0, 0)
+			nodeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 200)
+			nodeButton.Text = tostring(i)
+			nodeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+			nodeButton.TextSize = 18
+			nodeButton.Font = Enum.Font.GothamBold
+			nodeButton.Parent = canvasFrame
+			
+			local nodeCorner = Instance.new("UICorner")
+			nodeCorner.CornerRadius = UDim.new(1, 0)  -- Circular
+			nodeCorner.Parent = nodeButton
+			
+			-- Click to add to path
+			local connectionKey = "node_" .. i
+			connections[connectionKey] = nodeButton.MouseButton1Click:Connect(function()
+				-- Add node to path
+				table.insert(connectionPath, i)
+				
+				-- Highlight node
+				nodeButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+				
+				-- Update connection display
+				local pathText = "Path: "
+				for j, node in ipairs(connectionPath) do
+					pathText = pathText .. node
+					if j < #connectionPath then
+						pathText = pathText .. " → "
+					end
 				end
-			end
-		end)
+				instructionLabel.Text = pathText
+				
+				-- If path is complete (all nodes + return to start), build connections
+				if #connectionPath == nodeCount + 1 then
+					-- Build connections table
+					for j = 1, #connectionPath - 1 do
+						nodeConnections[connectionPath[j]] = connectionPath[j + 1]
+					end
+				end
+			end)
+		end
 	end
+	
+	layoutNodes()
 	
 	-- Clear button
 	local clearButton = Instance.new("TextButton")
