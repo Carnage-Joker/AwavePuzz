@@ -129,6 +129,33 @@ local REMOTE_DEFINITIONS: { RemoteDef } = {
 
 	-- Fun facts
 	{Name = "FunFactUpdate", Type = "Event"},
+	{Name = "RequestFunFact", Type = "Event"},
+	{Name = "ShowFunFact", Type = "Event"},
+	{Name = "UpdateFactStats", Type = "Event"},
+
+	-- Voiceover system
+	{Name = "PlayVoiceover", Type = "Event"},
+	{Name = "StopVoiceover", Type = "Event"},
+
+	-- Cure synthesis system
+	{Name = "StartSynthesis", Type = "Event"},
+	{Name = "SynthesisStateUpdate", Type = "Event"},
+	{Name = "SynthesisPuzzleComplete", Type = "Event"},
+	{Name = "SynthesisComplete", Type = "Event"},
+	{Name = "SynthesisFailed", Type = "Event"},
+
+	-- Notification system
+	{Name = "ShowNotification", Type = "Event"},
+
+	-- Portal matchmaking (additional remotes)
+	{Name = "PortalQueueStatus", Type = "Event"},
+	{Name = "PortalLeaveQueue", Type = "Event"},
+	{Name = "PortalQueueJoined", Type = "Event"},
+	{Name = "PortalQueueLeft", Type = "Event"},
+
+	-- Betrayal system (additional remotes)
+	{Name = "BetrayalOutcome", Type = "Event"},
+	{Name = "BetrayalStatus", Type = "Event"},
 }
 
 local function getOrCreateRemoteEventsFolder(): Folder
