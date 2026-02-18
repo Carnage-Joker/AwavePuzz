@@ -20,11 +20,15 @@ if not WeaponConfig then
 end
 WeaponConfig = require(WeaponConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[PlayerManager] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[PlayerManager] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[PlayerManager] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local PlayerManager = {}
 PlayerManager.__index = PlayerManager
@@ -57,13 +61,14 @@ function PlayerManager:setWeaponService(weaponService)
 end
 
 function PlayerManager:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"InventoryUpdate",
-		"CurrencyUpdate",
-		"WeaponLoadoutUpdate",
-		"PlayerHealthUpdate"
-	})
+	-- Get remotes from RemoteRegistry
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		InventoryUpdate = remotes.InventoryUpdate,
+		CurrencyUpdate = remotes.CurrencyUpdate,
+		WeaponLoadoutUpdate = remotes.WeaponLoadoutUpdate,
+		PlayerHealthUpdate = remotes.PlayerHealthUpdate,
+	}
 end
 
 ----------------------------------------------------------------
@@ -708,7 +713,7 @@ end
 
 function PlayerManager:sendInventoryUpdate(player)
 	if self.remoteEvents.InventoryUpdate and player then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.InventoryUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.InventoryUpdate, player, {
 			inventory = self:getInventory(player),
 		})
 	end
@@ -716,7 +721,7 @@ end
 
 function PlayerManager:sendCurrencyUpdate(player)
 	if self.remoteEvents.CurrencyUpdate and player then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.CurrencyUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.CurrencyUpdate, player, {
 			balance = self:getCurrency(player),
 		})
 	end
@@ -736,7 +741,7 @@ function PlayerManager:sendHealthUpdate(player)
 		return
 	end
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.PlayerHealthUpdate, player, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.PlayerHealthUpdate, player, {
 		current = playerData.health,
 		max = GameConfig.STARTING_HEALTH,
 	})
@@ -764,7 +769,7 @@ function PlayerManager:sendWeaponLoadout(player)
 		end
 	end
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.WeaponLoadoutUpdate, player, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.WeaponLoadoutUpdate, player, {
 		weapons = self:getWeapons(player),
 		equipped = self:getEquippedWeapon(player),
 		stats = weaponStats,

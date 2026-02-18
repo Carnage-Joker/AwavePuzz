@@ -74,16 +74,25 @@ function PortalMatchmakingService.new(gameManager)
 end
 
 function PortalMatchmakingService:setupRemoteEvents()
-	-- Use RemoteEventUtil for consistency with the rest of the codebase
-	local RemoteEventUtil = require(Shared:WaitForChild("RemoteEventUtil", 5))
-	self._RemoteEventUtil = RemoteEventUtil
+	-- Load RemoteRegistry for consistency with the rest of the codebase
+	local RemotesFolder = Shared:WaitForChild("Remotes", 5)
+	if not RemotesFolder then
+		error("[PortalMatchmakingService] CRITICAL: Failed to load Remotes folder")
+	end
+	local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+	if not RemoteRegistry then
+		error("[PortalMatchmakingService] CRITICAL: Failed to load RemoteRegistry")
+	end
+	RemoteRegistry = require(RemoteRegistry)
+	self._RemoteRegistry = RemoteRegistry
 	
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"PortalQueueStatus",
-		"PortalLeaveQueue",
-		"PortalQueueJoined",
-		"PortalQueueLeft"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		PortalQueueStatus = remotes.PortalQueueStatus,
+		PortalLeaveQueue = remotes.PortalLeaveQueue,
+		PortalQueueJoined = remotes.PortalQueueJoined,
+		PortalQueueLeft = remotes.PortalQueueLeft,
+	}
 	
 	-- Hook client requests to leave queue with rate limiting
 	self.remoteEvents.PortalLeaveQueue.OnServerEvent:Connect(function(player)
@@ -385,7 +394,7 @@ function PortalMatchmakingService:onPortalTouched(portalId, player)
 	if self.matchRegistry:isPlayerInMatch(player) or self.sessionState:isPlayerInMatch(player) then
 		print(string.format("[PortalMatchmakingService] Player %s already in a match, cannot join queue", player.Name))
 		-- Send feedback to client
-		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueStatus, player, {
+		self._RemoteRegistry.SafeFireClient(self.remoteEvents.PortalQueueStatus, player, {
 			portalId = portalId,
 			status = "in_match",
 			message = "Cannot join queue while in a match"
@@ -421,7 +430,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 	if portal.locked then
 		print(string.format("[PortalMatchmakingService] Portal %s is locked", portalId))
 		-- Send feedback to client
-		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueStatus, player, {
+		self._RemoteRegistry.SafeFireClient(self.remoteEvents.PortalQueueStatus, player, {
 			portalId = portalId,
 			status = "locked",
 			message = "Portal is launching..."
@@ -456,7 +465,7 @@ function PortalMatchmakingService:addPlayerToQueue(portalId, player)
 		player.Name, portalId, #portal.queue, self.maxPlayersPerMatch))
 	
 	-- Send join confirmation to player
-		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueJoined, player, {
+		self._RemoteRegistry.SafeFireClient(self.remoteEvents.PortalQueueJoined, player, {
 		mapId = portal.config.mapId,
 		queueCount = #portal.queue,
 		maxPlayers = self.maxPlayersPerMatch
@@ -502,7 +511,7 @@ function PortalMatchmakingService:removePlayerFromQueue(player, portalId)
 	
 	-- Send leave notification to player
 	if player and player.Parent then
-		self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
+		self._RemoteRegistry.SafeFireClient(self.remoteEvents.PortalQueueLeft, player, {
 			portalId = portalId
 		})
 	end
@@ -762,7 +771,7 @@ function PortalMatchmakingService:launchMatch(portalId)
 	-- Notify players they've left the queue (match is starting)
 	for _, player in ipairs(matchPlayers) do
 		if player and player.Parent then
-			self._RemoteEventUtil.safeFireClient(self.remoteEvents.PortalQueueLeft, player, {
+			self._RemoteRegistry.SafeFireClient(self.remoteEvents.PortalQueueLeft, player, {
 				portalId = portalId
 			})
 		end

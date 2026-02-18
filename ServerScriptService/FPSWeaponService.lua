@@ -21,11 +21,15 @@ if not FPSConfig then
 end
 FPSConfig = require(FPSConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[FPSWeaponService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[FPSWeaponService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[FPSWeaponService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local FPSWeaponService = {}
 FPSWeaponService.__index = FPSWeaponService
@@ -73,12 +77,13 @@ function FPSWeaponService.new(playerManager, weaponService)
 end
 
 function FPSWeaponService:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"WeaponReload",
-		"AmmoUpdate",
-		"ReloadConfirm" -- BUG-009 FIX: Server confirmation for reload requests
-	})
+	-- Use RemoteRegistry to get server remotes
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		WeaponReload = remotes.WeaponReload,
+		AmmoUpdate = remotes.AmmoUpdate,
+		ReloadConfirm = remotes.ReloadConfirm,
+	}
 
 	self.remoteEvents.WeaponReload.OnServerEvent:Connect(function(player, payload)
 		-- Validate payload structure to prevent client exploits
@@ -337,7 +342,7 @@ function FPSWeaponService:sendAmmoUpdate(player, weaponId)
 		return 
 	end
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.AmmoUpdate, player, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.AmmoUpdate, player, {
 		weaponId = weaponId,
 		current = ammo.current,
 		reserve = ammo.reserve,
@@ -361,7 +366,7 @@ function FPSWeaponService:sendReloadConfirmation(player, weaponId, success, relo
 	end
 	
 	if self.remoteEvents.ReloadConfirm then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.ReloadConfirm, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.ReloadConfirm, player, {
 			weaponId = weaponId,
 			reloadTime = reloadTime,
 			success = success

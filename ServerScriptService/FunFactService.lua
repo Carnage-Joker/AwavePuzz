@@ -17,11 +17,15 @@ if not FunFactConfig then
 end
 FunFactConfig = require(FunFactConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[FunFactService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[FunFactService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[FunFactService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local FunFactService = {}
 FunFactService.__index = FunFactService
@@ -46,11 +50,12 @@ function FunFactService.new()
 end
 
 function FunFactService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"RequestFunFact",    -- Client -> Server: Request a fun fact
-		"ShowFunFact",       -- Server -> Client: Display a fun fact
-		"UpdateFactStats"    -- Server -> Client: Update unlock stats (optional, for debugging)
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		RequestFunFact = remotes.RequestFunFact,
+		ShowFunFact = remotes.ShowFunFact,
+		UpdateFactStats = remotes.UpdateFactStats,
+	}
 
 	-- Handle fact requests from clients
 	self.remoteEvents.RequestFunFact.OnServerEvent:Connect(function(player)
@@ -191,7 +196,7 @@ function FunFactService:sendRandomFactToPlayer(player)
 	if fact then
 		-- Send to client
 		if self.remoteEvents.ShowFunFact then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.ShowFunFact, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.ShowFunFact, player, {
 				category = fact.category,
 				id = fact.id
 			})

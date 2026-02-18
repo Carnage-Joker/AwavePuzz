@@ -16,11 +16,15 @@ if not StoryConfig then
 end
 StoryConfig = require(StoryConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[AchievementService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[AchievementService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[AchievementService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local AchievementService = {}
 AchievementService.__index = AchievementService
@@ -46,9 +50,10 @@ function AchievementService.new(playerManager, gameManager)
 end
 
 function AchievementService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"AchievementUnlocked"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		AchievementUnlocked = remotes.AchievementUnlocked,
+	}
 end
 
 function AchievementService:setupEventListeners()
@@ -106,7 +111,7 @@ function AchievementService:unlockAchievement(player, achievementId)
 
 	-- Notify client
 	if self.remoteEvents.AchievementUnlocked then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AchievementUnlocked, player, achievementId)
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AchievementUnlocked, player, achievementId)
 	end
 
 	return true

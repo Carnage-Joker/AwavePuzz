@@ -11,11 +11,15 @@ if not SharedFolder then
 	error("[FPSAnimationService] CRITICAL: Failed to load Shared folder after 10 seconds")
 end
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[FPSAnimationService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[FPSAnimationService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[FPSAnimationService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local FPSAnimationService = {}
 FPSAnimationService.__index = FPSAnimationService
@@ -49,14 +53,15 @@ end
 
 function FPSAnimationService:setupRemoteEvents()
 	-- Create remote events for animation replication
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"AnimationFire",           -- Client → Server: Player fired weapon
-		"AnimationSprint",         -- Client → Server: Player sprint state changed
-		"AnimationADS",            -- Client → Server: Player ADS state changed
-		"AnimationFireReplicate",  -- Server → Clients: Replicate fire animation
-		"AnimationSprintReplicate",-- Server → Clients: Replicate sprint state
-		"AnimationADSReplicate",   -- Server → Clients: Replicate ADS state
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		AnimationFire = remotes.AnimationFire,
+		AnimationSprint = remotes.AnimationSprint,
+		AnimationADS = remotes.AnimationADS,
+		AnimationFireReplicate = remotes.AnimationFireReplicate,
+		AnimationSprintReplicate = remotes.AnimationSprintReplicate,
+		AnimationADSReplicate = remotes.AnimationADSReplicate,
+	}
 
 	-- Connect server event handlers
 	self.remoteEvents.AnimationFire.OnServerEvent:Connect(function(player, weaponId)
@@ -171,7 +176,7 @@ function FPSAnimationService:replicateFire(sourcePlayer, weaponId)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationFireReplicate, player, sourcePlayer, weaponId)
+			RemoteRegistry.SafeFireClient(self.remoteEvents.AnimationFireReplicate, player, sourcePlayer, weaponId)
 		end
 	end
 end
@@ -180,7 +185,7 @@ function FPSAnimationService:replicateSprint(sourcePlayer, isSprinting)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationSprintReplicate, player, sourcePlayer, isSprinting)
+			RemoteRegistry.SafeFireClient(self.remoteEvents.AnimationSprintReplicate, player, sourcePlayer, isSprinting)
 		end
 	end
 end
@@ -189,7 +194,7 @@ function FPSAnimationService:replicateADS(sourcePlayer, isADS)
 	-- Send to all players except the source player
 	for _, player in ipairs(Players:GetPlayers()) do
 		if player ~= sourcePlayer then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.AnimationADSReplicate, player, sourcePlayer, isADS)
+			RemoteRegistry.SafeFireClient(self.remoteEvents.AnimationADSReplicate, player, sourcePlayer, isADS)
 		end
 	end
 end

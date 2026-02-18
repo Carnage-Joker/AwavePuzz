@@ -22,11 +22,15 @@ if not GameConfig then
 end
 GameConfig = require(GameConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[AllianceServiceV2] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[AllianceServiceV2] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[AllianceServiceV2] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 -- New modules for networked alliance pooling
 local AllianceGraph = require(script.Parent.Alliance.AllianceGraph)
@@ -112,12 +116,13 @@ function AllianceServiceV2:setGameManager(gameManager)
 end
 
 function AllianceServiceV2:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"RequestAlliance",
-		"RespondAlliance",
-		"BreakAlliance",
-		"AllianceUpdate"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		RequestAlliance = remotes.RequestAlliance,
+		RespondAlliance = remotes.RespondAlliance,
+		BreakAlliance = remotes.BreakAlliance,
+		AllianceUpdate = remotes.AllianceUpdate,
+	}
 
 	-- Connect event handlers
 	self.remoteEvents.RequestAlliance.OnServerEvent:Connect(function(player, targetPlayer)
@@ -186,7 +191,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 
 	-- Check if requester is locked (in betrayal window or traitor)
 	if self.betrayalService and self.betrayalService:isPlayerLocked(requester) then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "locked",
 			message = "You cannot form alliances while in a betrayal window"
 		})
@@ -194,7 +199,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	end
 
 	if self.betrayalService and self.betrayalService:isTraitor(requester) then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "traitor",
 			message = "Traitors cannot form alliances"
 		})
@@ -204,7 +209,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	-- Check betrayal cooldown
 	if self:isOnBetrayalCooldown(requester) then
 		print(requester.Name .. " is on betrayal cooldown")
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "cooldown",
 			message = "You must wait before forming new alliances after a betrayal",
 		})
@@ -218,7 +223,7 @@ function AllianceServiceV2:handleAllianceRequest(requester, target)
 	self.pendingRequests[targetId][requesterId] = true
 
 	-- Notify target player
-RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, target, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, target, {
 		type = "request",
 		from = requester,
 		fromName = requester.Name,
@@ -247,7 +252,7 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 	if accept then
 		-- Check if responder is locked
 		if self.betrayalService and self.betrayalService:isPlayerLocked(responder) then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, responder, {
+			RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, responder, {
 				type = "locked",
 				message = "You cannot form alliances while in a betrayal window"
 			})
@@ -258,13 +263,13 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 		self:createAlliance(requester, responder)
 
 		-- Notify both players
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "formed",
 			with = responder,
 			withName = responder.Name,
 		})
 
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, responder, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, responder, {
 			type = "formed",
 			with = requester,
 			withName = requester.Name,
@@ -273,7 +278,7 @@ function AllianceServiceV2:handleAllianceResponse(responder, requester, accept)
 		print(responder.Name .. " accepted alliance with " .. requester.Name)
 	else
 		-- Notify requester of rejection
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, requester, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, requester, {
 			type = "rejected",
 			by = responder,
 			byName = responder.Name,
@@ -296,7 +301,7 @@ function AllianceServiceV2:handleBreakAlliance(player, target)
 
 	-- Check if player is locked
 	if self.betrayalService and self.betrayalService:isPlayerLocked(player) then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, player, {
 			type = "locked",
 			message = "You cannot break alliances while in a betrayal window"
 		})
@@ -307,7 +312,7 @@ function AllianceServiceV2:handleBreakAlliance(player, target)
 	local success, err = self.betrayalService:startBetrayal(player, target)
 	if not success then
 		print("[AllianceServiceV2] Failed to start betrayal:", err)
-		RemoteEventUtil.safeFireClient(self.remoteEvents.AllianceUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.AllianceUpdate, player, {
 			type = "error",
 			message = "Failed to start betrayal: " .. (err or "Unknown error")
 		})

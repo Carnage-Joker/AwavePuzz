@@ -25,11 +25,15 @@ if not GameConfig then
 end
 GameConfig = require(GameConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[SprintService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[SprintService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[SprintService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local SprintService = {}
 SprintService.__index = SprintService
@@ -74,10 +78,11 @@ end
 --------------------------------------------------------------------------------
 
 function SprintService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"SprintRequest",
-		"StaminaUpdate"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		SprintRequest = remotes.SprintRequest,
+		StaminaUpdate = remotes.StaminaUpdate,
+	}
 
 	self.remoteEvents.SprintRequest.OnServerEvent:Connect(function(player, wantsSprint)
 		self:handleSprintRequest(player, wantsSprint)
@@ -240,7 +245,7 @@ function SprintService:sendStaminaUpdate(player, force: boolean?)
 	state._lastSentStamina = currentStamina
 	state._lastSentSprint = isSprinting
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.StaminaUpdate, player, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.StaminaUpdate, player, {
 		current = currentStamina,
 		max = self.STAMINA_MAX,
 		isSprinting = isSprinting,

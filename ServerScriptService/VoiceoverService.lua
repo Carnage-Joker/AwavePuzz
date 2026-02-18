@@ -18,11 +18,15 @@ if not StoryConfig then
 end
 StoryConfig = require(StoryConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[VoiceoverService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[VoiceoverService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[VoiceoverService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local VoiceoverService = {}
 VoiceoverService.__index = VoiceoverService
@@ -41,10 +45,11 @@ function VoiceoverService.new()
 end
 
 function VoiceoverService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"PlayVoiceover",  -- Server -> Client: Play a voiceover
-		"StopVoiceover"   -- Server -> Client: Stop current voiceover
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		PlayVoiceover = remotes.PlayVoiceover,
+		StopVoiceover = remotes.StopVoiceover,
+	}
 end
 
 -- Play a voiceover for a specific player
@@ -61,7 +66,7 @@ function VoiceoverService:playVoiceoverForPlayer(player, voiceoverId, voiceoverD
 	
 	-- Send to client
 	if self.remoteEvents.PlayVoiceover then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.PlayVoiceover, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.PlayVoiceover, player, {
 			id = voiceoverId,
 			soundId = voiceoverData.SoundId or "",
 			text = voiceoverData.Text or "",
@@ -179,7 +184,7 @@ function VoiceoverService:stopVoiceoverForPlayer(player)
 	end
 	
 	if self.remoteEvents.StopVoiceover then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.StopVoiceover, player)
+		RemoteRegistry.SafeFireClient(self.remoteEvents.StopVoiceover, player)
 	end
 end
 

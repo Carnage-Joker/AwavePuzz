@@ -23,11 +23,15 @@ if not GameConfig then
 end
 GameConfig = require(GameConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[PuzzleService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[PuzzleService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[PuzzleService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local PuzzleService = {}
 PuzzleService.__index = PuzzleService
@@ -70,24 +74,17 @@ function PuzzleService.new(cureService, playerManager)
 end
 
 function PuzzleService:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	-- RemoteEvent Documentation:
-	-- - RequestPuzzle: Client -> Server, player requests to start a puzzle {componentName = string}
-	-- - SubmitPuzzleAnswer: Client -> Server, player submits puzzle solution {componentName = string, answer = any}
-	-- - PuzzleUpdate: Server -> Client, sends puzzle state updates {componentName = string, state = table}
-	-- - PuzzleFailed: Server -> Client, notifies puzzle failure {componentName = string, reason = string}
-	-- - PuzzleCompleted: Server -> Client, notifies puzzle completion {componentName = string, reward = table}
-	-- - OpenPuzzleUI: Server -> Client, tells client to open puzzle UI {componentName = string, puzzleData = table}
-	-- - RequestPuzzleProgress: Client -> Server, requests puzzle progress data (no payload)
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"RequestPuzzle",      -- Client requests to start a puzzle
-		"SubmitPuzzleAnswer", -- Client submits puzzle solution
-		"PuzzleUpdate",       -- Server sends puzzle state updates
-		"PuzzleFailed",       -- Server notifies puzzle failure
-		"PuzzleCompleted",    -- Server notifies puzzle completion
-		"OpenPuzzleUI",       -- Server tells client to open puzzle UI
-		"RequestPuzzleProgress" -- Client requests puzzle progress data
-	})
+	-- Use RemoteRegistry to get server remotes
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		RequestPuzzle = remotes.RequestPuzzle,
+		SubmitPuzzleAnswer = remotes.SubmitPuzzleAnswer,
+		PuzzleUpdate = remotes.PuzzleUpdate,
+		PuzzleFailed = remotes.PuzzleFailed,
+		PuzzleCompleted = remotes.PuzzleCompleted,
+		OpenPuzzleUI = remotes.OpenPuzzleUI,
+		RequestPuzzleProgress = remotes.RequestPuzzleProgress,
+	}
 
 	-- Connect event handlers
 	self.remoteEvents.RequestPuzzle.OnServerEvent:Connect(function(player, componentName)
@@ -120,7 +117,7 @@ function PuzzleService:sendPuzzleProgress(player)
 
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleUpdate") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleUpdate or remoteEvents.PuzzleUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.PuzzleUpdate or remoteEvents.PuzzleUpdate, player, {
 			type = "progress",
 			progress = progress
 		})
@@ -350,7 +347,7 @@ end
 function PuzzleService:sendPuzzleToClient(player, componentName, puzzle)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("OpenPuzzleUI") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.OpenPuzzleUI or remoteEvents.OpenPuzzleUI, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.OpenPuzzleUI or remoteEvents.OpenPuzzleUI, player, {
 			componentName = componentName,
 			puzzle = puzzle
 		})
@@ -360,7 +357,7 @@ end
 function PuzzleService:sendPuzzleError(player, message)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleFailed") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleFailed or remoteEvents.PuzzleFailed, player, message)
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.PuzzleFailed or remoteEvents.PuzzleFailed, player, message)
 	end
 end
 
@@ -560,7 +557,7 @@ function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
 	-- Notify client
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("PuzzleCompleted") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.PuzzleCompleted or remoteEvents.PuzzleCompleted, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.PuzzleCompleted or remoteEvents.PuzzleCompleted, player, {
 			componentName = componentName,
 			reward = reward,
 			timeTaken = elapsedTime

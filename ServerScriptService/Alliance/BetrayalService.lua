@@ -25,11 +25,15 @@ if not WeaponValues then
 end
 WeaponValues = require(WeaponValues)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[BetrayalService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[BetrayalService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[BetrayalService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local BetrayalService = {}
 BetrayalService.__index = BetrayalService
@@ -83,11 +87,12 @@ function BetrayalService:initialize()
 end
 
 function BetrayalService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"BetrayalStarted",
-		"BetrayalOutcome",
-		"BetrayalStatus"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		BetrayalStarted = remotes.BetrayalStarted,
+		BetrayalOutcome = remotes.BetrayalOutcome,
+		BetrayalStatus = remotes.BetrayalStatus,
+	}
 end
 
 -- Set game manager reference (can be called after initialization)
@@ -187,13 +192,13 @@ function BetrayalService:startBetrayal(betrayer, victim)
 	end)
 
 	-- 6) Notify clients
-RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalStarted, betrayer, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalStarted, betrayer, {
 		type = "betrayer",
 		victim = victim.Name,
 		duration = BETRAYAL_WINDOW_DURATION
 	})
 
-RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalStarted, victim, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalStarted, victim, {
 		type = "victim",
 		betrayer = betrayer.Name,
 		duration = BETRAYAL_WINDOW_DURATION
@@ -252,7 +257,7 @@ function BetrayalService:resolveOutcome1_SuccessfulBetrayal(betrayer, victim, da
 	self.activeWindows[betrayer.UserId] = nil
 
 	-- Notify clients
-	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
 		type = "success",
 		message = string.format("Betrayal successful! You eliminated %s and claimed 75%% of their pool!", victim.Name)
 	})
@@ -281,7 +286,7 @@ function BetrayalService:resolveOutcome2_FailedBetrayal(victor, betrayer, data)
 	self.activeWindows[betrayer.UserId] = nil
 
 	-- Notify clients
-	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, victor, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalOutcome, victor, {
 		type = "victory",
 		message = string.format("You defeated betrayer %s and claimed 75%% of their pool!", betrayer.Name)
 	})
@@ -330,12 +335,12 @@ function BetrayalService:onWindowExpired(betrayerId)
 	self.activeWindows[betrayerId] = nil
 
 	-- Notify clients
-RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalOutcome, betrayer, {
 		type = "stalemate_betrayer",
 		message = "Stalemate! All your personal items transferred to victim. You are marked as a Traitor."
 	})
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.BetrayalOutcome, victim, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.BetrayalOutcome, victim, {
 		type = "stalemate_victim",
 		message = string.format("Stalemate! You received all of %s's personal items.", betrayer.Name)
 	})
