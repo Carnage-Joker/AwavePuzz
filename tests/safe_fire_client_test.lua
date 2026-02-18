@@ -1,12 +1,13 @@
 -- safe_fire_client_test.lua
--- Unit test for RemoteEventUtil.safeFireClient
+-- Unit test for RemoteRegistry.SafeFireClient
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-print("=== safeFireClient unit test ===")
+print("=== SafeFireClient unit test ===")
 
-local RemoteEventUtil = require(ReplicatedStorage.Shared:WaitForChild("RemoteEventUtil", 5))
+local RemotesFolder = ReplicatedStorage.Shared:WaitForChild("Remotes", 5)
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry", 5))
 local remotes = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
 local testEvent = remotes:FindFirstChild("_Test_SafeFire") or Instance.new("RemoteEvent")
 testEvent.Name = "_Test_SafeFire"
@@ -25,19 +26,19 @@ end
 
 -- Test 1: nil player should return false and not error
 local ok, result = pcall(function()
-	return RemoteEventUtil.safeFireClient(testEvent, nil, {hello = "world"})
+	return RemoteRegistry.SafeFireClient(testEvent, nil, {hello = "world"})
 end)
-assertEquals(ok, true, "safeFireClient should not throw when player is nil")
-assertEquals(result, false, "safeFireClient returns false for nil player")
+assertEquals(ok, true, "SafeFireClient should not throw when player is nil")
+assertEquals(result, false, "SafeFireClient returns false for nil player")
 
 -- Test 2: valid player should return true (requires at least one connected player)
 local players = Players:GetPlayers()
 if #players >= 1 then
 	local player = players[1]
-	local fired = RemoteEventUtil.safeFireClient(testEvent, player, {msg = "ok"})
-	assertEquals(fired, true, "safeFireClient returns true for connected player")
+	local fired = RemoteRegistry.SafeFireClient(testEvent, player, {msg = "ok"})
+	assertEquals(fired, true, "SafeFireClient returns true for connected player")
 else
 	print("SKIP: No players available to fully validate 'connected player' case")
 end
 
-print("=== safeFireClient unit test complete ===")
+print("=== SafeFireClient unit test complete ===")

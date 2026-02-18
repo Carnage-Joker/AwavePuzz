@@ -308,8 +308,7 @@ suite.tests["Dependencies_SharedModulesLoad"] = function()
 		"WaveConfig",
 		"WeaponConfig",
 		"ZombieTypes",
-		"GameState",
-		"RemoteEventUtil"
+		"GameState"
 	}
 	
 	for _, moduleName in ipairs(sharedModules) do

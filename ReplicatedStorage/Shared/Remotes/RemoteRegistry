@@ -354,4 +354,39 @@ function RemoteRegistry.GetServerRemotes(): RemoteMap
 	return RemoteRegistry.initializeServer()
 end
 
+-- ------------------------------------------------------------------
+-- Safe FireClient wrapper (migrated from RemoteEventUtil)
+-- ------------------------------------------------------------------
+
+-- Safe FireClient wrapper
+-- Validates player before calling :FireClient to avoid errors when player disconnects mid-update.
+-- Usage: RemoteRegistry.SafeFireClient(remoteEvent, player, ...)
+function RemoteRegistry.SafeFireClient(remoteEvent: RemoteEvent, player: Player, ...): boolean
+	if typeof(remoteEvent) ~= "Instance" or not remoteEvent:IsA("RemoteEvent") then
+		error(string.format("%s SafeFireClient: first argument must be a RemoteEvent", LOG_PREFIX))
+	end
+
+	-- Validate player instance
+	if not player or typeof(player) ~= "Instance" or not player:IsA("Player") then
+		return false
+	end
+
+	-- Player must be in the data model
+	if not player.Parent or not player:IsDescendantOf(game) then
+		return false
+	end
+
+	-- Fire safely
+	local ok, err = pcall(function(...)
+		remoteEvent:FireClient(player, ...)
+	end, ...)
+
+	if not ok then
+		warn(string.format("%s SafeFireClient failed for player %s: %s", LOG_PREFIX, tostring(player.Name), tostring(err)))
+		return false
+	end
+
+	return true
+end
+
 return RemoteRegistry
