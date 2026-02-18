@@ -397,14 +397,17 @@ function PuzzleService:generateLogicClues(template, solution)
 		end
 	end
 	
-	-- Relational clue: relate an element to its actual lab
+	-- Relational clues: relate two scientists  
 	if #scientists >= 3 then
 		local scientist1 = scientists[1]
+		local scientist2 = scientists[2]
 		local assignment1 = solution[scientist1]
+		local assignment2 = solution[scientist2]
 		
-		-- Create a clue about where this element was actually studied
+		-- Create a more meaningful relational clue
+		-- For example: "The person who studied X works in a different lab than the person who studied Y"
 		table.insert(clues, {
-			text = "The lab where " .. assignment1.element .. " was studied is " .. assignment1.lab .. ".",
+			text = "The person who studied " .. assignment1.element .. " works in a different lab than the person who studied " .. assignment2.element,
 			type = "relational"
 		})
 	end

@@ -233,11 +233,19 @@ local timerConnection = nil
 
 -- Helper function to clear content and disconnect dynamic connections
 local function clearContent()
-	-- Disconnect any dynamic connections (e.g., colorBlock connections)
+	-- Disconnect any dynamic connections (e.g., colorBlock connections, puzzle-specific connections)
 	for key, connection in pairs(connections) do
-		if type(key) == "string" and key:match("^colorBlock_") then
-			if connection and connection.Connected then
+		if type(key) == "string" and (
+			key:match("^colorBlock_") or 
+			key:match("^elementButton_") or 
+			key:match("^labButton_") or 
+			key:match("^node_") or 
+			key:match("^clearButton_")
+		) then
+			if typeof(connection) == "RBXScriptConnection" and connection.Connected then
 				connection:Disconnect()
+			elseif type(connection) == "table" and type(connection.Disconnect) == "function" then
+				connection.Disconnect()
 			end
 			connections[key] = nil
 		end
@@ -629,6 +637,8 @@ local function createLogicPuzzleUI(puzzleData)
 			local selectedElement = elements[elementIndex]
 			elementButton.Text = selectedElement
 			playerGrid[scientist].element = selectedElement
+			-- Update stored data
+			contentFrame:SetAttribute("PlayerGridData", game:GetService("HttpService"):JSONEncode(playerGrid))
 		end)
 		
 		-- Lab selection cycles through options
@@ -639,6 +649,8 @@ local function createLogicPuzzleUI(puzzleData)
 			local selectedLab = labs[labIndex]
 			labButton.Text = selectedLab
 			playerGrid[scientist].lab = selectedLab
+			-- Update stored data
+			contentFrame:SetAttribute("PlayerGridData", game:GetService("HttpService"):JSONEncode(playerGrid))
 		end)
 	end
 	
@@ -750,6 +762,8 @@ local function createAbstractPuzzleUI(puzzleData)
 					for j = 1, #connectionPath - 1 do
 						nodeConnections[connectionPath[j]] = connectionPath[j + 1]
 					end
+					-- Update stored data
+					contentFrame:SetAttribute("NodeConnectionsData", game:GetService("HttpService"):JSONEncode(nodeConnections))
 				end
 			end)
 		end
@@ -786,6 +800,9 @@ local function createAbstractPuzzleUI(puzzleData)
 				node.BackgroundColor3 = Color3.fromRGB(60, 60, 200)
 			end
 		end
+		
+		-- Update stored data
+		contentFrame:SetAttribute("NodeConnectionsData", game:GetService("HttpService"):JSONEncode(nodeConnections))
 	end)
 	
 	-- Store connections in contentFrame
