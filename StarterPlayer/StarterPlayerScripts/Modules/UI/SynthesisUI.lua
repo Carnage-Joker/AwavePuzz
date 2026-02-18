@@ -10,7 +10,8 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local SynthesisUI = {}
@@ -31,11 +32,12 @@ function SynthesisUI.new()
 end
 
 function SynthesisUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"SynthesisStateUpdate",
-		"SynthesisComplete",
-		"SynthesisFailed"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	self.remoteEvents = {
+		SynthesisStateUpdate = remotes.SynthesisStateUpdate,
+		SynthesisComplete = remotes.SynthesisComplete,
+		SynthesisFailed = remotes.SynthesisFailed,
+	}
 	
 	-- Listen for synthesis state updates
 	if self.remoteEvents.SynthesisStateUpdate then

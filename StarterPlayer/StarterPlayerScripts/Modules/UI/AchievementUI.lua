@@ -10,7 +10,8 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local AchievementUI = {}
@@ -32,9 +33,10 @@ function AchievementUI.new()
 end
 
 function AchievementUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"AchievementUnlocked"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	self.remoteEvents = {
+		AchievementUnlocked = remotes.AchievementUnlocked,
+	}
 	
 	if self.remoteEvents.AchievementUnlocked then
 		table.insert(_connections, self.remoteEvents.AchievementUnlocked.OnClientEvent:Connect(function(achievementId)

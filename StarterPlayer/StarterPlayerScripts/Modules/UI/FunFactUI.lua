@@ -10,7 +10,8 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local FunFactUI = {}
@@ -41,10 +42,11 @@ function FunFactUI.new()
 end
 
 function FunFactUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShowFunFact",
-		"RequestFunFact"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	self.remoteEvents = {
+		ShowFunFact = remotes.ShowFunFact,
+		RequestFunFact = remotes.RequestFunFact,
+	}
 	
 	-- Listen for facts from server
 	if self.remoteEvents.ShowFunFact then

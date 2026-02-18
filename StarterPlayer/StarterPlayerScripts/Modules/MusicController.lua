@@ -11,7 +11,8 @@ local Player = Players.LocalPlayer
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 
 local MusicController = {}
 MusicController.__index = MusicController
@@ -55,10 +56,11 @@ function MusicController:createTracks()
 end
 
 function MusicController:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"GameStateUpdate",
-		"WaveAnnounce"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	self.remoteEvents = {
+		GameStateUpdate = remotes.GameStateUpdate,
+		WaveAnnounce = remotes.WaveAnnounce,
+	}
 
 	-- Listen for game state changes
 	if self.remoteEvents.GameStateUpdate then
