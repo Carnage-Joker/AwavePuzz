@@ -15,11 +15,15 @@ if not WeaponConfig then
 end
 WeaponConfig = require(WeaponConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[ShopService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[ShopService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[ShopService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local ShopService = {}
 ShopService.__index = ShopService
@@ -42,11 +46,12 @@ function ShopService.new(playerManager, weaponService)
 end
 
 function ShopService:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShopRequest",
-		"ShopUpdate"
-	})
+	-- Use RemoteRegistry to get server remotes
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		ShopRequest = remotes.ShopRequest,
+		ShopUpdate = remotes.ShopUpdate,
+	}
 
 	self.remoteEvents.ShopRequest.OnServerEvent:Connect(function(player, action, data)
 		self:handleRequest(player, action, data)
@@ -101,7 +106,7 @@ function ShopService:sendCatalog(player)
 	end
 
 	if self.remoteEvents.ShopUpdate then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.ShopUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.ShopUpdate, player, {
 			type = "catalog",
 			items = catalog,
 		})
@@ -267,7 +272,7 @@ function ShopService:sendResult(player, success, message)
 		return
 	end
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.ShopUpdate, player, {
+	RemoteRegistry.SafeFireClient(self.remoteEvents.ShopUpdate, player, {
 		type = "result",
 		success = success and true or false,
 		message = message or "",

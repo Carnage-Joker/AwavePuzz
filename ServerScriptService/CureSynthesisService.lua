@@ -25,11 +25,15 @@ if not PuzzleConfig then
 end
 PuzzleConfig = require(PuzzleConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[CureSynthesisService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[CureSynthesisService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[CureSynthesisService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local CureSynthesisService = {}
 CureSynthesisService.__index = CureSynthesisService
@@ -89,14 +93,16 @@ function CureSynthesisService:setPuzzleService(puzzleService)
 end
 
 function CureSynthesisService:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"StartSynthesis",           -- Client -> Server: Attempt to start synthesis
-		"SynthesisStateUpdate",     -- Server -> Client: Update synthesis state
-		"SynthesisPuzzleComplete",  -- Client -> Server: Mini-puzzle completed
-		"SynthesisComplete",        -- Server -> All: Synthesis succeeded
-		"SynthesisFailed",          -- Server -> All: Synthesis failed
-		"ShowNotification"          -- Server -> Client: Display notification message
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+
+	self.remoteEvents = {
+		StartSynthesis = remotes.StartSynthesis,
+		SynthesisStateUpdate = remotes.SynthesisStateUpdate,
+		SynthesisPuzzleComplete = remotes.SynthesisPuzzleComplete,
+		SynthesisComplete = remotes.SynthesisComplete,
+		SynthesisFailed = remotes.SynthesisFailed,
+		ShowNotification = remotes.ShowNotification,
+	}
 
 	-- Handle synthesis start requests
 	self.remoteEvents.StartSynthesis.OnServerEvent:Connect(function(player)
@@ -335,7 +341,7 @@ function CureSynthesisService:sendMessage(player, message, messageType)
 	
 	-- Send notification to client
 	if self.remoteEvents.ShowNotification and player and player:IsA("Player") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents.ShowNotification, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.ShowNotification, player, {
 			message = message,
 			messageType = messageType,
 			source = "CureSynthesisService"

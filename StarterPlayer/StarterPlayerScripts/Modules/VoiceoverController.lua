@@ -13,7 +13,8 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local VoiceoverController = {}
@@ -42,10 +43,12 @@ function VoiceoverController.new()
 end
 
 function VoiceoverController:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"PlayVoiceover",
-		"StopVoiceover"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+
+	self.remoteEvents = {
+		PlayVoiceover = remotes.PlayVoiceover,
+		StopVoiceover = remotes.StopVoiceover,
+	}
 	
 	-- Listen for voiceover playback requests
 	if self.remoteEvents.PlayVoiceover then

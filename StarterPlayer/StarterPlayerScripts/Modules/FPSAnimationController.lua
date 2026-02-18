@@ -14,7 +14,8 @@ local camera = workspace.CurrentCamera
 -- Shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 
 --------------------------------------------------------------------------------
 -- CONTROLLER
@@ -535,11 +536,12 @@ end
 
 function FPSAnimationController.initialize()
 	-- remote replication
-	FPSAnimationController.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"AnimationFire",
-		"AnimationSprint",
-		"AnimationADS",
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	FPSAnimationController.remoteEvents = {
+		AnimationFire = remotes.AnimationFire,
+		AnimationSprint = remotes.AnimationSprint,
+		AnimationADS = remotes.AnimationADS,
+	}
 
 	FPSAnimationController:createViewmodel()
 	FPSAnimationController:setupEventListeners()

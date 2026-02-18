@@ -10,7 +10,8 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local NotificationUI = {}
@@ -41,9 +42,11 @@ function NotificationUI.new()
 end
 
 function NotificationUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShowNotification"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+
+	self.remoteEvents = {
+		ShowNotification = remotes.ShowNotification,
+	}
 	
 	if self.remoteEvents.ShowNotification then
 		table.insert(_connections, self.remoteEvents.ShowNotification.OnClientEvent:Connect(function(notificationData)

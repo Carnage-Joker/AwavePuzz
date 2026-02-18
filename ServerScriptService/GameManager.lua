@@ -18,7 +18,16 @@ end
 
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig", 5))
 local WaveConfig = require(SharedFolder:WaitForChild("WaveConfig", 5))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil", 5))
+
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[GameManager] CRITICAL: Failed to load Remotes folder after 5 seconds")
+end
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[GameManager] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local BaseManager = require(script.Parent.BaseManager)
 local Spawner = require(script.Parent.Spawner)
@@ -219,31 +228,31 @@ function GameManager:configureSpawnersForMap()
 end
 
 function GameManager:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"WaveAnnounce",
-		"WaveUpdate",
-		"GameStateUpdate",
-		"CureUpdate",
-		"BaseHealthUpdate",
-		"MapUpdate",
-		"ScoreboardUpdate",
-		"ShowScoreboard",
-		"HideScoreboard",
-		"ShowTitleScreen",
-		"HideTitleScreen",
-		"TitleScreenContinue",
-		"ShowEpilogue",
-		"HideEpilogue",
-		"EpilogueComplete",
-		"ShowCredits",
-		"HideCredits",
-		"AchievementUnlocked",
-		"BetrayalStarted",
-		-- ✅ NEW: Map voting remotes for LobbyManager
-		"MapVotingState",
-		"MapVoteCast",
-		"MapVotingUpdate"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		WaveAnnounce = remotes.WaveAnnounce,
+		WaveUpdate = remotes.WaveUpdate,
+		GameStateUpdate = remotes.GameStateUpdate,
+		CureUpdate = remotes.CureUpdate,
+		BaseHealthUpdate = remotes.BaseHealthUpdate,
+		MapUpdate = remotes.MapUpdate,
+		ScoreboardUpdate = remotes.ScoreboardUpdate,
+		ShowScoreboard = remotes.ShowScoreboard,
+		HideScoreboard = remotes.HideScoreboard,
+		ShowTitleScreen = remotes.ShowTitleScreen,
+		HideTitleScreen = remotes.HideTitleScreen,
+		TitleScreenContinue = remotes.TitleScreenContinue,
+		ShowEpilogue = remotes.ShowEpilogue,
+		HideEpilogue = remotes.HideEpilogue,
+		EpilogueComplete = remotes.EpilogueComplete,
+		ShowCredits = remotes.ShowCredits,
+		HideCredits = remotes.HideCredits,
+		AchievementUnlocked = remotes.AchievementUnlocked,
+		BetrayalStarted = remotes.BetrayalStarted,
+		MapVotingState = remotes.MapVotingState,
+		MapVoteCast = remotes.MapVoteCast,
+		MapVotingUpdate = remotes.MapVotingUpdate,
+	}
 	
 	-- ✅ NEW: Pass remotes to LobbyManager after they're available
 	if self.lobbyManager and self.lobbyManager.setRemoteEvents then
@@ -490,7 +499,7 @@ function GameManager:_hookPlayerDeath(player)
 			local matchInfo = result.matchInfo
 			
 			-- Use safeFireClient to avoid errors when player disconnects mid-update
-			RemoteEventUtil.safeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
+			RemoteRegistry.SafeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
 			print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
 				player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 		end
@@ -618,7 +627,7 @@ function GameManager:onPlayerAdded(player)
 		local matchInfo = result.matchInfo
 		
 		-- Use safeFireClient to guard against disconnected players
-		RemoteEventUtil.safeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
+		RemoteRegistry.SafeFireClient(self.remoteEvents.GameStateUpdate, player, snapshot)
 		print(string.format("[Flow] Snapshot -> %s state=%s inMatch=%s matchId=%s", 
 			player.Name, snapshot.state, tostring(matchInfo.inMatch), tostring(matchInfo.matchId or "nil")))
 	end
@@ -631,7 +640,7 @@ function GameManager:onPlayerAdded(player)
 		self.playersCompletedEpilogue[player.UserId] = true
 		self.sessionState:setPassedTitle(player, true)
 		if self.remoteEvents.ShowEpilogue then
-			RemoteEventUtil.safeFireClient(self.remoteEvents.ShowEpilogue, player)
+			RemoteRegistry.SafeFireClient(self.remoteEvents.ShowEpilogue, player)
 		end
 		print(string.format("[Flow] Join -> Epilogue (late joiner during epilogue: %s)", player.Name))
 	elseif GameConfig.SHOW_TITLE_SCREEN then
@@ -777,7 +786,7 @@ function GameManager:setState(newState, payload)
 		if self.remoteEvents.ShowEpilogue then
 			for _, player in ipairs(Players:GetPlayers()) do
 				if self.playersReadyForEpilogue[player.UserId] and not self.playersCompletedEpilogue[player.UserId] then
-					RemoteEventUtil.safeFireClient(self.remoteEvents.ShowEpilogue, player)
+					RemoteRegistry.SafeFireClient(self.remoteEvents.ShowEpilogue, player)
 				end
 			end
 		end

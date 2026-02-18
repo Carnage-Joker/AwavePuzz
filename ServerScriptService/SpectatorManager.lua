@@ -23,11 +23,15 @@ if not GameConfig then
 end
 GameConfig = require(GameConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[SpectatorManager] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[SpectatorManager] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[SpectatorManager] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local SpectatorManager = {}
 SpectatorManager.__index = SpectatorManager
@@ -69,14 +73,15 @@ function SpectatorManager.new()
 end
 
 function SpectatorManager:_setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"EnterSpectatorMode",    -- Server -> Client
-		"ExitSpectatorMode",     -- Server -> Client
-		"SpectatorTargetUpdate", -- Server -> Client
-		"SpectatorCycleTarget",  -- Client -> Server
-		"SpectatorStateUpdate"   -- Server -> Client
-	})
+	-- Use RemoteRegistry to get server remotes
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		EnterSpectatorMode = remotes.EnterSpectatorMode,
+		ExitSpectatorMode = remotes.ExitSpectatorMode,
+		SpectatorTargetUpdate = remotes.SpectatorTargetUpdate,
+		SpectatorCycleTarget = remotes.SpectatorCycleTarget,
+		SpectatorStateUpdate = remotes.SpectatorStateUpdate,
+	}
 
 	-- Client cycle requests
 	self.remoteEvents.SpectatorCycleTarget.OnServerEvent:Connect(function(player, direction)
@@ -218,7 +223,7 @@ function SpectatorManager:onPlayerDied(player)
 		spectatorActive = true,
 	}
 
-RemoteEventUtil.safeFireClient(self.remoteEvents.EnterSpectatorMode, player, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.EnterSpectatorMode, player, {
 		targetPlayer = target and target.Name or nil,
 		targetUserId = target and target.UserId or nil,
 	})
@@ -245,7 +250,7 @@ function SpectatorManager:exitSpectatorMode(player)
 		player.Character:SetAttribute("IsSpectating", false)
 	end
 
-	RemoteEventUtil.safeFireClient(self.remoteEvents.ExitSpectatorMode, player, {})
+	RemoteRegistry.SafeFireClient(self.remoteEvents.ExitSpectatorMode, player, {})
 end
 
 function SpectatorManager:cycleSpectatorTarget(player, direction)
@@ -258,7 +263,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	if #alive == 0 then
 		-- nobody alive: clear target
 		data.targetUserId = nil
-		RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 			targetPlayer = nil,
 			targetUserId = nil,
 		})
@@ -279,7 +284,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	if currentIndex == 0 then
 		local newTarget = alive[1]
 		data.targetUserId = newTarget.UserId
-		RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 			targetPlayer = newTarget.Name,
 			targetUserId = newTarget.UserId,
 		})
@@ -299,7 +304,7 @@ function SpectatorManager:cycleSpectatorTarget(player, direction)
 	local newTarget = alive[newIndex]
 	data.targetUserId = newTarget.UserId
 
-RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
+RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorTargetUpdate, player, {
 		targetPlayer = newTarget.Name,
 		targetUserId = newTarget.UserId,
 	})
@@ -316,7 +321,7 @@ function SpectatorManager:onSpectatorTargetDied(targetUserId)
 				local newTarget = self:_findAlivePlayer(targetUserId, spectatorUserId)
 				data.targetUserId = newTarget and newTarget.UserId or nil
 
-				RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
+				RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
 					targetPlayer = newTarget and newTarget.Name or nil,
 					targetUserId = newTarget and newTarget.UserId or nil,
 				})
@@ -350,7 +355,7 @@ function SpectatorManager:_fixAllSpectatorTargets()
 				data.targetUserId = newTarget and newTarget.UserId or nil
 				local spectator = Players:GetPlayerByUserId(spectatorUserId)
 				if spectator then
-					RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
+					RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorTargetUpdate, spectator, {
 						targetPlayer = newTarget and newTarget.Name or nil,
 						targetUserId = newTarget and newTarget.UserId or nil,
 					})
@@ -390,7 +395,7 @@ function SpectatorManager:broadcastAliveList()
 		if data and data.spectatorActive then
 			local p = Players:GetPlayerByUserId(userId)
 			if p then
-				RemoteEventUtil.safeFireClient(self.remoteEvents.SpectatorStateUpdate, p, {
+				RemoteRegistry.SafeFireClient(self.remoteEvents.SpectatorStateUpdate, p, {
 					alivePlayers = aliveList,
 					aliveCount = #alivePlayers,
 				})

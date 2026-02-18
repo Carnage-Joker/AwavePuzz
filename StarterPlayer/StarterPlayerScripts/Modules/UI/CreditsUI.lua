@@ -10,7 +10,8 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemoteEventUtil = require(SharedFolder:WaitForChild("RemoteEventUtil"))
+local RemotesFolder = SharedFolder:WaitForChild("Remotes")
+local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local CreditsUI = {}
@@ -33,10 +34,11 @@ function CreditsUI.new()
 end
 
 function CreditsUI:setupRemoteEvents()
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"ShowCredits",
-		"HideCredits"
-	})
+	local remotes = RemoteRegistry.GetClientRemotes()
+	self.remoteEvents = {
+		ShowCredits = remotes.ShowCredits,
+		HideCredits = remotes.HideCredits,
+	}
 	
 	if self.remoteEvents.ShowCredits then
 		table.insert(_connections, self.remoteEvents.ShowCredits.OnClientEvent:Connect(function(survivorData)

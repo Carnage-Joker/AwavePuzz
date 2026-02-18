@@ -29,11 +29,15 @@ if not GameConfig then
 end
 GameConfig = require(GameConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[CureService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[CureService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[CureService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 local CureService = {}
 CureService.__index = CureService
@@ -59,10 +63,11 @@ end
 
 -- Setup remote events for cure progress updates
 function CureService:setupRemoteEvents()
-	-- Use shared utility to create remote events
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"PlayerCureProgressUpdate"
-	})
+	-- Get remotes from RemoteRegistry
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		PlayerCureProgressUpdate = remotes.PlayerCureProgressUpdate,
+	}
 end
 
 -- Set puzzle service reference (called after both services are created)
@@ -157,7 +162,7 @@ function CureService:addComponentProgress(player, componentName, amount)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
 		-- Use safeFireClient to avoid FireClient errors when player disconnects
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "component_collected",
 			componentName = componentName,
 			count = effectiveCount,
@@ -206,7 +211,7 @@ function CureService:handleDepositComponent(player, componentName)
 	-- Fire event to update UI
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "component_collected",
 			componentName = componentName,
 			count = effectiveCount,
@@ -225,7 +230,7 @@ function CureService:notifyPuzzleAvailable(player, componentName)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
 		-- Use safeFireClient to avoid FireClient errors when player disconnects
-		RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
+		RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "puzzle_available",
 			componentName = componentName,
 			message = "You have collected 5 " .. componentName .. " pieces! Visit a cure station to solve the puzzle."
@@ -336,7 +341,7 @@ function CureService:sendCureProgressUpdate(player, progress, components)
 	end
 
 	if self.remoteEvents and self.remoteEvents.PlayerCureProgressUpdate then
-		local fired = RemoteEventUtil.safeFireClient(self.remoteEvents.PlayerCureProgressUpdate, player, {
+		local fired = RemoteRegistry.SafeFireClient(self.remoteEvents.PlayerCureProgressUpdate, player, {
 			progress = progress,
 			components = components,
 			isPooled = self.allianceService and #self.allianceService:getAllies(player) > 0
@@ -350,7 +355,7 @@ function CureService:sendCureProgressUpdate(player, progress, components)
 	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
 	if remoteEvents and remoteEvents:FindFirstChild("CureUpdate") then
 		-- Use safeFireClient to protect against disconnected players
-		local fired = RemoteEventUtil.safeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
+		local fired = RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 			type = "progress",
 			progress = progress,
 			components = components

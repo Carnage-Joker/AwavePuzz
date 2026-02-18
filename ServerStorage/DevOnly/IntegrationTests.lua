@@ -44,7 +44,7 @@ suite.tests["Init_SharedModulesAccessible"] = function()
 	
 	local sharedModules = {
 		"GameConfig", "WaveConfig", "WeaponConfig", "MapConfig",
-		"ZombieTypes", "GameState", "RemoteEventUtil"
+		"ZombieTypes", "GameState"
 	}
 	
 	for _, moduleName in ipairs(sharedModules) do
