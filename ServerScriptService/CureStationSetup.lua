@@ -24,6 +24,23 @@ if SharedFolder then
 		end
 	end
 end
+
+-- Load RemoteRegistry for SafeFireClient
+local RemoteRegistry
+if SharedFolder then
+	local RemotesFolder = SharedFolder:FindFirstChild("Remotes")
+	if RemotesFolder then
+		local RemoteRegistryModule = RemotesFolder:FindFirstChild("RemoteRegistry")
+		if RemoteRegistryModule then
+			local success, result = pcall(require, RemoteRegistryModule)
+			if success then
+				RemoteRegistry = result
+			else
+				warn("[CureStationSetup] Failed to load RemoteRegistry:", result)
+			end
+		end
+	end
+end
 -- Constructor
 function CureStationSetup.new()
 	local self = setmetatable({}, CureStationSetup)
@@ -65,7 +82,7 @@ local function setupCureStation(station)
 			-- For MVP, we'll just attempt the first available component puzzle
 			
 			-- Send notification to show puzzle menu
-			if remoteEvents:FindFirstChild("CureUpdate") then
+			if remoteEvents:FindFirstChild("CureUpdate") and RemoteRegistry then
 				RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or remoteEvents.CureUpdate, player, {
 					type = "show_puzzle_menu",
 					message = "Select a component puzzle to attempt"
@@ -199,7 +216,7 @@ function CureStationSetup:initialize()
 				if nearestStation then
 					print("[CureStationSetup]", player.Name, "manually opened cure station menu from", nearestStation.Name)
 					local cureUpdate = remoteEvents:FindFirstChild("CureUpdate")
-					if cureUpdate then
+					if cureUpdate and RemoteRegistry then
 						RemoteRegistry.SafeFireClient(self.remoteEvents and self.remoteEvents.CureUpdate or cureUpdate, player, {
 							type = "show_puzzle_menu",
 							message = "Select a component puzzle to attempt"
