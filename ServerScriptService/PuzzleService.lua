@@ -716,11 +716,13 @@ function PuzzleService:validateAnswer(puzzle, answer)
 				end
 			end
 			
-			-- Return true only if ALL stages are complete
-			return allComplete
+			-- First return value: this stage answer was correct
+			-- Second return value: whether ALL stages are now complete
+			return true, allComplete
 		end
 		
-		return false
+		-- Incorrect answer for current synthesis stage
+		return false, false
 
 	return false
 end
