@@ -46,10 +46,28 @@ end
 
 function VoiceoverService:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetServerRemotes()
-	self.remoteEvents = {
-		PlayVoiceover = remotes.PlayVoiceover,
-		StopVoiceover = remotes.StopVoiceover,
-	}
+
+	self.remoteEvents = {}
+
+	if not remotes then
+		warn("[VoiceoverService] RemoteRegistry:GetServerRemotes() returned nil; voiceovers will be disabled until remotes are defined")
+		return
+	end
+
+	-- Wire up voiceover remotes if they exist in RemoteRegistry.
+	-- NOTE: RemoteRegistry must define PlayVoiceover/StopVoiceover in REMOTE_DEFINITIONS
+	-- for these to be non-nil.
+	if remotes.PlayVoiceover then
+		self.remoteEvents.PlayVoiceover = remotes.PlayVoiceover
+	else
+		warn("[VoiceoverService] PlayVoiceover remote not found in RemoteRegistry; voiceover playback will be disabled")
+	end
+
+	if remotes.StopVoiceover then
+		self.remoteEvents.StopVoiceover = remotes.StopVoiceover
+	else
+		warn("[VoiceoverService] StopVoiceover remote not found in RemoteRegistry; voiceover stop control will be disabled")
+	end
 end
 
 -- Play a voiceover for a specific player
