@@ -286,14 +286,19 @@ function PuzzleService:generatePuzzle(componentName)
 		}
 
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.LOGIC then
-		-- Generate logic puzzle (simplified for implementation)
+		-- Generate logic puzzle with clues
 		local template = PuzzleConfig.LogicPuzzles[1]
+		local solution = self:generateLogicSolution(template)
+		
+		-- Generate clues from the solution
+		local clues = self:generateLogicClues(template, solution)
+		
 		puzzle.data = {
 			elements = template.elements,
 			scientists = template.scientists,
 			labs = template.labs,
-			-- Generate clues and solution
-			solution = self:generateLogicSolution(template)
+			clues = clues,
+			solution = solution  -- Store for validation
 		}
 
 	elseif puzzleConfig.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
@@ -309,13 +314,14 @@ function PuzzleService:generatePuzzle(componentName)
 		-- Final puzzle combines multiple stages
 		puzzle.data = {
 			stages = {
-				{type = "math", puzzle = PuzzleConfig.generateMathPuzzle()},
-				{type = "pattern", puzzle = PuzzleConfig.generatePatternPuzzle()},
-				{type = "color", puzzle = {answer = "spectrum"}},
-				{type = "logic", puzzle = {answer = "deduction"}},
-				{type = "abstract", puzzle = {answer = "circuit"}}
+				{type = "math", puzzle = PuzzleConfig.generateMathPuzzle(), completed = false},
+				{type = "pattern", puzzle = PuzzleConfig.generatePatternPuzzle(), completed = false},
+				{type = "color", puzzle = {answer = "spectrum"}, completed = false},
+				{type = "logic", puzzle = {answer = "deduction"}, completed = false},
+				{type = "abstract", puzzle = {answer = "circuit"}, completed = false}
 			},
-			currentStage = 1
+			currentStage = 1,
+			totalStages = 5
 		}
 	end
 
@@ -323,18 +329,90 @@ function PuzzleService:generatePuzzle(componentName)
 end
 
 function PuzzleService:generateLogicSolution(template)
-	-- Generate a valid solution for logic puzzle
-	-- Simplified: just create a random valid mapping
+	-- Generate a valid solution for logic puzzle with proper shuffling
 	local solution = {}
-	local usedLabs = {}
+	
+	-- Create shuffled versions of elements and labs
+	local shuffledElements = {}
+	for i, element in ipairs(template.elements) do
+		shuffledElements[i] = element
+	end
+	
+	local shuffledLabs = {}
+	for i, lab in ipairs(template.labs) do
+		shuffledLabs[i] = lab
+	end
+	
+	-- Shuffle elements
+	for i = #shuffledElements, 2, -1 do
+		local j = math.random(1, i)
+		shuffledElements[i], shuffledElements[j] = shuffledElements[j], shuffledElements[i]
+	end
+	
+	-- Shuffle labs
+	for i = #shuffledLabs, 2, -1 do
+		local j = math.random(1, i)
+		shuffledLabs[i], shuffledLabs[j] = shuffledLabs[j], shuffledLabs[i]
+	end
 
+	-- Assign shuffled elements and labs to scientists
 	for i, scientist in ipairs(template.scientists) do
-		local element = template.elements[i]
-		local lab = template.labs[i]
-		solution[scientist] = {element = element, lab = lab}
+		solution[scientist] = {
+			element = shuffledElements[i],
+			lab = shuffledLabs[i]
+		}
 	end
 
 	return solution
+end
+
+function PuzzleService:generateLogicClues(template, solution)
+	-- Generate clues that uniquely identify the solution
+	local clues = {}
+	
+	-- Direct clues: explicitly state one scientist's assignment
+	local scientists = template.scientists
+	local directClueIndex = math.random(1, #scientists)
+	local directScientist = scientists[directClueIndex]
+	local assignment = solution[directScientist]
+	table.insert(clues, {
+		text = directScientist .. " studied " .. assignment.element .. " in " .. assignment.lab,
+		type = "direct"
+	})
+	
+	-- Negative clues: state what combinations are NOT true
+	-- Pick a different scientist for negative clues
+	local negativeClueIndex = directClueIndex % #scientists + 1
+	local negativeScientist = scientists[negativeClueIndex]
+	local negativeAssignment = solution[negativeScientist]
+	
+	-- Find an element that this scientist did NOT study
+	for _, element in ipairs(template.elements) do
+		if element ~= negativeAssignment.element then
+			table.insert(clues, {
+				text = negativeScientist .. " did not study " .. element,
+				type = "negative"
+			})
+			break
+		end
+	end
+	
+	-- Relational clues: relate two scientists  
+	if #scientists >= 3 then
+		local scientist1 = scientists[1]
+		local scientist2 = scientists[2]
+		local assignment1 = solution[scientist1]
+		local assignment2 = solution[scientist2]
+		
+		-- Create a more meaningful relational clue
+		-- For example: "The person who studied X works in a different lab than the person who studied Y"
+		table.insert(clues, {
+			text = "The person who studied " .. assignment1.element .. " works in a different lab than the person who studied " .. assignment2.element,
+			type = "relational"
+		})
+	end
+	
+	return clues
 end
 
 function PuzzleService:generateAbstractSolution(template)
@@ -454,78 +532,200 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		return true
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
-
-		-- Validate logic solution
-		-- For MVP: Simplified validation using answer string matching
-		-- Full implementation would include:
-		--   1. Parse player's arrangement of elements/scientists/labs
-		--   2. Check each arrangement against generated clues
-		--   3. Verify no conflicts with given constraints
-		--   4. Return true only if all constraints satisfied
-		-- Example: If clue says "Dr. Smith studied Compound X in Lab A",
-		-- verify player's grid matches this relationship
-		-- See PUZZLE_SYSTEM.md for deduction puzzle examples
-
-		-- Normalize answer for consistent validation
-		local normalizedAnswer = normalizeAnswer(answer)
-		if not normalizedAnswer then
+		-- Validate logic solution against the generated puzzle solution
+		-- Player answer should be a table mapping scientists to {element, lab}
+		-- Format: {["Dr. Smith"] = {element = "Compound X", lab = "Lab A"}, ...}
+		
+		if type(answer) ~= "table" then
+			-- Fallback: For MVP compatibility, also accept "correct" string
+			local normalizedAnswer = normalizeAnswer(answer)
+			if normalizedAnswer == "correct" then
+				return true
+			end
 			return false
 		end
-
-		-- Accept "correct" as the MVP answer for logic puzzles
-		if normalizedAnswer == "correct" then
-			return true
+		
+		-- Validate that player provided all scientists
+		local solution = puzzle.data.solution
+		if not solution then
+			return false
 		end
-		-- Could also validate against specific arrangements like "smithx", "jonezy", "brownz"
-		-- Format: scientist initial + element initial (e.g., "sx" = Smith + Compound X)
-
-		return false
+		
+		-- Check each scientist's assignment
+		for scientist, correctAssignment in pairs(solution) do
+			local playerAssignment = answer[scientist]
+			
+			if not playerAssignment then
+				return false  -- Missing scientist
+			end
+			
+			if playerAssignment.element ~= correctAssignment.element then
+				return false  -- Wrong element
+			end
+			
+			if playerAssignment.lab ~= correctAssignment.lab then
+				return false  -- Wrong lab
+			end
+		end
+		
+		-- Ensure no extra scientists were added
+		for scientist, _ in pairs(answer) do
+			if not solution[scientist] then
+				return false  -- Invalid scientist
+			end
+		end
+		
+		return true
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
-		-- Validate node connections
-		-- For MVP: Simplified validation using answer string matching
-		-- Full implementation would include:
-		--   1. Parse player's connection data (node pairs)
-		--   2. Build graph from connections
-		--   3. Verify all nodes are connected
-		--   4. Check no crossing lines (for planar graphs)
-		--   5. Validate forms complete circuit (Hamiltonian path)
-		-- Could use graph algorithms like DFS/BFS for connectivity check
-		-- See PuzzleConfig.AbstractPuzzles for puzzle templates
-
-		-- Normalize answer for consistent validation
-		local normalizedAnswer = normalizeAnswer(answer)
-		if not normalizedAnswer then
+		-- Validate node connections forming a complete circuit
+		-- Player answer should be a table of connections: {[1] = 2, [2] = 3, [3] = 1} means 1->2, 2->3, 3->1
+		-- Or array of pairs: {{1, 2}, {2, 3}, {3, 1}}
+		
+		if type(answer) ~= "table" then
+			-- Fallback: For MVP compatibility, also accept "circuit" string
+			local normalizedAnswer = normalizeAnswer(answer)
+			if normalizedAnswer == "circuit" then
+				return true
+			end
 			return false
 		end
-
-		-- Accept "circuit" as the MVP answer for abstract puzzles
-		if normalizedAnswer == "circuit" then
-			return true
+		
+		local nodeCount = puzzle.data.nodeCount
+		if not nodeCount or nodeCount < 3 then
+			return false
 		end
-		-- Could also validate connection patterns like "1-2,2-3,3-4,4-5,5-6,6-1"
-
-		return false
+		
+		-- Build adjacency list from answer
+		local adjacencyList = {}
+		for i = 1, nodeCount do
+			adjacencyList[i] = {}
+		end
+		
+		-- Parse connection format
+		for key, value in pairs(answer) do
+			if type(key) == "number" and type(value) == "number" then
+				-- Format: {[1] = 2, [2] = 3}
+				if key >= 1 and key <= nodeCount and value >= 1 and value <= nodeCount then
+					table.insert(adjacencyList[key], value)
+				end
+			elseif type(value) == "table" and #value == 2 then
+				-- Format: {{1, 2}, {2, 3}}
+				local from, to = value[1], value[2]
+				if from >= 1 and from <= nodeCount and to >= 1 and to <= nodeCount then
+					table.insert(adjacencyList[from], to)
+				end
+			end
+		end
+		
+		-- Check if forms a Hamiltonian circuit (visits all nodes exactly once and returns to start)
+		-- 1. Check each node has exactly one outgoing connection
+		for i = 1, nodeCount do
+			if #adjacencyList[i] ~= 1 then
+				return false  -- Each node must connect to exactly one other node
+			end
+		end
+		
+		-- 2. Follow the path and verify it visits all nodes and returns to start
+		local visited = {}
+		local currentNode = 1
+		local pathLength = 0
+		
+		while pathLength < nodeCount do
+			if visited[currentNode] then
+				return false  -- Visited a node twice before completing circuit
+			end
+			visited[currentNode] = true
+			pathLength = pathLength + 1
+			
+			-- Move to next node
+			local nextNode = adjacencyList[currentNode][1]
+			if not nextNode then
+				return false  -- Dead end
+			end
+			currentNode = nextNode
+		end
+		
+		-- 3. Check if we're back at the start
+		if currentNode ~= 1 then
+			return false  -- Doesn't form a circuit back to start
+		end
+		
+		-- 4. Verify all nodes were visited
+		if pathLength ~= nodeCount then
+			return false  -- Didn't visit all nodes
+		end
+		
+		return true
 
 	elseif puzzle.type == PuzzleConfig.PuzzleTypes.SYNTHESIS then
 		-- Validate multi-stage answer
-		-- For MVP: Simplified validation - synthesis puzzle is auto-solved when all components solved
-		-- Full implementation would:
-		--   1. Track current stage completion (1-5)
-		--   2. Validate each stage answer separately:
-		--      - Stage 1: Math answer validation
-		--      - Stage 2: Pattern answer validation
-		--      - Stage 3: Color arrangement validation
-		--      - Stage 4: Logic deduction validation
-		--      - Stage 5: Circuit connection validation
-		--   3. Progress to next stage only if current stage correct
-		--   4. Return true only when all 5 stages completed
-		-- Could use puzzle.data.currentStage to track progress
-
-		-- For MVP, synthesis is considered solved automatically if player attempts it
-		-- (All component puzzles must be solved to even access synthesis puzzle)
-		return true
-	end
+		-- Answer should contain: {stageIndex = <number>, answer = <stage-specific-answer>}
+		
+		if type(answer) ~= "table" then
+			-- Fallback: For MVP compatibility, auto-solve if all components solved
+			return true
+		end
+		
+		local currentStageIndex = puzzle.data.currentStage
+		local stages = puzzle.data.stages
+		
+		if not currentStageIndex or not stages or currentStageIndex > #stages then
+			return false
+		end
+		
+		-- Get the current stage
+		local currentStage = stages[currentStageIndex]
+		if not currentStage or currentStage.completed then
+			return false  -- Stage already completed or invalid
+		end
+		
+		-- Validate the answer for the current stage type
+		local stageAnswer = answer.answer or answer
+		local isStageCorrect = false
+		
+		if currentStage.type == "math" then
+			-- Validate math answer
+			isStageCorrect = (stageAnswer == currentStage.puzzle.answer)
+			
+		elseif currentStage.type == "pattern" then
+			-- Validate pattern answer
+			isStageCorrect = (stageAnswer == currentStage.puzzle.answer)
+			
+		elseif currentStage.type == "color" then
+			-- Simplified color validation
+			isStageCorrect = (normalizeAnswer(stageAnswer) == "spectrum")
+			
+		elseif currentStage.type == "logic" then
+			-- Simplified logic validation
+			isStageCorrect = (normalizeAnswer(stageAnswer) == "deduction" or normalizeAnswer(stageAnswer) == "correct")
+			
+		elseif currentStage.type == "abstract" then
+			-- Simplified abstract validation
+			isStageCorrect = (normalizeAnswer(stageAnswer) == "circuit")
+		end
+		
+		-- If stage is correct, mark it complete and advance
+		if isStageCorrect then
+			currentStage.completed = true
+			puzzle.data.currentStage = currentStageIndex + 1
+			
+			-- Check if all stages are complete
+			local allComplete = true
+			for _, stage in ipairs(stages) do
+				if not stage.completed then
+					allComplete = false
+					break
+				end
+			end
+			
+			-- First return value: this stage answer was correct
+			-- Second return value: whether ALL stages are now complete
+			return true, allComplete
+		end
+		
+		-- Incorrect answer for current synthesis stage
+		return false, false
 
 	return false
 end
