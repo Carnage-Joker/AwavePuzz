@@ -87,16 +87,11 @@ function PortalMatchmakingService:setupRemoteEvents()
 	self._RemoteRegistry = RemoteRegistry
 	
 	local remotes = RemoteRegistry.GetServerRemotes()
-	-- NOTE:
-	-- RemoteRegistry currently defines a single PortalQueueUpdate remote rather than
-	-- separate PortalQueueStatus / PortalLeaveQueue / PortalQueueJoined / PortalQueueLeft
-	-- entries. To keep this service functional and compatible with the existing registry,
-	-- all logical portal queue channels are mapped onto the single PortalQueueUpdate remote.
 	self.remoteEvents = {
-		PortalQueueStatus = remotes.PortalQueueUpdate,
-		PortalLeaveQueue = remotes.PortalQueueUpdate,
-		PortalQueueJoined = remotes.PortalQueueUpdate,
-		PortalQueueLeft = remotes.PortalQueueUpdate,
+		PortalQueueStatus = remotes.PortalQueueStatus,
+		PortalLeaveQueue = remotes.PortalLeaveQueue,
+		PortalQueueJoined = remotes.PortalQueueJoined,
+		PortalQueueLeft = remotes.PortalQueueLeft,
 	}
 	
 	-- Hook client requests to leave queue with rate limiting

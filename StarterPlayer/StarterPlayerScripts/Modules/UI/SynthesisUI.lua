@@ -32,12 +32,11 @@ function SynthesisUI.new()
 end
 
 function SynthesisUI:setupRemoteEvents()
-	-- Resolve synthesis-related remotes directly from the Remotes folder.
-	-- This avoids relying on undefined entries in RemoteRegistry.
+	local remotes = RemoteRegistry.GetClientRemotes()
 	self.remoteEvents = {
-		SynthesisStateUpdate = RemotesFolder:FindFirstChild("SynthesisStateUpdate"),
-		SynthesisComplete = RemotesFolder:FindFirstChild("SynthesisComplete"),
-		SynthesisFailed = RemotesFolder:FindFirstChild("SynthesisFailed"),
+		SynthesisStateUpdate = remotes.SynthesisStateUpdate,
+		SynthesisComplete = remotes.SynthesisComplete,
+		SynthesisFailed = remotes.SynthesisFailed,
 	}
 	
 	-- Listen for synthesis state updates

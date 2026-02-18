@@ -89,19 +89,10 @@ end
 function BetrayalService:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetServerRemotes()
 
-	local betrayalStarted = remotes.BetrayalStarted
-	local betrayalOutcome = remotes.BetrayalOutcome
-	local betrayalStatus = remotes.BetrayalStatus
-
-	-- Fail fast if required remotes are not registered in RemoteRegistry
-	assert(betrayalStarted ~= nil, "[BetrayalService] Remote 'BetrayalStarted' is not registered in RemoteRegistry")
-	assert(betrayalOutcome ~= nil, "[BetrayalService] Remote 'BetrayalOutcome' is not registered in RemoteRegistry")
-	assert(betrayalStatus ~= nil, "[BetrayalService] Remote 'BetrayalStatus' is not registered in RemoteRegistry")
-
 	self.remoteEvents = {
-		BetrayalStarted = betrayalStarted,
-		BetrayalOutcome = betrayalOutcome,
-		BetrayalStatus = betrayalStatus,
+		BetrayalStarted = remotes.BetrayalStarted,
+		BetrayalOutcome = remotes.BetrayalOutcome,
+		BetrayalStatus = remotes.BetrayalStatus,
 	}
 end
 

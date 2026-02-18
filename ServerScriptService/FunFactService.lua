@@ -52,23 +52,18 @@ end
 function FunFactService:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetServerRemotes()
 
-	-- RemoteRegistry currently defines a single FunFactUpdate remote.
-	-- We internally alias this remote to the conceptual channels used by this service.
-	local funFactRemote = remotes.FunFactUpdate
-	if not funFactRemote then
-		error("[FunFactService] CRITICAL: FunFactUpdate remote not found in RemoteRegistry")
-	end
-
 	self.remoteEvents = {
-		RequestFunFact = funFactRemote,
-		ShowFunFact = funFactRemote,
-		UpdateFactStats = funFactRemote,
+		RequestFunFact = remotes.RequestFunFact,
+		ShowFunFact = remotes.ShowFunFact,
+		UpdateFactStats = remotes.UpdateFactStats,
 	}
 
 	-- Handle fact requests from clients
-	self.remoteEvents.RequestFunFact.OnServerEvent:Connect(function(player)
-		self:sendRandomFactToPlayer(player)
-	end)
+	if self.remoteEvents.RequestFunFact then
+		self.remoteEvents.RequestFunFact.OnServerEvent:Connect(function(player)
+			self:sendRandomFactToPlayer(player)
+		end)
+	end
 end
 
 function FunFactService:connectPlayerEvents()

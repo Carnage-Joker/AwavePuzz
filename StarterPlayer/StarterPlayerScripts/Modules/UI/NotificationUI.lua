@@ -44,32 +44,8 @@ end
 function NotificationUI:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetClientRemotes()
 
-	-- Try to get the ShowNotification remote from the registry first
-	local showNotificationRemote = nil
-	if remotes then
-		showNotificationRemote = remotes.ShowNotification
-	end
-
-	-- Fallback: if RemoteRegistry does not expose ShowNotification, try to resolve it directly
-	if not showNotificationRemote then
-		local success, remoteOrError = pcall(function()
-			return RemotesFolder:FindFirstChild("ShowNotification")
-		end)
-
-		if success and remoteOrError and remoteOrError:IsA("RemoteEvent") then
-			showNotificationRemote = remoteOrError
-			if UIDebugConfig.EnableDebugOutput then
-				warn("[NotificationUI] ShowNotification missing from RemoteRegistry; using Remotes.ShowNotification directly")
-			end
-		else
-			if UIDebugConfig.EnableDebugOutput then
-				warn("[NotificationUI] ShowNotification remote not found; notifications will be disabled")
-			end
-		end
-	end
-
 	self.remoteEvents = {
-		ShowNotification = showNotificationRemote,
+		ShowNotification = remotes.ShowNotification,
 	}
 	
 	if self.remoteEvents.ShowNotification then
