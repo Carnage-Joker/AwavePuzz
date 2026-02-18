@@ -44,9 +44,27 @@ end
 
 function VoiceoverController:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetClientRemotes()
+
+	-- Prefer remotes provided by RemoteRegistry, but fall back to direct lookup
+	local playVoiceoverRemote = remotes.PlayVoiceover
+	if not playVoiceoverRemote then
+		playVoiceoverRemote = RemotesFolder:FindFirstChild("PlayVoiceover")
+		if not playVoiceoverRemote and UIDebugConfig.EnableDebugMessages then
+			warn("[VoiceoverController] PlayVoiceover remote not found in RemoteRegistry or RemotesFolder")
+		end
+	end
+
+	local stopVoiceoverRemote = remotes.StopVoiceover
+	if not stopVoiceoverRemote then
+		stopVoiceoverRemote = RemotesFolder:FindFirstChild("StopVoiceover")
+		if not stopVoiceoverRemote and UIDebugConfig.EnableDebugMessages then
+			warn("[VoiceoverController] StopVoiceover remote not found in RemoteRegistry or RemotesFolder")
+		end
+	end
+
 	self.remoteEvents = {
-		PlayVoiceover = remotes.PlayVoiceover,
-		StopVoiceover = remotes.StopVoiceover,
+		PlayVoiceover = playVoiceoverRemote,
+		StopVoiceover = stopVoiceoverRemote,
 	}
 	
 	-- Listen for voiceover playback requests
