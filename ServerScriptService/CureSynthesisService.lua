@@ -94,13 +94,34 @@ end
 
 function CureSynthesisService:setupRemoteEvents()
 	local remotes = RemoteRegistry.GetServerRemotes()
+
+	-- Resolve ShowNotification remote safely.
+	-- Prefer the RemoteRegistry-provided instance if available; otherwise
+	-- fall back to a RemoteEvent under ReplicatedStorage.RemoteEvents.
+	local showNotificationRemote = remotes.ShowNotification
+	if not showNotificationRemote then
+		local remoteFolder = ReplicatedStorage:FindFirstChild("RemoteEvents")
+		if not remoteFolder then
+			remoteFolder = Instance.new("Folder")
+			remoteFolder.Name = "RemoteEvents"
+			remoteFolder.Parent = ReplicatedStorage
+		end
+
+		showNotificationRemote = remoteFolder:FindFirstChild("ShowNotification")
+		if not showNotificationRemote then
+			showNotificationRemote = Instance.new("RemoteEvent")
+			showNotificationRemote.Name = "ShowNotification"
+			showNotificationRemote.Parent = remoteFolder
+		end
+	end
+
 	self.remoteEvents = {
 		StartSynthesis = remotes.StartSynthesis,
 		SynthesisStateUpdate = remotes.SynthesisStateUpdate,
 		SynthesisPuzzleComplete = remotes.SynthesisPuzzleComplete,
 		SynthesisComplete = remotes.SynthesisComplete,
 		SynthesisFailed = remotes.SynthesisFailed,
-		ShowNotification = remotes.ShowNotification,
+		ShowNotification = showNotificationRemote,
 	}
 
 	-- Handle synthesis start requests
