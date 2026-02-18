@@ -514,138 +514,267 @@ local function createColorPuzzleUI(puzzleData)
 	return colorBlocks
 end
 
--- Logic puzzle UI (simplified MVP with enhanced instructions)
+-- Logic puzzle UI with interactive grid
 local function createLogicPuzzleUI(puzzleData)
 	clearContent()
 
-	-- Full implementation would include:
-	--   1. Grid layout (3x3 or 4x4) showing element/person/location combinations
-	--   2. Clue display panel showing logical constraints
-	--   3. Interactive selection (click cells to mark possibilities)
-	--   4. Cross-referencing markers (X for impossible, ✓ for confirmed)
-	--   5. Visual feedback for conflicts
-	--   6. Submit button validates final arrangement against clues
-	-- Example grid: Scientists (rows) x Elements (cols) x Labs (depth)
-	-- For MVP, using simplified text input approach with enhanced UI
+	-- Interactive grid implementation
+	-- Grid shows Scientists (rows) x Elements+Labs (columns)
+	-- Player clicks cells to select assignments
 	
-	local instructionLabel = Instance.new("TextLabel")
-	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
-	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
-	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "📋 LOGIC DEDUCTION PUZZLE\n\nUse logical reasoning to deduce the correct arrangement.\n(Simplified MVP: Enter 'correct' to solve)"
-	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	instructionLabel.TextSize = 16
-	instructionLabel.Font = Enum.Font.GothamBold
-	instructionLabel.TextWrapped = true
-	instructionLabel.Parent = contentFrame
+	local scientists = puzzleData.scientists or {}
+	local elements = puzzleData.elements or {}
+	local labs = puzzleData.labs or {}
+	local clues = puzzleData.clues or {}
 	
-	-- Visual grid placeholder for future implementation
+	-- Show clues at the top
+	local cluesLabel = Instance.new("TextLabel")
+	cluesLabel.Size = UDim2.new(1, -20, 0, 60)
+	cluesLabel.Position = UDim2.new(0, 10, 0, 5)
+	cluesLabel.BackgroundTransparency = 1
+	cluesLabel.Text = "Clues:"
+	cluesLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+	cluesLabel.TextSize = 14
+	cluesLabel.Font = Enum.Font.GothamBold
+	cluesLabel.TextWrapped = true
+	cluesLabel.TextXAlignment = Enum.TextXAlignment.Left
+	cluesLabel.TextYAlignment = Enum.TextYAlignment.Top
+	cluesLabel.Parent = contentFrame
+	
+	-- Display each clue
+	local clueText = "Clues:\n"
+	for i, clue in ipairs(clues) do
+		clueText = clueText .. i .. ". " .. clue.text .. "\n"
+	end
+	cluesLabel.Text = clueText
+	
+	-- Interactive grid for assigning elements and labs to scientists
 	local gridFrame = Instance.new("Frame")
-	gridFrame.Size = UDim2.new(0, 320, 0, 200)
-	gridFrame.Position = UDim2.new(0.5, -160, 0, 100)
-	gridFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	gridFrame.Name = "GridFrame"
+	gridFrame.Size = UDim2.new(1, -20, 0, 180)
+	gridFrame.Position = UDim2.new(0, 10, 0, 75)
+	gridFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 	gridFrame.BorderSizePixel = 0
 	gridFrame.Parent = contentFrame
 	
 	local gridCorner = Instance.new("UICorner")
-	gridCorner.CornerRadius = UDim.new(0, 8)
+	gridCorner.CornerRadius = UDim.new(0, 6)
 	gridCorner.Parent = gridFrame
 	
-	local gridLabel = Instance.new("TextLabel")
-	gridLabel.Size = UDim2.new(1, 0, 1, 0)
-	gridLabel.BackgroundTransparency = 1
-	gridLabel.Text = "🔲 Grid UI\n\n(To be implemented:\nInteractive 3x3 grid\nwith clue checking)"
-	gridLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-	gridLabel.TextSize = 14
-	gridLabel.Font = Enum.Font.Gotham
-	gridLabel.Parent = gridFrame
-
-	-- Answer input
-	local answerBox = Instance.new("TextBox")
-	answerBox.Name = "AnswerBox"
-	answerBox.Size = UDim2.new(0, 300, 0, 50)
-	answerBox.Position = UDim2.new(0.5, -150, 0, 320)
-	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	answerBox.Text = ""
-	answerBox.PlaceholderText = "Enter 'correct'..."
-	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	answerBox.TextSize = 20
-	answerBox.Font = Enum.Font.Gotham
-	answerBox.Parent = contentFrame
-
-	local answerCorner = Instance.new("UICorner")
-	answerCorner.CornerRadius = UDim.new(0, 8)
-	answerCorner.Parent = answerBox
-
-	return answerBox
+	-- Store player's selections
+	local playerGrid = {}
+	for _, scientist in ipairs(scientists) do
+		playerGrid[scientist] = {element = nil, lab = nil}
+	end
+	
+	-- Create rows for each scientist
+	local rowHeight = 50
+	local labelWidth = 100
+	local cellWidth = 80
+	
+	for i, scientist in ipairs(scientists) do
+		local row = Instance.new("Frame")
+		row.Size = UDim2.new(1, 0, 0, rowHeight)
+		row.Position = UDim2.new(0, 0, 0, (i - 1) * rowHeight)
+		row.BackgroundTransparency = 1
+		row.Parent = gridFrame
+		
+		-- Scientist label
+		local scientistLabel = Instance.new("TextLabel")
+		scientistLabel.Size = UDim2.new(0, labelWidth, 1, 0)
+		scientistLabel.BackgroundTransparency = 1
+		scientistLabel.Text = scientist
+		scientistLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+		scientistLabel.TextSize = 12
+		scientistLabel.Font = Enum.Font.Gotham
+		scientistLabel.Parent = row
+		
+		-- Element dropdown button
+		local elementButton = Instance.new("TextButton")
+		elementButton.Name = "ElementButton"
+		elementButton.Size = UDim2.new(0, cellWidth, 0, 35)
+		elementButton.Position = UDim2.new(0, labelWidth + 5, 0, 7)
+		elementButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		elementButton.Text = "Element?"
+		elementButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		elementButton.TextSize = 11
+		elementButton.Font = Enum.Font.Gotham
+		elementButton.Parent = row
+		
+		local elementCorner = Instance.new("UICorner")
+		elementCorner.CornerRadius = UDim.new(0, 4)
+		elementCorner.Parent = elementButton
+		
+		-- Lab dropdown button
+		local labButton = Instance.new("TextButton")
+		labButton.Name = "LabButton"
+		labButton.Size = UDim2.new(0, cellWidth, 0, 35)
+		labButton.Position = UDim2.new(0, labelWidth + cellWidth + 10, 0, 7)
+		labButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		labButton.Text = "Lab?"
+		labButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		labButton.TextSize = 11
+		labButton.Font = Enum.Font.Gotham
+		labButton.Parent = row
+		
+		local labCorner = Instance.new("UICorner")
+		labCorner.CornerRadius = UDim.new(0, 4)
+		labCorner.Parent = labButton
+		
+		-- Element selection cycles through options
+		local elementIndex = 0
+		local connectionKey1 = "elementButton_" .. i
+		connections[connectionKey1] = elementButton.MouseButton1Click:Connect(function()
+			elementIndex = (elementIndex % #elements) + 1
+			local selectedElement = elements[elementIndex]
+			elementButton.Text = selectedElement
+			playerGrid[scientist].element = selectedElement
+		end)
+		
+		-- Lab selection cycles through options
+		local labIndex = 0
+		local connectionKey2 = "labButton_" .. i
+		connections[connectionKey2] = labButton.MouseButton1Click:Connect(function()
+			labIndex = (labIndex % #labs) + 1
+			local selectedLab = labs[labIndex]
+			labButton.Text = selectedLab
+			playerGrid[scientist].lab = selectedLab
+		end)
+	end
+	
+	-- Store playerGrid in contentFrame for later access
+	contentFrame:SetAttribute("HasPlayerGrid", true)
+	contentFrame:SetAttribute("PlayerGridData", game:GetService("HttpService"):JSONEncode(playerGrid))
+	
+	return playerGrid
 end
 
--- Abstract puzzle UI (simplified MVP with enhanced instructions)
+-- Abstract puzzle UI with node canvas and drag connections
 local function createAbstractPuzzleUI(puzzleData)
 	clearContent()
 
-	-- Full implementation would include:
-	--   1. Node visualization (circles/points positioned on canvas)
-	--   2. Drag-and-drop mechanics to create connections between nodes
-	--   3. Visual lines showing current connections
-	--   4. Collision detection to prevent crossing lines (if required)
-	--   5. Visual feedback for valid/invalid connections
-	--   6. Undo/clear buttons for connection management
-	--   7. Highlight completed circuits or valid paths
-	-- Example: Display 6-8 nodes, player drags from one to another to connect
-	-- Validate that all nodes connected and forms desired pattern (circuit, tree, etc.)
-	-- For MVP, using simplified text input approach with enhanced UI
+	local nodeCount = puzzleData.nodeCount or 6
 	
+	-- Instructions
 	local instructionLabel = Instance.new("TextLabel")
-	instructionLabel.Size = UDim2.new(1, -40, 0, 80)
-	instructionLabel.Position = UDim2.new(0, 20, 0, 10)
+	instructionLabel.Size = UDim2.new(1, -20, 0, 40)
+	instructionLabel.Position = UDim2.new(0, 10, 0, 5)
 	instructionLabel.BackgroundTransparency = 1
-	instructionLabel.Text = "🔗 NODE CONNECTION PUZZLE\n\nConnect all nodes to form a complete circuit.\n(Simplified MVP: Enter 'circuit' to solve)"
-	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	instructionLabel.TextSize = 16
+	instructionLabel.Text = "🔗 Connect all nodes in a circuit (1→2→3→...→1)\nClick nodes in order to create path"
+	instructionLabel.TextColor3 = Color3.fromRGB(255, 255, 100)
+	instructionLabel.TextSize = 13
 	instructionLabel.Font = Enum.Font.GothamBold
 	instructionLabel.TextWrapped = true
 	instructionLabel.Parent = contentFrame
 	
-	-- Visual node canvas placeholder for future implementation
+	-- Node canvas
 	local canvasFrame = Instance.new("Frame")
-	canvasFrame.Size = UDim2.new(0, 320, 0, 200)
-	canvasFrame.Position = UDim2.new(0.5, -160, 0, 100)
-	canvasFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	canvasFrame.Name = "NodeCanvas"
+	canvasFrame.Size = UDim2.new(1, -20, 0, 180)
+	canvasFrame.Position = UDim2.new(0, 10, 0, 50)
+	canvasFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 	canvasFrame.BorderSizePixel = 0
 	canvasFrame.Parent = contentFrame
 	
 	local canvasCorner = Instance.new("UICorner")
-	canvasCorner.CornerRadius = UDim.new(0, 8)
+	canvasCorner.CornerRadius = UDim.new(0, 6)
 	canvasCorner.Parent = canvasFrame
 	
-	local canvasLabel = Instance.new("TextLabel")
-	canvasLabel.Size = UDim2.new(1, 0, 1, 0)
-	canvasLabel.BackgroundTransparency = 1
-	canvasLabel.Text = "⭕ Node Canvas\n\n(To be implemented:\nDrag-and-drop nodes\nwith connection lines)"
-	canvasLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-	canvasLabel.TextSize = 14
-	canvasLabel.Font = Enum.Font.Gotham
-	canvasLabel.Parent = canvasFrame
-
-	-- Answer input
-	local answerBox = Instance.new("TextBox")
-	answerBox.Name = "AnswerBox"
-	answerBox.Size = UDim2.new(0, 300, 0, 50)
-	answerBox.Position = UDim2.new(0.5, -150, 0, 320)
-	answerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-	answerBox.Text = ""
-	answerBox.PlaceholderText = "Enter 'circuit'..."
-	answerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-	answerBox.TextSize = 20
-	answerBox.Font = Enum.Font.Gotham
-	answerBox.Parent = contentFrame
-
-	local answerCorner = Instance.new("UICorner")
-	answerCorner.CornerRadius = UDim.new(0, 8)
-	answerCorner.Parent = answerBox
-
-	return answerBox
+	-- Store connections
+	local nodeConnections = {}
+	local connectionPath = {}  -- Order of nodes clicked
+	
+	-- Create nodes in a circle pattern
+	local centerX = canvasFrame.AbsoluteSize.X / 2
+	local centerY = canvasFrame.AbsoluteSize.Y / 2
+	local radius = math.min(centerX, centerY) - 30
+	
+	for i = 1, nodeCount do
+		local angle = (i - 1) * (2 * math.pi / nodeCount) - math.pi / 2
+		local nodeX = centerX + radius * math.cos(angle)
+		local nodeY = centerY + radius * math.sin(angle)
+		
+		local nodeButton = Instance.new("TextButton")
+		nodeButton.Name = "Node" .. i
+		nodeButton.Size = UDim2.new(0, 40, 0, 40)
+		nodeButton.Position = UDim2.new(0, nodeX - 20, 0, nodeY - 20)
+		nodeButton.AnchorPoint = Vector2.new(0, 0)
+		nodeButton.BackgroundColor3 = Color3.fromRGB(60, 60, 200)
+		nodeButton.Text = tostring(i)
+		nodeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+		nodeButton.TextSize = 18
+		nodeButton.Font = Enum.Font.GothamBold
+		nodeButton.Parent = canvasFrame
+		
+		local nodeCorner = Instance.new("UICorner")
+		nodeCorner.CornerRadius = UDim.new(1, 0)  -- Circular
+		nodeCorner.Parent = nodeButton
+		
+		-- Click to add to path
+		local connectionKey = "node_" .. i
+		connections[connectionKey] = nodeButton.MouseButton1Click:Connect(function()
+			-- Add node to path
+			table.insert(connectionPath, i)
+			
+			-- Highlight node
+			nodeButton.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+			
+			-- Update connection display
+			local pathText = "Path: "
+			for j, node in ipairs(connectionPath) do
+				pathText = pathText .. node
+				if j < #connectionPath then
+					pathText = pathText .. " → "
+				end
+			end
+			instructionLabel.Text = pathText
+			
+			-- If path is complete (all nodes + return to start), build connections
+			if #connectionPath == nodeCount + 1 then
+				-- Build connections table
+				for j = 1, #connectionPath - 1 do
+					nodeConnections[connectionPath[j]] = connectionPath[j + 1]
+				end
+			end
+		end)
+	end
+	
+	-- Clear button
+	local clearButton = Instance.new("TextButton")
+	clearButton.Size = UDim2.new(0, 80, 0, 30)
+	clearButton.Position = UDim2.new(0.5, -40, 0, 240)
+	clearButton.BackgroundColor3 = Color3.fromRGB(200, 100, 50)
+	clearButton.Text = "Clear"
+	clearButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+	clearButton.TextSize = 14
+	clearButton.Font = Enum.Font.GothamBold
+	clearButton.Parent = contentFrame
+	
+	local clearCorner = Instance.new("UICorner")
+	clearCorner.CornerRadius = UDim.new(0, 4)
+	clearCorner.Parent = clearButton
+	
+	local clearConnection = "clearButton_abstract"
+	connections[clearConnection] = clearButton.MouseButton1Click:Connect(function()
+		-- Reset
+		connectionPath = {}
+		nodeConnections = {}
+		instructionLabel.Text = "🔗 Connect all nodes in a circuit (1→2→3→...→1)\nClick nodes in order to create path"
+		
+		-- Reset node colors
+		for i = 1, nodeCount do
+			local node = canvasFrame:FindFirstChild("Node" .. i)
+			if node then
+				node.BackgroundColor3 = Color3.fromRGB(60, 60, 200)
+			end
+		end
+	end)
+	
+	-- Store connections in contentFrame
+	contentFrame:SetAttribute("HasNodeConnections", true)
+	contentFrame:SetAttribute("NodeConnectionsData", game:GetService("HttpService"):JSONEncode(nodeConnections))
+	
+	return nodeConnections
 end
 
 -- Open puzzle UI
@@ -727,11 +856,33 @@ connections.submitButton = submitButton.MouseButton1Click:Connect(function()
 				table.insert(answer, block.BackgroundColor3)
 			end
 		end
-	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.LOGIC or 
-		currentPuzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
-		local answerBox = contentFrame:FindFirstChild("AnswerBox")
-		if answerBox and answerBox:IsA("TextBox") then
-			answer = answerBox.Text
+	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.LOGIC then
+		-- Get player grid data from interactive UI
+		if contentFrame:GetAttribute("HasPlayerGrid") then
+			local gridDataJSON = contentFrame:GetAttribute("PlayerGridData")
+			if gridDataJSON then
+				answer = game:GetService("HttpService"):JSONDecode(gridDataJSON)
+			end
+		else
+			-- Fallback to text input for MVP compatibility
+			local answerBox = contentFrame:FindFirstChild("AnswerBox")
+			if answerBox and answerBox:IsA("TextBox") then
+				answer = answerBox.Text
+			end
+		end
+	elseif currentPuzzle.type == PuzzleConfig.PuzzleTypes.ABSTRACT then
+		-- Get node connections from interactive UI
+		if contentFrame:GetAttribute("HasNodeConnections") then
+			local connectionsJSON = contentFrame:GetAttribute("NodeConnectionsData")
+			if connectionsJSON then
+				answer = game:GetService("HttpService"):JSONDecode(connectionsJSON)
+			end
+		else
+			-- Fallback to text input for MVP compatibility
+			local answerBox = contentFrame:FindFirstChild("AnswerBox")
+			if answerBox and answerBox:IsA("TextBox") then
+				answer = answerBox.Text
+			end
 		end
 	end
 
