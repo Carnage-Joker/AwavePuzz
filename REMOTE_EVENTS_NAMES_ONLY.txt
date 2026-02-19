@@ -1,7 +1,7 @@
 AwavePuzz - Complete RemoteEvent Names List
 Generated: 2026-02-19
 Source: RemoteRegistry v1.0.0
-Total: 99 RemoteEvents (no legacy/deprecated)
+Total: 99 RemoteEvents (including legacy/backward-compatible)
 
 ==========================================
 ALPHABETICAL LIST
