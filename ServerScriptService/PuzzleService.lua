@@ -723,6 +723,7 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		
 		-- Incorrect answer for current synthesis stage
 		return false, false
+	end
 
 	return false
 end
