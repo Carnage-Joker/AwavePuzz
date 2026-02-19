@@ -130,7 +130,7 @@ function WeaponService:setFPSWeaponService(fpsWeaponService)
 end
 
 function WeaponService:setupRemoteEvents()
-	-- Get remotes from RemoteRegistry
+	-- Use RemoteRegistry to get remote events
 	-- RemoteEvent Documentation:
 	-- - WeaponFire: Client -> Server, player fires weapon {origin = Vector3, direction = Vector3, weaponId = string}
 	-- - WeaponEquip: Client -> Server, player requests to equip weapon {weaponId = string}
@@ -139,7 +139,7 @@ function WeaponService:setupRemoteEvents()
 	self.remoteEvents = {
 		WeaponFire = remotes.WeaponFire,
 		WeaponEquip = remotes.WeaponEquip,
-		WeaponHitConfirm = remotes.WeaponHitConfirm,
+		WeaponHitConfirm = remotes.WeaponHitConfirm
 	}
 
 	self.remoteEvents.WeaponFire.OnServerEvent:Connect(function(player, payload)
