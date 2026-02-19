@@ -83,7 +83,7 @@ This document lists all **current, active RemoteEvents** used in AwavePuzz. Lega
 | StaminaUpdate | Server → Clients | Updates player's stamina |
 | EnterSpectatorMode | Server → Clients | Player enters spectator mode |
 | ExitSpectatorMode | Server → Clients | Player exits spectator mode |
-| CrouchUpdate | Client ↔ Server | Client movement crouch state updates |
+| CrouchUpdate | Client → Server | Client movement crouch state updates |
 
 ---
 
