@@ -1,10 +1,10 @@
 # AwavePuzz RemoteEvents - Complete List
 
 **Generated**: 2026-02-19  
-**Source**: `/ReplicatedStorage/Shared/Remotes/RemoteRegistry` (v1.0.0)  
+**Source**: RemoteEvent **names/count** from `/ReplicatedStorage/Shared/Remotes/RemoteRegistry` (v1.0.0); **direction/purpose** inferred from current server/client usage and curated manually.  
 **Total RemoteEvents**: 99
 
-This document lists all **current, active RemoteEvents** used in AwavePuzz. Legacy/backward-compat remotes are included only in clearly labeled **Legacy API** sections.
+This document lists all **current, active RemoteEvents** registered in `RemoteRegistry` and documents their **intended direction and purpose** based on how they are used in the codebase. Legacy/backward-compat remotes are included only in clearly labeled **Legacy API** sections.
 
 ---
 
@@ -159,9 +159,9 @@ This document lists all **current, active RemoteEvents** used in AwavePuzz. Lega
 
 | RemoteEvent Name | Direction | Purpose |
 |---|---|---|
-| ShopPurchase | Client → Server | Player purchases item from shop |
-| ShopOpen | Client → Server | Player opens shop |
-| ShopClose | Client → Server | Player closes shop |
+| ShopPurchase | Reserved | Reserved for future use (currently unused) |
+| ShopOpen | Reserved | Reserved for future use (currently unused) |
+| ShopClose | Reserved | Reserved for future use (currently unused) |
 | ShopRequest | Client → Server | Request shop action (purchase, view catalog) |
 | ShopUpdate | Server → Clients | Updates shop catalog or purchase result |
 | CurrencyUpdate | Server → Clients | Updates player's currency balance |
@@ -244,23 +244,23 @@ This document lists all **current, active RemoteEvents** used in AwavePuzz. Lega
 
 ## Summary by Direction
 
-### Client → Server (26 RemoteEvents)
+### Client → Server (32 RemoteEvents)
 Player input, requests, and actions sent to the server for validation and processing.
 
 - Animation triggers: AnimationFire, AnimationSprint, AnimationADS
 - Weapon actions: WeaponFire, WeaponReload, WeaponEquip, DealDamage
 - Puzzle interactions: PuzzlePickup, PuzzleSubmit, ItemPickup, RequestPuzzle, RequestPuzzleProgress, SubmitPuzzleAnswer
-- Shop: ShopPurchase, ShopOpen, ShopClose, ShopRequest
+- Shop: ShopRequest
 - Alliance: AllianceRequest, AllianceDisband, RequestAlliance, RespondAlliance, BreakAlliance
 - Lobby: CastMapVote, MapVoteCast
-- Player: SpectatorCycleTarget, SprintRequest
+- Player: SpectatorCycleTarget, SprintRequest, CrouchUpdate
 - UI: TitleScreenContinue, EpilogueComplete
 - Portal: PortalLeaveQueue
-- Synthesis: StartSynthesis
+- Synthesis: StartSynthesis, SynthesisPuzzleComplete
 - Cure: OpenCureStationMenu
 - Misc: RequestFunFact, ClientReady
 
-### Server → Clients (82 RemoteEvents)
+### Server → Clients (64 RemoteEvents)
 Game state updates, confirmations, and UI commands broadcast from server to clients.
 
 - **Animation replication**: AnimationFireReplicate, AnimationSprintReplicate, AnimationADSReplicate
@@ -277,12 +277,12 @@ Game state updates, confirmations, and UI commands broadcast from server to clie
 - **Betrayal**: BetrayalOutcome, BetrayalStatus
 - **Fun Facts**: FunFactUpdate, ShowFunFact, UpdateFactStats
 - **Voiceover**: PlayVoiceover, StopVoiceover
-- **Synthesis**: SynthesisStateUpdate, SynthesisPuzzleComplete, SynthesisComplete, SynthesisFailed
+- **Synthesis**: SynthesisStateUpdate, SynthesisComplete, SynthesisFailed
 
-### Bidirectional (1 RemoteEvent)
-Used for both client-to-server and server-to-client communication.
+### Reserved (3 RemoteEvents)
+Defined in RemoteRegistry but not currently used in active code. Reserved for future implementation.
 
-- CrouchUpdate
+- ShopPurchase, ShopOpen, ShopClose
 
 ---
 
@@ -290,14 +290,14 @@ Used for both client-to-server and server-to-client communication.
 
 1. **All RemoteEvents are type-checked** - The RemoteRegistry enforces proper RemoteEvent instances (vs RemoteFunction).
 
-2. **No legacy remotes included** - Only active remotes from the current RemoteRegistry v1.0.0 are listed. Archives and .disabled files are excluded.
+2. **Legacy remotes included but flagged** - Active remotes from the current RemoteRegistry v1.0.0 are listed. Six legacy remotes (3 alliance, 3 map voting) are included for backward compatibility but are clearly marked in **Legacy API** sections. Archives and .disabled files are excluded.
 
 3. **Server-authoritative design** - All game logic is validated server-side. Client→Server remotes only send requests; the server makes final decisions.
 
 4. **Direction notation**:
    - `Client → Server`: Client sends data/request to server
    - `Server → Clients`: Server broadcasts update to client(s)
-   - `Client ↔ Server`: Bidirectional (rare)
+   - `Reserved`: Defined in registry but not currently used in active code
 
 5. **Legacy compatibility** - The three legacy alliance remotes (RequestAlliance, RespondAlliance, BreakAlliance) and three legacy map voting remotes (MapVotingState, MapVoteCast, MapVotingUpdate) are maintained for backward compatibility but new code should use the modern APIs.
 
