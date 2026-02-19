@@ -228,7 +228,7 @@ This document lists all **current, active RemoteEvents** used in AwavePuzz. Lega
 |---|---|---|
 | StartSynthesis | Client → Server | Start cure synthesis process |
 | SynthesisStateUpdate | Server → Clients | Updates synthesis state |
-| SynthesisPuzzleComplete | Server → Clients | Synthesis puzzle completed |
+| SynthesisPuzzleComplete | Client → Server | Client reports synthesis puzzle completed |
 | SynthesisComplete | Server → Clients | Cure synthesis complete |
 | SynthesisFailed | Server → Clients | Cure synthesis failed |
 
