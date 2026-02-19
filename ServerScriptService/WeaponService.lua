@@ -36,11 +36,15 @@ if not WeaponConfig then
 end
 WeaponConfig = require(WeaponConfig)
 
-local RemoteEventUtil = SharedFolder:WaitForChild("RemoteEventUtil", 5)
-if not RemoteEventUtil then
-	error("[WeaponService] CRITICAL: Failed to load RemoteEventUtil after 5 seconds")
+local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
+if not RemotesFolder then
+	error("[WeaponService] CRITICAL: Failed to load Remotes folder after 5 seconds")
 end
-RemoteEventUtil = require(RemoteEventUtil)
+local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+if not RemoteRegistry then
+	error("[WeaponService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
+end
+RemoteRegistry = require(RemoteRegistry)
 
 -- Zombie hit reaction service
 local ZombieHitReactServiceModule = ServerScriptService:WaitForChild("ZombieHitReactService", 5)
@@ -126,16 +130,17 @@ function WeaponService:setFPSWeaponService(fpsWeaponService)
 end
 
 function WeaponService:setupRemoteEvents()
-	-- Use shared utility to create remote events
+	-- Use RemoteRegistry to get remote events
 	-- RemoteEvent Documentation:
 	-- - WeaponFire: Client -> Server, player fires weapon {origin = Vector3, direction = Vector3, weaponId = string}
 	-- - WeaponEquip: Client -> Server, player requests to equip weapon {weaponId = string}
 	-- - WeaponHitConfirm: Server -> Client, confirms hit on target {hitPosition = Vector3, damage = number}
-	self.remoteEvents = RemoteEventUtil.getOrCreateEvents({
-		"WeaponFire",
-		"WeaponEquip",
-		"WeaponHitConfirm"
-	})
+	local remotes = RemoteRegistry.GetServerRemotes()
+	self.remoteEvents = {
+		WeaponFire = remotes.WeaponFire,
+		WeaponEquip = remotes.WeaponEquip,
+		WeaponHitConfirm = remotes.WeaponHitConfirm
+	}
 
 	self.remoteEvents.WeaponFire.OnServerEvent:Connect(function(player, payload)
 		self:handleWeaponFire(player, payload)
@@ -630,7 +635,7 @@ function WeaponService:handleWeaponFire(player, payload)
 					if not areAllied then
 						-- PvP damage is allowed for non-allied players
 						self:damagePlayer(hitModel, hitPlayer, player, stats, weaponId)
-						RemoteEventUtil.safeFireClient(self.remoteEvents.WeaponHitConfirm, player, {
+						RemoteRegistry.SafeFireClient(self.remoteEvents.WeaponHitConfirm, player, {
 							position = result.Position,
 							target = hitPlayer.Name
 						})
