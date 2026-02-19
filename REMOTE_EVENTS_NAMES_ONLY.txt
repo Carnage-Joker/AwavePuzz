@@ -1,0 +1,253 @@
+AwavePuzz - Complete RemoteEvent Names List
+Generated: 2026-02-19
+Source: RemoteRegistry v1.0.0
+Total: 99 RemoteEvents (including legacy/backward-compatible)
+
+==========================================
+ALPHABETICAL LIST
+==========================================
+
+AchievementUnlocked
+AllianceAccept
+AllianceDecline
+AllianceDisband
+AllianceRequest
+AllianceUpdate
+AmmoUpdate
+AnimationADS
+AnimationADSReplicate
+AnimationFire
+AnimationFireReplicate
+AnimationSprint
+AnimationSprintReplicate
+BaseHealthUpdate
+BetrayalOutcome
+BetrayalStarted
+BetrayalStatus
+BreakAlliance
+CastMapVote
+ClientReady
+CrouchUpdate
+CureProgress
+CureUpdate
+CurrencyUpdate
+DealDamage
+EnterSpectatorMode
+EpilogueComplete
+ExitSpectatorMode
+FunFactUpdate
+GameStateUpdate
+HideCredits
+HideEpilogue
+HideScoreboard
+HideTitleScreen
+InventoryUpdate
+ItemPickup
+LobbyStateUpdate
+LobbyVoteUpdate
+MapUpdate
+MapVoteCast
+MapVoteEnd
+MapVoteStart
+MapVoteUpdate
+MapVotingState
+MapVotingUpdate
+OpenCureStationMenu
+OpenPuzzleUI
+PlayVoiceover
+PlayerCureProgressUpdate
+PlayerHealthUpdate
+PortalLeaveQueue
+PortalQueueJoined
+PortalQueueLeft
+PortalQueueStatus
+PortalQueueUpdate
+PuzzleCompleted
+PuzzleFailed
+PuzzlePickup
+PuzzleSubmit
+PuzzleUpdate
+ReloadConfirm
+RequestAlliance
+RequestFunFact
+RequestPuzzle
+RequestPuzzleProgress
+RespondAlliance
+ScoreboardUpdate
+ShopClose
+ShopOpen
+ShopPurchase
+ShopRequest
+ShopUpdate
+ShowCredits
+ShowEpilogue
+ShowFunFact
+ShowNotification
+ShowScoreboard
+ShowTitleScreen
+SpectatorCycleTarget
+SpectatorStateUpdate
+SpectatorTargetUpdate
+SprintRequest
+StaminaUpdate
+StartSynthesis
+StopVoiceover
+SubmitPuzzleAnswer
+SynthesisComplete
+SynthesisFailed
+SynthesisPuzzleComplete
+SynthesisStateUpdate
+TitleScreenContinue
+UpdateFactStats
+WaveAnnounce
+WaveUpdate
+WeaponEquip
+WeaponFire
+WeaponHitConfirm
+WeaponLoadoutUpdate
+WeaponReload
+
+==========================================
+GROUPED BY CATEGORY
+==========================================
+
+--- ANIMATION (6) ---
+AnimationFire
+AnimationSprint
+AnimationADS
+AnimationFireReplicate
+AnimationSprintReplicate
+AnimationADSReplicate
+
+--- GAME STATE & WAVES (4) ---
+WaveAnnounce
+WaveUpdate
+GameStateUpdate
+ClientReady
+
+--- CURE SYSTEM (3) ---
+CureUpdate
+CureProgress
+PlayerCureProgressUpdate
+
+--- BASE & MAP (2) ---
+BaseHealthUpdate
+MapUpdate
+
+--- UI STATE (11) ---
+ShowScoreboard
+HideScoreboard
+ScoreboardUpdate
+ShowTitleScreen
+HideTitleScreen
+TitleScreenContinue
+ShowEpilogue
+HideEpilogue
+EpilogueComplete
+ShowCredits
+HideCredits
+
+--- PLAYER SYSTEMS (11) ---
+AchievementUnlocked
+BetrayalStarted
+SpectatorCycleTarget
+SpectatorStateUpdate
+SpectatorTargetUpdate
+SprintRequest
+PlayerHealthUpdate
+StaminaUpdate
+EnterSpectatorMode
+ExitSpectatorMode
+CrouchUpdate
+
+--- MATCHMAKING & LOBBY (11) ---
+PortalQueueUpdate
+LobbyVoteUpdate
+LobbyStateUpdate
+MapVoteStart
+MapVoteUpdate
+MapVoteEnd
+CastMapVote
+MapVotingState
+MapVoteCast
+MapVotingUpdate
+PortalQueueStatus
+
+--- PORTAL (3) ---
+PortalLeaveQueue
+PortalQueueJoined
+PortalQueueLeft
+
+--- PUZZLE SYSTEM (10) ---
+PuzzlePickup
+PuzzleSubmit
+ItemPickup
+PuzzleUpdate
+PuzzleCompleted
+PuzzleFailed
+OpenPuzzleUI
+RequestPuzzle
+RequestPuzzleProgress
+SubmitPuzzleAnswer
+
+--- CURE STATIONS (1) ---
+OpenCureStationMenu
+
+--- WEAPONS & COMBAT (8) ---
+WeaponFire
+WeaponReload
+WeaponEquip
+WeaponHitConfirm
+WeaponLoadoutUpdate
+DealDamage
+AmmoUpdate
+ReloadConfirm
+
+--- SHOP & ECONOMY (7) ---
+ShopPurchase
+ShopOpen
+ShopClose
+ShopRequest
+ShopUpdate
+CurrencyUpdate
+InventoryUpdate
+
+--- ALLIANCE (MODERN) (5) ---
+AllianceRequest
+AllianceAccept
+AllianceDecline
+AllianceDisband
+AllianceUpdate
+
+--- ALLIANCE (LEGACY - BACKWARD COMPAT) (3) ---
+RequestAlliance
+RespondAlliance
+BreakAlliance
+
+--- BETRAYAL (2) ---
+BetrayalOutcome
+BetrayalStatus
+
+--- FUN FACTS (4) ---
+FunFactUpdate
+RequestFunFact
+ShowFunFact
+UpdateFactStats
+
+--- VOICEOVER (2) ---
+PlayVoiceover
+StopVoiceover
+
+--- CURE SYNTHESIS (5) ---
+StartSynthesis
+SynthesisStateUpdate
+SynthesisPuzzleComplete
+SynthesisComplete
+SynthesisFailed
+
+--- NOTIFICATION (1) ---
+ShowNotification
+
+==========================================
+END OF LIST
+==========================================
