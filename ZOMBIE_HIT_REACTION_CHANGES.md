@@ -283,7 +283,7 @@ local STAGGER_IMPULSE_MULT = 2.0
 ### Memory
 - ~200 bytes per zombie
 - Shared Heartbeat connection
-- Automatic cleanup on death
+- Automatic cleanup when zombie model is destroyed/removed
 
 ### CPU
 - <1ms per impulse (throttled)
