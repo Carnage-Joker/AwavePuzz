@@ -243,6 +243,27 @@ function Spawner:getZombieModel(zombieType)
 	return modelTemplate:Clone()
 end
 
+-- Set server network ownership for all BaseParts in zombie model
+-- This prevents client-side physics manipulation and ensures server authority
+function Spawner:setServerNetworkOwnership(zombieModel)
+	if not zombieModel then
+		return
+	end
+	
+	-- Set network owner to nil (server) for all BaseParts
+	for _, descendant in ipairs(zombieModel:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			local success, err = pcall(function()
+				descendant:SetNetworkOwner(nil)
+			end)
+			if not success then
+				warn(string.format("[Spawner] Failed to set network owner for %s in %s: %s", 
+					descendant.Name, zombieModel.Name, tostring(err)))
+			end
+		end
+	end
+end
+
 function Spawner:spawnZombie(zombieType)
 	local stats = ZombieTypes[zombieType]
 	if not stats then
@@ -278,6 +299,9 @@ function Spawner:spawnZombie(zombieType)
 
 	zombieModel.Name = zombieType .. "_" .. self.zombieCount
 	zombieModel.Parent = workspace.Zombies
+
+	-- Enforce server network ownership for all zombie parts (prevents client physics exploits)
+	self:setServerNetworkOwnership(zombieModel)
 
 	-- Create brain with AI services
 	local brain = ZombieBrain.new(

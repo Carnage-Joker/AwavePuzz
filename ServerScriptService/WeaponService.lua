@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ServerStorage = game:GetService("ServerStorage")
 local RunService = game:GetService("RunService")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 -- Server-only validation
 if not RunService:IsServer() then
@@ -44,6 +45,9 @@ if not RemoteRegistry then
 	error("[WeaponService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
 end
 RemoteRegistry = require(RemoteRegistry)
+
+-- Zombie hit reaction service
+local ZombieHitReactService = require(ServerScriptService:WaitForChild("ZombieHitReactService", 5))
 
 local function cloneTable(t)
 	local copy = {}
@@ -99,6 +103,9 @@ function WeaponService.new(playerManager, allianceService, gameManager)
 	self.playerWeaponState = {} -- userId -> state
 	self.registeredZombies = {} -- Compatibility shim: zombie tracking for tests
 	self.remoteEvents = {}
+	
+	-- Initialize zombie hit reaction service
+	self.zombieHitReactService = ZombieHitReactService.new()
 	
 	-- Rate limiting: track fire events per player to prevent spam
 	self.fireRateLimit = {} -- userId -> { count = number, windowStart = tick() }
@@ -608,7 +615,7 @@ function WeaponService:handleWeaponFire(player, payload)
 		if hitModel then
 			-- Check if hit a zombie
 			if hitModel:GetAttribute("IsZombie") then
-				self:damageZombie(hitModel, player, stats, weaponId)
+				self:damageZombie(hitModel, player, stats, weaponId, result.Instance, result.Position, direction)
 				RemoteRegistry.SafeFireClient(self.remoteEvents.WeaponHitConfirm, player, {
 					position = result.Position,
 					target = hitModel.Name
@@ -636,7 +643,7 @@ function WeaponService:handleWeaponFire(player, payload)
 		end
 	end
 end
-function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
+function WeaponService:damageZombie(zombieModel, player, stats, weaponId, hitPart, hitPosition, rayDirection)
 	local humanoid = zombieModel:FindFirstChild("Humanoid")
 	if not humanoid then
 		return
@@ -645,12 +652,37 @@ function WeaponService:damageZombie(zombieModel, player, stats, weaponId)
 	zombieModel:SetAttribute("LastHitBy", player.UserId)
 	zombieModel:SetAttribute("LastHitWeapon", weaponId)
 
+	-- Determine if this was a headshot (using FPSWeaponService if available)
+	local isHeadshot = false
+	local damageMultiplier = 1.0
+	if self.fpsWeaponService and hitPart then
+		isHeadshot = self.fpsWeaponService:isHeadshot(hitPart)
+		damageMultiplier = self.fpsWeaponService:getDamageMultiplier(hitPart)
+	end
+	
+	-- Calculate actual damage dealt (base damage * multiplier)
+	local actualDamage = stats.Damage * damageMultiplier
+
 	-- Wrap in pcall in case humanoid is destroyed between validation and damage application
 	local success, err = pcall(function()
-		humanoid:TakeDamage(stats.Damage)
+		-- Apply damage with multiplier
+		humanoid:TakeDamage(actualDamage)
 	end)
 	if not success then
 		warn("[WeaponService] Failed to apply damage to humanoid: " .. tostring(err))
+		return
+	end
+	
+	-- Apply hit reaction (impulse and stability effects)
+	if self.zombieHitReactService and hitPart and hitPosition and rayDirection then
+		self.zombieHitReactService:OnBulletHit(
+			zombieModel,
+			hitPart,
+			hitPosition,
+			rayDirection,
+			actualDamage,  -- Use actual damage dealt (post-multiplier)
+			isHeadshot
+		)
 	end
 end
 
