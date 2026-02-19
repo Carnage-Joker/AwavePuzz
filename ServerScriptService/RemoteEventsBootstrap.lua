@@ -23,8 +23,13 @@ if not RunService:IsServer() then
 end
 
 -- Module exposes an explicit initializer; auto-initialization on require is kept for backward compatibility
-local RemoteEventsBootstrap = {}
-RemoteEventsBootstrap.initialized = false
+local RemoteEventsBootstrap = {
+	Folder = nil,
+	Names = nil,
+	Remotes = nil,
+}
+-- Use explicit boolean type so strict type narrowing doesn't create impossible intersections
+RemoteEventsBootstrap.initialized = (false :: boolean)
 
 -- Canonical list (keep names stable for backward compatibility)
 local NAMES: {string} = {
@@ -161,7 +166,7 @@ function RemoteEventsBootstrap.initialize()
 	
 	printf("Animation remotes ready. Created: %d | Existing: %d | Replaced/Deduped: %d | Total: %d", created, existing, replaced, #NAMES)
 	
-	RemoteEventsBootstrap.initialized = true
+	RemoteEventsBootstrap.initialized = (true :: boolean)
 	RemoteEventsBootstrap.Folder = folder
 	RemoteEventsBootstrap.Names = NAMES
 	RemoteEventsBootstrap.Remotes = remotesByName
