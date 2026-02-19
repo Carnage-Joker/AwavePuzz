@@ -185,7 +185,8 @@ Verify cleanup when zombie dies mid-effect
 ### Expected Results
 - ✅ No errors when zombie dies during leg slow
 - ✅ No errors when zombie dies during stagger
-- ✅ State is cleaned up properly
+- ✅ State is cleaned up properly (on Humanoid.Died event)
+- ✅ State is also cleaned up when model is removed from DataModel
 
 ### Pass Criteria
 - [ ] No errors on zombie death

@@ -121,8 +121,8 @@ end
 
 Automatic cleanup prevents memory leaks:
 ```lua
--- ZombieHitReactService.lua:87-96
--- Clean up state when zombie is destroyed
+-- ZombieHitReactService.lua:87-110
+-- Clean up state when zombie is destroyed (parent becomes nil)
 local ancestryConnection
 ancestryConnection = zombieModel.AncestryChanged:Connect(function(_, parent)
     if parent == nil then
@@ -132,12 +132,32 @@ ancestryConnection = zombieModel.AncestryChanged:Connect(function(_, parent)
         end
     end
 end)
+
+-- Clean up state when zombie dies
+local diedConnection
+if humanoid then
+    diedConnection = humanoid.Died:Connect(function()
+        self:cleanupZombie(zombieModel)
+        if diedConnection then
+            diedConnection:Disconnect()
+        end
+        if ancestryConnection then
+            ancestryConnection:Disconnect()
+        end
+    end)
+end
+
+-- Also check during Heartbeat loop (lines 141-145)
+if not humanoid or humanoid.Health <= 0 then
+    self:cleanupZombie(zombieModel)
+end
 ```
 
 **Benefits**:
-- No memory leaks
+- No memory leaks (cleanup on death AND removal)
 - Automatic state cleanup
 - Connection cleanup
+- Dead zombies cleaned up even if model remains parented
 
 ### Existing Security Preserved ✅
 **Status**: SECURE

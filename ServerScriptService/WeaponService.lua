@@ -47,7 +47,11 @@ end
 RemoteRegistry = require(RemoteRegistry)
 
 -- Zombie hit reaction service
-local ZombieHitReactService = require(ServerScriptService:WaitForChild("ZombieHitReactService", 5))
+local ZombieHitReactServiceModule = ServerScriptService:WaitForChild("ZombieHitReactService", 5)
+if not ZombieHitReactServiceModule then
+	error("[WeaponService] CRITICAL: Failed to load ZombieHitReactService after 5 seconds")
+end
+local ZombieHitReactService = require(ZombieHitReactServiceModule)
 
 local function cloneTable(t)
 	local copy = {}

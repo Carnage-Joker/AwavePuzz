@@ -109,11 +109,12 @@ STAGGER_IMPULSE_MULT = 2.0       -- Stronger impulse on stagger
 ### Scalability
 - Designed for 50+ active zombies
 - Uses Heartbeat loop for stability regeneration (shared across all zombies)
-- Per-zombie state is minimal (6 fields: lastImpulseTime, stability, lastStaggerTime, originalSpeed, isStaggered, legSlowEndTime)
+- Per-zombie state is minimal (6 fields: lastImpulseTime, stability, lastStaggerTime, preEffectSpeed, isStaggered, legSlowEndTime)
 - Impulse cooldown prevents physics spam
 
 ### Memory Management
-- Automatic cleanup when zombie is destroyed (via AncestryChanged event)
+- Automatic cleanup when zombie dies (Humanoid.Died event) or is destroyed (AncestryChanged event)
+- Additional cleanup check in Heartbeat loop for dead zombies
 - No memory leaks from state tracking
 
 ### Server Authority
@@ -124,7 +125,7 @@ STAGGER_IMPULSE_MULT = 2.0       -- Stronger impulse on stagger
 ## Safety Features
 
 1. **Humanoid validation**: Early exit if humanoid is dead or missing
-2. **Speed restoration**: Original WalkSpeed stored and restored after effects
+2. **Speed restoration**: Pre-effect WalkSpeed stored per effect and restored after effects expire (preserves other speed modifiers from systems like boss auras)
 3. **pcall protection**: Physics operations wrapped in pcall
 4. **Input validation**: All parameters validated before processing
 5. **Brief staggers**: Stagger duration kept short (0.25-0.35s) to avoid breaking AI

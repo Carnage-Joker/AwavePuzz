@@ -76,15 +76,14 @@ end
 function ZombieHitReactService:getOrCreateState(zombieModel)
 	if not self.zombieStates[zombieModel] then
 		local humanoid = zombieModel:FindFirstChild("Humanoid")
-		local originalSpeed = humanoid and humanoid.WalkSpeed or 16
 		
 		self.zombieStates[zombieModel] = {
 			lastImpulseTime = 0,
 			stability = STABILITY_MAX,
 			lastStaggerTime = 0,
-			originalSpeed = originalSpeed,
 			isStaggered = false,
 			legSlowEndTime = 0,
+			preEffectSpeed = nil,  -- Stored per-effect to preserve other speed modifiers
 		}
 		
 		-- Clean up state when zombie is destroyed
@@ -98,9 +97,22 @@ function ZombieHitReactService:getOrCreateState(zombieModel)
 			end
 		end)
 		
+		-- Clean up state when zombie dies
+		local diedConnection
+		if humanoid then
+			diedConnection = humanoid.Died:Connect(function()
+				self:cleanupZombie(zombieModel)
+				if diedConnection then
+					diedConnection:Disconnect()
+				end
+				if ancestryConnection then
+					ancestryConnection:Disconnect()
+				end
+			end)
+		end
+		
 		if DEBUG then
-			print(string.format("[ZombieHitReactService] Created state for %s (original speed: %.1f)", 
-				zombieModel.Name, originalSpeed))
+			print(string.format("[ZombieHitReactService] Created state for %s", zombieModel.Name))
 		end
 	end
 	
@@ -127,14 +139,20 @@ function ZombieHitReactService:startStabilityRegeneration()
 	
 	self.heartbeatConnection = RunService.Heartbeat:Connect(function(deltaTime)
 		for zombieModel, state in pairs(self.zombieStates) do
-			-- Regenerate stability over time (capped at max)
-			if state.stability < STABILITY_MAX then
-				state.stability = math.min(STABILITY_MAX, state.stability + (STABILITY_REGEN_PER_SEC * deltaTime))
-			end
-			
-			-- Check if leg slow effect has expired
-			if state.legSlowEndTime > 0 and tick() >= state.legSlowEndTime then
-				self:restoreSpeed(zombieModel, state)
+			-- Check if zombie is dead and clean up
+			local humanoid = zombieModel:FindFirstChild("Humanoid")
+			if not humanoid or humanoid.Health <= 0 then
+				self:cleanupZombie(zombieModel)
+			else
+				-- Regenerate stability over time (capped at max)
+				if state.stability < STABILITY_MAX then
+					state.stability = math.min(STABILITY_MAX, state.stability + (STABILITY_REGEN_PER_SEC * deltaTime))
+				end
+				
+				-- Check if leg slow effect has expired
+				if state.legSlowEndTime > 0 and tick() >= state.legSlowEndTime then
+					self:restoreSpeed(zombieModel, state)
+				end
 			end
 		end
 	end)
@@ -193,7 +211,7 @@ function ZombieHitReactService:OnBulletHit(zombieModel, hitPart, hitPos, rayDirU
 	
 	-- Apply impulse (with cooldown)
 	if (currentTime - state.lastImpulseTime) >= IMPULSE_COOLDOWN then
-		self:applyImpulse(zombieModel, rayDirUnit, damage, isHeadshot)
+		self:applyImpulse(zombieModel, rayDirUnit)
 		state.lastImpulseTime = currentTime
 	end
 	
@@ -223,7 +241,7 @@ end
 -- ============================================================================
 -- IMPULSE APPLICATION
 -- ============================================================================
-function ZombieHitReactService:applyImpulse(zombieModel, rayDirUnit, damage, isHeadshot)
+function ZombieHitReactService:applyImpulse(zombieModel, rayDirUnit)
 	local root = zombieModel:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		return
@@ -300,13 +318,16 @@ function ZombieHitReactService:applyLegSlow(zombieModel, state)
 	
 	-- Apply slow if not already staggered
 	if not state.isStaggered then
-		local targetSpeed = state.originalSpeed * LEG_SLOW_SPEED
+		-- Capture current speed as pre-effect speed to preserve other modifiers
+		state.preEffectSpeed = humanoid.WalkSpeed
+		
+		local targetSpeed = humanoid.WalkSpeed * LEG_SLOW_SPEED
 		humanoid.WalkSpeed = targetSpeed
 		state.legSlowEndTime = tick() + LEG_SLOW_DURATION
 		
 		if DEBUG then
 			print(string.format("[ZombieHitReactService] Applied leg slow to %s (%.1f -> %.1f for %.1fs)", 
-				zombieModel.Name, state.originalSpeed, targetSpeed, LEG_SLOW_DURATION))
+				zombieModel.Name, state.preEffectSpeed, targetSpeed, LEG_SLOW_DURATION))
 		end
 	end
 end
@@ -317,14 +338,15 @@ function ZombieHitReactService:restoreSpeed(zombieModel, state)
 		return
 	end
 	
-	-- Only restore if not staggered
-	if not state.isStaggered then
-		humanoid.WalkSpeed = state.originalSpeed
+	-- Only restore if not staggered and we have a pre-effect speed
+	if not state.isStaggered and state.preEffectSpeed then
+		humanoid.WalkSpeed = state.preEffectSpeed
 		state.legSlowEndTime = 0
+		state.preEffectSpeed = nil
 		
 		if DEBUG then
 			print(string.format("[ZombieHitReactService] Restored speed for %s (%.1f)", 
-				zombieModel.Name, state.originalSpeed))
+				zombieModel.Name, humanoid.WalkSpeed))
 		end
 	end
 end
@@ -341,6 +363,9 @@ function ZombieHitReactService:triggerStagger(zombieModel, state, rayDirUnit)
 	-- Mark as staggered
 	state.isStaggered = true
 	state.lastStaggerTime = tick()
+	
+	-- Capture current speed as pre-effect speed to preserve other modifiers
+	state.preEffectSpeed = humanoid.WalkSpeed
 	
 	-- Apply stronger stagger impulse
 	local root = zombieModel:FindFirstChild("HumanoidRootPart")
@@ -367,14 +392,15 @@ function ZombieHitReactService:triggerStagger(zombieModel, state, rayDirUnit)
 	local staggerDuration = math.random(STAGGER_DURATION_MIN * 100, STAGGER_DURATION_MAX * 100) / 100
 	
 	task.delay(staggerDuration, function()
-		if humanoid and humanoid.Health > 0 then
-			humanoid.WalkSpeed = state.originalSpeed
+		if humanoid and humanoid.Health > 0 and state.preEffectSpeed then
+			humanoid.WalkSpeed = state.preEffectSpeed
 			state.isStaggered = false
 			state.legSlowEndTime = 0  -- Clear any leg slow
+			state.preEffectSpeed = nil
 			
 			if DEBUG then
 				print(string.format("[ZombieHitReactService] Stagger ended for %s, restored speed to %.1f", 
-					zombieModel.Name, state.originalSpeed))
+					zombieModel.Name, humanoid.WalkSpeed))
 			end
 		end
 	end)
