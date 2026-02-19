@@ -726,7 +726,7 @@ function PuzzleService:validateAnswer(puzzle, answer)
 		end
 
 	return false
-	end
+end
 
 
 function PuzzleService:onPuzzleCompleted(player, componentName, elapsedTime)
