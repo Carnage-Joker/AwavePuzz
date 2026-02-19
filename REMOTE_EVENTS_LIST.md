@@ -4,7 +4,7 @@
 **Source**: `/ReplicatedStorage/Shared/Remotes/RemoteRegistry` (v1.0.0)  
 **Total RemoteEvents**: 99
 
-This document lists all **current, active RemoteEvents** used in AwavePuzz. Legacy and deprecated remotes are excluded from this list.
+This document lists all **current, active RemoteEvents** used in AwavePuzz. Legacy/backward-compat remotes are included only in clearly labeled **Legacy API** sections.
 
 ---
 
