@@ -42,7 +42,7 @@ if not SharedFolder then
 	error("[MainServerScript] CRITICAL: Failed to load Shared folder after 10 seconds")
 end
 
--- Validate Shared substructure before requiring
+-- RemoteRegistry moved from Remotes/ to Shared/ (ModuleScripts belong in Shared, not in Remotes/)
 local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
 if not RemotesFolder then
 	error("[MainServerScript] CRITICAL: Shared.Remotes folder missing after 5 seconds")
