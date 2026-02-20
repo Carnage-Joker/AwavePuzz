@@ -149,6 +149,11 @@ function GameManager.new(allianceService)
 		self.currentState = GameManager.States.WAITING
 		print("[GameManager] Starting in WAITING state (title screen disabled)")
 	end
+	-- _globalState tracks the state to broadcast to non-match players.
+	-- self.currentState is the routing key used by update(); _globalState diverges
+	-- from currentState only while a portal match is active (e.g. currentState=COUNTDOWN
+	-- but non-match players should still see LOBBY).
+	self._globalState = self.currentState
 	self.currentWave = 0
 	self.cureProgress = 0
 	
@@ -174,6 +179,7 @@ function GameManager.new(allianceService)
 	self._characterAddedConnections = {}  -- userId -> CharacterAdded connection for cleanup
 	self._lastWaveBroadcastSec = nil      -- last second we broadcast WaveUpdate
 	self._spectatorCycleCooldown = {}     -- userId -> last os.clock()
+	self._lastCountdownLogSec = nil       -- last integer-second logged during countdown
 
 	-- ✅ REFACTOR: Lobby resolution state machine (replaces simple _lobbyResolved flag)
 	-- Initialize to VOTING as a safe default (will be reset when lobby actually starts)
@@ -722,14 +728,26 @@ function GameManager:setState(newState, payload)
 		end
 	end
 	
-	-- Only update global state when this transition is not owned by an active match.
-	-- This prevents non-match players from seeing match-scoped states (COUNTDOWN/WAVE_ACTIVE/etc)
-	-- via the global snapshot / effective state resolution.
+	-- _globalState tracks what non-match players should see. It only updates when the
+	-- transition is NOT owned by an active match so that non-match players continue to
+	-- see LOBBY/WAITING while a portal match is running COUNTDOWN/WAVE_ACTIVE/etc.
 	local shouldUpdateGlobalState = not (isMatchState and self._currentMatchId)
 	if shouldUpdateGlobalState then
-		self.currentState = newState
-		self.stateTimer = 0
+		self._globalState = newState
 	end
+
+	-- Always update self.currentState so update() can route to the correct tick function.
+	-- Previously this was gated behind shouldUpdateGlobalState, which caused update() to
+	-- keep routing to updateLobby() instead of updateCountdown(), making the countdown
+	-- loop forever without ever reaching 0.
+	local prevState = self.currentState
+	self.currentState = newState
+	self.stateTimer = 0
+
+	print(string.format("[GameManager] State: %s → %s (matchId=%s globalState=%s)",
+		tostring(prevState), newState,
+		tostring(self._currentMatchId or "none"),
+		tostring(self._globalState or newState)))
 
 	-- Build state snapshot (authoritative game state)
 	local stateData = {
@@ -788,8 +806,6 @@ function GameManager:setState(newState, payload)
 		end
 		print("[GameManager] Epilogue controlled via GameStateUpdate and legacy ShowEpilogue (compatibility path)")
 	end
-	
-	print(string.format("[GameManager] State changed to %s", newState))
 end
 
 -- Helper method to broadcast events to match players or appropriate audience
@@ -893,9 +909,10 @@ function GameManager:_getPlayerEffectiveState(player)
 		return "TitleScreen"
 	end
 	
-	-- Player has passed title screen, not in match - send global state
-	-- This handles lobby, waiting, scoreboard, etc.
-	return self.currentState
+	-- Player has passed title screen, not in match - send global state.
+	-- Use _globalState (which never reflects match-owned transitions) so non-match
+	-- players continue to see LOBBY/WAITING while a portal match is active.
+	return self._globalState or self.currentState
 end
 
 -- Get current state snapshot for a player (used on join/character spawn)
@@ -1518,7 +1535,27 @@ end
 
 function GameManager:updateCountdown(deltaTime)
 	self.stateTimer -= deltaTime
+
+	-- Instrumentation: log once per second so shrinking countdown is visible in logs
+	local nowSec = math.floor(self.stateTimer)
+	if self.stateTimer > 0 and self._lastCountdownLogSec ~= nowSec then
+		self._lastCountdownLogSec = nowSec
+		local matchId = self._currentMatchId or "global"
+		local playerCount
+		if self._currentMatchId then
+			local mr = self:getMatchRegistry()
+			playerCount = mr and #mr:getMatchPlayers(self._currentMatchId) or 0
+		else
+			playerCount = #Players:GetPlayers()
+		end
+		print(string.format("[Countdown] matchId=%s remainingTime=%d playerCount=%d",
+			matchId, nowSec, playerCount))
+	end
+
 	if self.stateTimer <= 0 then
+		self._lastCountdownLogSec = nil
+		print(string.format("[Countdown] Elapsed! matchId=%s -> startWave()",
+			tostring(self._currentMatchId or "global")))
 		self:startWave()
 	end
 end
