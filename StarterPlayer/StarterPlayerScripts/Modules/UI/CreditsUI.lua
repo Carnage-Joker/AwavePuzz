@@ -10,8 +10,7 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemotesFolder = SharedFolder:WaitForChild("Remotes")
-local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local CreditsUI = {}

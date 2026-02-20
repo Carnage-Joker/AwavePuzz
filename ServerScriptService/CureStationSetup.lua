@@ -28,16 +28,13 @@ end
 -- Load RemoteRegistry for SafeFireClient
 local RemoteRegistry
 if SharedFolder then
-	local RemotesFolder = SharedFolder:FindFirstChild("Remotes")
-	if RemotesFolder then
-		local RemoteRegistryModule = RemotesFolder:FindFirstChild("RemoteRegistry")
-		if RemoteRegistryModule then
-			local success, result = pcall(require, RemoteRegistryModule)
-			if success then
-				RemoteRegistry = result
-			else
-				warn("[CureStationSetup] Failed to load RemoteRegistry:", result)
-			end
+	local RemoteRegistryModule = SharedFolder:FindFirstChild("RemoteRegistry")
+	if RemoteRegistryModule then
+		local success, result = pcall(require, RemoteRegistryModule)
+		if success then
+			RemoteRegistry = result
+		else
+			warn("[CureStationSetup] Failed to load RemoteRegistry:", result)
 		end
 	end
 end

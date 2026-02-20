@@ -75,11 +75,7 @@ end
 
 function PortalMatchmakingService:setupRemoteEvents()
 	-- Load RemoteRegistry for consistency with the rest of the codebase
-	local RemotesFolder = Shared:WaitForChild("Remotes", 5)
-	if not RemotesFolder then
-		error("[PortalMatchmakingService] CRITICAL: Failed to load Remotes folder")
-	end
-	local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+	local RemoteRegistry = Shared:WaitForChild("RemoteRegistry", 5)
 	if not RemoteRegistry then
 		error("[PortalMatchmakingService] CRITICAL: Failed to load RemoteRegistry")
 	end

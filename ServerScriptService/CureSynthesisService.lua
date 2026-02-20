@@ -25,11 +25,7 @@ if not PuzzleConfig then
 end
 PuzzleConfig = require(PuzzleConfig)
 
-local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-if not RemotesFolder then
-	error("[CureSynthesisService] CRITICAL: Failed to load Remotes folder after 5 seconds")
-end
-local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+local RemoteRegistry = SharedFolder:WaitForChild("RemoteRegistry", 5)
 if not RemoteRegistry then
 	error("[CureSynthesisService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
 end

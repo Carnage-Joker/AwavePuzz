@@ -21,11 +21,7 @@ if not FPSConfig then
 end
 FPSConfig = require(FPSConfig)
 
-local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-if not RemotesFolder then
-	error("[FPSWeaponService] CRITICAL: Failed to load Remotes folder after 5 seconds")
-end
-local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+local RemoteRegistry = SharedFolder:WaitForChild("RemoteRegistry", 5)
 if not RemoteRegistry then
 	error("[FPSWeaponService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
 end

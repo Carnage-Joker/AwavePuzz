@@ -108,18 +108,17 @@ local function testRemoteRegistry()
 		return
 	end
 	
-	local RemotesFolder = SharedFolder:FindFirstChild("Remotes")
-	if not RemotesFolder then
-		fail(testName, "Remotes folder not found in Shared")
-		return
-	end
-	
-	local RemoteRegistry = RemotesFolder:FindFirstChild("RemoteRegistry")
+	local RemoteRegistry = SharedFolder:FindFirstChild("RemoteRegistry")
 	if not RemoteRegistry then
-		fail(testName, "RemoteRegistry module not found")
+		fail(testName, "RemoteRegistry module not found in Shared")
 		return
 	end
-	
+
+	if not RemoteRegistry:IsA("ModuleScript") then
+		fail(testName, "Shared.RemoteRegistry is not a ModuleScript (got " .. RemoteRegistry.ClassName .. ")")
+		return
+	end
+
 	local success, registry = pcall(function()
 		return require(RemoteRegistry)
 	end)
@@ -300,17 +299,14 @@ local function testBootLogDeterminism()
 		return
 	end
 	
-	local RemotesFolder = SharedFolder:FindFirstChild("Remotes")
-	if RemotesFolder then
-		local RemoteRegistry = RemotesFolder:FindFirstChild("RemoteRegistry")
-		if RemoteRegistry then
-			local success, registry = pcall(function()
-				return require(RemoteRegistry)
-			end)
-			if success and registry.VERSION then
-				pass(testName, "RemoteRegistry has VERSION for deterministic logging")
-				return
-			end
+	local RemoteRegistry = SharedFolder:FindFirstChild("RemoteRegistry")
+	if RemoteRegistry and RemoteRegistry:IsA("ModuleScript") then
+		local success, registry = pcall(function()
+			return require(RemoteRegistry)
+		end)
+		if success and registry.VERSION then
+			pass(testName, "RemoteRegistry has VERSION for deterministic logging")
+			return
 		end
 	end
 	

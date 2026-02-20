@@ -13,8 +13,7 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
-local RemotesFolder = SharedFolder:WaitForChild("Remotes")
-local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 
 local VoiceoverController = {}

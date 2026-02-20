@@ -42,13 +42,18 @@ if not SharedFolder then
 	error("[MainServerScript] CRITICAL: Failed to load Shared folder after 10 seconds")
 end
 
--- Use new RemoteRegistry system
-local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-if not RemotesFolder then
-	error("[MainServerScript] CRITICAL: Failed to load Remotes folder after 5 seconds")
+-- RemoteRegistry moved from Remotes/ to Shared/ (ModuleScripts belong in Shared, not in Remotes/)
+local RemoteRegistryModule = SharedFolder:WaitForChild("RemoteRegistry", 5)
+
+if not RemoteRegistryModule then
+	error("[MainServerScript] CRITICAL: Shared.RemoteRegistry ModuleScript missing")
 end
 
-local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry", 5))
+if not RemoteRegistryModule:IsA("ModuleScript") then
+	error("[MainServerScript] CRITICAL: Shared.RemoteRegistry is not a ModuleScript")
+end
+
+local RemoteRegistry = require(RemoteRegistryModule)
 local remotes = RemoteRegistry.initializeServer()
 print("[BOOT][SERVER] Phase 1 complete: Remote registry initialized")
 
