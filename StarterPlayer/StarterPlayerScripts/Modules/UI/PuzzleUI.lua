@@ -1061,7 +1061,9 @@ PuzzleUIModule.cleanup = cleanup
 -- Remotes are already bound during module initialization via RemoteRegistry.GetClientRemotes(),
 -- so this is intentionally a no-op; it just confirms compatibility.
 function PuzzleUIModule:bindRemotes(_remotesMap)
-	print("[PuzzleUI] bindRemotes called (remotes already bound at module init)")
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		print("[PuzzleUI] bindRemotes called (remotes already bound at module init)")
+	end
 end
 
 return PuzzleUIModule
