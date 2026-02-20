@@ -314,11 +314,13 @@ function ShopUI.bindRemotes()
 	shopRequest = ok1 and sr or nil
 	shopUpdate  = ok2 and su or nil
 
-	-- Debug: list found remotes and their full instance paths
-	print(string.format("[ShopUI] bindRemotes: ShopRequest=%s",
-		shopRequest and shopRequest:GetFullName() or "not found"))
-	print(string.format("[ShopUI] bindRemotes: ShopUpdate=%s",
-		shopUpdate and shopUpdate:GetFullName() or "not found"))
+	-- Debug: list found remotes and their full instance paths (gated by debug flag)
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		print(string.format("[ShopUI] bindRemotes: ShopRequest=%s",
+			shopRequest and shopRequest:GetFullName() or "not found"))
+		print(string.format("[ShopUI] bindRemotes: ShopUpdate=%s",
+			shopUpdate and shopUpdate:GetFullName() or "not found"))
+	end
 
 	if not shopRequest or not shopUpdate then
 		warn("[ShopUI] Missing required remotes: ShopRequest or ShopUpdate")
