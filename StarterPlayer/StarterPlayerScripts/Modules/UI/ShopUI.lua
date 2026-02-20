@@ -35,6 +35,7 @@ local function cleanupButtons(parent: Instance)
 	end
 end
 local UIConnectionMaid = require(SharedFolder:WaitForChild("UI"):WaitForChild("UIConnectionMaid"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 
 -- Initialize scale manager
 UIScaleManager.initialize()
@@ -296,21 +297,36 @@ local function rebuildList(items)
 end
 
 -- Bind remotes from RemoteRegistry (called by ClientMainModule)
-function ShopUI.bindRemotes(providedRemotes)
-	if not providedRemotes then
-		warn("[ShopUI] bindRemotes: No remotes provided")
-		return
+function ShopUI.bindRemotes()
+	-- Use RemoteRegistry as the source of truth for remote instances.
+	-- Note: bindRemotes may be invoked as a method (self, remotes) by ClientMainModule,
+	-- so we look up remotes via RemoteRegistry.getRemote() rather than the passed argument.
+	local ok1, sr = pcall(RemoteRegistry.getRemote, "ShopRequest")
+	local ok2, su = pcall(RemoteRegistry.getRemote, "ShopUpdate")
+
+	if not ok1 then
+		warn("[ShopUI] Failed to get ShopRequest remote:", sr)
 	end
-	
-	remotes = providedRemotes
-	shopRequest = remotes.ShopRequest
-	shopUpdate = remotes.ShopUpdate
-	
+
+	if not ok2 then
+		warn("[ShopUI] Failed to get ShopUpdate remote:", su)
+	end
+	shopRequest = ok1 and sr or nil
+	shopUpdate  = ok2 and su or nil
+
+	-- Debug: list found remotes and their full instance paths (gated by debug flag)
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		print(string.format("[ShopUI] bindRemotes: ShopRequest=%s",
+			shopRequest and shopRequest:GetFullName() or "not found"))
+		print(string.format("[ShopUI] bindRemotes: ShopUpdate=%s",
+			shopUpdate and shopUpdate:GetFullName() or "not found"))
+	end
+
 	if not shopRequest or not shopUpdate then
 		warn("[ShopUI] Missing required remotes: ShopRequest or ShopUpdate")
 		return
 	end
-	
+
 	-- Connect to shop update events
 	maid:Give(shopUpdate.OnClientEvent:Connect(function(payload)
 		if typeof(payload) ~= "table" then
