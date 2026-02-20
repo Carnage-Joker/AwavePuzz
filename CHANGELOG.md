@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created `docs/PR_HISTORY.md` – consolidates 4 pull request summary files
   - Created `docs/BOOT_SYSTEM.md` – consolidates 5 boot flow, safety guide, and flow diagram files
   - Created `docs/ANIMATIONS.md` – consolidates 4 animation guide, quick reference, checklist, and weapon animation files
-  - Deleted 90 source files from root (all content preserved in consolidated docs/)
+  - Removed 90 root-level markdown source files after consolidating their contents into the new `docs/` chapters (no content loss)
   - Also deleted `New Text Document.txt` and `REMOTE_EVENTS_NAMES_ONLY.txt`
   - Merged 13 additional loose docs/ files (BOOT_FLOW_FIXES_SUMMARY, BASE_DAMAGE_THROTTLING, VERIFICATION_SUMMARY, REMOTE_AUDIT, etc.) into their appropriate consolidated chapters
   - Updated `DOCUMENTATION.md` to version 5.0 reflecting fully consolidated structure
