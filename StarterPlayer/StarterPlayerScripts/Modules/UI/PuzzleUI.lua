@@ -1006,20 +1006,23 @@ end
 -- (PuzzleUpdate, PuzzleSubmit, RequestPuzzle, RequestPuzzleProgress) whose presence
 -- is verified here even though they are consumed by PuzzleMenuUI / the server.
 do
-	local PUZZLE_REMOTES = {
-		"PuzzleUpdate", "PuzzleSubmit", "OpenPuzzleUI",
-		"RequestPuzzle", "RequestPuzzleProgress", "SubmitPuzzleAnswer",
-		"PuzzleCompleted", "PuzzleFailed",
-	}
-	local bound = {}
-	for _, name in ipairs(PUZZLE_REMOTES) do
-		if remotes[name] then
-			table.insert(bound, name)
-		else
-			warn("[PuzzleUI] Missing remote: " .. name)
+	-- Gate boot logging behind UIDebugConfig to avoid noisy production logs.
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		local PUZZLE_REMOTES = {
+			"PuzzleUpdate", "PuzzleSubmit", "OpenPuzzleUI",
+			"RequestPuzzle", "RequestPuzzleProgress", "SubmitPuzzleAnswer",
+			"PuzzleCompleted", "PuzzleFailed",
+		}
+		local bound = {}
+		for _, name in ipairs(PUZZLE_REMOTES) do
+			if remotes[name] then
+				table.insert(bound, name)
+			else
+				warn("[PuzzleUI] Missing remote: " .. name)
+			end
 		end
+		print("[PuzzleUI] Bound remotes: " .. table.concat(bound, ", "))
 	end
-	print("[PuzzleUI] Bound remotes: " .. table.concat(bound, ", "))
 end
 
 -- Register input actions with InputActionRegistry
