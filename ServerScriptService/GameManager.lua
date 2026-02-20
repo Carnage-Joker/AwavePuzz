@@ -1538,7 +1538,7 @@ function GameManager:updateCountdown(deltaTime)
 
 	-- Instrumentation: log once per second so shrinking countdown is visible in logs
 	local nowSec = math.floor(self.stateTimer)
-	if self._lastCountdownLogSec ~= nowSec then
+	if self.stateTimer > 0 and self._lastCountdownLogSec ~= nowSec then
 		self._lastCountdownLogSec = nowSec
 		local matchId = self._currentMatchId or "global"
 		local playerCount
