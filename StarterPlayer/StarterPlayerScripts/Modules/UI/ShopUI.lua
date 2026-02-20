@@ -304,6 +304,13 @@ function ShopUI.bindRemotes()
 	local ok1, sr = pcall(RemoteRegistry.getRemote, "ShopRequest")
 	local ok2, su = pcall(RemoteRegistry.getRemote, "ShopUpdate")
 
+	if not ok1 then
+		warn("[ShopUI] Failed to get ShopRequest remote:", sr)
+	end
+
+	if not ok2 then
+		warn("[ShopUI] Failed to get ShopUpdate remote:", su)
+	end
 	shopRequest = ok1 and sr or nil
 	shopUpdate  = ok2 and su or nil
 
