@@ -21,7 +21,6 @@ local InputActionRegistry = require(SharedFolder:WaitForChild("InputActionRegist
 local UIDebugConfig = require(SharedFolder:WaitForChild("UIDebugConfig"))
 local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 local remotes = RemoteRegistry.GetClientRemotes()
-local PuzzleMenuRequest = remotes.PuzzleMenuRequest
 -- Initialize scale manager
 UIScaleManager.initialize()
 
@@ -41,10 +40,11 @@ end
 local MIN_TOUCH_TARGET = (UIScaleConfig.MinSizes.touchTarget and UIScaleConfig.MinSizes.touchTarget.width) or 44
 
 -- Prevent duplicate UI instances
+-- NOTE: Duplicates should never occur during normal boot; warn loudly without
+-- silently destroying so any real bug surfaces immediately.
 local existing = playerGui:FindFirstChild("PuzzleUI")
 if existing then
-	UIDebugConfig.warnDuplicate("PuzzleUI")
-	existing:Destroy()
+	warn("[PuzzleUI] UNEXPECTED: PuzzleUI ScreenGui already exists in PlayerGui — this indicates a boot ordering bug and should be investigated.")
 end
 
 UIDebugConfig.logUICreation("PuzzleUI", "Creating ScreenGui", "PuzzleUI.lua")
@@ -922,9 +922,10 @@ connections.submitButton = submitButton.MouseButton1Click:Connect(function()
 	end
 
 	-- Send to server
-	local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-	if remoteEvents and remoteEvents:FindFirstChild("SubmitPuzzleAnswer") then
-		remoteEvents.SubmitPuzzleAnswer:FireServer(currentComponentName, answer)
+	if remotes.SubmitPuzzleAnswer then
+		remotes.SubmitPuzzleAnswer:FireServer(currentComponentName, answer)
+	else
+		warn("[PuzzleUI] SubmitPuzzleAnswer remote not found — answer not sent to server")
 	end
 
 	-- Close UI (server will notify if correct/incorrect)
@@ -934,58 +935,95 @@ end)
 -- Remote event handlers
 
 -- Open puzzle UI
-local openPuzzleEvent = remoteEvents:WaitForChild("OpenPuzzleUI")
-connections.openPuzzle = openPuzzleEvent.OnClientEvent:Connect(function(data)
-	if data and data.puzzle and data.componentName then
-		openPuzzle(data.componentName, data.puzzle)
-	end
-end)
+local openPuzzleEvent = remotes.OpenPuzzleUI
+if openPuzzleEvent then
+	connections.openPuzzle = openPuzzleEvent.OnClientEvent:Connect(function(data)
+		if data and data.puzzle and data.componentName then
+			openPuzzle(data.componentName, data.puzzle)
+		end
+	end)
+else
+	warn("[PuzzleUI] OpenPuzzleUI remote not found — puzzle UI will not open from server")
+end
 
 -- Puzzle completed
-local puzzleCompletedEvent = remoteEvents:WaitForChild("PuzzleCompleted")
-connections.puzzleCompleted = puzzleCompletedEvent.OnClientEvent:Connect(function(data)
-	-- Show success notification
-	local notification = Instance.new("TextLabel")
-	notification.Size = UDim2.new(0, 400, 0, 80)
-	notification.Position = UDim2.new(0.5, -200, 0.2, 0)
-	notification.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-	notification.Text = string.format("Puzzle Solved!\n+%d Currency", data.reward or 0)
-	notification.TextColor3 = Color3.fromRGB(255, 255, 255)
-	notification.TextSize = 24
-	notification.Font = Enum.Font.GothamBold
-	notification.Parent = screenGui
+local puzzleCompletedEvent = remotes.PuzzleCompleted
+if puzzleCompletedEvent then
+	connections.puzzleCompleted = puzzleCompletedEvent.OnClientEvent:Connect(function(data)
+		-- Show success notification
+		local notification = Instance.new("TextLabel")
+		notification.Size = UDim2.new(0, 400, 0, 80)
+		notification.Position = UDim2.new(0.5, -200, 0.2, 0)
+		notification.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+		notification.Text = string.format("Puzzle Solved!\n+%d Currency", data.reward or 0)
+		notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+		notification.TextSize = 24
+		notification.Font = Enum.Font.GothamBold
+		notification.Parent = screenGui
 
-	local notifCorner = Instance.new("UICorner")
-	notifCorner.CornerRadius = UDim.new(0, 12)
-	notifCorner.Parent = notification
+		local notifCorner = Instance.new("UICorner")
+		notifCorner.CornerRadius = UDim.new(0, 12)
+		notifCorner.Parent = notification
 
-	-- Fade out and remove
-	task.wait(3)
-	notification:Destroy()
-end)
+		-- Fade out and remove
+		task.wait(3)
+		notification:Destroy()
+	end)
+else
+	warn("[PuzzleUI] PuzzleCompleted remote not found — puzzle completion notifications will not display")
+end
 
 -- Puzzle failed
-local puzzleFailedEvent = remoteEvents:WaitForChild("PuzzleFailed")
-connections.puzzleFailed = puzzleFailedEvent.OnClientEvent:Connect(function(message)
-	-- Show error notification
-	local notification = Instance.new("TextLabel")
-	notification.Size = UDim2.new(0, 400, 0, 80)
-	notification.Position = UDim2.new(0.5, -200, 0.2, 0)
-	notification.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-	notification.Text = "Puzzle Failed!\n" .. (message or "Try again")
-	notification.TextColor3 = Color3.fromRGB(255, 255, 255)
-	notification.TextSize = 20
-	notification.Font = Enum.Font.GothamBold
-	notification.Parent = screenGui
+local puzzleFailedEvent = remotes.PuzzleFailed
+if puzzleFailedEvent then
+	connections.puzzleFailed = puzzleFailedEvent.OnClientEvent:Connect(function(message)
+		-- Show error notification
+		local notification = Instance.new("TextLabel")
+		notification.Size = UDim2.new(0, 400, 0, 80)
+		notification.Position = UDim2.new(0.5, -200, 0.2, 0)
+		notification.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+		notification.Text = "Puzzle Failed!\n" .. (message or "Try again")
+		notification.TextColor3 = Color3.fromRGB(255, 255, 255)
+		notification.TextSize = 20
+		notification.Font = Enum.Font.GothamBold
+		notification.Parent = screenGui
 
-	local notifCorner = Instance.new("UICorner")
-	notifCorner.CornerRadius = UDim.new(0, 12)
-	notifCorner.Parent = notification
+		local notifCorner = Instance.new("UICorner")
+		notifCorner.CornerRadius = UDim.new(0, 12)
+		notifCorner.Parent = notification
 
-	-- Fade out and remove
-	task.wait(3)
-	notification:Destroy()
-end)
+		-- Fade out and remove
+		task.wait(3)
+		notification:Destroy()
+	end)
+else
+	warn("[PuzzleUI] PuzzleFailed remote not found — puzzle failure notifications will not display")
+end
+
+-- Boot log: report which puzzle-related remotes are available.
+-- Includes remotes consumed locally (OpenPuzzleUI, SubmitPuzzleAnswer, PuzzleCompleted,
+-- PuzzleFailed) and the broader puzzle-system remotes defined in the problem spec
+-- (PuzzleUpdate, PuzzleSubmit, RequestPuzzle, RequestPuzzleProgress) whose presence
+-- is verified here even though they are consumed by PuzzleMenuUI / the server.
+do
+	-- Gate boot logging behind UIDebugConfig to avoid noisy production logs.
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		local PUZZLE_REMOTES = {
+			"PuzzleUpdate", "PuzzleSubmit", "OpenPuzzleUI",
+			"RequestPuzzle", "RequestPuzzleProgress", "SubmitPuzzleAnswer",
+			"PuzzleCompleted", "PuzzleFailed",
+		}
+		local bound = {}
+		for _, name in ipairs(PUZZLE_REMOTES) do
+			if remotes[name] then
+				table.insert(bound, name)
+			else
+				warn("[PuzzleUI] Missing remote: " .. name)
+			end
+		end
+		print("[PuzzleUI] Bound remotes: " .. table.concat(bound, ", "))
+	end
+end
 
 -- Register input actions with InputActionRegistry
 InputActionRegistry.register("PuzzleSubmit", "PuzzleUI", {}, InputActionRegistry.Priority.MODAL_UI) -- Submit via button only
@@ -1018,4 +1056,14 @@ print("PuzzleUI initialized")
 -- Return module table
 local PuzzleUIModule = {}
 PuzzleUIModule.cleanup = cleanup
+
+-- bindRemotes satisfies the standard contract used by ClientMainModule.
+-- Remotes are already bound during module initialization via RemoteRegistry.GetClientRemotes(),
+-- so this is intentionally a no-op; it just confirms compatibility.
+function PuzzleUIModule:bindRemotes(_remotesMap)
+	if UIDebugConfig and UIDebugConfig.DEBUG_UI_CREATION then
+		print("[PuzzleUI] bindRemotes called (remotes already bound at module init)")
+	end
+end
+
 return PuzzleUIModule
