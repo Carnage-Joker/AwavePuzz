@@ -297,7 +297,7 @@ local function rebuildList(items)
 end
 
 -- Bind remotes from RemoteRegistry (called by ClientMainModule)
-function ShopUI.bindRemotes(_providedRemotes)
+function ShopUI.bindRemotes()
 	-- Use RemoteRegistry as the source of truth for remote instances.
 	-- Note: bindRemotes may be invoked as a method (self, remotes) by ClientMainModule,
 	-- so we look up remotes via RemoteRegistry.getRemote() rather than the passed argument.
