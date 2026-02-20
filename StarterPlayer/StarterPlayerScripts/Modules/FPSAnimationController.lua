@@ -14,8 +14,7 @@ local camera = workspace.CurrentCamera
 -- Shared modules
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local FPSConfig = require(SharedFolder:WaitForChild("FPSConfig"))
-local RemotesFolder = SharedFolder:WaitForChild("Remotes")
-local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 
 --------------------------------------------------------------------------------
 -- CONTROLLER

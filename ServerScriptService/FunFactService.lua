@@ -17,11 +17,7 @@ if not FunFactConfig then
 end
 FunFactConfig = require(FunFactConfig)
 
-local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-if not RemotesFolder then
-	error("[FunFactService] CRITICAL: Failed to load Remotes folder after 5 seconds")
-end
-local RemoteRegistry = RemotesFolder:WaitForChild("RemoteRegistry", 5)
+local RemoteRegistry = SharedFolder:WaitForChild("RemoteRegistry", 5)
 if not RemoteRegistry then
 	error("[FunFactService] CRITICAL: Failed to load RemoteRegistry after 5 seconds")
 end

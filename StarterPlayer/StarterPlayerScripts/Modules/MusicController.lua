@@ -11,8 +11,7 @@ local Player = Players.LocalPlayer
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local StoryConfig = require(SharedFolder:WaitForChild("StoryConfig"))
-local RemotesFolder = SharedFolder:WaitForChild("Remotes")
-local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry"))
+local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry"))
 
 local MusicController = {}
 MusicController.__index = MusicController

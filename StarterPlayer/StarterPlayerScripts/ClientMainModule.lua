@@ -47,14 +47,9 @@ local function bootClient()
 	
 	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 30) end
 	
-	local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-	if not RemotesFolder then
-		error("[ClientMain] CRITICAL: Failed to load Remotes folder after 5 seconds")
-	end
-	
 	if loadingManager then loadingManager:updatePhase("RemoteRegistry", 60) end
 	
-	local RemoteRegistry = require(RemotesFolder:WaitForChild("RemoteRegistry", 5))
+	local RemoteRegistry = require(SharedFolder:WaitForChild("RemoteRegistry", 5))
 	local remotes = RemoteRegistry.initializeClient(10)
 	if not remotes then
 		error("[ClientMain] CRITICAL: Failed to initialize remote registry")

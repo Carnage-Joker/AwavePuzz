@@ -43,11 +43,6 @@ if not SharedFolder then
 end
 
 -- RemoteRegistry moved from Remotes/ to Shared/ (ModuleScripts belong in Shared, not in Remotes/)
-local RemotesFolder = SharedFolder:WaitForChild("Remotes", 5)
-if not RemotesFolder then
-	error("[MainServerScript] CRITICAL: Shared.Remotes folder missing after 5 seconds")
-end
-
 local RemoteRegistryModule = SharedFolder:WaitForChild("RemoteRegistry", 5)
 
 if not RemoteRegistryModule then
