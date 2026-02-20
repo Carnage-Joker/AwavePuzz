@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created `docs/BUG_FIXES.md` – consolidates 28 bug fix summaries, security hardening, and unfixable bugs records
   - Created `docs/AUDITS.md` – consolidates 20 audit reports, findings, checklists, and production readiness assessments
   - Created `docs/IMPLEMENTATION_HISTORY.md` – consolidates 18 implementation summaries, refactor histories, and architecture notes
-  - Created `docs/TESTING_GUIDE.md` – consolidates 15 testing guides, test plans, and validation reports
+  - Created `docs/TESTING_GUIDE.md` – consolidates existing testing guides, test plans, and validation reports
   - Created `docs/PR_HISTORY.md` – consolidates 4 pull request summary files
   - Created `docs/BOOT_SYSTEM.md` – consolidates 5 boot flow, safety guide, and flow diagram files
   - Created `docs/ANIMATIONS.md` – consolidates 4 animation guide, quick reference, checklist, and weapon animation files
