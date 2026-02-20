@@ -4,7 +4,7 @@
 
 A multiplayer Roblox first-person shooter zombie survival game featuring wave-based combat, cure-crafting puzzles, alliance systems, dynamic music, achievements, and an immersive narrative experience with full FPS mechanics!
 
-> **📊 NEW: [Production Readiness Report](PRODUCTION_READINESS_REPORT.md)** - Comprehensive overview of all game features, what's working, what's not, and how to get production-ready (95% complete!)
+> **📊 NEW: [Production Readiness Report](docs/AUDITS.md#production-readiness-report)** - Comprehensive overview of all game features, what's working, what's not, and how to get production-ready (95% complete!)
 
 ## 🎮 Game Overview
 
@@ -449,7 +449,7 @@ This game is built using:
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for the restructured repository
 - **[SECURITY.md](SECURITY.md)** - 🆕 Security measures and anti-exploit documentation
 - **[BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md)** - 🆕 Boot system safety, entry points, and testing
-- **[BOOT_SAFETY_QUICK_REFERENCE.md](BOOT_SAFETY_QUICK_REFERENCE.md)** - 🆕 Quick reference for boot system changes
+- **[docs/BOOT_SYSTEM.md](docs/BOOT_SYSTEM.md)** - 🆕 Quick reference for boot system changes
 - **[DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)** - 🆕 Production deployment checklist
 
 #### Technical References
@@ -474,7 +474,7 @@ This game is built using:
 - **[FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md)** - FPS system documentation and tuning guide
 - **[WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)** - Weapon animation system guide
 - **[ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)** - Step-by-step animation creation tutorial
-- **[ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md)** - Quick reference for animation configuration
+- **[docs/ANIMATIONS.md](docs/ANIMATIONS.md)** - Quick reference for animation configuration
 
 #### Testing Guides
 - **[tests/README.md](tests/README.md)** - 🆕 Complete test suite documentation (boot, security, leaks, race conditions)

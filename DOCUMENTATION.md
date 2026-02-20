@@ -109,8 +109,7 @@ Zombie AI behavior and improvements documentation:
 - Tactical AI system overview
 
 For advanced AI features, see:
-- [docs/ai_changes.md](docs/ai_changes.md) - Detailed tactical AI implementation
-- [docs/ai_testing_guide.md](docs/ai_testing_guide.md) - Testing procedures for AI systems
+- [docs/archive/summaries/ai_changes.md](docs/archive/summaries/ai_changes.md) - Detailed tactical AI implementation (archived)
 
 #### [docs/features/alliance-system.md](docs/features/alliance-system.md)
 
@@ -317,15 +316,14 @@ Project structure and organization guide:
 
 ## 📊 Documentation Statistics
 
-- **Core Documentation**: 14 essential files in root directory
-- **Technical References**: 4 additional reference files (CODE_ARCHITECTURE, MODULE_DEPENDENCIES, INPUT_ACTION_MAP, UI_INVENTORY_AND_ARCHITECTURE)
-- **Implementation Docs**: 4 files in docs/implementation/
-- **Feature Docs**: 6 files in docs/features/
-- **Testing Guides**: 2 files in docs/testing/
-- **Archived Docs**: 42 files in docs/archive/ (organized by category)
-- **Total Active**: ~30 actively maintained documentation files
-- **Total Including Archive**: ~72 documentation files
-- **Most Comprehensive**: API_DOCUMENTATION.md (55KB)
+- **Root Level**: 18 essential documentation files
+- **docs/**: 7 consolidated reference files (BUG_FIXES, AUDITS, IMPLEMENTATION_HISTORY, TESTING_GUIDE, PR_HISTORY, BOOT_SYSTEM, ANIMATIONS) + 4 standalone files (REMOTE_EVENTS, STRUCTURE, UI_STANDARDS, flow_and_security)
+- **docs/features/**: 6 feature documentation files
+- **docs/implementation/**: 4 implementation documentation files
+- **docs/testing/**: 2 testing guide files
+- **docs/archive/**: 43 historical documentation files (organized by category)
+- **Total Active**: ~35 actively maintained documentation files
+- **Most Comprehensive**: API_DOCUMENTATION.md
 
 ## 🔍 Quick Search Guide
 
@@ -380,6 +378,6 @@ If you can't find what you're looking for:
 
 ---
 
-**Last Updated**: January 2026
-**Documentation Version**: 4.0 (Consolidated into docs/ chapters)
+**Last Updated**: February 2026
+**Documentation Version**: 5.0 (Further consolidated docs/ loose files into chapters)
 **Project Status**: ✅ Complete and Production-Ready

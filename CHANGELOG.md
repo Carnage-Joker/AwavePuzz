@@ -18,7 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Created `docs/ANIMATIONS.md` – consolidates 4 animation guide, quick reference, checklist, and weapon animation files
   - Deleted 90 source files from root (all content preserved in consolidated docs/)
   - Also deleted `New Text Document.txt` and `REMOTE_EVENTS_NAMES_ONLY.txt`
-  - Updated `DOCUMENTATION.md` to version 4.0 reflecting new consolidated structure
+  - Merged 13 additional loose docs/ files (BOOT_FLOW_FIXES_SUMMARY, BASE_DAMAGE_THROTTLING, VERIFICATION_SUMMARY, REMOTE_AUDIT, etc.) into their appropriate consolidated chapters
+  - Updated `DOCUMENTATION.md` to version 5.0 reflecting fully consolidated structure
+  - Fixed broken README.md links to point to consolidated files
 - **[2026-01-29] Documentation Consolidation (Phase 1)**: Cleaned up and reorganized project documentation
   - Archived 42 historical documentation files to `docs/archive/` directory
   - Removed outdated `docs/STRUCTURE_OLD.md`
