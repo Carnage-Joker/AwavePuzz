@@ -8,7 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **[2026-01-29] Documentation Consolidation**: Cleaned up and reorganized project documentation
+- **[2026-01-30] Documentation Consolidation (Phase 2)**: Consolidated 90+ root-level documentation files into 7 organized docs/ files
+  - Created `docs/BUG_FIXES.md` – consolidates 28 bug fix summaries, security hardening, and unfixable bugs records
+  - Created `docs/AUDITS.md` – consolidates 20 audit reports, findings, checklists, and production readiness assessments
+  - Created `docs/IMPLEMENTATION_HISTORY.md` – consolidates 18 implementation summaries, refactor histories, and architecture notes
+  - Created `docs/TESTING_GUIDE.md` – consolidates existing testing guides, test plans, and validation reports
+  - Created `docs/PR_HISTORY.md` – consolidates 4 pull request summary files
+  - Created `docs/BOOT_SYSTEM.md` – consolidates 5 boot flow, safety guide, and flow diagram files
+  - Created `docs/ANIMATIONS.md` – consolidates 4 animation guide, quick reference, checklist, and weapon animation files
+  - Removed 90 root-level markdown source files after consolidating their contents into the new `docs/` chapters (no content loss)
+  - Also deleted `New Text Document.txt` and `REMOTE_EVENTS_NAMES_ONLY.txt`
+  - Merged 13 additional loose docs/ files (BOOT_FLOW_FIXES_SUMMARY, BASE_DAMAGE_THROTTLING, VERIFICATION_SUMMARY, REMOTE_AUDIT, etc.) into their appropriate consolidated chapters
+  - Updated `DOCUMENTATION.md` to version 5.0 reflecting fully consolidated structure
+  - Fixed broken README.md links to point to consolidated files
+- **[2026-01-29] Documentation Consolidation (Phase 1)**: Cleaned up and reorganized project documentation
   - Archived 42 historical documentation files to `docs/archive/` directory
   - Removed outdated `docs/STRUCTURE_OLD.md`
   - Updated `INSTALLATION.md` to reflect current repository structure (removed all `src/` references)
