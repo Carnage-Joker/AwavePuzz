@@ -110,6 +110,7 @@ Zombie AI behavior and improvements documentation:
 
 For advanced AI features, see:
 - [docs/archive/summaries/ai_changes.md](docs/archive/summaries/ai_changes.md) - Detailed tactical AI implementation (archived)
+- [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md) - AI testing procedures and scenarios
 
 #### [docs/features/alliance-system.md](docs/features/alliance-system.md)
 
