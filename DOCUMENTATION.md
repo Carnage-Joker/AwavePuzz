@@ -75,38 +75,13 @@ Complete guide to the first-person shooter system:
 - Menu system
 - Configuration and tuning guide
 
-#### [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md)
-**27KB | 946 lines**
+#### [docs/ANIMATIONS.md](docs/ANIMATIONS.md)
 
-Comprehensive weapon animation system guide:
-- System architecture
-- 6 animation types per weapon (idle, fire, reload, equip, sprint, ADS)
-- Viewmodel system
-- Procedural animations (sway, breathing, recoil recovery)
-- Event-driven integration
-- Configuration reference
-- Troubleshooting guide
-
-#### [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md)
-**12KB | 463 lines**
-
-Step-by-step tutorial for creating weapon animations:
-- Roblox Studio animation tools setup
-- Creating each animation type
-- Best practices and timing guidelines
-- Exporting and publishing animations
-- Integration with the game
-
-#### [ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md)
-**6.4KB | 212 lines**
-
-Quick reference card for animation configuration:
-- Animation types table
-- Configuration locations
-- Adding animation assets
-- Procedural animation settings
-- Weapon positioning
-- Event flow diagram
+Consolidated animation documentation including:
+- **Animation Creation Guide** – step-by-step tutorial for creating weapon animations
+- **Animation Quick Reference** – quick reference card for animation configuration
+- **Animation Validation Checklist** – pre-release animation checklist
+- **Weapon Animations** – comprehensive weapon animation system guide (viewmodel, procedural animations, event-driven integration)
 
 ### Feature Documentation
 
@@ -171,7 +146,18 @@ Cross-platform device compatibility:
 
 ### Testing Documentation
 
-#### [tests/README.md](tests/README.md) 🆕
+#### [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)
+
+Consolidated testing documentation including:
+- Bug-specific test guides (Bug 005/006, ammo fix, weapon origin fix)
+- Boot smoke test validation report
+- Comprehensive test suite summary and README
+- General testing guide and audit-change testing
+- Lobby state machine test plan
+- Loading progress bar, title screen first load, and zombie hit reaction test guides
+- Test suite quick reference and validation reports
+
+#### [tests/README.md](tests/README.md)
 **Complete Test Suite Documentation**
 
 Overview of all test categories:
@@ -181,16 +167,10 @@ Overview of all test categories:
 - **Race Condition Tests** - State consistency validation
 - **System Integration Tests** - Cross-system validation
 
-#### [tests/boot_smoke_tests.lua](tests/boot_smoke_tests.lua) 🆕
+#### [tests/boot_smoke_tests.lua](tests/boot_smoke_tests.lua)
 **Boot System Validation Suite**
 
-Validates boot safety with 12 comprehensive tests:
-- Entry point duplicate guards (server & client)
-- RemoteRegistry initialization
-- Module loading and timeouts
-- Service initialization order
-- Character auto-load control
-- Client-server synchronization
+Validates boot safety with 12 comprehensive tests.
 
 Run in Studio Command Bar:
 ```lua
@@ -200,39 +180,17 @@ require(game.ReplicatedStorage.tests.run_boot_tests)
 #### [tests/security_validation_tests.lua](tests/security_validation_tests.lua)
 **Security Configuration Tests**
 
-Automated security validation (11 tests):
-- Anti-wallhack protection checks (BUG-004)
-- Server authority validation (BUG-009)
-- Configuration presence and sanity checks
+Automated security validation (11 tests).
 
 Run in Studio Command Bar:
 ```lua
 require(game.ReplicatedStorage.tests.run_security_tests)
 ```
 
-#### [BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md) 🆕
+#### [BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md)
 **Boot System Safety Documentation**
 
-Complete guide to boot safety:
-- Single entry points (server & client)
-- Duplicate execution guards
-- RemoteRegistry system
-- Module loading best practices
-- Service initialization order
-- Boot log format standards
-- Testing checklist
-- Troubleshooting guide
-
-#### [BOOT_SAFETY_QUICK_REFERENCE.md](BOOT_SAFETY_QUICK_REFERENCE.md) 🆕
-**Boot Safety Quick Reference**
-
-Quick reference for developers:
-- Entry point locations (DO NOT MODIFY)
-- Quick boot test command
-- Adding new services rules
-- Adding new remotes correctly
-- Module loading rules
-- Common issues and fixes
+Complete guide to boot safety, entry points, RemoteRegistry, and troubleshooting.
 
 #### [docs/testing/TESTING_ALLIANCE_SYSTEM.md](docs/testing/TESTING_ALLIANCE_SYSTEM.md)
 
@@ -241,6 +199,43 @@ Complete testing guide for the alliance and betrayal system.
 #### [docs/testing/TESTING_MAP_AND_LOBBY.md](docs/testing/TESTING_MAP_AND_LOBBY.md)
 
 Testing guide for map positioning and lobby improvements.
+
+### Consolidated Reference Documentation
+
+#### [docs/BUG_FIXES.md](docs/BUG_FIXES.md)
+
+All bug fix summaries consolidated in one place:
+- Individual bug fix records (BUG-001, BUG-005/006, BUG-007, etc.)
+- Ammo display, boot duplication, camera movement, cure station, UI fixes
+- Memory leak, security hardening, and unfixable bugs documentation
+
+#### [docs/AUDITS.md](docs/AUDITS.md)
+
+All audit reports and production readiness assessments:
+- Code consistency, executive summaries, findings verification
+- Comprehensive audit reports (2026), cure synthesis, animation ID audits
+- Camera movement audit, production readiness reports
+
+#### [docs/IMPLEMENTATION_HISTORY.md](docs/IMPLEMENTATION_HISTORY.md)
+
+Implementation history, refactors, and architecture decisions:
+- Baseline safety, loading progress bar, puzzle, state refactor implementations
+- Zombie hit reaction changes and security
+- Completion summaries, investigation records, verification
+- Module dependencies, UI/inventory architecture, file naming conventions, remote events list
+
+#### [docs/PR_HISTORY.md](docs/PR_HISTORY.md)
+
+Pull request history and stabilization records:
+- PR stabilization summary, general PR summary
+- Bug 005/006 PR summary, title screen first load PR summary
+
+#### [docs/BOOT_SYSTEM.md](docs/BOOT_SYSTEM.md)
+
+Complete boot system documentation:
+- Boot flow and start flow diagrams
+- Boot safety guide and quick reference
+- Flow diagrams for the entire system
 
 ### Historical Documentation
 
@@ -300,9 +295,8 @@ Project structure and organization guide:
 3. [docs/implementation/overview.md](docs/implementation/overview.md) - What's implemented
 
 ### "I want to add weapon animations"
-1. [ANIMATION_CREATION_GUIDE.md](ANIMATION_CREATION_GUIDE.md) - Step-by-step tutorial
-2. [ANIMATION_QUICK_REFERENCE.md](ANIMATION_QUICK_REFERENCE.md) - Quick config reference
-3. [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) - Complete system documentation
+1. [docs/ANIMATIONS.md](docs/ANIMATIONS.md) - All animation docs consolidated
+2. [BOOT_SAFETY_GUIDE.md](BOOT_SAFETY_GUIDE.md) - Boot safety for animation scripts
 
 ### "I want to tune game balance"
 1. [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) - FPS system tuning
@@ -316,9 +310,10 @@ Project structure and organization guide:
 
 ### "I need to troubleshoot an issue"
 1. [INSTALLATION.md](INSTALLATION.md) - Setup troubleshooting
-2. [WEAPON_ANIMATIONS.md](WEAPON_ANIMATIONS.md) - Animation troubleshooting
+2. [docs/ANIMATIONS.md](docs/ANIMATIONS.md) - Animation troubleshooting
 3. [docs/features/puzzle-system.md](docs/features/puzzle-system.md) - Puzzle troubleshooting
 4. [FPS_DOCUMENTATION.md](FPS_DOCUMENTATION.md) - FPS system troubleshooting
+5. [docs/BUG_FIXES.md](docs/BUG_FIXES.md) - Historical bug fixes and known issues
 
 ## 📊 Documentation Statistics
 
@@ -386,5 +381,5 @@ If you can't find what you're looking for:
 ---
 
 **Last Updated**: January 2026
-**Documentation Version**: 3.0 (Reorganized into chapters)
+**Documentation Version**: 4.0 (Consolidated into docs/ chapters)
 **Project Status**: ✅ Complete and Production-Ready
